@@ -582,9 +582,9 @@ startup code and the latter the less critical initialization steps, which
 can be done later and already in C. Both files implement a basic
 configuration of the MCU, which permits safe operation of the code. They
 do not configure more of the MCU hardware as required, there&#8217;s for example
-nothing about ADC. If an application want to use analogue inputs then
+nothing about ADC. If an application wants to use analogue inputs then
 it&#8217;ll add the hardware configuration of the ADC as appropriate. The two
-mentioned file contain only the basic initialization and most of this
+mentioned files contain only the basic initialization and most of this
 initialization can be considered application independent or, with other
 words, you can likely reuse these files without modification for most
 applications. This is what they do:</p>
@@ -598,6 +598,11 @@ applications. This is what they do:</p>
 <li>
 <p>All general purpose and the relevant special purpose registers are
 cleared</p>
+</li>
+<li>
+<p>The trap vectors are defined. All traps but one are dummies. The only
+used trap is the External Interrupt trap, which handles all normal I/O
+interrupts</p>
 </li>
 <li>
 <p>The MPU is configured such that it permits access to all available
@@ -622,11 +627,6 @@ application code)</p>
 </li>
 <li>
 <p>The initialized data sections are filled with the image in ROM</p>
-</li>
-<li>
-<p>The trap vectors are defined. All traps but one are dummies. The only
-used trap is the External Interrupt trap, which handles all normal I/O
-interrupts</p>
 </li>
 <li>
 <p>The EABI is prepared, particular registers are loaded accordingly</p>
@@ -723,10 +723,10 @@ handlers, which is a hardware constraint.</p>
 <p>The trap of principal interest for any application is trap #4, External
 Interrupts. All MCU devices (mostly I/O), which can signal their events by
 interrupt, are connected to the MCU&#8217;s Interrupt Controller (INTC). The
-INTC prioritizes them and routes the most important one through to CPU
-trap #4. Consequently, there&#8217;s only one interrupt handler for all
-possible I/O interrupts ("External Interrupts"). This handler has been
-implemented for you <sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnote_3" title="View footnote.">3</a>]</sup>.</p>
+INTC prioritizes their interrupt requests and routes the most important
+one through to CPU trap #4. Consequently, there&#8217;s only one interrupt
+handler for all possible I/O interrupts ("External Interrupts"). This
+handler has been implemented for you <sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnote_3" title="View footnote.">3</a>]</sup>.</p>
 </div>
 <div class="paragraph">
 <p>The handler for External Interrupts saves the context, queries the INTC
@@ -796,7 +796,7 @@ ihw_initMcuCoreHW();</pre>
 </div>
 <div class="paragraph">
 <p>After this call, the application can start doing the further hardware
-initialization as appropriate for its needs.</p>
+initialization as appropriate for its own needs.</p>
 </div>
 </div>
 <div class="sect3">
@@ -827,11 +827,12 @@ void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
 </div>
 <div class="paragraph">
 <div class="title">interruptHandler</div>
-<p><code>interruptHandler</code> is the function in your application, that serves the
-device when it raises the interrupt. Note, this is an ordinary C function.
-No particular type decorations are required to declare it as interrupt
-routine. This is because the function is just a sub-routine of the true,
-reusable interrupt handler that is implemented in the startup code.</p>
+<p><code>interruptHandler</code> is the function implemented in your application, that
+serves the device when it raises the interrupt. Note, this is an ordinary
+C function. No particular type decoration is required to declare it as
+interrupt routine. This is because the function is just a sub-routine of
+the true, reusable interrupt handler that is implemented in the startup
+code.</p>
 </div>
 <div class="paragraph">
 <div class="title">vectorNum</div>
@@ -839,8 +840,8 @@ reusable interrupt handler that is implemented in the startup code.</p>
 </div>
 <div class="paragraph">
 <div class="title">psrPriority</div>
-<p><code>psrPriority</code> is the priority of the interrupt in the range 0..15. (where
-0 is only a theoretical option; this lowest possible priority will make
+<p><code>psrPriority</code> is the priority of the interrupt in the range 0..15. (Where
+0 is a theoretical option only; this lowest possible priority will make
 the interrupt never be served at all.)</p>
 </div>
 <div class="paragraph">
@@ -869,11 +870,12 @@ good reason to do so.</p>
 <div class="paragraph">
 <p>Virtually all interrupt handlers will share some data with either the main
 application context or other handlers. Due to the different CPU contexts
-the handlers are running in, this cannot generally be done by assignments
-to shared data objects. Mutual exclusion from coincidental data access
-needs to be implemented. A pair of functions is offered to implement so
-called critical sections, i.e. code passages, the execution of which is
-surely not preempted by other contexts. See the code example:</p>
+the handlers are running in, this cannot generally be done by simple,
+unprotected assignments to shared data objects. Mutual exclusion from
+coincidental data access needs to be implemented. A pair of functions is
+offered to implement so called critical sections, i.e. code passages, the
+execution of which is surely not preempted by other contexts. See the code
+example:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -895,12 +897,12 @@ the competitors.</p>
 </div>
 <div class="paragraph">
 <p>Critical sections may be nested. In large code structures it may not
-always be evident to a local routine if it is called already, and surely under
-all imaginable circumstances, inside a critical section and it is
-permitted to open another one. It it leaves its local critical section it
-will not alter the status before&#8201;&#8212;&#8201;be it in or not in another critical
-section. This is way the enter function returns the according status so
-far as "msr".</p>
+always be evident to a local routine if it is already called, and surely
+under all imaginable circumstances, inside a critical section and it is
+permitted to open another one. When it leaves its local critical section
+it will not alter the status before&#8201;&#8212;&#8201;be it in or not in another critical
+section. This is why the enter function returns the status so far as
+"msr".</p>
 </div>
 </div>
 <div class="sect3">
@@ -919,7 +921,7 @@ void ihw_resumeAllInterrupts();</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>A typical use case is for interrupt handlers, which are registered as
+<p>A typical use case is with interrupt handlers, which are registered as
 non-preemptable. Such a handler is entered with all External Interrupts being
 suspended and can do some critical operations, which require this. It may
 then call <code>ihw_resumeAllInterrupts</code> and continue doing less critical stuff
@@ -930,10 +932,11 @@ as a normal, preemptable handler.</p>
 <h4 id="_lock_free_data_exchange">3.4.5. Lock-free data exchange</h4>
 <div class="paragraph">
 <p>Mutual exclusion is not always required. There are lock-free techniques,
-which are mostly build on volatile flag variables that signal particular
-application states and memory barriers that separate the code implementing
-the signaled action from the code doing the signaling. Our project is
-configured such that a full memory barrier can be placed in the code by:</p>
+which are mostly built on volatile flag variables that signal particular
+application states and on memory barriers that separate the code
+implementing the signaled action from the code doing the signaling. Our
+project is configured such that a full memory barrier can be placed in the
+code by:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -966,7 +969,7 @@ atomic_thread_fence(memory_order_seq_cst);</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-05 10:48:51 W. Europe Daylight Time
+Last updated 2017-10-07 00:19:25 W. Europe Daylight Time
 </div>
 </div>
 </body>

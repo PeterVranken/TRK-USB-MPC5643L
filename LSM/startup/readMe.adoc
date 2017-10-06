@@ -92,9 +92,9 @@ startup code and the latter the less critical initialization steps, which
 can be done later and already in C. Both files implement a basic
 configuration of the MCU, which permits safe operation of the code. They
 do not configure more of the MCU hardware as required, there's for example
-nothing about ADC. If an application want to use analogue inputs then
+nothing about ADC. If an application wants to use analogue inputs then
 it'll add the hardware configuration of the ADC as appropriate. The two
-mentioned file contain only the basic initialization and most of this
+mentioned files contain only the basic initialization and most of this
 initialization can be considered application independent or, with other
 words, you can likely reuse these files without modification for most
 applications. This is what they do:
@@ -103,6 +103,9 @@ applications. This is what they do:
 
 - All general purpose and the relevant special purpose registers are
   cleared
+- The trap vectors are defined. All traps but one are dummies. The only
+  used trap is the External Interrupt trap, which handles all normal I/O
+  interrupts
 - The MPU is configured such that it permits access to all available
   memory
 - The Time Base is enabled, this is a high resolution timer in the MCU's
@@ -113,9 +116,6 @@ applications. This is what they do:
 - The stack is initialized
 - The flash configuration is chosen for full clock speed
 - The initialized data sections are filled with the image in ROM
-- The trap vectors are defined. All traps but one are dummies. The only
-  used trap is the External Interrupt trap, which handles all normal I/O
-  interrupts
 - The EABI is prepared, particular registers are loaded accordingly
 - `main` is entered without arguments
 
@@ -188,12 +188,12 @@ handlers, which is a hardware constraint.
 The trap of principal interest for any application is trap #4, External
 Interrupts. All MCU devices (mostly I/O), which can signal their events by
 interrupt, are connected to the MCU's Interrupt Controller (INTC). The
-INTC prioritizes them and routes the most important one through to CPU
-trap #4. Consequently, there's only one interrupt handler for all
-possible I/O interrupts ("External Interrupts"). This handler has been
-implemented for you footnote:[It could be exchanged with your own handler like it
-has been described for any trap handler in section <<How to install your
-own application trap handlers>>].
+INTC prioritizes their interrupt requests and routes the most important
+one through to CPU trap #4. Consequently, there's only one interrupt
+handler for all possible I/O interrupts ("External Interrupts"). This
+handler has been implemented for you footnote:[It could be exchanged with
+your own handler like it has been described for any trap handler in
+section <<How to install your own application trap handlers>>].
 
 The handler for External Interrupts saves the context, queries the INTC
 for the interrupt source and branches into a sub-routine, which is
@@ -287,9 +287,9 @@ code.
 `vectorNum` is the index of the interrupt source according to table 28-4.
 
 .psrPriority
-`psrPriority` is the priority of the interrupt in the range 0..15. (where
+`psrPriority` is the priority of the interrupt in the range 0..15. (Where
 0 is a theoretical option only; this lowest possible priority will make
-the interrupt never be served at all).
+the interrupt never be served at all.)
 
 If different interrupt handlers have differing priorities then the handler
 of the lower priority can basically be preempted by handlers of higher
@@ -314,11 +314,12 @@ good reason to do so.
 
 Virtually all interrupt handlers will share some data with either the main
 application context or other handlers. Due to the different CPU contexts
-the handlers are running in, this cannot generally be done by assignments
-to shared data objects. Mutual exclusion from coincidental data access
-needs to be implemented. A pair of functions is offered to implement so
-called critical sections, i.e. code passages, the execution of which is
-surely not preempted by other contexts. See the code example:
+the handlers are running in, this cannot generally be done by simple,
+unprotected assignments to shared data objects. Mutual exclusion from
+coincidental data access needs to be implemented. A pair of functions is
+offered to implement so called critical sections, i.e. code passages, the
+execution of which is surely not preempted by other contexts. See the code
+example:
 
     #include "ihw_initMcuCoreHW.h"
     uint32_t msr = ihw_enterCriticalSection();
@@ -337,10 +338,10 @@ the competitors.
 Critical sections may be nested. In large code structures it may not
 always be evident to a local routine if it is already called, and surely
 under all imaginable circumstances, inside a critical section and it is
-permitted to open another one. It it leaves its local critical section it
-will not alter the status before -- be it in or not in another critical
-section. This is way the enter function returns the according status so
-far as "msr".
+permitted to open another one. When it leaves its local critical section
+it will not alter the status before -- be it in or not in another critical
+section. This is why the enter function returns the status so far as
+"msr".
 
 ==== Suspend all External Interrupts
 
@@ -353,7 +354,7 @@ necessarily need to be called pairwise:
     void ihw_suspendAllInterrupts();
     void ihw_resumeAllInterrupts();
     
-A typical use case is for interrupt handlers, which are registered as
+A typical use case is with interrupt handlers, which are registered as
 non-preemptable. Such a handler is entered with all External Interrupts being
 suspended and can do some critical operations, which require this. It may
 then call `ihw_resumeAllInterrupts` and continue doing less critical stuff
@@ -362,10 +363,11 @@ as a normal, preemptable handler.
 ==== Lock-free data exchange
 
 Mutual exclusion is not always required. There are lock-free techniques,
-which are mostly build on volatile flag variables that signal particular
-application states and memory barriers that separate the code implementing
-the signaled action from the code doing the signaling. Our project is
-configured such that a full memory barrier can be placed in the code by:
+which are mostly built on volatile flag variables that signal particular
+application states and on memory barriers that separate the code
+implementing the signaled action from the code doing the signaling. Our
+project is configured such that a full memory barrier can be placed in the
+code by:
 
     #include <stdatomic.h>
     atomic_thread_fence(memory_order_seq_cst);
