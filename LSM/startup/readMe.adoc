@@ -1,0 +1,371 @@
+= Sample "startup"
+:Author:    Peter Vranken
+:Email:     mailto:Peter_Vranken@Yahoo.de
+:Revision:  1
+:toc:       left
+:numbered:
+
+== About this sample
+
+This is the initial sample, the "Hello World" so to say. The function is
+the stereotypical blinking LED. The evaluation board has two bi-color user LEDs
+and two buttons and we let both LEDs blink at different frequency and in
+different colors. One button can be used to toggle the color scheme.
+
+There's nothing more to say about the functionality of the sample. The
+true value of the sample is not its function but the infrastructure it
+shapes and which is fully reusable. This infrastructure is described in
+the next sections.
+
+== Tools
+
+=== Compiler and Debugger
+
+The sample is compiled with GCC (MinGW-powerpc-eabi-glo-4.9.2) and it can
+be flashed and debugged with the Code Warrior IDE. (See project overview
+for more details.)
+
+=== Makefile
+
+Compilation and linkage are makefile controlled. The makefile is made
+generic and can be reused for other projects, not only for a tiny "Hello World"
+with a few source files. It supports a number of options (targets); get an
+overview by typing:
+ 
+    mingw32-make help
+
+The makefile requires a little number of configuration settings, among
+which a list of source code directories. These directories are recursively
+searched for `*.c` and `*.S` files and all of these files are compiled or
+assembled, respectively, and all of the object files are linked to the
+flashable binary file. Open main file `GNUmakefile` to get more details.
+
+NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
+port will fail with obscure, misleading error messages. It's safe to use
+the `make.exe` from the compiler installation archive. The makefile is
+designed to run on different host systems but has been tested with Windows
+7 only.
+
+To reuse the sample for your own purpose, you'd adopt the sample's
+complete folder structure, then extend the file `code/mai_main.c` with the
+initialization of and/or jump into your application code. You will likely
+add more source code folders to hold all of your application code. The
+makefile as it is should be capable of building your application.
+
+==== Floating point, SPE and EABI
+
+Compiling C code for an embedded target is much more complex than on the
+host machine, where the simple command line `gcc helloWorld.c` can already
+produce a well-working executable. Embedded targets however require some
+difficult to take decisions on compiler settings and taking different
+settings can easily make your code crash or go into the trap. Reusing the
+makefile in your project will provide a safely running, reasonable and
+well-documented solution for some target specific issues:
+
+- The PowerPC specification comprises different sets of instructions. We
+  want to use as much thereof as supported by both, compiler and CPU. In
+  this project, the Book E and SPE instruction sets are enabled for
+  compilation
+- Floating point operation is not available out of the box. Nowadays, most
+  CPUs offer machine instructions for floating point operations but mostly
+  they support only 32 Bit operations and so does ours. The compiler needs
+  to be configured to produce the according machine instructions and it
+  needs to somehow handle the double precision operations. We've
+  configured it to emit 32 Bit floating point SPE instructions for both
+  single and double precision and to link the code against the floating
+  point emulation library -- for those math calls, which can't be computed
+  with the SPE machine instruction set. footnote:[A remaining, minor issue
+  with double precision math calls is documented inside the makefile.]
+- The compiler is configured for PowerPC EABI support. Different options
+  exist and we have enabled the small data addressing mode for RAM and
+  ROM, which reduces code size and increases performance
+
+== Code structure
+
+The structure of the code of the sample is part of the mentioned, reusable
+infrastructure, too. The functional code found in `mai_main.c` is of little
+interest, it's just a kind of demonstration how to set up an application.
+
+The principal two files are `startup/sup_startup.S` and
+`startup/ihw_initMcuCoreHW.c`. The former contains the assembler written
+startup code and the latter the less critical initialization steps, which
+can be done later and already in C. Both files implement a basic
+configuration of the MCU, which permits safe operation of the code. They
+do not configure more of the MCU hardware as required, there's for example
+nothing about ADC. If an application want to use analogue inputs then
+it'll add the hardware configuration of the ADC as appropriate. The two
+mentioned file contain only the basic initialization and most of this
+initialization can be considered application independent or, with other
+words, you can likely reuse these files without modification for most
+applications. This is what they do:
+
+1. `sup_startup.S`:
+
+- All general purpose and the relevant special purpose registers are
+  cleared
+- The MPU is configured such that it permits access to all available
+  memory
+- The Time Base is enabled, this is a high resolution timer in the MCU's
+  core
+- The complete RAM is zeroized (not only the used portion)
+- The watchdog is disabled (rearming it is considered responsibility of the
+  application code)
+- The stack is initialized
+- The flash configuration is chosen for full clock speed
+- The initialized data sections are filled with the image in ROM
+- The trap vectors are defined. All traps but one are dummies. The only
+  used trap is the External Interrupt trap, which handles all normal I/O
+  interrupts
+- The EABI is prepared, particular registers are loaded accordingly
+- `main` is entered without arguments
+
+2. `ihw_initMcuCoreHW.c`:
+
+- The fault collection and control unit (FCCU) is reset to have no faults
+- CPU and peripheral clock are set to the maximum of 120 MHz
+- The interrupt handler is configured. No interrupt is enabled yet but the
+  application code gets the API function `void
+  ihw_installINTCInterruptHandler(...)` to register its handlers for all
+  kinds of I/O device interrupts
+
+All of the initialization steps from `ihw_initMcuCoreHW.c` are bundled in
+the call of `void ihw_initMcuCoreHW()`, which is expected to be called as
+first operation of C entry function `main`.
+
+=== Only GCC, only Lockstep Mode (LSM)
+
+The implementation does not claim to support different compilers and
+environments. Instead it is dedicated to GCC, the Book E instruction set
+and the MCU's Lockstep Mode and it is tested only with a particular
+revision of GCC.
+
+This has been decided for sake of transparency and reliability. At many
+points of the implementation it would have been quite clear, how to put
+some preprocessor statements in order to support e.g. VLE code or the Code
+Warrior compiler. As a matter of experience, the consequent use of such
+preprocessor constructs can strongly degrade the readability of the code
+and, moreover, such an attempt stays a promise, which can't be safely kept
+without according, comprehensive software tests. The test effort strongly
+rises if many different compile configurations are supported and the
+required software tools may not even be available (as it is for a
+commercial Code Warrior license).
+  footnote:[The implementation is widely based on code samples published
+by NXP, formerly Freescale; references are given in the source code
+comments. The original code may have contained preprocessor switches to
+support VLE instructions or Decoupled Parallel Mode (DPM). If so, these
+switches may still appear in our implementation in order to facilitate a
+possible later migration. However, the according preprocessor switches
+must not be used, the code will not compile.]
+
+We don't think, that it is too difficult to do the migration to another
+configuration. The implementation as it is is well documented and quite
+transparent. However, doing the migration and testing the resulting code
+should be fully in your own responsibility.
+
+=== Traps and interrupts
+
+The startup code implements all trap handlers. All of them except trap #4
+(External Interrupts) are implemented as infinite loops; code execution
+stays at one and the same branch instruction. If your software seems to
+hang, issue a break from the debugger. If you are indeed in a trap you
+will immediately know, which trap it caught and at which address the
+problem arose.
+
+==== How to install your own application trap handlers
+
+The dummy trap handlers are a preliminary development tool only. If your
+application wants to implement a true handler it can; you'll have to
+change the assembler startup code a bit. Declare your handler using the
+`.extern` statement and replace the registration of the dummy handler,
+e.g. `IVOR1trap`, in function `initExceptionHandlers` with your handler.
+
+Place your handler in the linker text section `.ivor` in order to
+guarantee that it resides in the same 64k memory page as all the other
+handlers, which is a hardware constraint.
+
+=== Trap #4, External Interrupts
+
+The trap of principal interest for any application is trap #4, External
+Interrupts. All MCU devices (mostly I/O), which can signal their events by
+interrupt, are connected to the MCU's Interrupt Controller (INTC). The
+INTC prioritizes them and routes the most important one through to CPU
+trap #4. Consequently, there's only one interrupt handler for all
+possible I/O interrupts ("External Interrupts"). This handler has been
+implemented for you footnote:[It could be exchanged with your own handler like it
+has been described for any trap handler in section <<How to install your
+own application trap handlers>>].
+
+The handler for External Interrupts saves the context, queries the INTC
+for the interrupt source and branches into a sub-routine, which is
+specific for that source. This "sub-routine" is a normal C function, which
+is provided by your application. From your perspective of the application
+programmer, this function effectively is the interrupt handler for the
+given interrupt source.
+
+All of these application provided interrupt handlers are held in a large
+table of those. Putting a handler into this table is called "registering
+an interrupt handler" and an API function to do so is provided to the
+application code (see below).
+
+Any reasonable application will require serving a number of interrupt
+sources. It'll configure the according I/O device, implement an according
+interrupt handler and register this handler for the I/O device. After
+having completed this for all required I/O devices, the application will
+globally enable interrupt handling and the application is running.
+  footnote:[The startup software enters `main()` with all External Interrupt
+handling disabled, i.e. MSR bit EE is cleared.]
+  
+No reasonable application will require serving all available interrupt
+sources. The table of registered handlers is initially filled with a dummy
+handler for all of them. This dummy handler can't really serve an
+interrupt as it knows nothing about the source device. It would be called
+if and only if the related interrupt source is enabled and no true handler
+is registered for it. This is considered a severe bug in the application
+code and the dummy handler has been installed only for problem reporting
+and avoidance of undefined code behavior. In DEBUG compilation, the dummy
+handler uses a global variable to indicate the interrupt source and an
+assertion reports the location of the problem. In PRODUCTION compilation,
+the handler is registered at priority zero and it'll immediately return.
+Priority zero will make that the interrupt is never routed through to the
+CPU.
+
+Summarizing, we have a hard-coded set of CPU trap handlers -- exchange
+requires assembler source code change -- and interrupt handlers for
+serving the I/O devices of interest, which are registered by the
+application at run-time.
+
+=== API
+
+Besides doing the basic, widely reusable initialization of the MCU, the
+startup code described above offers a kind of tiny API to the application.
+The sample's functional code demonstrates how to use it. Particularly,
+there is the registration of interrupt handlers and a set of functions to
+safely implement the data exchange between interrupts and other code
+contexts.
+
+==== System initialization
+
+The application needs to complete the basic hardware initialization
+immediately after entry into main:
+
+    #include "ihw_initMcuCoreHW.h"
+    ihw_initMcuCoreHW();
+
+After this call, the application can start doing the further hardware
+initialization as appropriate for its own needs.
+  
+==== Interrupt registration
+
+The registration of interrupts relates to the External Interrupts, i.e. to
+interrupts, which are raised by the devices that are connected to the
+Interrupt Controller (INTC) and which are routed through to the CPU by the
+INTC. All devices that are connected to the INTC are identified by an
+index. You'll find a table of all connected interrupt sources and their
+index in the MPC5643L Microcontroller Reference Manual, section 28.7,
+table 28-4.
+
+If you configure a device to generate interrupts then you will surely
+register your interrupt handler for this device. Look for its index
+(labeled "IRQ #" in table 28-4) and call
+
+    #include "ihw_initMcuCoreHW.h"
+    void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
+                                        , unsigned short vectorNum
+                                        , unsigned char psrPriority
+                                        , bool isPreemptable
+                                        );
+    
+.interruptHandler
+`interruptHandler` is the function implemented in your application, that
+serves the device when it raises the interrupt. Note, this is an ordinary
+C function. No particular type decoration is required to declare it as
+interrupt routine. This is because the function is just a sub-routine of
+the true, reusable interrupt handler that is implemented in the startup
+code.
+
+.vectorNum
+`vectorNum` is the index of the interrupt source according to table 28-4.
+
+.psrPriority
+`psrPriority` is the priority of the interrupt in the range 0..15. (where
+0 is a theoretical option only; this lowest possible priority will make
+the interrupt never be served at all).
+
+If different interrupt handlers have differing priorities then the handler
+of the lower priority can basically be preempted by handlers of higher
+priority. It is important to note that this implies that the handler of a
+given interrupt source can never be interrupted by the same source. A
+handler therefore doesn't necessarily need to be reentrant.
+  footnote:[Interrupt source is not identical to I/O device. Some devices
+can raise different interrupts to signal different events. It's a matter
+of application design to assign them same or different priorities.]
+  
+.isPreemptable  
+The basic, priority controlled preemption of handlers by others can be
+fine tuned using this argument. If `isPreemptable` is set to `false` then the
+registered interrupt handler is entered with the MSR bit EE cleared, i.e.
+the CPU will not serve any other External Interrupts. The handler becomes
+effectively non-preemptable with respect to all other External Interrupts.
+
+The normal setting should be `true`. Inhibit preemption only if there's
+good reason to do so.
+
+==== Mutual exclusion, critical sections
+
+Virtually all interrupt handlers will share some data with either the main
+application context or other handlers. Due to the different CPU contexts
+the handlers are running in, this cannot generally be done by assignments
+to shared data objects. Mutual exclusion from coincidental data access
+needs to be implemented. A pair of functions is offered to implement so
+called critical sections, i.e. code passages, the execution of which is
+surely not preempted by other contexts. See the code example:
+
+    #include "ihw_initMcuCoreHW.h"
+    uint32_t msr = ihw_enterCriticalSection();
+    {
+        /* Put your protected code here. It is executed with mutual
+           exclusion with other handlers and/or main context. */
+    }
+    ihw_leaveCriticalSection(msr);
+    
+Note, that the main context and all handlers are strictly prioritized.
+Among all contexts that access the same shared data object it makes no
+sense to implement a critical section in the context(s) of highest
+priority -- this (these) context(s) won't anyway be preempted by all
+the competitors.
+
+Critical sections may be nested. In large code structures it may not
+always be evident to a local routine if it is already called, and surely
+under all imaginable circumstances, inside a critical section and it is
+permitted to open another one. It it leaves its local critical section it
+will not alter the status before -- be it in or not in another critical
+section. This is way the enter function returns the according status so
+far as "msr".
+
+==== Suspend all External Interrupts
+
+Very similar to the implementation and meaning of critical sections is the
+function pair to suspend and resume all External Interrupts. The major
+difference is that these function can't be nested and that they don't
+necessarily need to be called pairwise:
+
+    #include "ihw_initMcuCoreHW.h"
+    void ihw_suspendAllInterrupts();
+    void ihw_resumeAllInterrupts();
+    
+A typical use case is for interrupt handlers, which are registered as
+non-preemptable. Such a handler is entered with all External Interrupts being
+suspended and can do some critical operations, which require this. It may
+then call `ihw_resumeAllInterrupts` and continue doing less critical stuff
+as a normal, preemptable handler.
+
+==== Lock-free data exchange
+
+Mutual exclusion is not always required. There are lock-free techniques,
+which are mostly build on volatile flag variables that signal particular
+application states and memory barriers that separate the code implementing
+the signaled action from the code doing the signaling. Our project is
+configured such that a full memory barrier can be placed in the code by:
+
+    #include <stdatomic.h>
+    atomic_thread_fence(memory_order_seq_cst);
