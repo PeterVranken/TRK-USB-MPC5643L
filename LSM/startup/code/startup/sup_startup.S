@@ -204,6 +204,7 @@ su_waitForever:
 /* End of sup_startUp */
 
 
+
 /**
  *   @func zeroizeRegisters
  * First step of MCU startup is to bring all relevant registers into a
@@ -319,15 +320,11 @@ zeroizeRegisters:
     mtspr   318, r0     /* DVC1  */
     mtspr   319, r0     /* DVC2  */
     mtspr   562, r0     /* DBCNT */
-
-    /// @todo Is this useful? 624-627 are written immediately after return
-    /* Preliminary configuration of MAS0 - MAS6, will be completed later. */
     mtspr   624, r0     /* MAS0 */
     mtspr   625, r0     /* MAS1 */
     mtspr   626, r0     /* MAS2 */
     mtspr   627, r0     /* MAS3 */
     mtspr   628, r0     /* MAS4 */
-                        /* no MAS5 */
     mtspr   630, r0     /* MAS6 */
 
     evmra   r0, r4      /* ACC */

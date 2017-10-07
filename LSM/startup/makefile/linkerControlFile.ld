@@ -121,18 +121,23 @@ SECTIONS
        ROM. */
     .sdata2 :
     {
-        /* Note, _SDA2_BASE_ is a section internal symbol, so the value is relative to the
-           section begin. It spawns a +/- 15 Bit address space in which the compiler can
-           use short address modes to access the data. Used for EABI initialization in the
-           startup code. */
-        _SDA2_BASE_ = 0x8000 ;
-
         *(.sdata2)
         *(.sdata2.*)
     } >memFlash =0xae
 
     .sbss2  (NOLOAD) :
     {
+        /* @todo NXP document "Power PC Embedded Application Binary Interface (EABI):
+           32-Bit Implementation", p. 11: ".sbss2 is intended to hold writable small data"
+           At another location the same documents says that the same base pointer
+           _SDA2_BASE_ is used to address both sections in a 64k area. This conflicts with
+           holding sdata2 in flash ROM and sbss2 in RAM. The specification permits holding
+           sdata2 in RAM, too, and this seems to be the only chance to conform with all
+           requirements. Unfortunately, on cost of using expensive RAM for const data.
+           Until we do not see the compiler placing writable data into sbss2 we are
+           continuing with a flash ROM allocation. If it would ever happen then we had to
+           either move both sections to RAM or not to use SDA2 at all (which is a matter of
+           the compiler command line). */
         *(.sbss2)
         *(.sbss2.*)
 
@@ -172,11 +177,6 @@ SECTIONS
 
     .sdata  : ALIGN(8)
     {
-        /* Note, _SDA_BASE_ is a section internal symbol, so the value is relative to the
-           section begin. It spawns a +/- 15 Bit address space in which the compiler can
-           use short address modes to access the data. Used for EABI initialization in the
-           startup code. */
-        _SDA_BASE_ = 0x8000 ;
         *(.sdata)
         *(.sdata.*)
 

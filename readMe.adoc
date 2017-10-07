@@ -13,10 +13,10 @@ development tools. It's not difficult to find a GNU C cross compiler for the
 PowerPC architecture in the Internet but as a matter of experience it's
 quite cumbersome to make it produce a flashable and running piece of code.
 Furthermore, if we have produced such a binary file then it's still
-another matter to flash it and to get and setup a debugger to step through
+another matter to flash it and to find and setup a debugger to step through
 it.
 
-None of these tasks can be solved in general. There are to many
+None of these tasks can be solved in general. There are too many
 dependencies on the host machine, the specific chip from the PowerPC
 family and the hardware board it is mounted on. Any imaginable
 configuration of these will need particular investigation and specific
@@ -26,6 +26,12 @@ or less difficult or more or less effortful to migrate this solution to other
 revisions or ports of GCC or other derivates from the micro controller
 family but this is considered your responsibility and out of scope of this
 project.
+
+An important exception is the choice of the host machine. We don't expect
+problems with Linux. GCC is anyway a native UNIX tool, Cygwin is obsolete
+by nature, the Code Warrior is available for UNIX, too, and the makefiles
+used in this project have been designed to run under Linux. Please note,
+that this has not been tested yet.
 
 The configuration for this project is:
 
@@ -42,17 +48,16 @@ The configuration for this project is:
 
 This project presents a number of code samples for this hardware and
 toolchain configuration. All samples are intended to support your software
-development. They are no complete functional applications but offer
-building blocks for a real application.
+development. They are no fully elaborated, functional applications but
+they offer building blocks for a real application.
 
 The most prominent sample is the blinking LED, here called "startup".
 While it is not of any use as such it does contain a lot of reusable stuff
-for a real development: There is the toolchain setup (compiler, linker,
-flash tool, debugger), there is a powerful, generic, fully reusable
-makefile and there is a clean piece of startup code, which will suffice
-for most applications. Remove the LED blink code and start writing your
-application but don't loose time with setting up your development
-environment.
+for real development: As there is the toolchain setup (compiler, linker,
+flash tool, debugger), a powerful, generic, fully reusable makefile and a
+clean piece of startup code, which will suffice for most applications.
+Remove the LED blink code and start writing your application but don't
+loose time with setting up your development environment.
 
 == The samples
 
@@ -61,15 +66,15 @@ the sample "startup", which configures the complete toolchain and
 implements a blinking LED on the evaluation board. More samples will
 follow.
 
-All samples are self-contained. There are several elements, which are same
-in all samples, like startup code and makefile. It would be natural to put
-them in a shared directory and reuse them across the samples. We decided not to
-do so in order to make the reuse of the sample as simple as possible. Once
-you have installed the tools you will be able to copy any sample to an arbitrary
-local directory and either run the makefile from the command line or use
-the Code Warrior Eclipse with our project file loaded to build the sample.
-The CW Eclipse is in either case required to flash and debug the built
-software. 
+All samples are self-contained. There are some common elements, which are
+same in all samples, like startup code and makefile. It would be natural
+to put them in a shared directory and reuse them across the samples. We
+decided not to do so in order to make the reuse of the sample as simple as
+possible. Once you have installed the tools you will be able to copy any
+sample to an arbitrary local directory and either run the makefile from
+the command line or use the Code Warrior IDE with our Eclipse project file
+to build the sample. The Code Warrior IDE is in either case required to
+flash and debug the built software.
 
 == Installation
 
