@@ -82,10 +82,6 @@
  * Local prototypes
  */
  
-/** This symbol is exported by the assembler module sup_startUp.S. It is the entry point
-    into the entire software. Successfully booting means branching there. */
-extern void sup_startUp(void);
-
  
 /*
  * Data definitions

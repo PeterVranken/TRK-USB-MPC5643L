@@ -105,11 +105,11 @@ sup_bamData:
     .global  sup_startUp
     .type    sup_startUp, @function
 sup_startUp:
-    bl      zeroizeRegisters    /* Clear all GPR and all relevant SPR */
+    bl      zeroizeRegisters        /* Clear all GPR and all relevant SPR */
     bl      initExceptionHandlers   /* Set all IVOR registers of the MCU */
-    bl      initMMU             /* Make MMU allow all memory accesses */
-    bl      initTimeBase        /* Start the MCU's high resolution counter */
-    bl      zeroizeSRAM         /* Clear all RAM */
+    bl      initMMU                 /* Make MMU allow all memory accesses */
+    bl      initTimeBase            /* Start the MCU's high resolution counter */
+    bl      zeroizeSRAM             /* Clear all RAM */
 
     /* The watchdog is disabled now. Most available sample code code does do this as C
        function at the beginning of main, however, if we are in lockstep mode and use the

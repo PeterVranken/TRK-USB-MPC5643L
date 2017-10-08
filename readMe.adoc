@@ -69,7 +69,7 @@ follow.
 All samples are self-contained. There are some common elements, which are
 same in all samples, like startup code and makefile. It would be natural
 to put them in a shared directory and reuse them across the samples. We
-decided not to do so in order to make the reuse of the sample as simple as
+decided not to do so in order to make the reuse of the samples as simple as
 possible. Once you have installed the tools you will be able to copy any
 sample to an arbitrary local directory and either run the makefile from
 the command line or use the Code Warrior IDE with our Eclipse project file
@@ -79,7 +79,7 @@ flash and debug the built software.
 == Installation
 
 Please, find more details on installing the required development tools
-in folder tools.
+in folder `tools`.
 
 == Documentation
 
