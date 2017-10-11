@@ -129,9 +129,10 @@ int_INTCInterruptHandlerAry:
  * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file
  * IntcInterrupts_p0.c, l. 102ff.
  */
-    .section .text.ivor
+    .section .text.ivor, "a"
     .globl  int_INTCInterruptHandler
     .type   int_INTCInterruptHandler, @function
+    .align  4
 int_INTCInterruptHandler:
 
 prolog:
@@ -176,6 +177,7 @@ endIfPreemptable:
        in an interrupt. Set it again prior to branching into the user code. */
     oris    r4, r4, 0x0200
     mtmsr   r4
+/// @todo Always allow critical interrupt and machine check, we have traps for that
 
     /* Save rest of context required by EABI */
     stw     r12, 0x4c(r1)       /* Store r12 */
@@ -221,6 +223,7 @@ epilog:
 
     /* Ensure interrupt flag has finished clearing */
     /// @todo Double-check. Docu MCU says that wrteei does do instruction synchronization. Is it about memory vs. instruction synchronization?
+    /// @todo Newer NXP sample code toggles the order of msync and wrteei 0
     msync
 
     /* Write 0 to INTC_EOIR, informing INTC to restore priority as it was on entry to this
@@ -251,4 +254,6 @@ epilog:
     .size   int_INTCInterruptHandler, .-int_INTCInterruptHandler
 /* End of int_INTCInterruptHandler */
 
-
+    /* At the end of the code: Avoid a gap in the section. This makes the flash procedure
+       in Code Warrior 10.7 fail to flash the code. */
+    .align  4

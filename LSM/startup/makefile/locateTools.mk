@@ -34,16 +34,19 @@ else
     dotExe :=
 endif
 
+# Different releases of GCC use different executable names.
+gcc-prefix := powerpc-eabivle-
+
 # Now use the path search to get all absolute tool paths for later use.
 cat := $(call pathSearch,$(toolsSearchPath),cat$(dotExe))
 cp := $(call pathSearch,$(toolsSearchPath),cp$(dotExe))
 echo := $(call pathSearch,$(toolsSearchPath),echo$(dotExe))
 gawk := $(call pathSearch,$(toolsSearchPath),gawk$(dotExe))
 awk := $(gawk)
-gcc := $(call pathSearch,$(toolsSearchPath),powerpc-eabi-gcc$(dotExe))
-g++ := $(call pathSearch,$(toolsSearchPath),powerpc-eabi-g++$(dotExe))
-ar := $(call pathSearch,$(toolsSearchPath),powerpc-eabi-ar$(dotExe))
-objcopy := $(call pathSearch,$(toolsSearchPath),powerpc-eabi-objcopy$(dotExe))
+gcc := $(call pathSearch,$(toolsSearchPath),$(gcc-prefix)gcc$(dotExe))
+g++ := $(call pathSearch,$(toolsSearchPath),$(gcc-prefix)g++$(dotExe))
+ar := $(call pathSearch,$(toolsSearchPath),$(gcc-prefix)ar$(dotExe))
+objcopy := $(call pathSearch,$(toolsSearchPath),$(gcc-prefix)objcopy$(dotExe))
 mkdir := $(call pathSearch,$(toolsSearchPath),mkdir$(dotExe))
 mv := $(call pathSearch,$(toolsSearchPath),mv$(dotExe))
 now := $(call pathSearch,$(toolsSearchPath),now$(dotExe))

@@ -86,17 +86,21 @@ SECTIONS
     .boot :
     {
         ld_romStart = . ;
-        KEEP(*(.boot))
-        KEEP(*(.boot.*))
+        KEEP(*(.bamData))
+        KEEP(*(.bamData.*))
+
+        *(.boot)
+        *(.boot.*)
+
     } >memBoot
 
     .text :
     {
         /* All the MPU trap handlers need to be in the same 64k page. The boot sector
            defines the empty dummy handlers for unused traps. Implemented, real handlers
-           should be located close to the boot sector to have them still in the same 64k
-           page as the dummies. We provide a dedicated section for this purpose, which is
-           placed first after the boot sector. */
+           should be located in or close to the boot sector to have them still in the same
+           64k page as the dummies. We provide a dedicated section for this purpose, which
+           is placed first after the boot sector. */
         *(.text.ivor)
         *(.text.ivor.*)
 

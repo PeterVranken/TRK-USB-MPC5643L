@@ -206,7 +206,7 @@
 #define MMU_TLB1_ENTRY5_MAS2 MMU_MAS2_PERIPHERALS(/* address */ 0xc3f80000)
 #define MMU_TLB1_ENTRY5_MAS3 MMU_MAS3_PERIPHERALS(/* address */ 0xc3f80000)
 
-/* 1MB at 0xffe0_0000 (off-platform peripherals, from ADC) */
+/* 512k at 0xffe0_0000 (off-platform peripherals, from ADC) */
 #define MMU_TLB1_ENTRY6_MAS0 MMU_MAS0(/* idxTblEntry */ 6)
 #define MMU_TLB1_ENTRY6_MAS1 MMU_MAS1_PERIPHERALS(/* size */ 9 /* 512k */)
 #define MMU_TLB1_ENTRY6_MAS2 MMU_MAS2_PERIPHERALS(/* address */ 0xffe00000)

@@ -21,16 +21,16 @@
 /* Module interface
  *   sub_startup
  *   __eabi
- *   IVOR0trap .. IVOR15trap
- *   IVOR32trap .. IVOR34trap
+ *   sup_IVOR0trap .. sup_IVOR15trap
+ *   sup_IVOR32trap .. sup_IVOR34trap
  * Local functions
  *   zeroizeRegisters
+ *   initExceptionHandlers
  *   initMMU
  *   initTimeBase
  *   zeroizeSRAM
  *   disableWatchdog
  *   initFlash
- *   initExceptionHandlers
  */
 
 /*
@@ -48,14 +48,9 @@
 /* The definition of the boot sector (at 0x00000000). The data contents are defined here
    and the location of the boot sector is defined in the linker control file.
      See MCU reference manual, 5.3, p.126ff */
-#define RCHW_BOOT_ID    0x005A
-#define RCHW_VLE        0x0100        /* Enable VLE instruction set */
-
-#ifdef SUP_USE_VLE_INSTRUCTION_SET
-#define RCHW_VALUE (RCHW_VLE|RCHW_BOOT_ID)
-#else
+#define RCHW_VLE        0x0100      /* Optional: Enable VLE instruction set */
+#define RCHW_BOOT_ID    0x005A      /* Fixed, hard-coded value */
 #define RCHW_VALUE (RCHW_BOOT_ID)
-#endif
 
 
 /*
@@ -88,7 +83,7 @@
 /**
  * The boot sector contents are defined as first element of sector .boot.
  */
-    .section .boot, "a"
+    .section .bamData, "a"
     .global sup_bamData         /* Nice to have this in the map file */ 
 sup_bamData:
     .dc.w RCHW_VALUE, 0
@@ -219,7 +214,7 @@ zeroizeRegisters:
 
     /* Set the MSR[SPE] bit so code can use "evmergelo" instruction. */
     lis     r6,0x200
-    ori     r6,r6,0x0
+    ori     r6,r6,0x0 ///@todo This statement should be superfluous
     mtmsr   r6
     isync
 
@@ -258,11 +253,11 @@ zeroizeRegisters:
     evmergelo r30, r0, r0
     evmergelo r31, r0, r0   /* ... r31 */
 
-    mtcrf   0xFF, r29
+    mtcr    r29
 
     mtspr   284, r29    /* TBL     */
     mtspr   285, r29    /* TBU     */
-    mtspr   272, r29    /* SPRG1-7 */
+    mtspr   272, r29    /* SPRG0-7 */
     mtspr   273, r29
     mtspr   274, r29
     mtspr   275, r29
@@ -337,6 +332,297 @@ zeroizeRegisters:
 
 
 /**
+ *   @func initExceptionHandlers
+ * Set up the MCU's interrupt table. This relates to the 16 built-in exception handlers,
+ * not to the external interrupts, the application code will mainly use. (The external
+ * interrupts are one of the 16 exceptions set here.) We assign empty handlers to most
+ * exceptions. These handler loop infinitely so that you will see the exception in the
+ * debugger.
+ */
+    .type   initExceptionHandlers, @function
+    .extern int_INTCInterruptHandler
+initExceptionHandlers:
+    
+    /* Write the common most significant 16 bits of all the exception handler addresses. */
+    lis     r0, sup_IVOR0trap@h
+    mtspr   63, r0      /* IVPR */
+    
+    /* Write the individual bits 4..15 of the all the exception handler addresses. It
+       doesn't matter to write all bits, later at exception handling time they will
+       beignored or read zero. Therefore, we need to ensure that bits 0..3 of the actual
+       addresses are surely zero. This is done below by assembler statement .align. */
+    li      r0, sup_IVOR0trap@l
+    mtspr   400, r0     /* IVOR0 Critical input */
+    li      r0, sup_IVOR1trap@l
+    mtspr   401, r0     /* IVOR1 Machine check (non-maskable interrupt) */
+    li      r0, sup_IVOR2trap@l
+    mtspr   402, r0     /* IVOR2 Data storage */
+    li      r0, sup_IVOR3trap@l
+    mtspr   403, r0     /* IVOR3 Instruction storage */
+    li      r0, int_INTCInterruptHandler@l
+    mtspr   404, r0     /* IVOR4 External input */
+    li      r0, sup_IVOR5trap@l
+    mtspr   405, r0     /* IVOR5 Alignment */
+    li      r0, sup_IVOR6trap@l
+    mtspr   406, r0     /* IVOR6 Program */
+    li      r0, sup_IVOR7trap@l
+    mtspr   407, r0     /* IVOR7 Floating-point unavailable */
+    li      r0, sup_IVOR8trap@l
+    mtspr   408, r0     /* IVOR8 System call */
+    li      r0, sup_IVOR9trap@l
+    mtspr   409, r0     /* IVOR9 AP unavailable (not used by this core) */
+    li      r0, sup_IVOR10trap@l
+    mtspr   410, r0     /* IVOR10 Decrementer */
+    li      r0, sup_IVOR11trap@l
+    mtspr   411, r0     /* IVOR11 Fixed-interval timer */
+    li      r0, sup_IVOR12trap@l
+    mtspr   412, r0     /* IVOR12 Watchdog timer */
+    li      r0, sup_IVOR13trap@l
+    mtspr   413, r0     /* IVOR13 Data TLB error */
+    li      r0, sup_IVOR14trap@l
+    mtspr   414, r0     /* IVOR14 Instruction TLB error */
+    li      r0, sup_IVOR15trap@l
+    mtspr   415, r0     /* IVOR15 Debug */
+                 
+    li      r0, sup_IVOR32trap@l
+    mtspr   528, r0      /* IVOR32 SPE unavailable */
+    li      r0, sup_IVOR33trap@l
+    mtspr   529, r0      /* IVOR33 SPE data exception */
+    li      r0, sup_IVOR34trap@l
+    mtspr   530, r0      /* IVOR34 SPE round exception */
+
+    blr
+
+    .size   initExceptionHandlers, .-initExceptionHandlers
+/* End of initExceptionHandlers */
+
+
+/**
+ *   @func sup_IVOR0trap
+ * Exception handler IVOR0 for the Critical Input interrupt.
+ */
+    .global sup_IVOR0trap   /* Note, it is not required to make this symbol global. However
+                               it is handy to see the traps in the application map file and
+                               this is why we do so for all traps. */
+    .type   sup_IVOR0trap, @function
+    .align  4
+sup_IVOR0trap:
+    b       sup_IVOR0trap   /* Critical Input interrupt handler */ 
+    .size   sup_IVOR0trap, .-sup_IVOR0trap
+
+
+/**
+ *   @func sup_IVOR1trap
+ * Exception handler IVOR1 for the Machine check / (NMI) interrupt.
+ */
+    .global sup_IVOR1trap
+    .type   sup_IVOR1trap, @function
+    .align  4
+sup_IVOR1trap:
+    b       sup_IVOR1trap   /* Machine check / (NMI) interrupt handler */
+    .size   sup_IVOR1trap, .-sup_IVOR1trap
+
+
+/**
+ *   @func sup_IVOR2trap
+ * Exception handler IVOR2 for the Data Storage interrupt. This trap is taken if the MMU
+ * signals an unpermitted data access.
+ */
+    .global sup_IVOR2trap
+    .type   sup_IVOR2trap, @function
+    .align  4
+sup_IVOR2trap:
+    b       sup_IVOR2trap   /* Data Storage interrupt handler */
+    .size   sup_IVOR2trap, .-sup_IVOR2trap
+
+
+/**
+ *   @func sup_IVOR3trap
+ * Exception handler IVOR3 for the Instruction Storage interrupt. This trap is taken if
+ * the MMU signals an unpermitted instruction fetch.
+ */
+    .global sup_IVOR3trap
+    .type   sup_IVOR3trap, @function
+    .align  4
+sup_IVOR3trap:
+    b       sup_IVOR3trap   /* Instruction Storage interrupt handler */
+    .size   sup_IVOR3trap, .-sup_IVOR3trap
+
+
+/* Note, there's no default IVOR4 trap since we always install a real trap handler for the
+   inevitable external interrupt handling. */
+
+/**
+ *   @func sup_IVOR5trap
+ * Exception handler IVOR5 for the Alignment interrupt.
+ */
+    .global sup_IVOR5trap
+    .type   sup_IVOR5trap, @function
+    .align  4
+sup_IVOR5trap:
+    b       sup_IVOR5trap   /* Alignment interrupt handler */
+    .size   sup_IVOR5trap, .-sup_IVOR5trap
+
+
+/**
+ *   @func sup_IVOR6trap
+ * Exception handler IVOR6 for the Program interrupt.
+ */
+    .global sup_IVOR6trap
+    .type   sup_IVOR6trap, @function
+    .align  4
+sup_IVOR6trap:
+    b       sup_IVOR6trap   /* Program interrupt handler */
+    .size   sup_IVOR6trap, .-sup_IVOR6trap
+
+
+/**
+ *   @func sup_IVOR7trap
+ * Exception handler IVOR7 for the Floating-point unavailable interrupt.
+ */
+    .global sup_IVOR7trap
+    .type   sup_IVOR7trap, @function
+    .align  4
+sup_IVOR7trap:
+    b       sup_IVOR7trap   /* Floating-point unavailable interrupt handler */
+    .size   sup_IVOR7trap, .-sup_IVOR7trap
+
+
+/**
+ *   @func sup_IVOR8trap
+ * Exception handler IVOR8 for the System call interrupt.
+ */
+    .global sup_IVOR8trap
+    .type   sup_IVOR8trap, @function
+    .align  4
+sup_IVOR8trap:
+    b       sup_IVOR8trap   /* System call interrupt handler */
+    .size   sup_IVOR8trap, .-sup_IVOR8trap
+
+
+/**
+ *   @func sup_IVOR9trap
+ * Exception handler IVOR9 for the AP unavailable interrupt.
+ */
+    .global sup_IVOR9trap
+    .type   sup_IVOR9trap, @function
+    .align  4
+sup_IVOR9trap:
+    b       sup_IVOR9trap   /* AP unavailable interrupt handler */
+    .size   sup_IVOR9trap, .-sup_IVOR9trap
+
+
+/**
+ *   @func sup_IVOR10trap
+ * Exception handler IVOR10 for the Decrementer interrupt.
+ */
+    .global sup_IVOR10trap
+    .type   sup_IVOR10trap, @function
+    .align  4
+sup_IVOR10trap:
+    b       sup_IVOR10trap   /* Decrementer interrupt handler */
+    .size   sup_IVOR10trap, .-sup_IVOR10trap
+
+
+/**
+ *   @func sup_IVOR11trap
+ * Exception handler IVOR11 for the Fixed Interval Timer interrupt.
+ */
+    .global sup_IVOR11trap
+    .type   sup_IVOR11trap, @function
+    .align  4
+sup_IVOR11trap:
+    b       sup_IVOR11trap   /* Fixed Interval Timer interrupt handler */
+    .size   sup_IVOR11trap, .-sup_IVOR11trap
+
+
+/**
+ *   @func sup_IVOR12trap
+ * Exception handler IVOR12 for the Watchdog Timer interrupt.
+ */
+    .global sup_IVOR12trap
+    .type   sup_IVOR12trap, @function
+    .align  4
+sup_IVOR12trap:
+    b       sup_IVOR12trap   /* Watchdog Timer interrupt handler */
+    .size   sup_IVOR12trap, .-sup_IVOR12trap
+
+
+/**
+ *   @func sup_IVOR13trap
+ * Exception handler IVOR13 for the Data TLB Error interrupt.
+ */
+    .global sup_IVOR13trap
+    .type   sup_IVOR13trap, @function
+    .align  4
+sup_IVOR13trap:
+    b       sup_IVOR13trap   /* Data TLB Error interrupt handler */
+    .size   sup_IVOR13trap, .-sup_IVOR13trap
+
+
+/**
+ *   @func sup_IVOR14trap
+ * Exception handler IVOR14 for the Instruction TLB Error interrupt.
+ */
+    .global sup_IVOR14trap
+    .type   sup_IVOR14trap, @function
+    .align  4
+sup_IVOR14trap:
+    b       sup_IVOR14trap   /* Instruction TLB Error interrupt handler */
+    .size   sup_IVOR14trap, .-sup_IVOR14trap
+
+
+/**
+ *   @func sup_IVOR15trap
+ * Exception handler IVOR15 for the Debug I.
+ */
+    .global sup_IVOR15trap
+    .type   sup_IVOR15trap, @function
+    .align  4
+sup_IVOR15trap:
+    b       sup_IVOR15trap   /* Debug Interrupt */
+    .size   sup_IVOR15trap, .-sup_IVOR15trap
+
+/**
+ *   @func sup_IVOR32trap
+ * Exception handler IVOR32 for the SPE unavailable interrupt.
+ */
+    .global sup_IVOR32trap
+    .type   sup_IVOR32trap, @function
+    .align  4
+sup_IVOR32trap:
+    b       sup_IVOR32trap   /* SPE unavailable */
+    .size   sup_IVOR32trap, .-sup_IVOR32trap
+
+
+/**
+ *   @func sup_IVOR33trap
+ * Exception handler IVOR33 for the SPE data exception interrupt.
+ */
+    .global sup_IVOR33trap
+    .type   sup_IVOR33trap, @function
+    .align  4
+sup_IVOR33trap:
+    b       sup_IVOR33trap   /* SPE data exception */
+    .size   sup_IVOR33trap, .-sup_IVOR33trap
+
+
+/**
+ *   @func sup_IVOR34trap
+ * Exception handler IVOR34 for the SPE round exception interrupt.
+ */
+    .global sup_IVOR34trap
+    .type   sup_IVOR34trap, @function
+    .align  4
+sup_IVOR34trap:
+    b       sup_IVOR34trap   /* SPE round exception */
+    .size   sup_IVOR34trap, .-sup_IVOR34trap
+
+/* End of IVOR exception handlers 0..15 and 32..24 */
+
+
+
+/**
  *   @func initMMU
  * Shape an initial MMU configuration such that all addresses can be used without the
  * danger of an exception.
@@ -362,7 +648,6 @@ initMMU:
        space, see MSR, bit IS. 
          Note, the assembly code in this routine must not touch the RAM, it is not
        accessible yet. */
-    /// @todo Add NXP temporary initialization for safe access to the MMU
 
     /* Install the temporary table entry for flash ROM instruction read. We use the normal
        configuration with the only modification of selecting another address space.
@@ -463,7 +748,7 @@ initMMU:
     ori     r6, r6, MMU_TLB1_ENTRY5_MAS3@l
     bl      writeMMUTableEntry
 
-    /* 1MB at 0xffe0_0000 (off-platform peripherals, from ADC) */
+    /* 512k at 0xffe0_0000 (off-platform peripherals, from ADC) */
     lis     r3, MMU_TLB1_ENTRY6_MAS0@h
     ori     r3, r3, MMU_TLB1_ENTRY6_MAS0@l
     lis     r4, MMU_TLB1_ENTRY6_MAS1@h
@@ -715,9 +1000,9 @@ disableWatchdog:
  */
     .type   initFlash, @function
 initFlash:
-    stwu    sp, -20(sp)
+    stwu  sp, -24(sp) /* We need 20 Byte but stack frame must be multiple of 8 (EABI) */
     mflr    r0
-    stw     r0, 24(sp)
+    stw     r0, 28(sp)
     
     /* Load the required three movable instructions into r8..r10. */
     lis     r9, if_movalbeMachineCode@ha
@@ -731,20 +1016,22 @@ initFlash:
     stw     r9, 12(sp)
     stw     r10, 16(sp)
     
-    /* Load function arguments or our moveable sub-routine. */
+    /* Load function arguments of our moveable sub-routine. */
     lis     r3, 0x18c7      /* 0x18c7eded: Configuration word. */
     ori     r3, r3, 0xeded
     lis     r4, 0xc3f8      /* &CFLASH.PFCR0.R: Configuration register of flash controller */
     ori r4, r4, 0x801c
+    msync
+    isync
     
     /* Call sub-routine, which is in the stack area. */
     la      r9, 8(sp)
     mtctr   r9
     bctrl
     
-    lwz     r0, 24(sp)
+    lwz     r0, 28(sp)
     mtlr    r0
-    addi    sp, sp, 20
+    addi    sp, sp, 24
     blr
 
 if_movalbeMachineCode:
@@ -754,297 +1041,6 @@ if_movalbeMachineCode:
     
     .size   initFlash, .-initFlash
 /* End of initFlash */
-
-
-
-/**
- *   @func initExceptionHandlers
- * Set up the MCU's interrupt table. This relates to the 16 built-in exception handlers,
- * not to the external interrupts, the application code will mainly use. (The external
- * interrupts are one of the 16 exceptions set here.) We assign empty handlers to most
- * exceptions. These handler loop infinitely so that you will see the exception in the
- * debugger.
- */
-    .type   initExceptionHandlers, @function
-    .extern int_INTCInterruptHandler
-initExceptionHandlers:
-    
-    /* Write the common most significant 16 bits of all the exception handler addresses. */
-    lis     r0, IVOR0trap@h
-    mtspr   63, r0      /* IVPR */
-    
-    /* Write the individual bits 4..15 of the all the exception handler addresses. It
-       doesn't matter to write all bits, later at exception handling time they will
-       beignored or read zero. Therefore, we need to ensure that bits 0..3 of the actual
-       addresses are surely zero. This is done below by assembler statement .align. */
-    li      r0, IVOR0trap@l
-    mtspr   400, r0     /* IVOR0 Critical input */
-    li      r0, IVOR1trap@l
-    mtspr   401, r0     /* IVOR1 Machine check (non-maskable interrupt) */
-    li      r0, IVOR2trap@l
-    mtspr   402, r0     /* IVOR2 Data storage */
-    li      r0, IVOR3trap@l
-    mtspr   403, r0     /* IVOR3 Instruction storage */
-    li      r0, int_INTCInterruptHandler@l
-    mtspr   404, r0     /* IVOR4 External input */
-    li      r0, IVOR5trap@l
-    mtspr   405, r0     /* IVOR5 Alignment */
-    li      r0, IVOR6trap@l
-    mtspr   406, r0     /* IVOR6 Program */
-    li      r0, IVOR7trap@l
-    mtspr   407, r0     /* IVOR7 Floating-point unavailable */
-    li      r0, IVOR8trap@l
-    mtspr   408, r0     /* IVOR8 System call */
-    li      r0, IVOR9trap@l
-    mtspr   409, r0     /* IVOR9 AP unavailable (not used by this core) */
-    li      r0, IVOR10trap@l
-    mtspr   410, r0     /* IVOR10 Decrementer */
-    li      r0, IVOR11trap@l
-    mtspr   411, r0     /* IVOR11 Fixed-interval timer */
-    li      r0, IVOR12trap@l
-    mtspr   412, r0     /* IVOR12 Watchdog timer */
-    li      r0, IVOR13trap@l
-    mtspr   413, r0     /* IVOR13 Data TLB error */
-    li      r0, IVOR14trap@l
-    mtspr   414, r0     /* IVOR14 Instruction TLB error */
-    li      r0, IVOR15trap@l
-    mtspr   415, r0     /* IVOR15 Debug */
-                 
-    li      r0, IVOR32trap@l
-    mtspr   528, r0      /* IVOR32 SPE unavailable */
-    li      r0, IVOR33trap@l
-    mtspr   529, r0      /* IVOR33 SPE data exception */
-    li      r0, IVOR34trap@l
-    mtspr   530, r0      /* IVOR34 SPE round exception */
-
-    blr
-
-    .size   initExceptionHandlers, .-initExceptionHandlers
-/* End of initExceptionHandlers */
-
-
-/**
- *   @func IVOR0trap
- * Exception handler IVOR0 for the Critical Input interrupt.
- */
-    .global IVOR0trap   /* Note, it is not required to make this symbol global. However it
-                           is handy to see the traps in the application map file and this
-                           is why we do so for all traps. */
-    .type   IVOR0trap, @function
-    .align  4
-IVOR0trap:
-    b       IVOR0trap   /* Critical Input interrupt handler */ 
-    .size   IVOR0trap, .-IVOR0trap
-
-
-/**
- *   @func IVOR1trap
- * Exception handler IVOR1 for the Machine check / (NMI) interrupt.
- */
-    .global IVOR1trap
-    .type   IVOR1trap, @function
-    .align  4
-IVOR1trap:
-    b       IVOR1trap   /* Machine check / (NMI) interrupt handler */
-    .size   IVOR1trap, .-IVOR1trap
-
-
-/**
- *   @func IVOR2trap
- * Exception handler IVOR2 for the Data Storage interrupt. This trap is taken if the MMU
- * signals an unpermitted data access.
- */
-    .global IVOR2trap
-    .type   IVOR2trap, @function
-    .align  4
-IVOR2trap:
-    b       IVOR2trap   /* Data Storage interrupt handler */
-    .size   IVOR2trap, .-IVOR2trap
-
-
-/**
- *   @func IVOR3trap
- * Exception handler IVOR3 for the Instruction Storage interrupt. This trap is taken if
- * the MMU signals an unpermitted instruction fetch.
- */
-    .global IVOR3trap
-    .type   IVOR3trap, @function
-    .align  4
-IVOR3trap:
-    b       IVOR3trap   /* Instruction Storage interrupt handler */
-    .size   IVOR3trap, .-IVOR3trap
-
-
-/* Note, there's no default IVOR4 trap since we always install a real trap handler for the
-   inevitable external interrupt handling. */
-
-/**
- *   @func IVOR5trap
- * Exception handler IVOR5 for the Alignment interrupt.
- */
-    .global IVOR5trap
-    .type   IVOR5trap, @function
-    .align  4
-IVOR5trap:
-    b       IVOR5trap   /* Alignment interrupt handler */
-    .size   IVOR5trap, .-IVOR5trap
-
-
-/**
- *   @func IVOR6trap
- * Exception handler IVOR6 for the Program interrupt.
- */
-    .global IVOR6trap
-    .type   IVOR6trap, @function
-    .align  4
-IVOR6trap:
-    b       IVOR6trap   /* Program interrupt handler */
-    .size   IVOR6trap, .-IVOR6trap
-
-
-/**
- *   @func IVOR7trap
- * Exception handler IVOR7 for the Floating-point unavailable interrupt.
- */
-    .global IVOR7trap
-    .type   IVOR7trap, @function
-    .align  4
-IVOR7trap:
-    b       IVOR7trap   /* Floating-point unavailable interrupt handler */
-    .size   IVOR7trap, .-IVOR7trap
-
-
-/**
- *   @func IVOR8trap
- * Exception handler IVOR8 for the System call interrupt.
- */
-    .global IVOR8trap
-    .type   IVOR8trap, @function
-    .align  4
-IVOR8trap:
-    b       IVOR8trap   /* System call interrupt handler */
-    .size   IVOR8trap, .-IVOR8trap
-
-
-/**
- *   @func IVOR9trap
- * Exception handler IVOR9 for the AP unavailable interrupt.
- */
-    .global IVOR9trap
-    .type   IVOR9trap, @function
-    .align  4
-IVOR9trap:
-    b       IVOR9trap   /* AP unavailable interrupt handler */
-    .size   IVOR9trap, .-IVOR9trap
-
-
-/**
- *   @func IVOR10trap
- * Exception handler IVOR10 for the Decrementer interrupt.
- */
-    .global IVOR10trap
-    .type   IVOR10trap, @function
-    .align  4
-IVOR10trap:
-    b       IVOR10trap   /* Decrementer interrupt handler */
-    .size   IVOR10trap, .-IVOR10trap
-
-
-/**
- *   @func IVOR11trap
- * Exception handler IVOR11 for the Fixed Interval Timer interrupt.
- */
-    .global IVOR11trap
-    .type   IVOR11trap, @function
-    .align  4
-IVOR11trap:
-    b       IVOR11trap   /* Fixed Interval Timer interrupt handler */
-    .size   IVOR11trap, .-IVOR11trap
-
-
-/**
- *   @func IVOR12trap
- * Exception handler IVOR12 for the Watchdog Timer interrupt.
- */
-    .global IVOR12trap
-    .type   IVOR12trap, @function
-    .align  4
-IVOR12trap:
-    b       IVOR12trap   /* Watchdog Timer interrupt handler */
-    .size   IVOR12trap, .-IVOR12trap
-
-
-/**
- *   @func IVOR13trap
- * Exception handler IVOR13 for the Data TLB Error interrupt.
- */
-    .global IVOR13trap
-    .type   IVOR13trap, @function
-    .align  4
-IVOR13trap:
-    b       IVOR13trap   /* Data TLB Error interrupt handler */
-    .size   IVOR13trap, .-IVOR13trap
-
-
-/**
- *   @func IVOR14trap
- * Exception handler IVOR14 for the Instruction TLB Error interrupt.
- */
-    .global IVOR14trap
-    .type   IVOR14trap, @function
-    .align  4
-IVOR14trap:
-    b       IVOR14trap   /* Instruction TLB Error interrupt handler */
-    .size   IVOR14trap, .-IVOR14trap
-
-
-/**
- *   @func IVOR15trap
- * Exception handler IVOR15 for the Debug I.
- */
-    .global IVOR15trap
-    .type   IVOR15trap, @function
-    .align  4
-IVOR15trap:
-    b       IVOR15trap   /* Debug Interrupt */
-    .size   IVOR15trap, .-IVOR15trap
-
-/**
- *   @func IVOR32trap
- * Exception handler IVOR32 for the SPE unavailable interrupt.
- */
-    .global IVOR32trap
-    .type   IVOR32trap, @function
-    .align  4
-IVOR32trap:
-    b       IVOR32trap   /* SPE unavailable */
-    .size   IVOR32trap, .-IVOR32trap
-
-
-/**
- *   @func IVOR33trap
- * Exception handler IVOR33 for the SPE data exception interrupt.
- */
-    .global IVOR33trap
-    .type   IVOR33trap, @function
-    .align  4
-IVOR33trap:
-    b       IVOR33trap   /* SPE data exception */
-    .size   IVOR33trap, .-IVOR33trap
-
-
-/**
- *   @func IVOR34trap
- * Exception handler IVOR34 for the SPE round exception interrupt.
- */
-    .global IVOR34trap
-    .type   IVOR34trap, @function
-    .align  4
-IVOR34trap:
-    b       IVOR34trap   /* SPE round exception */
-    .size   IVOR34trap, .-IVOR34trap
-
-/* End of IVOR exception handlers 0..15 and 32..24 */
 
 
 
@@ -1071,3 +1067,8 @@ __eabi:
 
     .size   __eabi, .-__eabi
 /* End of __eabi */
+
+    /* At the end of the code: Avoid a gap in the section. This makes the flash procedure
+       in Code Warrior 10.7 fail to flash the code. */
+    .align  4
+

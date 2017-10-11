@@ -231,7 +231,7 @@ VPATH := $(srcDirList) $(targetDir)
 useSoftwareEmulation := 0
 targetFlags := -mcpu=8540 -Wa,-me500 -Wa,-mbooke32 -misel=yes                               \
                -meabi -msdata=default -G8                                                   \
-               -mregnames -Wa,-mregnames
+               -mregnames
 ifeq ($(useSoftwareEmulation),1)
     targetFlags += -mspe -mfloat-gprs=no -fshort-double -msoft-float
 else
@@ -258,6 +258,7 @@ asmFlags = $(targetFlags)                                                       
            $(foreach path,$(srcDirList) $(incDirList),-I$(path))                            \
            $(cDefines) $(foreach def,$(defineList),-D$(def))                                \
            -Wa,-g -Wa,-gdwarf-2
+
 ifneq ($(CONFIG),DEBUG)
     asmFlags += $(productionCodeOptimization)
 endif
@@ -378,7 +379,7 @@ $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath) $(projectResourceFile)
 lFlags = -Wl,-Tmakefile/linkerControlFile.ld -nostartfiles -Wl,--gc-sections $(targetFlags) \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
          -Wl,--warn-common,--warn-once -Wl,-g                                               \
-         -msoft-float
+         -msoft-float --sysroot=$(dir $(gcc))../powerpc-eabivle/newlib
 
 $(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt makefile/linkerControlFile.ld
 	$(info Linking project. Mapfile is $(targetDir)$(target).map)

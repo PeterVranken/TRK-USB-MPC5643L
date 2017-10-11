@@ -40,7 +40,7 @@ The configuration for this project is:
 |Micro controller|https://www.nxp.com/products/microcontrollers-and-processors/power-architecture-processors/mpc5xxx-55xx-32-bit-mcus/ultra-reliable-mpc56xx-32-bit-automotive-and-industrial-microcontrollers-mcus/ultra-reliable-dual-core-32-bit-mcu-for-automotive-and-industrial-applications:MPC564xL[NXP PowerPC MPC5643L]
 |Evaluation board|https://www.nxp.com/support/developer-resources/hardware-development-tools/startertrak-development-boards/mpc5643l-startertrak-for-safety-applications:TRK-USB-MPC5643L[NXP TRK-USB-5643L]
 |Host|Windows 7
-|C compiler|https://sourceforge.net/projects/mingw-gcc-powerpc-eabi/files[MinGW-powerpc-eabi-glo-4.9.2]
+|C compiler|https://drive.google.com/open?id=0B_3zBh2c7LroNEFIOVlJcUVKRWc[MinGW-powerpc-eabivle-4.9.4]
 |Unix tools|http://www.cygwin.com/[Cygwin]
 |Flash tool|https://www.nxp.com/pages/codewarrior-for-mcus-eclipse-ide-coldfire.-56800-e-dsc-kinetis.-nxp-56xx-rs08-s08-s12z-v10.7:CW-MCU10?tab=Design_Tools_Tab[NXP Code Warrior 10.7]
 |Debugger|(same as flash tool)
@@ -79,7 +79,7 @@ flash and debug the built software.
 == Installation
 
 Please, find more details on installing the required development tools
-in folder `tools`.
+in Wiki page Tools (TODO).
 
 == Documentation
 

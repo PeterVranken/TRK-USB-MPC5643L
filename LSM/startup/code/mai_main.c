@@ -228,6 +228,9 @@ void main()
         if((mai_cntIdle % 500000) == 0)
         {
             /* Request SW interrupt 3 (test) */
+/// @todo This statement generates a 32 Bit write but we need a byte access. This is an
+// error if there are race conditions. We would clear another SW IRQ by reading and writing
+// back that bit
             INTC.SSCIR0_3.B.SET3 = 1;
         }
 #if 0
