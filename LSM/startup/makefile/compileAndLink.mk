@@ -229,13 +229,13 @@ VPATH := $(srcDirList) $(targetDir)
 # 64k each (RAM and ROM) become too small to hold all "small" data objects. Prior to
 # disabling the mode you should first try to reduce the size limit to 4 or 2 Byte.
 useSoftwareEmulation := 0
-targetFlags := -mcpu=8540 -Wa,-me500 -Wa,-mbooke32 -misel=yes                               \
+targetFlags := -mcpu=e200z4 -mno-vle -mbig-endian -misel=yes                                \
                -meabi -msdata=default -G8                                                   \
                -mregnames
 ifeq ($(useSoftwareEmulation),1)
     targetFlags += -mspe -mfloat-gprs=no -fshort-double -msoft-float
 else
-    targetFlags += -mspe -mfloat-gprs=yes -fshort-double
+    targetFlags += -mspe -mhard-float -fshort-double
 endif
 
 # Choose optimization level for production compilation.
@@ -379,7 +379,7 @@ $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath) $(projectResourceFile)
 lFlags = -Wl,-Tmakefile/linkerControlFile.ld -nostartfiles -Wl,--gc-sections $(targetFlags) \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
          -Wl,--warn-common,--warn-once -Wl,-g                                               \
-         -msoft-float --sysroot=$(dir $(gcc))../powerpc-eabivle/newlib
+         -mhard-float --sysroot=$(dir $(gcc))../powerpc-eabivle/newlib
 
 $(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt makefile/linkerControlFile.ld
 	$(info Linking project. Mapfile is $(targetDir)$(target).map)
