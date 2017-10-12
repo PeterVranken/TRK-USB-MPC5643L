@@ -6,77 +6,7 @@
 		<cconfiguration id="0.27344492">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492" moduleId="org.eclipse.cdt.core.settings" name="DEBUG">
 				<macros>
-					<stringListMacro name="Path" type="VALUE_TEXT_LIST">
-						<value name="C:\ProgramFiles\MinGW-powerpc-eabi-glo-4.9.2\bin"/>
-						<value name="C:/ProgramFiles/NXP/S32DS_Power_v1.2/eclipse/jre/bin/client"/>
-						<value name="C:/ProgramFiles/NXP/S32DS_Power_v1.2/eclipse/jre/bin"/>
-						<value name="C:/ProgramFiles/NXP/S32DS_Power_v1.2/eclipse/jre/lib/i386"/>
-						<value name="C:\ProgramFiles\perl-5.24.1\site\bin"/>
-						<value name="C:\ProgramFiles\perl-5.24.1\bin"/>
-						<value name="C:\ProgramFiles\Python35\Scripts\"/>
-						<value name="C:\ProgramFiles\Python35\"/>
-						<value name="C:\ProgramFiles\HighTec\licensemanager"/>
-						<value name="C:\ProgramData\Oracle\Java\javapath"/>
-						<value name="C:\ProgramFiles\MinGW-5.3.0\bin"/>
-						<value name="C:\ProgramFiles\MinGW-5.3.0\msys\1.0\bin"/>
-						<value name="C:\ProgramFiles\Python35-w32\Scripts\"/>
-						<value name="C:\ProgramFiles\Python35-w32\"/>
-						<value name="C:\Program Files (x86)\MiKTeX 2.9\miktex\bin\"/>
-						<value name="C:\Oracle\app\product\11.2.0\client_1\bin\"/>
-						<value name="C:\Program Files (x86)\Intel\iCLS Client\"/>
-						<value name="C:\Program Files\Intel\iCLS Client\"/>
-						<value name="C:\WINDOWS\system32"/>
-						<value name="C:\WINDOWS"/>
-						<value name="C:\WINDOWS\System32\Wbem"/>
-						<value name="C:\WINDOWS\System32\WindowsPowerShell\v1.0\"/>
-						<value name="C:\Program Files\Intel\Intel(R) Management Engine Components\DAL"/>
-						<value name="C:\Program Files (x86)\Intel\Intel(R) Management Engine Components\DAL"/>
-						<value name="C:\Program Files\Intel\Intel(R) Management Engine Components\IPT"/>
-						<value name="C:\Program Files (x86)\Intel\Intel(R) Management Engine Components\IPT"/>
-						<value name="C:\Program Files\MATLAB\R2015b\bin"/>
-						<value name="C:\Program Files\MATLAB\R2013b\bin"/>
-						<value name="C:\Program Files (x86)\MATLAB\R2010bSP1\bin\"/>
-						<value name="C:\Program Files (x86)\Seapine\TestTrack\"/>
-						<value name="C:\Program Files\MATLAB\R2012b\bin"/>
-						<value name="c:\ProgramFiles\Java\jdk1.7.0_71\bin"/>
-						<value name="c:\BMW\SVN\99_Tools\gawk-4.0.1"/>
-						<value name="C:\Program Files\Intel\WiFi\bin\"/>
-						<value name="C:\Program Files\Common Files\Intel\WirelessCommon\"/>
-						<value name="C:\Program Files\WIDCOMM\Bluetooth Software\"/>
-						<value name="C:\Program Files\WIDCOMM\Bluetooth Software\syswow64"/>
-						<value name="c:\ProgramFiles\emacs-25.1.1\bin"/>
-						<value name="c:\ProgramFiles\bin"/>
-						<value name="c:\ProgramFiles\Aspell\bin"/>
-						<value name="c:\ProgramFiles\Perl\bin"/>
-						<value name="c:\ProgramFiles\CVSBin"/>
-						<value name="c:\ProgramFiles\InterpreterForSSL\bin"/>
-						<value name="c:\ProgramFiles\Apache\apache-ant-1.9.4\bin"/>
-						<value name="c:\ProgramFiles\NSIS"/>
-						<value name="c:\ProgramFiles\bin\PsTools"/>
-						<value name="c:\ProgramFiles\doxygen-1.8.8\bin"/>
-						<value name="C:\Program Files (x86)\7-Zip"/>
-						<value name="C:\Program Files (x86)\VideoLAN\VLC"/>
-						<value name="C:\ProgramFiles\Visu-IT\DDS7.1.R0"/>
-						<value name="C:\Program Files (x86)\Seapine\TestTrack\"/>
-						<value name="C:\ProgramFiles\srecord-1.62-win32"/>
-						<value name="C:\ProgramFiles\Vector\ASAP2-Tool-Set-9.0\Exec"/>
-						<value name="C:\ProgramFiles\ETAS\RTA-RTE-v5.6.0\bin"/>
-						<value name="C:\ProgramFiles\bin\wget\bin"/>
-						<value name="C:\ProgramFiles\gs\gs9.15\bin"/>
-						<value name="C:\ProgramFiles\dSPACE-TargetLink-3.4-win32\Exe"/>
-						<value name="C:\ProgramFiles\WinMerge"/>
-						<value name="C:\Program Files\7-Zip"/>
-						<value name="C:\ProgramFiles\Pandoc\"/>
-						<value name="C:\Program Files\Internet Explorer"/>
-						<value name="C:\ProgramFiles\GnuPG\pub"/>
-						<value name="C:\ProgramFiles\TortoiseSVN\bin"/>
-						<value name="C:\ProgramFiles\Git\cmd"/>
-						<value name="C:\Program Files\MATLAB\R2015b\polyspace\bin"/>
-						<value name="C:\ProgramFiles\Ruby24-x64\bin"/>
-						<value name="C:\ProgramFiles\PuTTY\"/>
-						<value name="C:\ProgramFiles\Ruby24-x64\bin"/>
-						<value name="C:\ProgramFiles\NXP\S32DS_Power_v1.2\eclipse"/>
-					</stringListMacro>
+					<stringListMacro name="Path" type="VALUE_TEXT_LIST"/>
 				</macros>
 				<externalSettings/>
 				<extensions>
@@ -93,7 +23,7 @@
 					<folderInfo id="0.27344492." name="/" resourcePath="">
 						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.1536408283" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.1536408283.1249798448" name=""/>
-							<builder arguments="" autoBuildTarget="-s jobs=4 CONFIG=DEBUG build" buildPath="${ProjDirPath}" cleanBuildTarget="-s CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.1366328964" incrementalBuildTarget="-s jobs=4 CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="true" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 CONFIG=DEBUG build" buildPath="${ProjDirPath}" cleanBuildTarget="-s CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.1366328964" incrementalBuildTarget="-s jobs=4 CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.189979424" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1946264837" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1320621573" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>

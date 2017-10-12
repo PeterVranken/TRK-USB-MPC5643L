@@ -5,6 +5,9 @@
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="0.27344492">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492" moduleId="org.eclipse.cdt.core.settings" name="DEBUG">
+				<macros>
+					<stringListMacro name="Path" type="VALUE_TEXT_LIST"/>
+				</macros>
 				<externalSettings/>
 				<extensions>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
@@ -16,7 +19,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of code for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492" isPrebuildInvalidatingBuild="false" name="DEBUG" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+				<configuration buildProperties="" description="Compilation of code for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492" isPrebuildInvalidatingBuild="false" name="DEBUG" parent="org.eclipse.cdt.build.core.prefbase.cfg">
 					<folderInfo id="0.27344492." name="/" resourcePath="">
 						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.1536408283" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.1536408283.1249798448" name=""/>

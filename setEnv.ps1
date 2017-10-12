@@ -29,9 +29,9 @@ else
 
 # Create a convenience shortcut to the right instance of the make processor.
 set-alias -Name "make" `
-          -Value ($env:PPC_GNU_BASEDIR+"\bin\mingw32-make.exe") `
-          -Description "Run the GNU make processor, which is appropriate to build the software for the TRK-USB-MPC%&$§L board"
+          -Value ($env:PPC_GNU_BASEDIR+"\bin\make.exe") `
+          -Description "Run the GNU make processor, which is appropriate to build the software for the TRK-USB-MPC5643L board"
 
-# Prepare the Windows search path for the run of the HighTec tools.
+# Prepare the Windows search path for the run of the compilation tools.
 $env:PATH = $env:PPC_GNU_BASEDIR + "\bin" `
             + ";" + $env:PATH
