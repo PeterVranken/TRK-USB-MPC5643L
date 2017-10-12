@@ -1,0 +1,262 @@
+/**
+ * @file int_INTCInterruptHandler.S
+ * Book E assembler implementation of interrupt handler for external interrupts handled by
+ * the INTC. Used for MPC5643L in Lockstep Mode (LSM). The code has been designed for use
+ * with GCC for PowerPC EABI.
+ *
+ * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+/* Module interface
+ *   int_INTCInterruptHandler
+ * Local functions
+ */
+
+/*
+ * Include files
+ */
+
+#include "sup_settings.h"
+
+
+/*
+ * Defines
+ */
+
+/** Address of interrupt controller INTC0 in memory map. */
+#define INTC0           0xfff48000
+
+/** Address of INTC interrupt acknowledge register in memory map, for processor 0. */
+#define INTC_IACKR_PRC0 (INTC0+0x10)
+
+/** Address of INTC end of interrupt register in memory map, for processor 0. */
+#define INTC_EOIR_PRC0  (INTC0+0x18)
+
+
+/*
+ * External function declarations
+ */
+
+
+/*
+ * Data declarations
+ */
+
+
+
+/*
+ * Function implementation
+ */
+
+
+
+/** The table of function pointers into the actual IRQ handlers is implemented here in the
+    assembler code, where we have better control of the required alignment constraints.\n
+      Note, the entries in the table are normal, proper C functions; no considerations
+    about specific calling conventions (e.g. without stack frame) or according type
+    decorations need to be made. */
+    .section .INTCInterruptHandlerAry, "a"
+    #define DEF_HDL ihw_dummyINTCInterruptHandler /* Use abbrev. for condensed source code */
+    .extern DEF_HDL
+    .global int_INTCInterruptHandlerAry
+    .align  16      /* 16 Bit alignment required by INTC hardware. The statement makes the
+                       implementation safe but does not say anything about efficient memory
+                       allocation. To avoid a big waste of memory the section allocation in
+                       the linker file should be made on an according memory address, too. */ 
+int_INTCInterruptHandlerAry:
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    .dc.l   DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL, DEF_HDL
+    #undef DEF_HDL
+
+/* End of int_INTCInterruptHandlerAry */
+
+
+
+
+/**
+ *   @func sup_INTCInterruptHandler
+ * This is the interrupt handler for the MCU trap #4, External Interrupts. This trap
+ * relates to interrupts controlled by the INTC. The INTC provides the vector to the
+ * appropriate service function and handles the preemption or mutual exclusion of
+ * interrupts by providing an effective priority scheme.\n
+ *   The handler implementation here will save the CPU context onto the stack, read the
+ * service function pointer and call this function. It'll then acknowledge the interrupt
+ * (thereby triggering the priority handling of the INTC) restore the context and return
+ * from interrupt.
+ *   @remark
+ * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file
+ * IntcInterrupts_p0.c, l. 102ff.
+ */
+    .section .text.ivor, "a"
+    .globl  int_INTCInterruptHandler
+    .type   int_INTCInterruptHandler, @function
+    .align  4
+int_INTCInterruptHandler:
+
+prolog:
+    e_stwu  sp, -0x50(sp)       /* Create stack frame */
+    
+    /* Store locally needed working registers. */
+    se_stw  r0, 0x24(sp)
+    mfcr    r0                  /* Store CR */
+    se_stw  r0, 0x20(sp)
+    se_stw  r3, 0x28(sp)        /* Store r3 to work with */
+    se_stw  r4, 0x2c(sp)        /* Store r4 to work with */
+    
+    /* Save SRR0 and SRR1 */
+    mfsrr0  r0                  /* Store SRR0 (before enabling EE) */
+    se_stw  r0, 0x0c(sp)
+    mfsrr1  r0                  /* Store SRR1 (before enabling EE) */
+    se_stw  r0, 0x10(sp)
+
+    /* Clear request to processor; r3 contains the address of the ISR */
+    e_lis   r3, INTC_IACKR_PRC0@ha      /* Read pointer into ISR Vector Table
+                                           int_INTCInterruptHandlerAry */
+    e_lwz   r3, INTC_IACKR_PRC0@l(r3)   /* Load INTC_IACKR, which clears request to
+                                           processor */
+    se_lwz  r3, 0x0(r3)         /* Read ISR address from ISR Vector Table using pointer  */
+
+    mfmsr   r4          /* Read the MSR for manipulation as appropriate for the user code. */
+    
+    /* For preemptable interrupt handlers set the EE bit in the MSR. The property
+       preemptability of a handler is encoded as MSBit of the vector in the table. */
+    e_cmpwi cr2, r3, 0
+    e_bge   cr2, endIfPreemptable
+isPreemptable:
+
+    /* Clear the flag bit to get the proper address back and enable processor recognition
+       of interrupts. */
+    e_rlwinm r3, r3, 0, 1, 31   /* Keep bits 0..30 in r3 */
+    e_or2i  r4, 0x8000          /* Set MSR[EE]=1 */
+endIfPreemptable:
+
+    /* The handler code requires the full instruction set but the SPE bit is reset on entry
+       in an interrupt. Set it again prior to branching into the user code. */
+    e_or2is r4, 0x0200
+    mtmsr   r4
+/// @todo Always allow critical interrupt and machine check, we have traps for that
+
+    /* Save rest of context required by EABI */
+    e_stw   r12, 0x4c(sp)       /* Store r12 */
+    e_stw   r11, 0x48(sp)       /* Store r11 */
+    e_stw   r10, 0x44(sp)       /* Store r10 */
+    e_stw   r9, 0x40(sp)        /* Store r9 */
+    e_stw   r8, 0x3c(sp)        /* Store r8 */
+    se_stw  r7, 0x38(sp)        /* Store r7 */
+    se_stw  r6, 0x34(sp)        /* Store r6 */
+    se_stw  r5, 0x30(sp)        /* Store r5 */
+    mfxer   r0                  /* Store XER */
+    se_stw  r0, 0x1c(sp)
+    mfctr   r0                  /* Store CTR */
+    se_stw  r0, 0x18(sp)
+    mflr    r0                  /* Store LR */
+    se_stw  r0, 0x14(sp)
+
+    /* Branch to ISR handler address from SW vector table */
+    mtlr    r3                  /* Store ISR address to LR */
+    se_blrl                     /* Branch to ISR, but return here */
+
+epilog:
+    /* Restore context required by EABI (except still used working registers) */
+    se_lwz  r0, 0x14(sp)        /* Restore LR */
+    mtlr    r0
+    se_lwz  r0, 0x18(sp)        /* Restore CTR */
+    mtctr   r0
+    se_lwz  r0, 0x1c(sp)        /* Restore XER */
+    mtxer   r0
+    se_lwz  r0, 0x20(sp)        /* Restore CR */
+    mtcrf   0xff, r0
+    se_lwz  r5, 0x30(sp)        /* Restore r5 */
+    se_lwz  r6, 0x34(sp)        /* Restore r6 */
+    se_lwz  r7, 0x38(sp)        /* Restore r7 */
+    e_lwz   r8, 0x3c(sp)        /* Restore r8 */
+    e_lwz   r9, 0x40(sp)        /* Restore r9 */
+    e_lwz   r10, 0x44(sp)       /* Restore r10 */
+    e_lwz   r11, 0x48(sp)       /* Restore r11 */
+    e_lwz   r12, 0x4c(sp)       /* Restore r12 */
+
+    /* Disable processor recognition of interrupts.  */
+    wrteei  0
+
+    /* Ensure interrupt flag has finished clearing */
+    /// @todo Double-check. Docu MCU says that wrteei does do instruction synchronization. Is it about memory vs. instruction synchronization?
+    /// @todo Newer NXP sample code toggles the order of msync and wrteei 0
+    msync
+
+    /* Write 0 to INTC_EOIR, informing INTC to restore priority as it was on entry to this
+       handler. */
+    se_li   r3, 0
+    e_lis   r4, INTC_EOIR_PRC0@ha   /* Load upper half of INTC_EOIR address */
+    e_stw   r3, INTC_EOIR_PRC0@l(r4)/* Write 0 to INTC_EOIR */
+
+    /* Restore Working Registers */
+    se_lwz  r3, 0x28(sp)        /* Restore r3 */
+    se_lwz  r4, 0x2c(sp)        /* Restore r4 */
+
+    /* Retrieve SRR0 and SRR1 */
+    se_lwz  r0, 0x0c(sp)        /* Restore SRR0 */
+    mtsrr0  r0
+    se_lwz  r0, 0x10(sp)        /* Restore SRR1 */
+    mtsrr1  r0
+
+    /* Restore remaining working register r0 */
+    se_lwz  r0,  0x24(sp)       /* Restore r0 */
+
+    /* Restore space on stack */
+    e_la    sp, 0x50(sp)
+
+    /* End of Interrupt */
+    se_rfi
+
+// @todo See doc\e200zCore\EB696-NewVLEInstructionsForImprovingInterruptHandlerEfficiency.pdf:
+//    e_stmvgprw      0x24 (r1)           ;# Save GPRs, r[0,3-12]
+// Use these efficient statements
+
+    .size   int_INTCInterruptHandler, .-int_INTCInterruptHandler
+/* End of int_INTCInterruptHandler */
+
+    /* At the end of the code: Avoid a gap in the section. This makes the flash procedure
+       in Code Warrior 10.7 fail to flash the code. */
+    .align  4
