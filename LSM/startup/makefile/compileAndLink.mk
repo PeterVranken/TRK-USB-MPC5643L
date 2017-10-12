@@ -203,22 +203,8 @@ VPATH := $(srcDirList) $(targetDir)
 #   Floating point support:
 #   The target selection impacts how floating point operations are implemented.
 # The optimal configuration is: Only use single float operations and use the hardware
-# floating point unit. targetFlags has to be set like:
-#   targetFlags := [..] -mspe -mfloat-gprs=yes -fshort-double
-#   Use of software emulation for floating point operations is supported, too. This let's
-# the linker append the required floating point operations as library function.
-# Furthermore, the linker will now take all stuff from another version of the library, now
-# from folder "nof". targetFlags has to be set like:
-#   targetFlags := [..] -mspe -mfloat-gprs=no -fshort-double -msoft-float
-#   Note, -fshort-double is a strong recommendation but not a must when using emulated
-# floating point. It is however a must when using the hardware floating point unit. The FPU
-# of the MPC5643L has no double float support and a compiler configuration that uses
-# hardware support for single float and software emulation for double float has not been
-# found yet.
-#   Note: -mhard-float (which is identical to -msingle-float) must not be used with our CPU
-# derivate as it generates code for the general purpose floating point registers, FPR,
-# which are not available in the core of the MPC5643L. A "float unavailable" exception
-# results.
+# floating point unit.
+#   Use of software emulation for floating point operations is supported, too.
 #   Use different data addressing modes:
 #   Standard setting is the use of short addressing modes for "small" data objects in RAM
 # and ROM. The memory space for the short addressing mode is limited it should therefore
@@ -229,13 +215,13 @@ VPATH := $(srcDirList) $(targetDir)
 # 64k each (RAM and ROM) become too small to hold all "small" data objects. Prior to
 # disabling the mode you should first try to reduce the size limit to 4 or 2 Byte.
 useSoftwareEmulation := 0
-targetFlags := -mcpu=e200z4 -mno-vle -mbig-endian -misel=yes                                \
+targetFlags := -mcpu=e200z4 -mbig-endian -mno-vle -mspe -misel=yes                          \
                -meabi -msdata=default -G8                                                   \
                -mregnames
 ifeq ($(useSoftwareEmulation),1)
-    targetFlags += -mspe -mfloat-gprs=no -fshort-double -msoft-float
+    targetFlags += -msoft-float -fshort-double
 else
-    targetFlags += -mspe -mhard-float -fshort-double
+    targetFlags += -mhard-float -fshort-double
 endif
 
 # Choose optimization level for production compilation.
@@ -271,7 +257,7 @@ $(targetDir)obj/%.o: %.S
 
 # Pattern rules for compilation of, C and C++ source files.
 
-cFlags =  $(targetFlags) -mno-string                                                        \
+cFlags = $(targetFlags) -mno-string                                                         \
          -fno-common -fno-exceptions -ffunction-sections -fdata-sections                    \
          -fshort-enums -fdiagnostics-show-option -finline-functions                         \
          -fzero-initialized-in-bss -fno-tree-loop-optimize                                  \
@@ -362,24 +348,10 @@ $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath) $(projectResourceFile)
 	$(info File created)
 
 # Let the linker create the flashable binary file.
-#   Note, regardless of the floating point mode chosen with the compiler switches (see
-# above, either pure software emulation mode or support of SPE FPU instructions) we need
-# to tell the linker to use software emulation mode. It'll then link against the floating
-# point emulation libraries, which is required to provide those operations, which are not
-# available as SPE instruction.
-#   Note, a performance boost could likely be achieved by a rebuild of the math library
-# using the SPE instruction set, i.e. using the compiler switches recommended above.
-#   CAUTION: A remaining unsolved problem is the switch -fshort-double, which is highly
-# desired in software emulation mode and unavoidable in SPE hardware mode. There seems to
-# be no set of libraries, which has been compiled in this mode. If we call a library
-# function using the type double for in- or output then the code doesn't crash but produces
-# bad results. A statement like x=exp(y); will produce the wrong result for x. We need to
-# do, what is anyway strongly recommended - using the float variants of these library
-# functions. Our example would become x=expf(y);, which works as expected.
 lFlags = -Wl,-Tmakefile/linkerControlFile.ld -nostartfiles -Wl,--gc-sections $(targetFlags) \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
          -Wl,--warn-common,--warn-once -Wl,-g                                               \
-         -mhard-float --sysroot=$(dir $(gcc))../powerpc-eabivle/newlib
+         --sysroot=$(dir $(gcc))../powerpc-eabivle/newlib
 
 $(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt makefile/linkerControlFile.ld
 	$(info Linking project. Mapfile is $(targetDir)$(target).map)

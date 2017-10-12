@@ -45,7 +45,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
+ *   main
  * Local functions
+ *   testFloatingPointConfiguration
+ *   interruptSW3Handler
+ *   interruptPIT0Handler
  */
 
 /*
@@ -103,6 +107,85 @@ static volatile lbd_led_t _ledPIT0Handler = lbd_led_D4_red;
 /*
  * Function implementation
  */
+
+/**
+ * Some floating point operations in order to test the compiler configuration.
+ */
+static void testFloatingPointConfiguration()
+{
+    volatile float x, y = 99.0f, z;
+    x = y / 3;
+    x = y / 3.0f;
+    x = y / 3.0;
+    
+    z = y / x;
+    z = y * x;
+    z = y + x;
+    z = y - x;
+    z = y + 56ul;
+    
+    x = 3.1415f / 4.0f;
+    y = sin(x);
+    y = sinf(x);
+    y = cos(x);
+    y = cosf(x);
+    
+    x = 1.0;
+    y = exp(x);
+    y = expf(x);
+    y = log(x);
+    y = logf(x);
+    y = pow10(x);
+    y = pow10f(x);
+    
+    x = 0.0f;
+    y = z / x;
+    y = log(x);
+    y = logf(x);
+    x = -1.0;
+    y = sqrt(x);
+    y = sqrtf(x);
+    
+    volatile double a, b = 99.0f, c;
+    a = x + z;
+    a = b / 3;
+    a = b / 3.0f;
+    a = b / 3.0;
+    
+    c = b / a;
+    c = b * a;
+    c = b + a;
+    c = b - a;
+    c = b + 56ul;
+    
+    a = 3.1415f / 4.0f;
+    b = sin(a);
+    b = sinf(a);
+    b = cos(a);
+    b = cosf(a);
+    
+    a = 1.0;
+    b = exp(a);
+    b = expf(a);
+    b = log(a);
+    b = logf(a);
+    b = pow10(a);
+    b = pow10f(a);
+    
+    a = 0.0f;
+    b = c / a;
+    b = log(a);
+    b = logf(a);
+    a = -1.0;
+    b = sqrt(a);
+    b = sqrtf(a);
+    
+    /* Give us a chance to see the last result in the debugger prior to leaving scope. */
+    b = 0.0;
+
+} /* testFloatingPointConfiguration */
+
+
 
 /**
  * Interrupt handler that serves the SW interrupt 3.
@@ -221,6 +304,9 @@ void main()
     /* The external interrupts are enabled after configuring I/O devices and registering
        the interrupt handlers. */
     ihw_resumeAllInterrupts();
+    
+    /* Call test of floating point configuration. (Only useful with a connected debugger.) */
+    testFloatingPointConfiguration();
     
     while(true)
     {

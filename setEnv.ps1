@@ -18,7 +18,7 @@ if ("$env:PPC_GNU_BASEDIR" -eq "")
     write-host ("setEnv.ps1: You need to configure this script prior to first use: Specify location of GCC for PowerPC")
     Write-Host "Press any key to continue ..."; $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
-    $env:PPC_GNU_BASEDIR = "C:\ProgramFiles\MinGW-powerpc-eabi-glo-4.9.2"
+    $env:PPC_GNU_BASEDIR = "C:\ProgramFiles\MinGW-powerpc-eabivle-4.9.4"
     write-host ('Environment variable PPC_GNU_BASEDIR is set to ' + $env:PPC_GNU_BASEDIR)
 }
 else
