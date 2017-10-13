@@ -236,7 +236,7 @@ endif
     # Os: 50%, requires linkage of crtsavres.S
 # CAUTION: crtsavres.S not yet migrated to VLE, -Os can't be used, code crashes
     # Ofast: 41%, likely same as -O3
-productionCodeOptimization := -Ofast
+productionCodeOptimization := -Os
 
 # Pattern rules for assembler language source files.
 asmFlags = $(targetFlags)                                                                   \
