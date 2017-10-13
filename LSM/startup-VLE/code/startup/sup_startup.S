@@ -97,14 +97,26 @@ sup_bamData:
  * specified in the BAM data block in the boot sector to make this happen after reset.
  */
     .section .boot, "a"
-    .global  sup_startUp
-    .type    sup_startUp, @function
+    .global sup_startUp
+    .type   sup_startUp, @function
 sup_startUp:
-    e_bl      zeroizeRegisters      /* Clear all GPR and all relevant SPR */
-    e_bl      initExceptionHandlers /* Set all IVOR registers of the MCU */
-    e_bl      initMMU               /* Make MMU allow all memory accesses */
-    e_bl      initTimeBase          /* Start the MCU's high resolution counter */
-    e_bl      zeroizeSRAM           /* Clear all RAM */
+    e_bl    zeroizeRegisters        /* Set MSR[SPE], clear all GPR and all relevant SPR */
+    e_bl    initExceptionHandlers   /* Set all IVOR registers of the MCU */
+    e_bl    initMMU                 /* Make MMU allow all memory accesses */
+    
+    /* Exception handlers are installed, memory is accessible - there's no reason to wait
+       any longer with enabling the higher prior interrupts (critical and machine
+       check). We have the minimum functionality of an empty trap handler, which reports
+       the problem to the SW developer.
+         Note, the external interrupts are not enabled yet. They are entirely managed by
+       the application software. */
+    mfmsr   r0
+    e_or2is r0, 0x0002              /* CE: Critical interrupts */
+    e_or2i  r0, 0x1000              /* ME: Machine check */
+    mtmsr   r0
+
+    e_bl    initTimeBase            /* Start the MCU's high resolution counter */
+    e_bl    zeroizeSRAM             /* Clear all RAM */
 
     /* The watchdog is disabled now. Most available sample code code does do this as C
        function at the beginning of main, however, if we are in lockstep mode and use the
@@ -125,7 +137,7 @@ sup_startUp:
     /* Select appropriate conditions for the operation of the flash (waitstates, caching,
        etc.) It is essential to do this prior to rising the CPU clock rate by configuring
        the PLL. */
-    e_bl      initFlash
+    e_bl    initFlash
 
     /* Fill the stack with a byte pattern. This pattern is used later to measure the
        current stack usage. */
@@ -199,6 +211,7 @@ su_waitForever:
 /* End of sup_startUp */
 
 
+
 /**
  *   @func zeroizeRegisters
  * First step of MCU startup is to bring all relevant registers into a
@@ -218,7 +231,7 @@ zeroizeRegisters:
     se_isync
 
     /* Initialize the 64-bits of GPR0 to 0 */
-    e_lis      r1, 0           /* Initialize the lower 32-bits of GPR1 to 0. */
+    e_lis     r1, 0         /* Initialize the lower 32-bits of GPR1 to 0. */
     evmergelo r0, r1, r1    /* Write the lower 32-bits of GPR1 into both halfs of GPR0. */
     evmergelo r1, r0, r0    /* Clear 64 Bit of r1, r2 ... */
     evmergelo r2 ,r0 ,r0
@@ -314,15 +327,11 @@ zeroizeRegisters:
     mtspr   318, r0     /* DVC1  */
     mtspr   319, r0     /* DVC2  */
     mtspr   562, r0     /* DBCNT */
-
-    /// @todo Is this useful? 624-627 are written immediately after return
-    /* Preliminary configuration of MAS0 - MAS6, will be completed later. */
     mtspr   624, r0     /* MAS0 */
     mtspr   625, r0     /* MAS1 */
     mtspr   626, r0     /* MAS2 */
     mtspr   627, r0     /* MAS3 */
     mtspr   628, r0     /* MAS4 */
-                        /* no MAS5 */
     mtspr   630, r0     /* MAS6 */
 
     evmra   r0, r4      /* ACC */
@@ -645,8 +654,7 @@ sup_IVOR34trap:
  * danger of an exception.
  *   @remark
  * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file
- * MPC5643L_HWInit.c, l. 396ff, and Erika Enterprise, file
- * freescale_mpc5643l\src\ee_boot.S, l. 297ff.
+ * MPC5643L_HWInit.c, l. 396ff.
  */
     .type   initMMU, @function
 initMMU:

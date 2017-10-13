@@ -135,7 +135,7 @@ int_INTCInterruptHandlerAry:
     .align  4
 int_INTCInterruptHandler:
 
-prolog:
+int_prolog:
     e_stwu  sp, -0x50(sp)       /* Create stack frame */
     
     /* Store locally needed working registers. */
@@ -163,20 +163,32 @@ prolog:
     /* For preemptable interrupt handlers set the EE bit in the MSR. The property
        preemptability of a handler is encoded as MSBit of the vector in the table. */
     e_cmpwi cr2, r3, 0
-    e_bge   cr2, endIfPreemptable
-isPreemptable:
-
-    /* Clear the flag bit to get the proper address back and enable processor recognition
-       of interrupts. */
+    e_bge   cr2, int_endIfPreemptable
+    
+    /* Relevant MSR bits. These bits are now set in the MSR for execution of the
+       application interrupt handler.
+         0x02000000: SPE
+         0x00020000: CE
+         0x00008000: EE (depends, only for preemtable handlers)
+         0x00001000: ME */
+    
+int_isPreemptable:
+    /* Clear the flag bit to get the proper address back. */
     e_rlwinm r3, r3, 0, 1, 31   /* Keep bits 0..30 in r3 */
+    
+    /* Enable processor recognition of interrupts. */
     e_or2i  r4, 0x8000          /* Set MSR[EE]=1 */
-endIfPreemptable:
 
+int_endIfPreemptable:
     /* The handler code requires the full instruction set but the SPE bit is reset on entry
-       in an interrupt. Set it again prior to branching into the user code. */
-    e_or2is r4, 0x0200
+       in an interrupt. Set it again prior to branching into the user code.
+         There's no reason to lock the higher prior interrupts (critical and machine
+       check). At minimum there's an empty trap handler, which reports the problem to the
+       SW developer. */
+    e_or2is r4, 0x0202
+    e_or2i  r4, 0x1000
+
     mtmsr   r4
-/// @todo Always allow critical interrupt and machine check, we have traps for that
 
     /* Save rest of context required by EABI */
     e_stw   r12, 0x4c(sp)       /* Store r12 */
@@ -198,7 +210,7 @@ endIfPreemptable:
     mtlr    r3                  /* Store ISR address to LR */
     se_blrl                     /* Branch to ISR, but return here */
 
-epilog:
+int_epilog:
     /* Restore context required by EABI (except still used working registers) */
     se_lwz  r0, 0x14(sp)        /* Restore LR */
     mtlr    r0
@@ -207,7 +219,7 @@ epilog:
     se_lwz  r0, 0x1c(sp)        /* Restore XER */
     mtxer   r0
     se_lwz  r0, 0x20(sp)        /* Restore CR */
-    mtcrf   0xff, r0
+    mtcr    r0
     se_lwz  r5, 0x30(sp)        /* Restore r5 */
     se_lwz  r6, 0x34(sp)        /* Restore r6 */
     se_lwz  r7, 0x38(sp)        /* Restore r7 */
@@ -217,7 +229,7 @@ epilog:
     e_lwz   r11, 0x48(sp)       /* Restore r11 */
     e_lwz   r12, 0x4c(sp)       /* Restore r12 */
 
-    /* Disable processor recognition of interrupts.  */
+    /* Disable processor recognition of interrupts. */
     wrteei  0
 
     /* Ensure interrupt flag has finished clearing */

@@ -50,7 +50,7 @@
      See MCU reference manual, 5.3, p.126ff */
 #define RCHW_VLE        0x0100      /* Optional: Enable VLE instruction set */
 #define RCHW_BOOT_ID    0x005A      /* Fixed, hard-coded value */
-#define RCHW_VALUE (RCHW_BOOT_ID)
+#define RCHW_VALUE      (RCHW_BOOT_ID)
 
 
 /*
@@ -97,12 +97,24 @@ sup_bamData:
  * specified in the BAM data block in the boot sector to make this happen after reset.
  */
     .section .boot, "a"
-    .global  sup_startUp
-    .type    sup_startUp, @function
+    .global sup_startUp
+    .type   sup_startUp, @function
 sup_startUp:
     bl      zeroizeRegisters        /* Clear all GPR and all relevant SPR */
     bl      initExceptionHandlers   /* Set all IVOR registers of the MCU */
     bl      initMMU                 /* Make MMU allow all memory accesses */
+    
+    /* Exception handlers are installed, memory is accessible - there's no reason to wait
+       any longer with enabling the higher prior interrupts (critical and machine
+       check). We have the minimum functionality of an empty trap handler, which reports
+       the problem to the SW developer.
+         Note, the external interrupts are not enabled yet. They are entirely managed by
+       the application software. */
+    mfmsr   r0
+    oris    r0, r0, 0x0002          /* CE: Critical interrupts */
+    ori     r0, r0, 0x1000          /* ME: Machine check */
+    mtmsr   r0
+
     bl      initTimeBase            /* Start the MCU's high resolution counter */
     bl      zeroizeSRAM             /* Clear all RAM */
 
@@ -139,7 +151,7 @@ sup_startUp:
     addi    r9, r9, 0xa5a5a5a5@l
 su_loopFillStack:
     stw     r9, 0(r8)           /* Write the four pattern bytes in r9 */
-    addi    r8, r8, 4           /* Increment write pointer */
+    la      r8, 4(r8)           /* Increment write pointer */
     bdnz    su_loopFillStack    /* Branch on counter register not zero */
 
     /* Taken from NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file __start.c, l. 186ff:
@@ -149,10 +161,10 @@ su_loopFillStack:
          @todo To be check if we misunderstood something. The standard stack frame of the
        entry into main will already overwrite the word 4(sp) with the saved link register
        and our -1 has no effect. */
-    li      r8, 0              /* Load up r8 with 0x00000000. */
+    li      r8, 0              /* Clear r8. */
     stw     r8, 0(sp)          /* SysVr4 EABI Supp indicated that initial back chain word
                                   should be null. */
-    addi    r8, 0, -1          /* Load up r0 with 0xffffffff. */
+    addi    r8, 0, -1          /* Load 0xffffffff into r8. */
     stw     r8, 4(sp)          /* Make an illegal return address of 0xffffffff.  */
     
     /* Copy the mirror of the initialized RAM sections from flash ROM to the RAM - all
@@ -169,9 +181,9 @@ su_loopFillStack:
 
 su_loopInitData:
     lwz     r11, 0(r8)          /* Move next word from ROM to .data section in RAM */
-    addi    r8, r8, 4
+    la      r8, 4(r8)
     stw     r11, 0(r10)
-    addi    r10, r10, 4
+    la      r10, 4(r10)
     cmplw   cr0, r10, r9
     blt     su_loopInitData
     msync                       /* Complete the copy operation */
@@ -213,8 +225,7 @@ su_waitForever:
 zeroizeRegisters:
 
     /* Set the MSR[SPE] bit so code can use "evmergelo" instruction. */
-    lis     r6,0x200
-    ori     r6,r6,0x0 ///@todo This statement should be superfluous
+    lis     r6, 0x200
     mtmsr   r6
     isync
 
@@ -937,7 +948,7 @@ zreg_loop:
     /* ECC SRAM must be initialized with 64-bit writes, hence stmw;
      * 16-btye alignment should work always */
     stmw    r28, 0(r8)      /* Write registers 28-31 thus 16 Byte */
-    addi    r8, r8, 16
+    la      r8, 16(r8)
     bdnz    zreg_loop
 
     blr
@@ -1031,7 +1042,7 @@ initFlash:
     
     lwz     r0, 28(sp)
     mtlr    r0
-    addi    sp, sp, 24
+    la      sp, 24(sp)
     blr
 
 if_movalbeMachineCode:

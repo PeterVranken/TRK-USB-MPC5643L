@@ -443,7 +443,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_makefile">2.2. Makefile</a></li>
 </ul>
 </li>
-<li><a href="#_code_structure">3. Code structure</a>
+<li><a href="#_code_architecture">3. Code architecture</a>
 <ul class="sectlevel2">
 <li><a href="#_only_gcc_only_lockstep_mode_lsm">3.1. Only GCC, only Lockstep Mode (LSM)</a></li>
 <li><a href="#_traps_and_interrupts">3.2. Traps and interrupts</a></li>
@@ -478,7 +478,7 @@ the next sections.</p>
 <div class="sect2">
 <h3 id="_compiler_and_debugger">2.1. Compiler and Debugger</h3>
 <div class="paragraph">
-<p>The sample is compiled with GCC (MinGW-powerpc-eabi-glo-4.9.2) and it can
+<p>The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
 be flashed and debugged with the Code Warrior IDE. (See project overview
 for more details.)</p>
 </div>
@@ -541,8 +541,8 @@ well-documented solution for some target specific issues:</p>
 <ul>
 <li>
 <p>The PowerPC specification comprises different sets of instructions. We
-want to use as much thereof as supported by both, compiler and CPU. In
-this project, the Book E and SPE instruction sets are enabled for
+need to find a configuration that is supported by both, compiler and
+CPU. In this project, the Book E and SPE instruction sets are enabled for
 compilation</p>
 </li>
 <li>
@@ -568,12 +568,13 @@ ROM, which reduces code size and increases performance</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_code_structure">3. Code structure</h2>
+<h2 id="_code_architecture">3. Code architecture</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The structure of the code of the sample is part of the mentioned, reusable
-infrastructure, too. The functional code found in <code>mai_main.c</code> is of little
-interest, it&#8217;s just a kind of demonstration how to set up an application.</p>
+<p>The architecture of the code of the sample is part of the mentioned,
+reusable infrastructure, too. The functional code found in <code>mai_main.c</code> is
+of little interest, it&#8217;s just a kind of demonstration how to set up an
+application.</p>
 </div>
 <div class="paragraph">
 <p>The principal two files are <code>startup/sup_startup.S</code> and
@@ -581,13 +582,13 @@ interest, it&#8217;s just a kind of demonstration how to set up an application.<
 startup code and the latter the less critical initialization steps, which
 can be done later and already in C. Both files implement a basic
 configuration of the MCU, which permits safe operation of the code. They
-do not configure more of the MCU hardware as required, there&#8217;s for example
-nothing about ADC. If an application wants to use analogue inputs then
-it&#8217;ll add the hardware configuration of the ADC as appropriate. The two
-mentioned files contain only the basic initialization and most of this
-initialization can be considered application independent or, with other
-words, you can likely reuse these files without modification for most
-applications. This is what they do:</p>
+do not configure more of the MCU hardware as required to run code, there&#8217;s
+for example nothing about ADC. If an application wants to use analogue
+inputs then it&#8217;ll add the hardware configuration of the ADC as
+appropriate. The two mentioned files contain only the basic initialization
+and most of this initialization can be considered application independent
+or, with other words, you can likely reuse these files without
+modification for most applications. This is what they do:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -610,7 +611,7 @@ memory</p>
 </li>
 <li>
 <p>The Time Base is enabled, this is a high resolution timer in the MCU&#8217;s
-core</p>
+core mostly used for execution time measurement</p>
 </li>
 <li>
 <p>The complete RAM is zeroized (not only the used portion)</p>
@@ -669,20 +670,20 @@ first operation of C entry function <code>main</code>.</p>
 <p>The implementation does not claim to support different compilers and
 environments. Instead it is dedicated to GCC, the Book E instruction set
 and the MCU&#8217;s Lockstep Mode and it is tested only with a particular
-revision of GCC.</p>
+revision of GCC.
+<sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
 </div>
 <div class="paragraph">
 <p>This has been decided for sake of transparency and reliability. At many
 points of the implementation it would have been quite clear, how to put
-some preprocessor statements in order to support e.g. VLE code or the Code
-Warrior compiler. As a matter of experience, the consequent use of such
-preprocessor constructs can strongly degrade the readability of the code
-and, moreover, such an attempt stays a promise, which can&#8217;t be safely kept
-without according, comprehensive software tests. The test effort strongly
-rises if many different compile configurations are supported and the
-required software tools may not even be available (as it is for a
-commercial Code Warrior license).
-  <sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
+some preprocessor statements or makefile if-clauses in order to support
+e.g. VLE code or the Code Warrior compiler. As a matter of experience, the
+consequent use of such preprocessor constructs can strongly degrade the
+readability of the code and, moreover, such an attempt stays a promise,
+which can&#8217;t be safely kept without according, comprehensive software
+tests. The test effort strongly rises if many different compile
+configurations are supported and the required software tools may not even
+be available.</p>
 </div>
 <div class="paragraph">
 <p>We don&#8217;t think, that it is too difficult to do the migration to another
@@ -698,8 +699,8 @@ should be fully in your own responsibility.</p>
 (External Interrupts) are implemented as infinite loops; code execution
 stays at one and the same branch instruction. If your software seems to
 hang, issue a break from the debugger. If you are indeed in a trap you
-will immediately know, which trap it caught and at which address the
-problem arose.</p>
+will immediately know, which trap your software caught and at which
+address the problem arose.</p>
 </div>
 <div class="sect3">
 <h4 id="_how_to_install_your_own_application_trap_handlers">3.2.1. How to install your own application trap handlers</h4>
@@ -726,13 +727,14 @@ interrupt, are connected to the MCU&#8217;s Interrupt Controller (INTC). The
 INTC prioritizes their interrupt requests and routes the most important
 one through to CPU trap #4. Consequently, there&#8217;s only one interrupt
 handler for all possible I/O interrupts ("External Interrupts"). This
-handler has been implemented for you <sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnote_3" title="View footnote.">3</a>]</sup>.</p>
+handler has been implemented for you.
+  <sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnote_3" title="View footnote.">3</a>]</sup></p>
 </div>
 <div class="paragraph">
 <p>The handler for External Interrupts saves the context, queries the INTC
 for the interrupt source and branches into a sub-routine, which is
 specific for that source. This "sub-routine" is a normal C function, which
-is provided by your application. From your perspective of the application
+is provided by your application. From your perspective of an application
 programmer, this function effectively is the interrupt handler for the
 given interrupt source.</p>
 </div>
@@ -832,7 +834,7 @@ serves the device when it raises the interrupt. Note, this is an ordinary
 C function. No particular type decoration is required to declare it as
 interrupt routine. This is because the function is just a sub-routine of
 the true, reusable interrupt handler that is implemented in the startup
-code.</p>
+code, see file <code>int_INTCInterruptHandler.S</code>.</p>
 </div>
 <div class="paragraph">
 <div class="title">vectorNum</div>
@@ -863,6 +865,22 @@ effectively non-preemptable with respect to all other External Interrupts.</p>
 <div class="paragraph">
 <p>The normal setting should be <code>true</code>. Inhibit preemption only if there&#8217;s
 good reason to do so.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+Machine Check and Critical Interrupt are always enabled. They are
+not used, there&#8217;s normally no source for these interrupts, but they are
+connected to the empty trap handlers and can report severe code errors by
+going into those traps. The debugger would immediately show the details of
+the problem.
+</td>
+</tr>
+</table>
 </div>
 </div>
 <div class="sect3">
@@ -955,10 +973,10 @@ atomic_thread_fence(memory_order_seq_cst);</pre>
 <a href="#_footnoteref_1">1</a>. A remaining, minor issue with double precision math calls is documented inside the makefile.
 </div>
 <div class="footnote" id="_footnote_2">
-<a href="#_footnoteref_2">2</a>. The implementation is widely based on code samples published by NXP, formerly Freescale; references are given in the source code comments. The original code may have contained preprocessor switches to support VLE instructions or Decoupled Parallel Mode (DPM). If so, these switches may still appear in our implementation in order to facilitate a possible later migration. However, the according preprocessor switches must not be used, the code will not compile.
+<a href="#_footnoteref_2">2</a>. The code has been run with MinGW-powerpc-eabi-glo-4.9.2, too, but compiler and linker settings in the makefile require some changes; please refer to the early revisions of the makefile.
 </div>
 <div class="footnote" id="_footnote_3">
-<a href="#_footnoteref_3">3</a>. It could be exchanged with your own handler like it has been described for any trap handler in section <a href="#_how_to_install_your_own_application_trap_handlers">How to install your own application trap handlers</a>
+<a href="#_footnoteref_3">3</a>. It could be exchanged with your own handler like it has been described for any trap handler in section <a href="#_how_to_install_your_own_application_trap_handlers">How to install your own application trap handlers</a>.
 </div>
 <div class="footnote" id="_footnote_4">
 <a href="#_footnoteref_4">4</a>. The startup software enters <code>main()</code> with all External Interrupt handling disabled, i.e. MSR bit EE is cleared.
@@ -969,7 +987,7 @@ atomic_thread_fence(memory_order_seq_cst);</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-07 00:19:25 W. Europe Daylight Time
+Last updated 2017-10-14 00:04:19 W. Europe Daylight Time
 </div>
 </div>
 </body>

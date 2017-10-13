@@ -234,7 +234,6 @@ endif
     # O2: 41%
     # O1: 52%
     # Os: 50%, requires linkage of crtsavres.S
-# CAUTION: crtsavres.S not yet migrated to VLE, -Os can't be used, code crashes
     # Ofast: 41%, likely same as -O3
 productionCodeOptimization := -Os
 

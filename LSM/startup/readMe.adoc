@@ -21,7 +21,7 @@ the next sections.
 
 === Compiler and Debugger
 
-The sample is compiled with GCC (MinGW-powerpc-eabi-glo-4.9.2) and it can
+The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
 be flashed and debugged with the Code Warrior IDE. (See project overview
 for more details.)
 
@@ -63,8 +63,8 @@ makefile in your project will provide a safely running, reasonable and
 well-documented solution for some target specific issues:
 
 - The PowerPC specification comprises different sets of instructions. We
-  want to use as much thereof as supported by both, compiler and CPU. In
-  this project, the Book E and SPE instruction sets are enabled for
+  need to find a configuration that is supported by both, compiler and
+  CPU. In this project, the Book E and SPE instruction sets are enabled for
   compilation
 - Floating point operation is not available out of the box. Nowadays, most
   CPUs offer machine instructions for floating point operations but mostly
@@ -80,24 +80,25 @@ well-documented solution for some target specific issues:
   exist and we have enabled the small data addressing mode for RAM and
   ROM, which reduces code size and increases performance
 
-== Code structure
+== Code architecture
 
-The structure of the code of the sample is part of the mentioned, reusable
-infrastructure, too. The functional code found in `mai_main.c` is of little
-interest, it's just a kind of demonstration how to set up an application.
+The architecture of the code of the sample is part of the mentioned,
+reusable infrastructure, too. The functional code found in `mai_main.c` is
+of little interest, it's just a kind of demonstration how to set up an
+application.
 
 The principal two files are `startup/sup_startup.S` and
 `startup/ihw_initMcuCoreHW.c`. The former contains the assembler written
 startup code and the latter the less critical initialization steps, which
 can be done later and already in C. Both files implement a basic
 configuration of the MCU, which permits safe operation of the code. They
-do not configure more of the MCU hardware as required, there's for example
-nothing about ADC. If an application wants to use analogue inputs then
-it'll add the hardware configuration of the ADC as appropriate. The two
-mentioned files contain only the basic initialization and most of this
-initialization can be considered application independent or, with other
-words, you can likely reuse these files without modification for most
-applications. This is what they do:
+do not configure more of the MCU hardware as required to run code, there's
+for example nothing about ADC. If an application wants to use analogue
+inputs then it'll add the hardware configuration of the ADC as
+appropriate. The two mentioned files contain only the basic initialization
+and most of this initialization can be considered application independent
+or, with other words, you can likely reuse these files without
+modification for most applications. This is what they do:
 
 1. `sup_startup.S`:
 
@@ -109,7 +110,7 @@ applications. This is what they do:
 - The MPU is configured such that it permits access to all available
   memory
 - The Time Base is enabled, this is a high resolution timer in the MCU's
-  core
+  core mostly used for execution time measurement
 - The complete RAM is zeroized (not only the used portion)
 - The watchdog is disabled (rearming it is considered responsibility of the
   application code)
@@ -138,24 +139,20 @@ The implementation does not claim to support different compilers and
 environments. Instead it is dedicated to GCC, the Book E instruction set
 and the MCU's Lockstep Mode and it is tested only with a particular
 revision of GCC.
+footnote:[The code has been run with MinGW-powerpc-eabi-glo-4.9.2, too,
+but compiler and linker settings in the makefile require some changes;
+please refer to the early revisions of the makefile.]
 
 This has been decided for sake of transparency and reliability. At many
 points of the implementation it would have been quite clear, how to put
-some preprocessor statements in order to support e.g. VLE code or the Code
-Warrior compiler. As a matter of experience, the consequent use of such
-preprocessor constructs can strongly degrade the readability of the code
-and, moreover, such an attempt stays a promise, which can't be safely kept
-without according, comprehensive software tests. The test effort strongly
-rises if many different compile configurations are supported and the
-required software tools may not even be available (as it is for a
-commercial Code Warrior license).
-  footnote:[The implementation is widely based on code samples published
-by NXP, formerly Freescale; references are given in the source code
-comments. The original code may have contained preprocessor switches to
-support VLE instructions or Decoupled Parallel Mode (DPM). If so, these
-switches may still appear in our implementation in order to facilitate a
-possible later migration. However, the according preprocessor switches
-must not be used, the code will not compile.]
+some preprocessor statements or makefile if-clauses in order to support
+e.g. VLE code or the Code Warrior compiler. As a matter of experience, the
+consequent use of such preprocessor constructs can strongly degrade the
+readability of the code and, moreover, such an attempt stays a promise,
+which can't be safely kept without according, comprehensive software
+tests. The test effort strongly rises if many different compile
+configurations are supported and the required software tools may not even
+be available.
 
 We don't think, that it is too difficult to do the migration to another
 configuration. The implementation as it is is well documented and quite
@@ -168,8 +165,8 @@ The startup code implements all trap handlers. All of them except trap #4
 (External Interrupts) are implemented as infinite loops; code execution
 stays at one and the same branch instruction. If your software seems to
 hang, issue a break from the debugger. If you are indeed in a trap you
-will immediately know, which trap it caught and at which address the
-problem arose.
+will immediately know, which trap your software caught and at which
+address the problem arose.
 
 ==== How to install your own application trap handlers
 
@@ -191,14 +188,15 @@ interrupt, are connected to the MCU's Interrupt Controller (INTC). The
 INTC prioritizes their interrupt requests and routes the most important
 one through to CPU trap #4. Consequently, there's only one interrupt
 handler for all possible I/O interrupts ("External Interrupts"). This
-handler has been implemented for you footnote:[It could be exchanged with
-your own handler like it has been described for any trap handler in
-section <<How to install your own application trap handlers>>].
+handler has been implemented for you.
+  footnote:[It could be exchanged with your own handler like it has been
+described for any trap handler in section <<How to install your own
+application trap handlers>>.]
 
 The handler for External Interrupts saves the context, queries the INTC
 for the interrupt source and branches into a sub-routine, which is
 specific for that source. This "sub-routine" is a normal C function, which
-is provided by your application. From your perspective of the application
+is provided by your application. From your perspective of an application
 programmer, this function effectively is the interrupt handler for the
 given interrupt source.
 
@@ -281,7 +279,7 @@ serves the device when it raises the interrupt. Note, this is an ordinary
 C function. No particular type decoration is required to declare it as
 interrupt routine. This is because the function is just a sub-routine of
 the true, reusable interrupt handler that is implemented in the startup
-code.
+code, see file `int_INTCInterruptHandler.S`.
 
 .vectorNum
 `vectorNum` is the index of the interrupt source according to table 28-4.
@@ -309,6 +307,12 @@ effectively non-preemptable with respect to all other External Interrupts.
 
 The normal setting should be `true`. Inhibit preemption only if there's
 good reason to do so.
+
+NOTE: Machine Check and Critical Interrupt are always enabled. They are
+not used, there's normally no source for these interrupts, but they are
+connected to the empty trap handlers and can report severe code errors by
+going into those traps. The debugger would immediately show the details of
+the problem.
 
 ==== Mutual exclusion, critical sections
 

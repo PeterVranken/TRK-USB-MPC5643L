@@ -86,6 +86,7 @@ SECTIONS
     .boot :
     {
         ld_romStart = . ;
+
         KEEP(*(.bamData))
         KEEP(*(.bamData.*))
 
