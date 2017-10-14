@@ -63,7 +63,7 @@
 # build.
 
 # The name of the project is used for several build products.
-project := TRK-USB-MPC5643L-startup
+project := TRK-USB-MPC5643L-printf
 
 # The directory, from where to run the compiled target when yielding target run. Defaults
 # to the directory, where the compiled target is located.
