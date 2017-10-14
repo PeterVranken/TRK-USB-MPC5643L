@@ -178,7 +178,8 @@ The dummy trap handlers are a preliminary development tool only. If your
 application wants to implement a true handler it can; you'll have to
 change the assembler startup code a bit. Declare your handler using the
 `.extern` statement and replace the registration of the dummy handler,
-e.g. `IVOR1trap`, in function `initExceptionHandlers` with your handler.
+e.g. `sup_IVOR1trap`, in function `initExceptionHandlers` with your
+handler.
 
 Place your handler in the linker text section `.ivor` in order to
 guarantee that it resides in the same 64k memory page as all the other
