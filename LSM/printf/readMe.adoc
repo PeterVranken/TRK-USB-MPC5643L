@@ -1,4 +1,4 @@
-= Sample "startup"
+= Sample "printf" - Use of RS 232 serial interface for C's printf & Co.
 :Author:    Peter Vranken
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :Revision:  1
@@ -7,15 +7,8 @@
 
 == About this sample
 
-This is the initial sample, the "Hello World" so to say. The function is
-the stereotypical blinking LED. The evaluation board has two bi-color user LEDs
-and two buttons and we let both LEDs blink at different frequency and in
-different colors. One button can be used to toggle the color scheme.
-
-There's nothing more to say about the functionality of the sample. The
-true value of the sample is not its function but the infrastructure it
-shapes and which is fully reusable. This infrastructure is described in
-the next sections.
+TODOC Add introduction. Most of the section below will still apply but
+they are irrelevant in the context of this sample and should be revised.
 
 == Tools
 

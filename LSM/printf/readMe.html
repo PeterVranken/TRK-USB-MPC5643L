@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 1.5.6.1">
 <meta name="author" content="Peter Vranken">
-<title>Sample "startup"</title>
+<title>Sample "printf" - Use of RS 232 serial interface for C&#8217;s printf &amp; Co.</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /* Asciidoctor default stylesheet | MIT License | http://asciidoctor.org */
@@ -428,7 +428,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
-<h1>Sample "startup"</h1>
+<h1>Sample "printf" - Use of RS 232 serial interface for C&#8217;s printf &amp; Co.</h1>
 <div class="details">
 <span id="author" class="author">Peter Vranken</span><br>
 <span id="email" class="email">mailto:Peter_Vranken@Yahoo.de</span><br>
@@ -459,16 +459,8 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="_about_this_sample">1. About this sample</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This is the initial sample, the "Hello World" so to say. The function is
-the stereotypical blinking LED. The evaluation board has two bi-color user LEDs
-and two buttons and we let both LEDs blink at different frequency and in
-different colors. One button can be used to toggle the color scheme.</p>
-</div>
-<div class="paragraph">
-<p>There&#8217;s nothing more to say about the functionality of the sample. The
-true value of the sample is not its function but the infrastructure it
-shapes and which is fully reusable. This infrastructure is described in
-the next sections.</p>
+<p>TODOC Add introduction. Most of the section below will still apply but
+they are irrelevant in the context of this sample and should be revised.</p>
 </div>
 </div>
 </div>
@@ -709,7 +701,8 @@ address the problem arose.</p>
 application wants to implement a true handler it can; you&#8217;ll have to
 change the assembler startup code a bit. Declare your handler using the
 <code>.extern</code> statement and replace the registration of the dummy handler,
-e.g. <code>IVOR1trap</code>, in function <code>initExceptionHandlers</code> with your handler.</p>
+e.g. <code>sup_IVOR1trap</code>, in function <code>initExceptionHandlers</code> with your
+handler.</p>
 </div>
 <div class="paragraph">
 <p>Place your handler in the linker text section <code>.ivor</code> in order to
@@ -987,7 +980,7 @@ atomic_thread_fence(memory_order_seq_cst);</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-14 00:04:19 W. Europe Daylight Time
+Last updated 2017-10-14 09:24:33 W. Europe Daylight Time
 </div>
 </div>
 </body>

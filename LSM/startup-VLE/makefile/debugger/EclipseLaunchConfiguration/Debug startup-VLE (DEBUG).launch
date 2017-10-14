@@ -196,7 +196,7 @@
 <stringAttribute key="com.pemicro.mcu.debug.connections.pne.eppc.STARTUP_SPECIFY_NETWORKCARD_ENABLED" value="0"/>
 <stringAttribute key="com.pemicro.mcu.debug.connections.pne.eppc.STARTUP_USE_CYCLONEPRO_RELAYS" value="1"/>
 <stringAttribute key="com.pemicro.mcu.debug.connections.pne.eppc.STARTUP_interface_selection" value="1"/>
-<stringAttribute key="com.pemicro.mcu.debug.connections.pne.eppc.UUID" value="c985565a-4348-4f33-af41-b734ab18560c"/>
+<stringAttribute key="com.pemicro.mcu.debug.connections.pne.eppc.UUID" value="a5ba43fe-d693-4db4-9133-fa503cc94349"/>
 <intAttribute key="org.eclipse.cdt.launch.ATTR_BUILD_BEFORE_LAUNCH_ATTR" value="0"/>
 <stringAttribute key="org.eclipse.cdt.launch.COREFILE_PATH" value=""/>
 <stringAttribute key="org.eclipse.cdt.launch.DEBUGGER_ID" value="com.freescale.cdt.debug.cw.eppc.EPPCDebugger"/>
