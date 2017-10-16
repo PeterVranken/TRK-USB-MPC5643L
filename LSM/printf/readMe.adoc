@@ -7,7 +7,7 @@
 
 == About this sample
 
-TODOC Add introduction. Most of the section below will still apply but
+TODOC Add introduction. Most of the sections below will still apply but
 they are irrelevant in the context of this sample and should be revised.
 
 == Tools

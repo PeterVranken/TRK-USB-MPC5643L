@@ -212,6 +212,27 @@ SECTIONS
         ld_ramEnd = . ;
     } >memData
 
+    /* The heap area is used in this sample for the printf functionality of the C lib.
+       Furthermore, our code requires a memory area with constraints in alignment and size
+       that can't be implemented on C source code level. */
+    .heap (NOLOAD) : ALIGN(1024)
+    {
+        /* The DMA ring buffer is put at the beginning because of the high alignment
+           requirement: log2(sizeOfBuffer) least significant bits need to be zero in its
+           address.
+             Note, the section alignment hard-coded in the file therefore limits the size
+           of the buffer, which is chosen in the C source code. Assertions in the C code
+           are required to ensure the crosswise consistency of C source code and linker
+           control file. */
+        *(.heap.dmaRingBuffer)
+        *(.heap.dmaRingBuffer.*)
+
+        . = ALIGN(8);
+        ld_sbrkStart = . ;
+        ld_sbrkEnd = ld_memHeapEnd;
+
+    } >memHeap
+    
     /* Read the end of the used flash ROM into a linker label. */
     .dummy : { ld_romEnd = . ; } >memFlash
 

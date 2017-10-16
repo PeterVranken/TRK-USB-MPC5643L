@@ -52,7 +52,22 @@
  * Global data declarations
  */
 
-extern volatile unsigned long lfd_noRxBytes;
+/** This development support variable counts the number of DMA transfers intiated since
+    power-up, to do the serial output */
+extern volatile unsigned long lfd_serialOutNoDMATransfers;
+
+/** The ring buffer for serial output can be memntarily full. In such a case a sent message
+    can be truncated (from a few bytes shortend up to entirely lost). This development
+    support variable counts the number of message since power-up, which underwent
+    trunction. */
+extern volatile unsigned long lfd_serialOutNoTruncatedMsgs;
+
+/** The ring buffer for serial output can be memntarily full. In such a case a sent message
+    can be truncated (from a few bytes shortend up to entirely lost). This development
+    support variable counts the number of truncated, lost message characters since
+    power-up. */ 
+extern volatile unsigned long lfd_serialOutNoLostMsgBytes;
+
 
 
 /*

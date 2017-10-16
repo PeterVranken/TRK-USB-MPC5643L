@@ -52,10 +52,14 @@
     explicitly disable inlining here. */
 # define NO_INLINE __attribute__((noinline))
 
+/** Place a piece of code or data objects into a sepcific linker section. */
+# define SECTION(sectionName)  __attribute__((section (#sectionName)))
+
 #else
 # define ATTRIB_UNUSED
 # define ATTRIB_DBG_ONLY
 # define NO_INLINE
+# define SECTION
 #endif
 
 /** The number of elements of a one dimensional array. */
