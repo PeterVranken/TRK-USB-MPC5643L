@@ -439,8 +439,9 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_about_this_sample">1. About this sample</a></li>
 <li><a href="#_tools">2. Tools</a>
 <ul class="sectlevel2">
-<li><a href="#_compiler_and_debugger">2.1. Compiler and Debugger</a></li>
-<li><a href="#_makefile">2.2. Makefile</a></li>
+<li><a href="#_environment">2.1. Environment</a></li>
+<li><a href="#_compiler_and_debugger">2.2. Compiler and Debugger</a></li>
+<li><a href="#_makefile">2.3. Makefile</a></li>
 </ul>
 </li>
 <li><a href="#_code_architecture">3. Code architecture</a>
@@ -484,15 +485,73 @@ infrastructure is described in the next sections.</p>
 <h2 id="_tools">2. Tools</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_compiler_and_debugger">2.1. Compiler and Debugger</h3>
+<h3 id="_environment">2.1. Environment</h3>
+<div class="sect3">
+<h4 id="_command_line_based_build">2.1.1. Command line based build</h4>
+<div class="paragraph">
+<p>The makefiles and related scripts require a few settings of the
+environment in the host machine. In particular, the location of the GNU
+compiler installation needs to be known and the PATH variable needs to
+contain the paths to the required tools.</p>
+</div>
+<div class="paragraph">
+<p>For Windows users there is a shortcut to PowerShell in the root of this
+project, which opens the shell with the prepared environment. Furthermore,
+it creates an alias to the appropriate GNU make executable. You can simply
+type <code>make</code> from any location to run MinGW32 GNU make.</p>
+</div>
+<div class="paragraph">
+<p>The PowerShell process reads the script <code>setEnv.ps1</code>, located in the
+project root, too, to configure the environment. This script requires
+configuration prior to its first use. Windows users open it in a text
+editor and follow the given instructions that are marked by TODO tags.
+Mainly, it&#8217;s about specifying the installation directory of GCC.</p>
+</div>
+<div class="paragraph">
+<p>Non-Windows users will read this script to see, which (few) environmental
+settings are needed to successfully run the build and prepare an according
+script for their native shell.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_eclipse_for_building_flashing_and_debugging">2.1.2. Eclipse for building, flashing and debugging</h4>
+<div class="paragraph">
+<p>Flashing and debugging is always done using the NXP CodeWarrior Eclipse
+IDE, which is available for free download. If you are going to run the
+application build from Eclipse, too, then the same environmental settings
+as decribed above for a shell based build need to be done for Eclipse. The
+easiest way to do so is starting Eclipse from a shell, that has executed
+the script <code>setEnv.ps1</code> prior to opening Eclipse.</p>
+</div>
+<div class="paragraph">
+<p>For Windows users the script <code>CW-IDE.ps1</code> has been prepared. This script
+requires configuration prior to its first use. Windows users open it in a
+text editor and follow the given instructions that are marked by TODO
+tags. Mainly, it&#8217;s about specifying the installation directory of
+CodeWarrior.</p>
+</div>
+<div class="paragraph">
+<p>Non-Windows users will read this script to see, which (few) environmental
+and path settings are needed to successfully run the build under control
+of Eclipse and prepare an according script for their native shell.</p>
+</div>
+<div class="paragraph">
+<p>Once everything is prepared, the CodeWarrior Eclipse IDE will never be
+started other than by clicking the script <code>CW-IDE.ps1</code> or its equivalent
+on non-Windows hosts.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_compiler_and_debugger">2.2. Compiler and Debugger</h3>
 <div class="paragraph">
 <p>The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
-be flashed and debugged with the Code Warrior IDE. (See project overview
+be flashed and debugged with the CodeWarrior IDE. (See project overview
 for more details.)</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_makefile">2.2. Makefile</h3>
+<h3 id="_makefile">2.3. Makefile</h3>
 <div class="paragraph">
 <p>Compilation and linkage are makefile controlled. The makefile is made
 generic and can be reused for other VLE projects, not only for a tiny
@@ -501,7 +560,8 @@ generic and can be reused for other VLE projects, not only for a tiny
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>mingw32-make help</pre>
+<pre>cd &lt;rootFolderOfSampleWhereGNUmakefileResides&gt;
+mingw32-make help</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -535,7 +595,7 @@ add more source code folders to hold all of your application code. The
 makefile as it is should be capable of building your application.</p>
 </div>
 <div class="sect3">
-<h4 id="_floating_point_spe_and_eabi">2.2.1. Floating point, SPE and EABI</h4>
+<h4 id="_floating_point_spe_and_eabi">2.3.1. Floating point, SPE and EABI</h4>
 <div class="paragraph">
 <p>Compiling C code for an embedded target is much more complex than on the
 host machine, where the simple command line <code>gcc helloWorld.c</code> can already
@@ -684,7 +744,7 @@ revision of GCC.</p>
 <p>This has been decided for sake of transparency and reliability. At many
 points of the implementation it would have been quite clear, how to place
 some preprocessor statements or makefile if-clauses in order to support
-e.g. Book E code or the Code Warrior compiler. As a matter of experience,
+e.g. Book E code or the CodeWarrior compiler. As a matter of experience,
 the consequent use of such preprocessor constructs can strongly degrade
 the readability of the code and, moreover, such an attempt stays a
 promise, which can&#8217;t be safely kept without according, comprehensive
@@ -716,7 +776,8 @@ address the problem arose.</p>
 application wants to implement a true handler it can; you&#8217;ll have to
 change the assembler startup code a bit. Declare your handler using the
 <code>.extern</code> statement and replace the registration of the dummy handler,
-e.g. <code>IVOR1trap</code>, in function <code>initExceptionHandlers</code> with your handler.</p>
+e.g. <code>sup_IVOR1trap</code>, in function <code>initExceptionHandlers</code> with your
+handler.</p>
 </div>
 <div class="paragraph">
 <p>Place your handler in the linker text section <code>.ivor</code> in order to
@@ -991,7 +1052,7 @@ atomic_thread_fence(memory_order_seq_cst);</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-14 00:04:12 W. Europe Daylight Time
+Last updated 2017-10-17 23:16:54 W. Europe Daylight Time
 </div>
 </div>
 </body>

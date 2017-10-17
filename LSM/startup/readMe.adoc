@@ -19,10 +19,58 @@ the next sections.
 
 == Tools
 
+=== Environment
+
+==== Command line based build
+
+The makefiles and related scripts require a few settings of the
+environment in the host machine. In particular, the location of the GNU
+compiler installation needs to be known and the PATH variable needs to
+contain the paths to the required tools. 
+
+For Windows users there is a shortcut to PowerShell in the root of this
+project, which opens the shell with the prepared environment. Furthermore,
+it creates an alias to the appropriate GNU make executable. You can simply
+type `make` from any location to run MinGW32 GNU make.
+
+The PowerShell process reads the script `setEnv.ps1`, located in the
+project root, too, to configure the environment. This script requires
+configuration prior to its first use. Windows users open it in a text
+editor and follow the given instructions that are marked by TODO tags.
+Mainly, it's about specifying the installation directory of GCC.
+
+Non-Windows users will read this script to see, which (few) environmental
+settings are needed to successfully run the build and prepare an according
+script for their native shell.
+
+==== Eclipse for building, flashing and debugging
+
+Flashing and debugging is always done using the NXP CodeWarrior Eclipse
+IDE, which is available for free download. If you are going to run the
+application build from Eclipse, too, then the same environmental settings
+as decribed above for a shell based build need to be done for Eclipse. The
+easiest way to do so is starting Eclipse from a shell, that has executed
+the script `setEnv.ps1` prior to opening Eclipse.
+
+For Windows users the script `CW-IDE.ps1` has been prepared. This script
+requires configuration prior to its first use. Windows users open it in a
+text editor and follow the given instructions that are marked by TODO
+tags. Mainly, it's about specifying the installation directory of
+CodeWarrior.
+
+Non-Windows users will read this script to see, which (few) environmental
+and path settings are needed to successfully run the build under control
+of Eclipse and prepare an according script for their native shell.
+
+Once everything is prepared, the CodeWarrior Eclipse IDE will never be
+started other than by clicking the script `CW-IDE.ps1` or its equivalent
+on non-Windows hosts.
+
+
 === Compiler and Debugger
 
 The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
-be flashed and debugged with the Code Warrior IDE. (See project overview
+be flashed and debugged with the CodeWarrior IDE. (See project overview
 for more details.)
 
 === Makefile
@@ -32,6 +80,7 @@ generic and can be reused for other projects, not only for a tiny "Hello World"
 with a few source files. It supports a number of options (targets); get an
 overview by typing:
  
+    cd <rootFolderOfSampleWhereGNUmakefileResides>
     mingw32-make help
 
 The makefile requires a little number of configuration settings, among
@@ -146,7 +195,7 @@ please refer to the early revisions of the makefile.]
 This has been decided for sake of transparency and reliability. At many
 points of the implementation it would have been quite clear, how to put
 some preprocessor statements or makefile if-clauses in order to support
-e.g. VLE code or the Code Warrior compiler. As a matter of experience, the
+e.g. VLE code or the CodeWarrior compiler. As a matter of experience, the
 consequent use of such preprocessor constructs can strongly degrade the
 readability of the code and, moreover, such an attempt stays a promise,
 which can't be safely kept without according, comprehensive software

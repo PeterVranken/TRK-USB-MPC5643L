@@ -57,7 +57,7 @@
 #include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
-#include "lfd_linFlexDriver.h"
+#include "sio_serialIO.h"
 #include "mai_main.h"
 
 
@@ -186,7 +186,7 @@ void main()
     while(true)
     {
         ++ mai_cntIdle;
-        if((mai_cntIdle % 2500000) == 0)
+        if((mai_cntIdle % 100000) == 0)
         {
             char msg[256]
                , tmp[128];
@@ -203,7 +203,7 @@ void main()
             utoa((unsigned int)mai_cntIntPIT0, tmp, /* base */ 10);
             strcat(msg, tmp);
             strcat(msg, "\r\n");
-            lfd_writeSerial(msg, strlen(msg));
+            sio_writeSerial(msg, strlen(msg));
             ++ cnt_;
         }
 #if 0

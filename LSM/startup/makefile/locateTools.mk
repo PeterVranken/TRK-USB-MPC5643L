@@ -13,7 +13,7 @@
 # purpose.
 #include commonFunctions.mk
 
-# Find the tools preferably in the folder specified by environment variable PPC_GNU_BASEDIR
+# Find the tools preferably in the folder specified by environment variable GCC_POWERPC_HOME
 # but look secondary in the system search path also. The system search path is expected as
 # either colon or semicolon separated list of path designations in the environment variable
 # PATH.
@@ -24,7 +24,7 @@ toolsSearchPath := $(subst ;, ,$(call w2u,$(PATH)))
 else
 toolsSearchPath := $(subst :, ,$(PATH))
 endif
-toolsSearchPath := $(PPC_GNU_BASEDIR) $(toolsSearchPath)
+toolsSearchPath := $(GCC_POWERPC_HOME) $(toolsSearchPath)
 #$(info Search path for external tools: $(toolsSearchPath))
 
 # Under Windows we have to look for gcc.exe rather than for gcc.
@@ -76,12 +76,12 @@ helpGCC:
 ifeq ($(and $(make),$(gcc)),)
     $(info make: $(make), gcc: $(gcc), cp: $(cp))
     $(info Current working directory: $(shell cd))
-    $(info $$(PPC_GNU_BASEDIR): $(PPC_GNU_BASEDIR))
+    $(info $$(GCC_POWERPC_HOME): $(GCC_POWERPC_HOME))
     $(info $$(PATH): $(PATH))
     $(error Required GNU tools can't be located. Most probable reasons are: You \
             didn't install the Cycwin Unix tools, you didn't install GCC for PowerPC \
             or you didn't add the paths to the executables to the environment variable \
-            PATH and you didn't set environment variable PPC_GNU_BASEDIR to point to \
+            PATH and you didn't set environment variable GCC_POWERPC_HOME to point to \
             the installation of GCC)
 else
     #$(info make: $(make), gcc: $(gcc), cp: $(cp))

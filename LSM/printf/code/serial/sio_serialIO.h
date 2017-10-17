@@ -1,8 +1,8 @@
-#ifndef LFD_LINFLEXDRIVER_INCLUDED
-#define LFD_LINFLEXDRIVER_INCLUDED
+#ifndef SIO_SERIALIO_INCLUDED
+#define SIO_SERIALIO_INCLUDED
 /**
- * @file lfd_linFlexDriver.h
- * Definition of global interface of module lfd_linFlexDriver.c
+ * @file sio_serialIO.h
+ * Definition of global interface of module sio_serialIO.c
  *
  * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -54,19 +54,19 @@
 
 /** This development support variable counts the number of DMA transfers intiated since
     power-up, to do the serial output */
-extern volatile unsigned long lfd_serialOutNoDMATransfers;
+extern volatile unsigned long sio_serialOutNoDMATransfers;
 
 /** The ring buffer for serial output can be memntarily full. In such a case a sent message
     can be truncated (from a few bytes shortend up to entirely lost). This development
     support variable counts the number of message since power-up, which underwent
     trunction. */
-extern volatile unsigned long lfd_serialOutNoTruncatedMsgs;
+extern volatile unsigned long sio_serialOutNoTruncatedMsgs;
 
 /** The ring buffer for serial output can be memntarily full. In such a case a sent message
     can be truncated (from a few bytes shortend up to entirely lost). This development
     support variable counts the number of truncated, lost message characters since
     power-up. */ 
-extern volatile unsigned long lfd_serialOutNoLostMsgBytes;
+extern volatile unsigned long sio_serialOutNoLostMsgBytes;
 
 
 
@@ -75,9 +75,9 @@ extern volatile unsigned long lfd_serialOutNoLostMsgBytes;
  */
 
 void ldf_initSerialInterface(unsigned int baudRate);
-signed int lfd_writeSerial(const void *msg, size_t noBytes);
+signed int sio_writeSerial(const void *msg, size_t noBytes);
 
-#endif  /* LFD_LINFLEXDRIVER_INCLUDED */
+#endif  /* SIO_SERIALIO_INCLUDED */
 
 
  
