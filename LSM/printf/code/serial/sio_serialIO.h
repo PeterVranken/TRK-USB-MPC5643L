@@ -68,14 +68,28 @@ extern volatile unsigned long sio_serialOutNoTruncatedMsgs;
     power-up. */ 
 extern volatile unsigned long sio_serialOutNoLostMsgBytes;
 
+/** The number of lost input characters due to overfull input ring buffer. */
+extern volatile unsigned long sio_serialInLostBytes;
+
+#ifdef DEBUG
+/** Count all input characters received since last reset. This variable is support in DEBUG
+    compilation only. */
+extern volatile unsigned long sio_serialInNoRxBytes;
+#endif
 
 
 /*
  * Global prototypes
  */
 
+/** Module initialization. Configure the I/O devices for serial output. */
 void ldf_initSerialInterface(unsigned int baudRate);
+
+/** A byte string is sent through the serial interface. */
 signed int sio_writeSerial(const void *msg, size_t noBytes);
+
+/** Application API function to read a single character from serial input. */
+signed int sio_getchar();
 
 #endif  /* SIO_SERIALIO_INCLUDED */
 

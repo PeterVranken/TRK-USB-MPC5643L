@@ -54,6 +54,7 @@
 #include <assert.h>
 
 #include "MPC5643L.h"
+#include "typ_types.h"
 #include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
@@ -186,7 +187,7 @@ void main()
     while(true)
     {
         ++ mai_cntIdle;
-        if((mai_cntIdle % 100000) == 0)
+        if((mai_cntIdle % 2500000) == 0)
         {
             char msg[256]
                , tmp[128];
@@ -204,6 +205,60 @@ void main()
             strcat(msg, tmp);
             strcat(msg, "\r\n");
             sio_writeSerial(msg, strlen(msg));
+            
+            /* Echo meanwhile received input characters, but not that often. */
+            if((cnt_ % 10) == 0)
+            {
+                char inputMsg[256];
+                unsigned int u = 0;
+                while(true)
+                {
+                    signed int c = sio_getchar();
+                    if(c != -1)
+                        inputMsg[u] = (char)c;
+                    else
+                        inputMsg[u] = '\0';
+                        
+                    if(u < sizeOfAry(inputMsg)-1)
+                        ++ u;
+                    else
+                    {
+                        inputMsg[sizeOfAry(inputMsg)-1] = '\0';
+                        break;
+                    }
+                }
+                size_t noChars = strlen(inputMsg);
+                if(noChars > 0)
+                {
+                    sio_writeSerial("You've typed: ", sizeof("You've typed: ")-1);
+                    sio_writeSerial(inputMsg, noChars);
+                    if(inputMsg[noChars-1] != '\n')
+                        sio_writeSerial("\r\n", 2);
+                        
+                    /* Interpret the input as possible command. */
+                    if(strcmp(inputMsg, "green\r\n") == 0)
+                    {
+                        /* To avoid race conditions with the interrupt, we would actually
+                           require a critial section. */
+                        uint32_t msr = ihw_enterCriticalSection();
+                        {
+                            lbd_setLED(_ledPIT0Handler, /* isOn */ false);
+                            _ledPIT0Handler = lbd_led_D4_grn;
+                        }
+                        ihw_leaveCriticalSection(msr);
+                    }
+                    else if(strcmp(inputMsg, "red\r\n") == 0)
+                    {
+                        uint32_t msr = ihw_enterCriticalSection();
+                        {
+                            lbd_setLED(_ledPIT0Handler, /* isOn */ false);
+                            _ledPIT0Handler = lbd_led_D4_red;
+                        }
+                        ihw_leaveCriticalSection(msr);
+                    }
+                }
+            } /* End if(Time to echo console input?) */
+            
             ++ cnt_;
         }
 #if 0

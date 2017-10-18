@@ -85,16 +85,22 @@
     should normally be chosen higher than #INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT. */
 #define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     2
 
-/** The size of the ring buffer can be chosen as a power of two of bytes.
+/** The size of the ring buffer for serial output can be chosen as a power of two of bytes.
       @remark Note, the permitted range of values depends on the reservation of space made
     in the linker control file. */
 #define SERIAL_OUTPUT_RING_BUFFER_SIZE_PWR_OF_TWO   10
 
-/** Compute the size of the ring buffer as number of bytes. */
+/** The size of the ring buffer for serial input as number of bytes. The maximum capacity
+    is one Byte less than the size. */
+#define SERIAL_INPUT_RING_BUFFER_SIZE   257
+
+/** Compute the size of the output ring buffer as number of bytes. */
 #define SERIAL_OUTPUT_RING_BUFFER_SIZE  (1u<<(SERIAL_OUTPUT_RING_BUFFER_SIZE_PWR_OF_TWO)) 
 
-/** Used for index arithemtics: A mask for those index bits in an integer word. */
+/** Used for index arithemtics: A mask for the index bits in an integer word. Here for the
+    serial output buffer. */
 #define SERIAL_OUTPUT_RING_BUFFER_IDX_MASK  (SERIAL_OUTPUT_RING_BUFFER_SIZE-1)
+
 
 /* The LINFlex device to be used is selected by name depending on the setting of
    #IDX_LINFLEX_D. */
@@ -146,7 +152,7 @@ volatile unsigned long sio_serialOutNoLostMsgBytes = 0;
 static uint8_t SECTION(.heap.dmaRingBuffer) _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE];
 
 /** The write index into the ring buffer used for serial output. Since we use bytes and
-    since the log2(sizeOfBuffer) least significant bits of the buffer address are be zero
+    since the log2(sizeOfBuffer) least significant bits of the buffer address are zero
     the address of the index element is \a _serialOutRingBuf | \a _serialOutRingBufIdxWrM,
     which is equal to \a _serialOutRingBuf + \a _serialOutRingBufIdxWrM.
       @remark The variable is only used modulo SERIAL_OUTPUT_RING_BUFFER_SIZE, i.e. the more
@@ -160,20 +166,38 @@ static volatile unsigned int _serialOutRingBufIdxWrM = 0;
     DMA transfer completes and the client code has not demanded a new output meanwhile. */
 static volatile bool _serialOutDmaTransferIsRunning = false;
 
+/** The ring buffer used for the interrupt based serial input. No particular section is
+    required. Due to the low performance requirements we can use any location and do normal
+    address arithmetics. */
+static volatile uint8_t _serialInRingBuf[SERIAL_INPUT_RING_BUFFER_SIZE];
 
-volatile unsigned long sio_noRxBytes = 0;
-static volatile unsigned char _readBuf[512]
-                            , *_pRdBuf = &_readBuf[0];
-static const unsigned char *_pRdBufEnd = &_readBuf[0] + sizeof(_readBuf);
-static unsigned int _noEOL = 0;
+/** A pointer to the end of the ring buffer used for serial input. This pointer facilitates
+    the cyclic pointer update.
+      @remark Note, the pointer points to the last byte in the buffer, not to the first
+    address beyond as usually done. */
+static volatile const uint8_t * _pEndSerialInRingBuf =
+                                    &_serialInRingBuf[SERIAL_INPUT_RING_BUFFER_SIZE-1];
 
-unsigned long sio_read_noInvocations = 0;
-int sio_read_fildes = -99;
-void *sio_read_buf = (void*)-99;
-size_t sio_read_nbytes = 99;
-unsigned int sio_read_noErrors = 0
-           , sio_read_noLostBytes = 0;
-           
+/** The pointer to the next write position in the ring buffer used for serial input. */
+static volatile uint8_t * volatile _pWrSerialInRingBuf = &_serialInRingBuf[0];
+
+/** The pointer to the next read position from the ring buffer used for serial input. The
+    buffer is considered empty if \a _pWrSerialInRingBuf equals \a _pRdSerialInRingBuf,
+    i.e. the buffer can contain up to SERIAL_INPUT_RING_BUFFER_SIZE-1 characters. */
+static volatile uint8_t * volatile _pRdSerialInRingBuf = &_serialInRingBuf[0];
+
+/** The number of received but not yet consumed end of line characters. Required for read
+    line API function. */
+static volatile unsigned int _serialInNoEOL = 0;
+
+/** The number of lost characters due to overfull input ring buffer. */
+volatile unsigned long sio_serialInLostBytes = 0; 
+
+#ifdef DEBUG
+/** Count all characters received since last reset. This variable is support in DEBUG
+    compilation only. */
+volatile unsigned long sio_serialInNoRxBytes = 0;
+#endif
 
  
 /*
@@ -500,23 +524,49 @@ static void dmaTransferCompleteInterrupt(void)
 
 
 /**
- * Interrupt handler for UART RX event.
+ * Interrupt handler for UART RX event. A received character is read from the UART hadrware
+ * and put into our ring buffer if there's space left. Otherwise the character is counted
+ * as lost without further remedial action.
  */
-static void linFlexRxInterrupt(void)
+static void linFlexRxInterrupt()
 {
-    ++ sio_noRxBytes;
-    
-    /* Get the received byte and put it into our buffer. */
+    /* Get the received byte. */
+    /// @todo Record a buffer overrun bit in case the IRQ handler comes too slow
     const unsigned char c = LINFLEX.BDRM.B.DATA4;
-    if(_pRdBuf < _pRdBufEnd)
+    
+#ifdef DEBUG
+    ++ sio_serialInNoRxBytes;
+#endif
+
+    /* Check for buffer full. Compute next write position at the same time. */
+    volatile uint8_t * const pWrTmp = _pWrSerialInRingBuf
+                   , * const pWrNext = pWrTmp < _pEndSerialInRingBuf? pWrTmp+1
+                                                                    : &_serialInRingBuf[0];
+    
+    /* Put the byte into our buffer if there's enough room. */
+    if(pWrNext != _pRdSerialInRingBuf)
     {
-        * _pRdBuf++ = c;
+        *pWrTmp = c;
+        
+        /* Count the received end of line characters. (The variable is decremented on
+           consumption of such a character.) */
         if(c == '\n')
-            ++ _noEOL;
+            ++ _serialInNoEOL;
+        
+        /* Update write position into ring buffer. This is at the same time the indication
+           of the availablity of the new character to the application API functions. */
+        _pWrSerialInRingBuf = pWrNext;
+    }
+    else    
+    {
+        /* Buffer overrun, count lost character. */
+        ++ sio_serialInLostBytes;
     }
     
-    /// @todo Record a buffer overrun bit in case the IRQ handler comes too slow
-    
+    /* Ensure that all relevant memory changes are visible before we leave the
+       interrupt. */
+    atomic_thread_fence(memory_order_seq_cst);
+
     /* Acknowlege the interrupt and enable the next one at the same time. */
     assert((LINFLEX.UARTSR.R & 0x4) != 0);
     LINFLEX.UARTSR.R = 0x4;  
@@ -575,6 +625,10 @@ void ldf_initSerialInterface(unsigned int baudRate)
     /* Initialize DMA and connect it to the UART. */
     initDMA();
 
+    /* Empty receive buffer. */
+    _pWrSerialInRingBuf =
+    _pRdSerialInRingBuf = &_serialInRingBuf[0];
+    
 } /* End of ldf_initSerialInterface */
 
 
@@ -696,6 +750,58 @@ signed int sio_writeSerial(const void *msg, unsigned int noBytes)
 
 
 
+/**
+ * Application API function to read a single character from serial input or EOF if there's
+ * no such character received meanwhile.
+ *   @return
+ * The function is non-blocking. If the receive buffer currently contains no character it
+ * returns EOF (-1). Otherwise it returns the earliest received character, which is still
+ * in the buffer.
+ *   @remark
+ * The return of EOF does not mean that the stream has been closed. It's just a matter of
+ * having no input data temporarily. On reception of the more characters the function will
+ * continue to return them.
+ */
+signed int sio_getchar()
+{
+    signed int c;
+    
+    /* Reading the ring buffer is done in critical section get ensure mutiual exclusion
+       with the it filling interrupt. */
+    uint32_t msr = ihw_enterCriticalSection();
+    {
+        /* Check for buffer empty. */
+        if(_pRdSerialInRingBuf != _pWrSerialInRingBuf)
+        {
+            c = *_pRdSerialInRingBuf;
+
+            /* Keep track of the received but not yet consumed end of line characters. (The
+               variable is incremented on reception of such a character.) */
+            if(c == '\n')
+            {
+                assert(_serialInNoEOL > 0);
+                -- _serialInNoEOL;
+            }
+
+            /* Update read position in the ring buffer. This is at the same time the indication
+               towards the interrupt of having the character consumed. */
+            volatile uint8_t * const pRdTmp = _pRdSerialInRingBuf;
+            _pRdSerialInRingBuf = pRdTmp < _pEndSerialInRingBuf ? pRdTmp+1 
+                                                                : &_serialInRingBuf[0];
+        }
+        else    
+        {
+            /* Nothing in buffer, return EOF. */
+            c = -1;
+        }
+    }
+    ihw_leaveCriticalSection(msr);
+
+    return c;
+
+} /* End of sio_getchar */
+
+
 #if 0
 /// @todo Let the write API with file ID become part of the printf compilation unit
 signed int write(int file, const void *msg, size_t noBytes)
@@ -710,6 +816,13 @@ signed int write(int file, const void *msg, size_t noBytes)
         
 } /* End of write */
 
+
+unsigned long sio_read_noInvocations = 0;
+int sio_read_fildes = -99;
+void *sio_read_buf = (void*)-99;
+size_t sio_read_nbytes = 99;
+unsigned int sio_read_noErrors = 0
+           , sio_read_noLostBytes = 0;
 
 /// @todo This API belongs into the printf module. We need a raw read char or read line
 ssize_t read(int fildes, void *buf, size_t nbytes)
@@ -759,10 +872,10 @@ ssize_t read(int fildes, void *buf, size_t nbytes)
             /* Extract data and clear buffer. */
             memcpy(buf, (const void*)&_readBuf[0], nbytes);
             _pRdBuf = &_readBuf[0];
-            _noEOL = 0;
+            _serialInNoEOL = 0;
             
             result = (ssize_t)nbytes;
-        }        
+        }
     }
     ihw_leaveCriticalSection(msr);
 
