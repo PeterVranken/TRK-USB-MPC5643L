@@ -64,11 +64,23 @@ extern volatile unsigned long sio_serialOutNoTruncatedMsgs;
 
 /** The ring buffer for serial output can be memntarily full. In such a case a sent message
     can be truncated (from a few bytes shortend up to entirely lost). This development
-    support variable counts the number of truncated, lost message characters since
-    power-up. */ 
+    support variable counts the number of message since power-up, which underwent
+    trunction.
+      @remark Because of the race conditions between serial I/O interrupt an application
+    software can not clearly relate a change of \a sio_serialOutNoTruncatedMsgs to a
+    particular character or message it gets from the read functions sio_getChar or
+    sio_getLine. In particular, it must not try to reset the counter prior to a read
+    operation in order to establish such a relation. The application will just know that
+    there are garbled messages. */
 extern volatile unsigned long sio_serialOutNoLostMsgBytes;
 
-/** The number of lost input characters due to overfull input ring buffer. */
+/** The ring buffer for serial output can be memntarily full. In such a case a sent message
+    can be truncated (from a few bytes shortend up to entirely lost). This development
+    support variable counts the number of truncated, lost message characters since
+    power-up.
+      @remark See \a sio_serialOutNoTruncatedMsgs for race conditions with the input
+    functions of this module's API. Just the same holds for \a
+    sio_serialOutNoLostMsgBytes. */ 
 extern volatile unsigned long sio_serialInLostBytes;
 
 #ifdef DEBUG
@@ -86,10 +98,13 @@ extern volatile unsigned long sio_serialInNoRxBytes;
 void ldf_initSerialInterface(unsigned int baudRate);
 
 /** A byte string is sent through the serial interface. */
-signed int sio_writeSerial(const void *msg, size_t noBytes);
+unsigned int sio_writeSerial(const char *msg, size_t noBytes);
 
 /** Application API function to read a single character from serial input. */
-signed int sio_getchar();
+signed int sio_getChar();
+
+/* Read a line of input text from the serial interface. */
+char *sio_getLine(char buf[], unsigned int sizeOfBuf);
 
 #endif  /* SIO_SERIALIO_INCLUDED */
 

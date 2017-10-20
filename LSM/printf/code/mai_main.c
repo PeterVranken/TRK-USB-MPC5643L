@@ -59,6 +59,7 @@
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"
+#include "f2d_float2Double.h"
 #include "mai_main.h"
 
 
@@ -205,7 +206,7 @@ void main()
             strcat(msg, tmp);
             strcat(msg, "\r\n");
             sio_writeSerial(msg, strlen(msg));
-            
+#if 0
             /* Echo meanwhile received input characters, but not that often. */
             if((cnt_ % 10) == 0)
             {
@@ -213,7 +214,7 @@ void main()
                 unsigned int u = 0;
                 while(true)
                 {
-                    signed int c = sio_getchar();
+                    signed int c = sio_getChar();
                     if(c != -1)
                         inputMsg[u] = (char)c;
                     else
@@ -258,7 +259,44 @@ void main()
                     }
                 }
             } /* End if(Time to echo console input?) */
+#else
+            /* Look for possible user input through serial interface. */
+            char inputMsg[40+1];
+            if(sio_getLine(inputMsg, sizeOfAry(inputMsg)) != NULL)
+            {
+                sio_writeSerial("You've typed: ", sizeof("You've typed: ")-1);
+                sio_writeSerial(inputMsg, strlen(inputMsg));
+                sio_writeSerial("\r\n", 2);
+            }
             
+            /* Interpret the input as possible command. */
+            if(strcmp(inputMsg, "green") == 0)
+            {
+                /* To avoid race conditions with the interrupt, we would actually
+                   require a critial section. */
+                uint32_t msr = ihw_enterCriticalSection();
+                {
+                    lbd_setLED(_ledPIT0Handler, /* isOn */ false);
+                    _ledPIT0Handler = lbd_led_D4_grn;
+                }
+                ihw_leaveCriticalSection(msr);
+            }
+            else if(strcmp(inputMsg, "red") == 0)
+            {
+                uint32_t msr = ihw_enterCriticalSection();
+                {
+                    lbd_setLED(_ledPIT0Handler, /* isOn */ false);
+                    _ledPIT0Handler = lbd_led_D4_red;
+                }
+                ihw_leaveCriticalSection(msr);
+            }
+#endif
+            printf( "%s: cnt_=%i, time=%.3f min=%.3f h\r\n"
+                  , __func__
+                  , cnt_
+                  , f2d(mai_cntIntPIT0/60.0e3)
+                  , f2d(mai_cntIntPIT0/3600.0e3)
+                  );
             ++ cnt_;
         }
 #if 0
