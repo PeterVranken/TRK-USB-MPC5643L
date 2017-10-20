@@ -46,9 +46,9 @@ MEMORY
     /* Lock Step Mode, 128k of RAM. It is distributed into several chunks because we want
        to have chunks at specific addresses and/or want them to have a specific size. */
     memData(rxw):   org = 0x40000000,
-                    len = 0x00020000 - 0x1800 - 0x4000
-    memHeap(rxw):   org = 0x40000000 + (0x00020000 - 0x1800 - 0x4000),
-                    len = 0x1800
+                    len = 0x00020000 - 0x2000 - 0x4000
+    memHeap(rxw):   org = 0x40000000 + (0x00020000 - 0x2000 - 0x4000),
+                    len = 0x2000
     memStack(rxw):  org = 0x40000000 + (0x00020000 - 0x4000),
                     len = 0x4000
 }
@@ -217,6 +217,8 @@ SECTIONS
        that can't be implemented on C source code level. */
     .heap (NOLOAD) : ALIGN(1024)
     {
+        ld_heapStart = . ;
+
         /* The DMA ring buffer is put at the beginning because of the high alignment
            requirement: log2(sizeOfBuffer) least significant bits need to be zero in its
            address.
@@ -229,8 +231,10 @@ SECTIONS
 
         . = ALIGN(8);
         ld_sbrkStart = . ;
-        ld_sbrkEnd = ld_memHeapEnd;
+        . += ld_memHeapSize - (ld_sbrkStart - ld_heapStart) ;
+        ld_sbrkEnd = . ;
 
+        ld_heapEnd = . ;
     } >memHeap
     
     /* Read the end of the used flash ROM into a linker label. */
@@ -238,10 +242,11 @@ SECTIONS
 
     /* Compute the used portions of RAM and ROM, so that they appear in the map file and
        can be used from the startup and application code. */
-    ld_dataSize = ld_dataEnd - ld_dataStart ;
-    ld_ramSize = ld_ramEnd - ld_ramStart ;
+    ld_dataSize = ld_dataEnd - ld_dataStart;
+    ld_ramSize = ld_ramEnd - ld_ramStart;
     ld_dataMirrorStart = LOADADDR(.data);
     ld_dataMirrorEnd   = LOADADDR(.sdata) + SIZEOF(.sdata);
-    ld_dataMirrorSize = ld_dataMirrorEnd - ld_dataMirrorStart;
-    ld_romSize = ld_romEnd - ld_romStart ;
+    ld_dataMirrorSize  = ld_dataMirrorEnd - ld_dataMirrorStart;
+    ld_sbrkSize = ld_sbrkEnd - ld_sbrkStart;
+    ld_romSize = ld_romEnd - ld_romStart;
 }

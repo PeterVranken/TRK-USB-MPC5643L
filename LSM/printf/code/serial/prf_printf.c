@@ -9,11 +9,11 @@
  * way, how the library functions request more chunks of data from the stream does not fit
  * to the character of a serial input, which can be temporarily exhausted but which will
  * have new data some time later. We couldn't find a way to satisfy the interface of the C
- * library (mainly through function read()) without inacceptable blocking states. As far as
+ * library (mainly through function read()) without unacceptable blocking states. As far as
  * input is concerned, you will have to build your application directly on the API of
  * module sio_serialIO.c.
  *   @remark Note, this function does not provide any directly used function or data
- * object. Just compile and link it and successfuly use \a printf, \a fprint, \a put,
+ * object. Just compile and link it and successfully use \a printf, \a fprintf, \a put,
  * \a fputs, \a putchar.
  *   @remark By using \a printf or one of the other functions in your application you will
  * get a significant additional RAM and ROM consumption. Particular the RAM consumption
@@ -21,10 +21,10 @@
  * like in "%.3f".
  *   @remark Using \a printf with floating point formatting characters is a very expensive
  * operation in term of CPU load, too. The C library has not been compiled with
- * -fshort-double and does perform the real 64 Bit operations as required by teh C
- * standard. All of this is done by the emulation libary since there is no hardware support
+ * -fshort-double and does perform the real 64 Bit operations as required by the C
+ * standard. All of this is done by the emulation library since there is no hardware support
  * for 64 Bit operations in the MPC5643L.
- *   @remark The memory allocation concept of \a printf and else is intransparent. We
+ *   @remark The memory allocation concept of \a printf and else is untransparent. We
  * implemented a primitive substitute for the required function \a sbrk, which basically
  * works but which is not safe. We didn't have a true specification of the behavior of this
  * function and can't guarantee that it is working fully as expected. Furthermore, the maximum
@@ -33,8 +33,8 @@
  * of memory errors at run time and waste of expensive RAM.
  *   @remark For several reasons, and particularly because of the last two remarks, the use
  * of \a printf and else must never be considered in production code. (Whereas it is fine to
- * use the API of sio_serialIO.c in production code.) As a rule of thumb, all occurances of
- * #include "f2d_float2Double.h" and of \a printf, \a fprint, etc. must be surrounded by
+ * use the API of sio_serialIO.c in production code.) As a rule of thumb, all occurrences of
+ * #include "f2d_float2Double.h" and of \a printf, \a fprintf, etc. must be surrounded by
  * preprocessor conditions, that permit their compilation only in DEBUG configuration.
  *
  * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
@@ -135,18 +135,23 @@ unsigned long prf_sbrk_totalIncrement = 0;
  * https://en.wikipedia.org/wiki/Sbrk and
  * https://www.gnu.org/software/libc/manual/html_node/Resizing-the-Data-Segment.html#Resizing-the-Data-Segment.
  */
-void *sbrk(intptr_t increment)
+void *sbrk(ptrdiff_t increment)
 {
     /* Record the use of this function. The information retrieved from these variables may
        help adjusting the size of the linker reserved memory chunk. */
     ++ prf_sbrk_noRequests;
-    prf_sbrk_totalIncrement += (uint32_t)increment;
+    prf_sbrk_totalIncrement += (unsigned long)increment;
     
-    /// @todo Use heap area from linker file
-    static char _Alignas(double) heap_[8192];
+    /* Shape access to the linker provided reserved memory for sbrk. */
+    extern uint8_t ld_sbrkStart[0]
+                 , ld_sbrkEnd[0];
+                 
+    /* Check alignment, should be no less than double alignment. Correct linker file if
+       this assertion fires. */
+    assert(((uintptr_t)ld_sbrkStart & (8-1)) == 0);
     
-    static const char *pNextChunk_ = &heap_[0];
-    if(pNextChunk_ + increment <= &heap_[0] + sizeof(heap_))
+    static uint8_t *pNextChunk_ = ld_sbrkStart;
+    if(pNextChunk_ + increment <= ld_sbrkEnd)
     {
         void *result = (void*)pNextChunk_;
         pNextChunk_ += increment;

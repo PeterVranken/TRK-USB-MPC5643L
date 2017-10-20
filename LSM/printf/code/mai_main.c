@@ -193,11 +193,7 @@ void main()
             char msg[256]
                , tmp[128];
             static unsigned int cnt_ = 0;
-//            sprintf( msg
-//                   , "main: cnt: %u, mai_cntIntPIT0: %lu\r\n"
-//                   , cnt_
-//                   , mai_cntIntPIT0
-//                   );
+                   
             strcpy(msg, "main: Hello World, cnt: ");
             utoa(cnt_, tmp, /* base */ 10);
             strcat(msg, tmp);
@@ -206,6 +202,15 @@ void main()
             strcat(msg, tmp);
             strcat(msg, "\r\n");
             sio_writeSerial(msg, strlen(msg));
+            
+            sprintf( msg
+                   , "main: %s: cnt: %u, mai_cntIntPIT0: %lu\r\n"
+                   , "sprintf"
+                   , cnt_
+                   , mai_cntIntPIT0
+                   );
+            sio_writeSerial(msg, strlen(msg));
+
 #if 0
             /* Echo meanwhile received input characters, but not that often. */
             if((cnt_ % 10) == 0)
@@ -291,6 +296,12 @@ void main()
                 ihw_leaveCriticalSection(msr);
             }
 #endif
+            puts("Hello World, this is puts\r\n");
+            fputs("Hello World, this is fputs(stdout)\r\n", stdout);
+            fputs("Hello World, this is fputs(stderr)\r\n", stderr);
+            fprintf(stdout, "Hello World, this is fprintf(%s)\r\n", "stdout");
+            fprintf(stderr, "Hello World, this is fprintf(%s)\r\n", "stderr");
+            putchar('x'); putchar('y'); putchar('z'); putchar('\r'); putchar('\n');
             printf( "%s: cnt_=%i, time=%.3f min=%.3f h\r\n"
                   , __func__
                   , cnt_
