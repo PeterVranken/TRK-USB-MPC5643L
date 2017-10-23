@@ -95,6 +95,27 @@ static volatile lbd_led_t _ledPIT0Handler = lbd_led_D4_red;
  */
 
 /**
+ * Helper function: Read high resolution timer register of CPU. The register wraps around
+ * after about 35s. The return value can be used to measure time spans up to this length.
+ *   @return
+ * Get the current register value. The value is incremented every 1/120MHz = (8+1/3)ns
+ * regardless of the CPU activity.
+ */
+static inline uint32_t getTBL()
+{
+    uint32_t TBL;
+    asm volatile ( /* AssemblerTemplate */
+                   "mfspr %0, 268\n\r" /* SPR 268 = TBL, 269 = TBU */
+                 : /* OutputOperands */ "=r" (TBL)
+                 : /* InputOperands */
+                 : /* Clobbers */
+                 );
+    return TBL;
+
+} /* End of getTBL */
+
+
+/**
  * Interrupt handler that serves the interrupt of Programmable Interrupt Timer 0.
  */
 static void interruptPIT0Handler()
@@ -296,6 +317,8 @@ void main()
                 ihw_leaveCriticalSection(msr);
             }
 #endif
+            uint32_t tiStart = getTBL();
+            
             puts("Hello World, this is puts\r\n");
             fputs("Hello World, this is fputs(stdout)\r\n", stdout);
             fputs("Hello World, this is fputs(stderr)\r\n", stderr);
@@ -308,6 +331,33 @@ void main()
                   , f2d(mai_cntIntPIT0/60.0e3)
                   , f2d(mai_cntIntPIT0/3600.0e3)
                   );
+                  
+            /* Consider using anywhere the integer variants of printf from the new C
+               library and do not link the floating point standard implementation. This
+               will save ROM space and a lot of CPU load. */
+            unsigned int h, m, s, ms;
+            h = mai_cntIntPIT0 / 3600000;
+            m = s = mai_cntIntPIT0 - h*3600000;
+            m /= 60000;
+            s = ms = s - m*60000;
+            s /= 1000;
+            ms = ms - s*1000;
+            
+            iprintf( "%s: cnt_=%u, time=%u:%02u:%02u:%03u\r\n"
+                   , __func__
+                   , cnt_
+                   , h, m, s, ms
+                   );
+                   
+            /* Elapsed time for all output so far, basically measured in 8.33=25/3 ns
+               units. */
+            uint32_t tiPrintNs = 25*(getTBL() - tiStart)/3
+                   , tiPrintUs = tiPrintNs / 1000;
+            tiPrintNs -= tiPrintUs * 1000;
+            fiprintf( stdout, "%s, Time to print: %u.%03u us\r\n"
+                    , __func__
+                    , tiPrintUs, tiPrintNs
+                    );
             ++ cnt_;
         }
 #if 0
