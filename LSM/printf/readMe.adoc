@@ -7,8 +7,97 @@
 
 == About this sample
 
-TODOC Add introduction. Most of the sections below will still apply but
-they are irrelevant in the context of this sample and should be revised.
+This sample adds a serial I/O channel to the startup sample. Our
+evaluation board TRK-USB-MPC5643L uses a USB connection for programming
+and debugging. The same channel supports a RS 232 serial connection. The
+USB chip on the board implements the serial to USB translation and a
+service on the host machine makes the connection again available like a
+normal serial interface (called `COM` on a Windows host).
+
+This connection can be used from the MPC5643L. It has to configure the two
+pins, which are hard wired to the corresponding pins of the USB chip as
+UART RX and TX port and implement the driver for the onboard UART device.
+This is done in a reusable way in this sample.
+
+== The UART driver
+
+The UART driver (including MCU pin configuration) is implemented in
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/printf/code/serial/sio_serialIO.c[`code/serial/sio_serialIO.c`].
+The initialization function configures the MCU devices LINFlexD_0, DMA_MUX
+and eDMA. The eDMA is configured to operate in modulo mode. The DMA
+implements a ring buffer, which fits well to the continuous character
+stream of a serial interface. Whenever something is in the ring buffer the
+DMA will copy it byte after byte into the send register of the UART. All
+the CPU has to do for serial output is to perform one or two `memcpy` to
+put the sent message into the ring buffer. The application interface is a
+write function for that; it takes a pointer to `char` and the number of
+bytes to send as arguments.
+
+Serial input is implemented less performant. No DMA is used, every received
+character is got by interrupt and put into an intermediate buffer. The
+application interface is a get function to fetch the next single character
+from that buffer and a read function to get a line of text at once, i.e.
+all characters up to the next newline character.
+
+The asymetric design is based on the assumption that most of the serial
+data will be output. The application can use the interface to regularly
+write status information to the host machine. The host can sent commands
+to the application to control it. Such commands require typically much
+less characters than the response. The design is not optimal if large
+data amounts need to be downloaded to the evaluation board.
+
+An important detail of the implementation is the ring buffer for DMA. The
+implementation in hardware superimposes tight constraints on the address
+and size of the memory area used for that buffer. These constraints can't
+be fulfilled by C source code. It's necessary to define the buffer in the
+linker command file, see
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/printf/makefile/linkerControlFile.ld[`makefile/linkerControlFile.ld`].
+
+Another important detail of the DMA implementation is the sharing concept
+for the eDMA device. This sample reserves one of the available 16 DMA
+channels. Which one can be selected by compile time switch. While
+selecting and reserving one out of the available channels should be fine
+even in large applications, requires the sharing of the device a more
+detailed consideration. The eDMA device has several global configurations
+settings, which affect all channels and their coordination. Our sample
+chooses a basic configuration but it must be doubted that this is
+satisfying for arbitrary applications that use other DMA channels for
+other purposes at the same time. If you're going to integrate the serial
+interface into your application then it's likely that you will have to cut
+out the general eDMA configuration from `sio_serialIO.c` and move it into
+a more approriate, centralized code location.
+
+TODOC: up to 115200 kBaud
+
+== The interface to the C standard library
+
+The simple API of the serial interface allows to write given messages of
+known length and to read single characters or lines of text. More
+flexible, formatted output become possible through the C library. The
+standard streams `stdout` and `stderr` have been connected the serial
+interface. All according output functions from the C library can thus be
+used to write messages to the host. These are mainly `puts`, `printf` and
+`iprintf`. (`fprintf` with `stdout`/`stderr` does work, too, but has no
+noticeable advantage.) Information output from an application becomes very
+easy and most convenient.
+
+Serial input could not be connected to the C library. The unpredictable
+arrival of input characters doesn't fit to the stream concept of the C
+library and its data read interface.
+
+The penalty of using the C library for output instead of the raw API of
+`sio_serialIO.c` is high. The ROM consumption for the linked functions is
+significant but likely not deciding -- the MCU has a huge amount of ROM
+available. The stream implementation of the library requires several kByte
+of RAM for buffering, which hurts more. The sample allocates 7k to the
+heap function `sbrk`, which serves the library. Last but not least, the
+CPU load for formatted output is high if the floating point format
+characters are applied.
+
+TODOC:
+Why high load with %f: No hard-float
+Scalability concept, raw, iprintf, printf; compile printf.c, f2d, #include f2d
+Atomic: serialWrite, printf by experience
 
 == Tools
 
