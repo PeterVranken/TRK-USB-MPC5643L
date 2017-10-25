@@ -77,7 +77,6 @@
 
 #include "typ_types.h"
 #include "sio_serialIO.h"
-#include "f2d_float2Double.h"
 
 
 /*

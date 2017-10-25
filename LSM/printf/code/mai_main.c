@@ -206,6 +206,11 @@ void main()
        the interrupt handlers. */
     ihw_resumeAllInterrupts();
     
+    /* Sample code from readMe.adoc. */
+    float x = 3.14;
+    double y = expf(1.0);
+    printf("%s=%.2f, %c=%.5g\r\n", "pi", f2d(x), 'e', f2d(y));
+    
     while(true)
     {
         ++ mai_cntIdle;

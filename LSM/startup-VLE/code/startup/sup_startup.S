@@ -952,7 +952,7 @@ zeroizeSRAM:
     e_or2i  r8, ld_memRamStart@l
     e_lis   r9, ld_memRamSize@h
     e_or2i  r9, ld_memRamSize@l
-    srawi   r9, r9, (0x4)   /* Divide length in Byte by 2^4=16 */
+    srawi   r9, r9, 4       /* Divide length in Byte by 2^4=16 */
     mtctr   r9
     se_li   r31, 0
     se_li   r30, 0

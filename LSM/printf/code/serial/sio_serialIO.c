@@ -347,7 +347,7 @@ static void initDMA(void)
  * Initialization of the MPC5643L's I/O device LINFlex_0. The device is put into UART mode
  * for serial in-/output.
  *   @param baudRate
- * The baud rate in Hz. Allow values range from 10 .. 1000000, proven values range from 300
+ * The Baud rate in Hz. Allow values range from 10 .. 1000000, proven values range from 300
  * till 115200 Hz.
  *   @remark
  * To match the correct Baud rates the code assumes a peripheral clock rate of 120 MHz.
@@ -644,8 +644,8 @@ static void registerInterrupts(void)
  * Initialize the I/O devices for serial output, in particular, these are the LINFlex
  * device plus a DMA channel to serve it.
  *   @param baudRate
- * The Baud rate of in- and output.
- *   @todo Selection of DMA channel and LINFlex device should become an option
+ * The Baud rate of in- and output in Hz. Allow values range from 10 .. 1000000, proven
+ * values range from 300 till 115200 Hz.
  *   @remark
  * This function needs to be called at system initialization phase, when all External
  * Interrupts are still suspended.

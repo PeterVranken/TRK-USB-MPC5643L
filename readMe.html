@@ -519,7 +519,7 @@ that this has not been tested yet.</p>
 <p>This project presents a number of code samples for this hardware and
 toolchain configuration. All samples are intended to support your software
 development. They are no fully elaborated, functional applications but
-they offer building blocks for a real application.</p>
+they offer building blocks for a true application.</p>
 </div>
 <div class="paragraph">
 <p>The most prominent sample is the blinking LED, here called "startup".
@@ -537,9 +537,17 @@ loose time with setting up your development environment.</p>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This project is at its very first beginning. At the moment we only have
-the sample "startup", which configures the complete toolchain and
-implements a blinking LED on the evaluation board. More samples will
-follow.</p>
+the samples "startup" and "printf".</p>
+</div>
+<div class="paragraph">
+<p>"startup" configures the complete toolchain and implements a blinking LED
+on the evaluation board. It is available in two variants, using the elder
+Book E instruction set or the newer, more compact VLE instructions.</p>
+</div>
+<div class="paragraph">
+<p>"printf" adds a serial communication interface with a terminal program
+running on the host computer, that can be used with formatted output
+through the C library functions <code>printf</code> and Co. More samples will follow.</p>
 </div>
 <div class="paragraph">
 <p>All samples are self-contained. There are some common elements, which are
@@ -583,7 +591,7 @@ found in the Internet.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-18 23:12:24 W. Europe Daylight Time
+Last updated 2017-10-25 23:13:28 W. Europe Daylight Time
 </div>
 </div>
 </body>

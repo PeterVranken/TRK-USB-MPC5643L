@@ -9,15 +9,23 @@
 
 This sample adds a serial I/O channel to the startup sample. Our
 evaluation board TRK-USB-MPC5643L uses a USB connection for programming
-and debugging. The same channel supports a RS 232 serial connection. The
-USB chip on the board implements the serial to USB translation and a
-service on the host machine makes the connection again available like a
+and debugging. The same channel supports an RS 232 serial connection. The
+USB chip on the board implements the serial-to-USB translation and a
+service on the host machine makes the connection again available as a
 normal serial interface (called `COM` on a Windows host).
 
 This connection can be used from the MPC5643L. It has to configure the two
-pins, which are hard wired to the corresponding pins of the USB chip as
-UART RX and TX port and implement the driver for the onboard UART device.
-This is done in a reusable way in this sample.
+pins as UART RX and TX port, which are hard wired to the corresponding
+pins of the USB chip and implement the driver for the on-board UART
+device. This is done in a reusable way in this sample.
+
+To see how the sample works you need to open a terminal software on your
+host machine (e.g. Putty on Windows) and open the serial port, which is
+offered by the TRK-USB-MPC5643L. (On Windows, open the Computer Management
+and go to the Device Manager to find out.) The Baud rate has been selected
+as 19200 Bd in file `code/mai_main.c`, 8 Bit, no parity, 1 start and stop
+Bit. The terminal should print the messages regularly sent by the sample
+code running on the evaluation board.
 
 == The UART driver
 
@@ -39,12 +47,24 @@ application interface is a get function to fetch the next single character
 from that buffer and a read function to get a line of text at once, i.e.
 all characters up to the next newline character.
 
-The asymetric design is based on the assumption that most of the serial
+The asymmetric design is based on the assumption that most of the serial
 data will be output. The application can use the interface to regularly
 write status information to the host machine. The host can sent commands
 to the application to control it. Such commands require typically much
 less characters than the response. The design is not optimal if large
 data amounts need to be downloaded to the evaluation board.
+
+=== Performance
+
+The UART offers a system of clock dividers that permits fine granular
+selection of the Baud rate. The application interface permits specifying
+any Baud rate within the range from 10 Hz to 1 MHz. The interface has been
+successfully tested with Baud rates from 300 Hz till 115200 Hz. Drop outs
+have been observed at higher rates. This is rather due to the external
+parts of the serial connection than an issue of the UART device or our
+software but this statement is hard to prove.
+
+=== The ring buffer and the linker control file
 
 An important detail of the implementation is the ring buffer for DMA. The
 implementation in hardware superimposes tight constraints on the address
@@ -52,6 +72,8 @@ and size of the memory area used for that buffer. These constraints can't
 be fulfilled by C source code. It's necessary to define the buffer in the
 linker command file, see
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/printf/makefile/linkerControlFile.ld[`makefile/linkerControlFile.ld`].
+
+=== Using DMA not only for the serial interface
 
 Another important detail of the DMA implementation is the sharing concept
 for the eDMA device. This sample reserves one of the available 16 DMA
@@ -65,9 +87,8 @@ satisfying for arbitrary applications that use other DMA channels for
 other purposes at the same time. If you're going to integrate the serial
 interface into your application then it's likely that you will have to cut
 out the general eDMA configuration from `sio_serialIO.c` and move it into
-a more approriate, centralized code location.
+a more appropriate, centralized code location.
 
-TODOC: up to 115200 kBaud
 
 == The interface to the C standard library
 
@@ -83,7 +104,7 @@ easy and most convenient.
 
 Serial input could not be connected to the C library. The unpredictable
 arrival of input characters doesn't fit to the stream concept of the C
-library and its data read interface.
+library and its blocking data read interface.
 
 The penalty of using the C library for output instead of the raw API of
 `sio_serialIO.c` is high. The ROM consumption for the linked functions is
@@ -94,10 +115,88 @@ heap function `sbrk`, which serves the library. Last but not least, the
 CPU load for formatted output is high if the floating point format
 characters are applied.
 
-TODOC:
-Why high load with %f: No hard-float
-Scalability concept, raw, iprintf, printf; compile printf.c, f2d, #include f2d
-Atomic: serialWrite, printf by experience
+=== The use of floating point format characters
+
+The high CPU load when applying the floating point format characters
+results from the non-availability of a C library that has been compiled
+with our compiler settings. We use the compiler configuration
+`-mhard-float -fshort-double`: The 32 Bit SPE floating point instructions
+are applied to all floating point operations, including type `double`. The
+linked library has not been compiled with `-fshort-double` and uses
+floating point emulation routines for all `double` operations and by
+definition of the C standard are all arguments of `printf` of this type.
+So all computations are done without hardware support.
+
+There is another important implication. Given our compiler settings, the
+compiler is not capable of emitting machine code that interfaces correctly
+with `printf` & Co.: All arguments stay 32 Bit but the library will read
+them as 64 Bit. Wrong data formatting results. As a work around, we offer
+an assembler written tiny wrapper function, `f2d`, which takes a 32 Bit
+floating point value and returns the same value as 64 Bit float. This
+wrapper needs to be applied to all floating point arguments of `printf`,
+regardless whether they are declared as `float` or `double`:
+
+    #include "f2d_float2Double.h"
+    
+    float x = 3.14;
+    double y = expf(1.0);
+    printf("%s=%.2f, %c=%.5g\r\n", "pi", f2d(x), 'e', f2d(y));
+    
+=== Atomicity of message output
+
+Atomicity of message handling can be granted only for the API of
+`sio_serialIO.c`. Here, writing a message and reading a line of text are
+atomic; the characters of a message processed in CPU context A won't be
+intermingled with those of messages written or read by other, concurrent
+CPU contexts B, C, ...
+
+As a matter of experience, using `puts` or `printf` from the C library
+will retain atomicity. The stream implementation seems to ensure integrity
+of messages (where a "message" is the output of a single call of each of
+these functions). This statement is however not proven.
+
+=== Scalability of the solution
+
+The trade off between cost and added value leads to different degrees of
+applying the code of this sample in true projects. The raw interface
+implementation, `sio_serialIO.c/h`, is very lean and fully reusable. No
+formatted output is possible, the application needs to prepare all
+messages itself before writing into the interface. An application directly
+using the serial interface API would include `sio_serialIO.h`, compile
+`sio_serialIO.c` and not use the other files located in `code/serial`.
+
+Using formatted output with the C library is very convenient but is
+practically restricted to the use as development tool. The high need for
+RAM and particularly the unpredictable amount of possibly required RAM
+footnote:[See our heap implementation in file `prf_printf.c`, function
+`sbrk`.]
+makes it unsafe to use these functions in production code.
+
+As a rule of thumb, all occurrences of `printf` & Co. in an application
+should be enclosed in pre-processor switches that restrict the compilation
+of the code to the DEBUG configuration:
+
+    #ifdef DEBUG
+        printf("%s=%.2f, %c=%.5g\r\n", "pi", f2d(x), 'e', f2d(y));
+    #endif
+
+To not have the additional penalty of high CPU load, an application can
+decide to use only the integer formatting characters of `printf` -- or to
+directly use solely the `iprintf` variants from the new C library to
+further save ROM. An application doing so would include `stdio.h` and
+compile `sio_serialIO.c` and `prf_printf.c`. It doesn't need to include
+`sio_serialIO.h` and it must not include `f2d_float2Double.h`.
+
+An application which wants to pay for full floating point support, will
+additionally include `f2d_float2Double.h`. This enables the use of
+`printf` with floating point format characters.
+
+Note, including the header `f2d_float2Double.h` does not only offer the
+wrapper `f2d` but has an important (negative) side effect on using
+`printf` in general: It switches the compiler warning in case of a
+mismatch between format string and actual argument list off. This is
+required because of the 32/64 Bit type faking done by `f2d` but impacts
+all `printf` arguments.
 
 == Tools
 

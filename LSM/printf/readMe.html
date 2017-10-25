@@ -437,19 +437,25 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
 <li><a href="#_about_this_sample">1. About this sample</a></li>
-<li><a href="#_tools">2. Tools</a>
+<li><a href="#_the_uart_driver">2. The UART driver</a>
 <ul class="sectlevel2">
-<li><a href="#_environment">2.1. Environment</a></li>
-<li><a href="#_compiler_and_debugger">2.2. Compiler and Debugger</a></li>
-<li><a href="#_makefile">2.3. Makefile</a></li>
+<li><a href="#_performance">2.1. Performance</a></li>
+<li><a href="#_the_ring_buffer_and_the_linker_control_file">2.2. The ring buffer and the linker control file</a></li>
+<li><a href="#_using_dma_not_only_for_the_serial_interface">2.3. Using DMA not only for the serial interface</a></li>
 </ul>
 </li>
-<li><a href="#_code_architecture">3. Code architecture</a>
+<li><a href="#_the_interface_to_the_c_standard_library">3. The interface to the C standard library</a>
 <ul class="sectlevel2">
-<li><a href="#_only_gcc_only_lockstep_mode_lsm">3.1. Only GCC, only Lockstep Mode (LSM)</a></li>
-<li><a href="#_traps_and_interrupts">3.2. Traps and interrupts</a></li>
-<li><a href="#_trap_4_external_interrupts">3.3. Trap #4, External Interrupts</a></li>
-<li><a href="#_api">3.4. API</a></li>
+<li><a href="#_the_use_of_floating_point_format_characters">3.1. The use of floating point format characters</a></li>
+<li><a href="#_atomicity_of_message_output">3.2. Atomicity of message output</a></li>
+<li><a href="#_scalability_of_the_solution">3.3. Scalability of the solution</a></li>
+</ul>
+</li>
+<li><a href="#_tools">4. Tools</a>
+<ul class="sectlevel2">
+<li><a href="#_environment">4.1. Environment</a></li>
+<li><a href="#_compiler_and_debugger">4.2. Compiler and Debugger</a></li>
+<li><a href="#_makefile">4.3. Makefile</a></li>
 </ul>
 </li>
 </ul>
@@ -460,18 +466,246 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="_about_this_sample">1. About this sample</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>TODOC Add introduction. Most of the sections below will still apply but
-they are irrelevant in the context of this sample and should be revised.</p>
+<p>This sample adds a serial I/O channel to the startup sample. Our
+evaluation board TRK-USB-MPC5643L uses a USB connection for programming
+and debugging. The same channel supports an RS 232 serial connection. The
+USB chip on the board implements the serial-to-USB translation and a
+service on the host machine makes the connection again available as a
+normal serial interface (called <code>COM</code> on a Windows host).</p>
+</div>
+<div class="paragraph">
+<p>This connection can be used from the MPC5643L. It has to configure the two
+pins as UART RX and TX port, which are hard wired to the corresponding
+pins of the USB chip and implement the driver for the on-board UART
+device. This is done in a reusable way in this sample.</p>
+</div>
+<div class="paragraph">
+<p>To see how the sample works you need to open a terminal software on your
+host machine (e.g. Putty on Windows) and open the serial port, which is
+offered by the TRK-USB-MPC5643L. (On Windows, open the Computer Management
+and go to the Device Manager to find out.) The Baud rate has been selected
+as 19200 Bd in file <code>code/mai_main.c</code>, 8 Bit, no parity, 1 start and stop
+Bit. The terminal should print the messages regularly sent by the sample
+code running on the evaluation board.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tools">2. Tools</h2>
+<h2 id="_the_uart_driver">2. The UART driver</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The UART driver (including MCU pin configuration) is implemented in
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/printf/code/serial/sio_serialIO.c"><code>code/serial/sio_serialIO.c</code></a>.
+The initialization function configures the MCU devices LINFlexD_0, DMA_MUX
+and eDMA. The eDMA is configured to operate in modulo mode. The DMA
+implements a ring buffer, which fits well to the continuous character
+stream of a serial interface. Whenever something is in the ring buffer the
+DMA will copy it byte after byte into the send register of the UART. All
+the CPU has to do for serial output is to perform one or two <code>memcpy</code> to
+put the sent message into the ring buffer. The application interface is a
+write function for that; it takes a pointer to <code>char</code> and the number of
+bytes to send as arguments.</p>
+</div>
+<div class="paragraph">
+<p>Serial input is implemented less performant. No DMA is used, every received
+character is got by interrupt and put into an intermediate buffer. The
+application interface is a get function to fetch the next single character
+from that buffer and a read function to get a line of text at once, i.e.
+all characters up to the next newline character.</p>
+</div>
+<div class="paragraph">
+<p>The asymmetric design is based on the assumption that most of the serial
+data will be output. The application can use the interface to regularly
+write status information to the host machine. The host can sent commands
+to the application to control it. Such commands require typically much
+less characters than the response. The design is not optimal if large
+data amounts need to be downloaded to the evaluation board.</p>
+</div>
+<div class="sect2">
+<h3 id="_performance">2.1. Performance</h3>
+<div class="paragraph">
+<p>The UART offers a system of clock dividers that permits fine granular
+selection of the Baud rate. The application interface permits specifying
+any Baud rate within the range from 10 Hz to 1 MHz. The interface has been
+successfully tested with Baud rates from 300 Hz till 115200 Hz. Drop outs
+have been observed at higher rates. This is rather due to the external
+parts of the serial connection than an issue of the UART device or our
+software but this statement is hard to prove.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_the_ring_buffer_and_the_linker_control_file">2.2. The ring buffer and the linker control file</h3>
+<div class="paragraph">
+<p>An important detail of the implementation is the ring buffer for DMA. The
+implementation in hardware superimposes tight constraints on the address
+and size of the memory area used for that buffer. These constraints can&#8217;t
+be fulfilled by C source code. It&#8217;s necessary to define the buffer in the
+linker command file, see
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/printf/makefile/linkerControlFile.ld"><code>makefile/linkerControlFile.ld</code></a>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_using_dma_not_only_for_the_serial_interface">2.3. Using DMA not only for the serial interface</h3>
+<div class="paragraph">
+<p>Another important detail of the DMA implementation is the sharing concept
+for the eDMA device. This sample reserves one of the available 16 DMA
+channels. Which one can be selected by compile time switch. While
+selecting and reserving one out of the available channels should be fine
+even in large applications, requires the sharing of the device a more
+detailed consideration. The eDMA device has several global configurations
+settings, which affect all channels and their coordination. Our sample
+chooses a basic configuration but it must be doubted that this is
+satisfying for arbitrary applications that use other DMA channels for
+other purposes at the same time. If you&#8217;re going to integrate the serial
+interface into your application then it&#8217;s likely that you will have to cut
+out the general eDMA configuration from <code>sio_serialIO.c</code> and move it into
+a more appropriate, centralized code location.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_interface_to_the_c_standard_library">3. The interface to the C standard library</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The simple API of the serial interface allows to write given messages of
+known length and to read single characters or lines of text. More
+flexible, formatted output become possible through the C library. The
+standard streams <code>stdout</code> and <code>stderr</code> have been connected the serial
+interface. All according output functions from the C library can thus be
+used to write messages to the host. These are mainly <code>puts</code>, <code>printf</code> and
+<code>iprintf</code>. (<code>fprintf</code> with <code>stdout</code>/<code>stderr</code> does work, too, but has no
+noticeable advantage.) Information output from an application becomes very
+easy and most convenient.</p>
+</div>
+<div class="paragraph">
+<p>Serial input could not be connected to the C library. The unpredictable
+arrival of input characters doesn&#8217;t fit to the stream concept of the C
+library and its blocking data read interface.</p>
+</div>
+<div class="paragraph">
+<p>The penalty of using the C library for output instead of the raw API of
+<code>sio_serialIO.c</code> is high. The ROM consumption for the linked functions is
+significant but likely not deciding&#8201;&#8212;&#8201;the MCU has a huge amount of ROM
+available. The stream implementation of the library requires several kByte
+of RAM for buffering, which hurts more. The sample allocates 7k to the
+heap function <code>sbrk</code>, which serves the library. Last but not least, the
+CPU load for formatted output is high if the floating point format
+characters are applied.</p>
+</div>
+<div class="sect2">
+<h3 id="_the_use_of_floating_point_format_characters">3.1. The use of floating point format characters</h3>
+<div class="paragraph">
+<p>The high CPU load when applying the floating point format characters
+results from the non-availability of a C library that has been compiled
+with our compiler settings. We use the compiler configuration
+<code>-mhard-float -fshort-double</code>: The 32 Bit SPE floating point instructions
+are applied to all floating point operations, including type <code>double</code>. The
+linked library has not been compiled with <code>-fshort-double</code> and uses
+floating point emulation routines for all <code>double</code> operations and by
+definition of the C standard are all arguments of <code>printf</code> of this type.
+So all computations are done without hardware support.</p>
+</div>
+<div class="paragraph">
+<p>There is another important implication. Given our compiler settings, the
+compiler is not capable of emitting machine code that interfaces correctly
+with <code>printf</code> &amp; Co.: All arguments stay 32 Bit but the library will read
+them as 64 Bit. Wrong data formatting results. As a work around, we offer
+an assembler written tiny wrapper function, <code>f2d</code>, which takes a 32 Bit
+floating point value and returns the same value as 64 Bit float. This
+wrapper needs to be applied to all floating point arguments of <code>printf</code>,
+regardless whether they are declared as <code>float</code> or <code>double</code>:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "f2d_float2Double.h"</pre>
+</div>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>float x = 3.14;
+double y = expf(1.0);
+printf("%s=%.2f, %c=%.5g\r\n", "pi", f2d(x), 'e', f2d(y));</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_atomicity_of_message_output">3.2. Atomicity of message output</h3>
+<div class="paragraph">
+<p>Atomicity of message handling can be granted only for the API of
+<code>sio_serialIO.c</code>. Here, writing a message and reading a line of text are
+atomic; the characters of a message processed in CPU context A won&#8217;t be
+intermingled with those of messages written or read by other, concurrent
+CPU contexts B, C, &#8230;&#8203;</p>
+</div>
+<div class="paragraph">
+<p>As a matter of experience, using <code>puts</code> or <code>printf</code> from the C library
+will retain atomicity. The stream implementation seems to ensure integrity
+of messages (where a "message" is the output of a single call of each of
+these functions). This statement is however not proven.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_scalability_of_the_solution">3.3. Scalability of the solution</h3>
+<div class="paragraph">
+<p>The trade off between cost and added value leads to different degrees of
+applying the code of this sample in true projects. The raw interface
+implementation, <code>sio_serialIO.c/h</code>, is very lean and fully reusable. No
+formatted output is possible, the application needs to prepare all
+messages itself before writing into the interface. An application directly
+using the serial interface API would include <code>sio_serialIO.h</code>, compile
+<code>sio_serialIO.c</code> and not use the other files located in <code>code/serial</code>.</p>
+</div>
+<div class="paragraph">
+<p>Using formatted output with the C library is very convenient but is
+practically restricted to the use as development tool. The high need for
+RAM and particularly the unpredictable amount of possibly required RAM
+<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup>
+makes it unsafe to use these functions in production code.</p>
+</div>
+<div class="paragraph">
+<p>As a rule of thumb, all occurrences of <code>printf</code> &amp; Co. in an application
+should be enclosed in pre-processor switches that restrict the compilation
+of the code to the DEBUG configuration:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#ifdef DEBUG
+    printf("%s=%.2f, %c=%.5g\r\n", "pi", f2d(x), 'e', f2d(y));
+#endif</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To not have the additional penalty of high CPU load, an application can
+decide to use only the integer formatting characters of <code>printf</code>&#8201;&#8212;&#8201;or to
+directly use solely the <code>iprintf</code> variants from the new C library to
+further save ROM. An application doing so would include <code>stdio.h</code> and
+compile <code>sio_serialIO.c</code> and <code>prf_printf.c</code>. It doesn&#8217;t need to include
+<code>sio_serialIO.h</code> and it must not include <code>f2d_float2Double.h</code>.</p>
+</div>
+<div class="paragraph">
+<p>An application which wants to pay for full floating point support, will
+additionally include <code>f2d_float2Double.h</code>. This enables the use of
+<code>printf</code> with floating point format characters.</p>
+</div>
+<div class="paragraph">
+<p>Note, including the header <code>f2d_float2Double.h</code> does not only offer the
+wrapper <code>f2d</code> but has an important (negative) side effect on using
+<code>printf</code> in general: It switches the compiler warning in case of a
+mismatch between format string and actual argument list off. This is
+required because of the 32/64 Bit type faking done by <code>f2d</code> but impacts
+all <code>printf</code> arguments.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tools">4. Tools</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_environment">2.1. Environment</h3>
+<h3 id="_environment">4.1. Environment</h3>
 <div class="sect3">
-<h4 id="_command_line_based_build">2.1.1. Command line based build</h4>
+<h4 id="_command_line_based_build">4.1.1. Command line based build</h4>
 <div class="paragraph">
 <p>The makefiles and related scripts require a few settings of the
 environment in the host machine. In particular, the location of the GNU
@@ -480,9 +714,9 @@ contain the paths to the required tools.</p>
 </div>
 <div class="paragraph">
 <p>For Windows users there is a shortcut to PowerShell in the root of this
-project, which opens the shell with the prepared environment. Furthermore,
-it creates an alias to the appropriate GNU make executable. You can simply
-type <code>make</code> from any location to run MinGW32 GNU make.</p>
+project (not sample), which opens the shell with the prepared environment.
+Furthermore, it creates an alias to the appropriate GNU make executable.
+You can simply type <code>make</code> from any location to run MinGW32 GNU make.</p>
 </div>
 <div class="paragraph">
 <p>The PowerShell process reads the script <code>setEnv.ps1</code>, located in the
@@ -498,7 +732,7 @@ script for their native shell.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_eclipse_for_building_flashing_and_debugging">2.1.2. Eclipse for building, flashing and debugging</h4>
+<h4 id="_eclipse_for_building_flashing_and_debugging">4.1.2. Eclipse for building, flashing and debugging</h4>
 <div class="paragraph">
 <p>Flashing and debugging is always done using the NXP CodeWarrior Eclipse
 IDE, which is available for free download. If you are going to run the
@@ -527,7 +761,7 @@ on non-Windows hosts.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_compiler_and_debugger">2.2. Compiler and Debugger</h3>
+<h3 id="_compiler_and_debugger">4.2. Compiler and Debugger</h3>
 <div class="paragraph">
 <p>The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
 be flashed and debugged with the CodeWarrior IDE. (See project overview
@@ -535,25 +769,28 @@ for more details.)</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_makefile">2.3. Makefile</h3>
+<h3 id="_makefile">4.3. Makefile</h3>
 <div class="paragraph">
-<p>Compilation and linkage are makefile controlled. The makefile is made
-generic and can be reused for other projects, not only for a tiny "Hello World"
-with a few source files. It supports a number of options (targets); get an
-overview by typing:</p>
+<p>Compilation and linkage are makefile controlled. The makefile supports a
+number of options (targets); get an overview by typing:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>cd &lt;rootFolderOfSampleWhereGNUmakefileResides&gt;
+<pre>cd &lt;projectRoot&gt;/LSM/printf
 mingw32-make help</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The makefile requires a little number of configuration settings, among
-which a list of source code directories. These directories are recursively
-searched for <code><strong>.c</code> and <code></strong>.S</code> files and all of these files are compiled or
-assembled, respectively, and all of the object files are linked to the
-flashable binary file. Open main file <code>GNUmakefile</code> to get more details.</p>
+<p>The main makefile <code>GNUmakefile</code> has been configured for the build of
+sample "printf". Type:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>mingw32-make -s build</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>to produce the flashable file (<code>TRK-USB-MPC5643L-printf.elf</code>).</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -572,449 +809,11 @@ designed to run on different host systems but has been tested with Windows
 </table>
 </div>
 <div class="paragraph">
-<p>To reuse the sample for your own purpose, you&#8217;d adopt the sample&#8217;s
-complete folder structure, then extend the file <code>code/mai_main.c</code> with the
-initialization of and/or jump into your application code. You will likely
-add more source code folders to hold all of your application code. The
-makefile as it is should be capable of building your application.</p>
-</div>
-<div class="sect3">
-<h4 id="_floating_point_spe_and_eabi">2.3.1. Floating point, SPE and EABI</h4>
-<div class="paragraph">
-<p>Compiling C code for an embedded target is much more complex than on the
-host machine, where the simple command line <code>gcc helloWorld.c</code> can already
-produce a well-working executable. Embedded targets however require some
-difficult to take decisions on compiler settings and taking different
-settings can easily make your code crash or go into the trap. Reusing the
-makefile in your project will provide a safely running, reasonable and
-well-documented solution for some target specific issues:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The PowerPC specification comprises different sets of instructions. We
-need to find a configuration that is supported by both, compiler and
-CPU. In this project, the Book E and SPE instruction sets are enabled for
-compilation</p>
-</li>
-<li>
-<p>Floating point operation is not available out of the box. Nowadays, most
-CPUs offer machine instructions for floating point operations but mostly
-they support only 32 Bit operations and so does ours. The compiler needs
-to be configured to produce the according machine instructions and it
-needs to somehow handle the double precision operations. We&#8217;ve
-configured it to emit 32 Bit floating point SPE instructions for both
-single and double precision and to link the code against the floating
-point emulation library&#8201;&#8212;&#8201;for those math calls, which can&#8217;t be computed
-with the SPE machine instruction set. <sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup></p>
-</li>
-<li>
-<p>The compiler is configured for PowerPC EABI support. Different options
-exist and we have enabled the small data addressing mode for RAM and
-ROM, which reduces code size and increases performance</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_code_architecture">3. Code architecture</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The architecture of the code of the sample is part of the mentioned,
-reusable infrastructure, too. The functional code found in <code>mai_main.c</code> is
-of little interest, it&#8217;s just a kind of demonstration how to set up an
-application.</p>
-</div>
-<div class="paragraph">
-<p>The principal two files are <code>startup/sup_startup.S</code> and
-<code>startup/ihw_initMcuCoreHW.c</code>. The former contains the assembler written
-startup code and the latter the less critical initialization steps, which
-can be done later and already in C. Both files implement a basic
-configuration of the MCU, which permits safe operation of the code. They
-do not configure more of the MCU hardware as required to run code, there&#8217;s
-for example nothing about ADC. If an application wants to use analogue
-inputs then it&#8217;ll add the hardware configuration of the ADC as
-appropriate. The two mentioned files contain only the basic initialization
-and most of this initialization can be considered application independent
-or, with other words, you can likely reuse these files without
-modification for most applications. This is what they do:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><code>sup_startup.S</code>:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>All general purpose and the relevant special purpose registers are
-cleared</p>
-</li>
-<li>
-<p>The trap vectors are defined. All traps but one are dummies. The only
-used trap is the External Interrupt trap, which handles all normal I/O
-interrupts</p>
-</li>
-<li>
-<p>The MPU is configured such that it permits access to all available
-memory</p>
-</li>
-<li>
-<p>The Time Base is enabled, this is a high resolution timer in the MCU&#8217;s
-core mostly used for execution time measurement</p>
-</li>
-<li>
-<p>The complete RAM is zeroized (not only the used portion)</p>
-</li>
-<li>
-<p>The watchdog is disabled (rearming it is considered responsibility of the
-application code)</p>
-</li>
-<li>
-<p>The stack is initialized</p>
-</li>
-<li>
-<p>The flash configuration is chosen for full clock speed</p>
-</li>
-<li>
-<p>The initialized data sections are filled with the image in ROM</p>
-</li>
-<li>
-<p>The EABI is prepared, particular registers are loaded accordingly</p>
-</li>
-<li>
-<p><code>main</code> is entered without arguments</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p><code>ihw_initMcuCoreHW.c</code>:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The fault collection and control unit (FCCU) is reset to have no faults</p>
-</li>
-<li>
-<p>CPU and peripheral clock are set to the maximum of 120 MHz</p>
-</li>
-<li>
-<p>The interrupt handler is configured. No interrupt is enabled yet but the
-application code gets the API function <code>void
-ihw_installINTCInterruptHandler(&#8230;&#8203;)</code> to register its handlers for all
-kinds of I/O device interrupts</p>
-</li>
-</ul>
-</div>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p>All of the initialization steps from <code>ihw_initMcuCoreHW.c</code> are bundled in
-the call of <code>void ihw_initMcuCoreHW()</code>, which is expected to be called as
-first operation of C entry function <code>main</code>.</p>
-</div>
-<div class="sect2">
-<h3 id="_only_gcc_only_lockstep_mode_lsm">3.1. Only GCC, only Lockstep Mode (LSM)</h3>
-<div class="paragraph">
-<p>The implementation does not claim to support different compilers and
-environments. Instead it is dedicated to GCC, the Book E instruction set
-and the MCU&#8217;s Lockstep Mode and it is tested only with a particular
-revision of GCC.
-<sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
-</div>
-<div class="paragraph">
-<p>This has been decided for sake of transparency and reliability. At many
-points of the implementation it would have been quite clear, how to put
-some preprocessor statements or makefile if-clauses in order to support
-e.g. VLE code or the CodeWarrior compiler. As a matter of experience, the
-consequent use of such preprocessor constructs can strongly degrade the
-readability of the code and, moreover, such an attempt stays a promise,
-which can&#8217;t be safely kept without according, comprehensive software
-tests. The test effort strongly rises if many different compile
-configurations are supported and the required software tools may not even
-be available.</p>
-</div>
-<div class="paragraph">
-<p>We don&#8217;t think, that it is too difficult to do the migration to another
-configuration. The implementation as it is is well documented and quite
-transparent. However, doing the migration and testing the resulting code
-should be fully in your own responsibility.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_traps_and_interrupts">3.2. Traps and interrupts</h3>
-<div class="paragraph">
-<p>The startup code implements all trap handlers. All of them except trap #4
-(External Interrupts) are implemented as infinite loops; code execution
-stays at one and the same branch instruction. If your software seems to
-hang, issue a break from the debugger. If you are indeed in a trap you
-will immediately know, which trap your software caught and at which
-address the problem arose.</p>
-</div>
-<div class="sect3">
-<h4 id="_how_to_install_your_own_application_trap_handlers">3.2.1. How to install your own application trap handlers</h4>
-<div class="paragraph">
-<p>The dummy trap handlers are a preliminary development tool only. If your
-application wants to implement a true handler it can; you&#8217;ll have to
-change the assembler startup code a bit. Declare your handler using the
-<code>.extern</code> statement and replace the registration of the dummy handler,
-e.g. <code>sup_IVOR1trap</code>, in function <code>initExceptionHandlers</code> with your
-handler.</p>
-</div>
-<div class="paragraph">
-<p>Place your handler in the linker text section <code>.ivor</code> in order to
-guarantee that it resides in the same 64k memory page as all the other
-handlers, which is a hardware constraint.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_trap_4_external_interrupts">3.3. Trap #4, External Interrupts</h3>
-<div class="paragraph">
-<p>The trap of principal interest for any application is trap #4, External
-Interrupts. All MCU devices (mostly I/O), which can signal their events by
-interrupt, are connected to the MCU&#8217;s Interrupt Controller (INTC). The
-INTC prioritizes their interrupt requests and routes the most important
-one through to CPU trap #4. Consequently, there&#8217;s only one interrupt
-handler for all possible I/O interrupts ("External Interrupts"). This
-handler has been implemented for you.
-  <sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnote_3" title="View footnote.">3</a>]</sup></p>
-</div>
-<div class="paragraph">
-<p>The handler for External Interrupts saves the context, queries the INTC
-for the interrupt source and branches into a sub-routine, which is
-specific for that source. This "sub-routine" is a normal C function, which
-is provided by your application. From your perspective of an application
-programmer, this function effectively is the interrupt handler for the
-given interrupt source.</p>
-</div>
-<div class="paragraph">
-<p>All of these application provided interrupt handlers are held in a large
-table of those. Putting a handler into this table is called "registering
-an interrupt handler" and an API function to do so is provided to the
-application code (see below).</p>
-</div>
-<div class="paragraph">
-<p>Any reasonable application will require serving a number of interrupt
-sources. It&#8217;ll configure the according I/O device, implement an according
-interrupt handler and register this handler for the I/O device. After
-having completed this for all required I/O devices, the application will
-globally enable interrupt handling and the application is running.
-  <sup class="footnote">[<a id="_footnoteref_4" class="footnote" href="#_footnote_4" title="View footnote.">4</a>]</sup></p>
-</div>
-<div class="paragraph">
-<p>No reasonable application will require serving all available interrupt
-sources. The table of registered handlers is initially filled with a dummy
-handler for all of them. This dummy handler can&#8217;t really serve an
-interrupt as it knows nothing about the source device. It would be called
-if and only if the related interrupt source is enabled and no true handler
-is registered for it. This is considered a severe bug in the application
-code and the dummy handler has been installed only for problem reporting
-and avoidance of undefined code behavior. In DEBUG compilation, the dummy
-handler uses a global variable to indicate the interrupt source and an
-assertion reports the location of the problem. In PRODUCTION compilation,
-the handler is registered at priority zero and it&#8217;ll immediately return.
-Priority zero will make that the interrupt is never routed through to the
-CPU.</p>
-</div>
-<div class="paragraph">
-<p>Summarizing, we have a hard-coded set of CPU trap handlers&#8201;&#8212;&#8201;exchange
-requires assembler source code change&#8201;&#8212;&#8201;and interrupt handlers for
-serving the I/O devices of interest, which are registered by the
-application at run-time.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_api">3.4. API</h3>
-<div class="paragraph">
-<p>Besides doing the basic, widely reusable initialization of the MCU, the
-startup code described above offers a kind of tiny API to the application.
-The sample&#8217;s functional code demonstrates how to use it. Particularly,
-there is the registration of interrupt handlers and a set of functions to
-safely implement the data exchange between interrupts and other code
-contexts.</p>
-</div>
-<div class="sect3">
-<h4 id="_system_initialization">3.4.1. System initialization</h4>
-<div class="paragraph">
-<p>The application needs to complete the basic hardware initialization
-immediately after entry into main:</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>#include "ihw_initMcuCoreHW.h"
-ihw_initMcuCoreHW();</pre>
-</div>
-</div>
-<div class="paragraph">
-<p>After this call, the application can start doing the further hardware
-initialization as appropriate for its own needs.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_interrupt_registration">3.4.2. Interrupt registration</h4>
-<div class="paragraph">
-<p>The registration of interrupts relates to the External Interrupts, i.e. to
-interrupts, which are raised by the devices that are connected to the
-Interrupt Controller (INTC) and which are routed through to the CPU by the
-INTC. All devices that are connected to the INTC are identified by an
-index. You&#8217;ll find a table of all connected interrupt sources and their
-index in the MPC5643L Microcontroller Reference Manual, section 28.7,
-table 28-4.</p>
-</div>
-<div class="paragraph">
-<p>If you configure a device to generate interrupts then you will surely
-register your interrupt handler for this device. Look for its index
-(labeled "IRQ #" in table 28-4) and call</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>#include "ihw_initMcuCoreHW.h"
-void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
-                                    , unsigned short vectorNum
-                                    , unsigned char psrPriority
-                                    , bool isPreemptable
-                                    );</pre>
-</div>
-</div>
-<div class="paragraph">
-<div class="title">interruptHandler</div>
-<p><code>interruptHandler</code> is the function implemented in your application, that
-serves the device when it raises the interrupt. Note, this is an ordinary
-C function. No particular type decoration is required to declare it as
-interrupt routine. This is because the function is just a sub-routine of
-the true, reusable interrupt handler that is implemented in the startup
-code, see file <code>int_INTCInterruptHandler.S</code>.</p>
-</div>
-<div class="paragraph">
-<div class="title">vectorNum</div>
-<p><code>vectorNum</code> is the index of the interrupt source according to table 28-4.</p>
-</div>
-<div class="paragraph">
-<div class="title">psrPriority</div>
-<p><code>psrPriority</code> is the priority of the interrupt in the range 0..15. (Where
-0 is a theoretical option only; this lowest possible priority will make
-the interrupt never be served at all.)</p>
-</div>
-<div class="paragraph">
-<p>If different interrupt handlers have differing priorities then the handler
-of the lower priority can basically be preempted by handlers of higher
-priority. It is important to note that this implies that the handler of a
-given interrupt source can never be interrupted by the same source. A
-handler therefore doesn&#8217;t necessarily need to be reentrant.
-  <sup class="footnote">[<a id="_footnoteref_5" class="footnote" href="#_footnote_5" title="View footnote.">5</a>]</sup></p>
-</div>
-<div class="paragraph">
-<div class="title">isPreemptable</div>
-<p>The basic, priority controlled preemption of handlers by others can be
-fine tuned using this argument. If <code>isPreemptable</code> is set to <code>false</code> then the
-registered interrupt handler is entered with the MSR bit EE cleared, i.e.
-the CPU will not serve any other External Interrupts. The handler becomes
-effectively non-preemptable with respect to all other External Interrupts.</p>
-</div>
-<div class="paragraph">
-<p>The normal setting should be <code>true</code>. Inhibit preemption only if there&#8217;s
-good reason to do so.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-Machine Check and Critical Interrupt are always enabled. They are
-not used, there&#8217;s normally no source for these interrupts, but they are
-connected to the empty trap handlers and can report severe code errors by
-going into those traps. The debugger would immediately show the details of
-the problem.
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_mutual_exclusion_critical_sections">3.4.3. Mutual exclusion, critical sections</h4>
-<div class="paragraph">
-<p>Virtually all interrupt handlers will share some data with either the main
-application context or other handlers. Due to the different CPU contexts
-the handlers are running in, this cannot generally be done by simple,
-unprotected assignments to shared data objects. Mutual exclusion from
-coincidental data access needs to be implemented. A pair of functions is
-offered to implement so called critical sections, i.e. code passages, the
-execution of which is surely not preempted by other contexts. See the code
-example:</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>#include "ihw_initMcuCoreHW.h"
-uint32_t msr = ihw_enterCriticalSection();
-{
-    /* Put your protected code here. It is executed with mutual
-       exclusion with other handlers and/or main context. */
-}
-ihw_leaveCriticalSection(msr);</pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Note, that the main context and all handlers are strictly prioritized.
-Among all contexts that access the same shared data object it makes no
-sense to implement a critical section in the context(s) of highest
-priority&#8201;&#8212;&#8201;this (these) context(s) won&#8217;t anyway be preempted by all
-the competitors.</p>
-</div>
-<div class="paragraph">
-<p>Critical sections may be nested. In large code structures it may not
-always be evident to a local routine if it is already called, and surely
-under all imaginable circumstances, inside a critical section and it is
-permitted to open another one. When it leaves its local critical section
-it will not alter the status before&#8201;&#8212;&#8201;be it in or not in another critical
-section. This is why the enter function returns the status so far as
-"msr".</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_suspend_all_external_interrupts">3.4.4. Suspend all External Interrupts</h4>
-<div class="paragraph">
-<p>Very similar to the implementation and meaning of critical sections is the
-function pair to suspend and resume all External Interrupts. The major
-difference is that these function can&#8217;t be nested and that they don&#8217;t
-necessarily need to be called pairwise:</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>#include "ihw_initMcuCoreHW.h"
-void ihw_suspendAllInterrupts();
-void ihw_resumeAllInterrupts();</pre>
-</div>
-</div>
-<div class="paragraph">
-<p>A typical use case is with interrupt handlers, which are registered as
-non-preemptable. Such a handler is entered with all External Interrupts being
-suspended and can do some critical operations, which require this. It may
-then call <code>ihw_resumeAllInterrupts</code> and continue doing less critical stuff
-as a normal, preemptable handler.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_lock_free_data_exchange">3.4.5. Lock-free data exchange</h4>
-<div class="paragraph">
-<p>Mutual exclusion is not always required. There are lock-free techniques,
-which are mostly built on volatile flag variables that signal particular
-application states and on memory barriers that separate the code
-implementing the signaled action from the code doing the signaling. Our
-project is configured such that a full memory barrier can be placed in the
-code by:</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>#include &lt;stdatomic.h&gt;
-atomic_thread_fence(memory_order_seq_cst);</pre>
-</div>
-</div>
+<p>This sample builds on the basic sample "startup" located in a sibling folder.
+"printf" is compiled for the Book E instruction set. All build settings
+and the software architecture are identical to "startup". Please refer to
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc" class="bare">https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc</a>
+for details.</p>
 </div>
 </div>
 </div>
@@ -1023,24 +822,12 @@ atomic_thread_fence(memory_order_seq_cst);</pre>
 <div id="footnotes">
 <hr>
 <div class="footnote" id="_footnote_1">
-<a href="#_footnoteref_1">1</a>. A remaining, minor issue with double precision math calls is documented inside the makefile.
-</div>
-<div class="footnote" id="_footnote_2">
-<a href="#_footnoteref_2">2</a>. The code has been run with MinGW-powerpc-eabi-glo-4.9.2, too, but compiler and linker settings in the makefile require some changes; please refer to the early revisions of the makefile.
-</div>
-<div class="footnote" id="_footnote_3">
-<a href="#_footnoteref_3">3</a>. It could be exchanged with your own handler like it has been described for any trap handler in section <a href="#_how_to_install_your_own_application_trap_handlers">How to install your own application trap handlers</a>.
-</div>
-<div class="footnote" id="_footnote_4">
-<a href="#_footnoteref_4">4</a>. The startup software enters <code>main()</code> with all External Interrupt handling disabled, i.e. MSR bit EE is cleared.
-</div>
-<div class="footnote" id="_footnote_5">
-<a href="#_footnoteref_5">5</a>. Interrupt source is not identical to I/O device. Some devices can raise different interrupts to signal different events. It&#8217;s a matter of application design to assign them same or different priorities.
+<a href="#_footnoteref_1">1</a>. See our heap implementation in file <code>prf_printf.c</code>, function <code>sbrk</code>.
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-17 23:16:29 W. Europe Daylight Time
+Last updated 2017-10-25 23:06:45 W. Europe Daylight Time
 </div>
 </div>
 </body>
