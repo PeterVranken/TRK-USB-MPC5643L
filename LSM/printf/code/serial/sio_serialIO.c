@@ -351,7 +351,6 @@ static void initDMA(void)
  * till 115200 Hz.
  *   @remark
  * To match the correct Baud rates the code assumes a peripheral clock rate of 120 MHz.
- *   @todo Make the selection of the LINFlex device (0/1) an argument
  */
 static void initLINFlex(unsigned int baudRate)
 {
@@ -532,7 +531,8 @@ static void dmaTransferCompleteInterrupt(void)
     {
         /* Set the number of bytes to transfer by DMA to the UART. */
         EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = noBytesWrittenMeanwhile;
-        EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytesWrittenMeanwhile;
+        //EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytesWrittenMeanwhile;
+        EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.R = (noBytesWrittenMeanwhile<<16);
 
         /* Enable the UART to request bytes from the DMA. This initiates a subsequent DMA
            transfer. */
@@ -569,7 +569,9 @@ static void linFlexRxInterrupt()
     /* To support different terminal characteristics, one character can be configured to
        be silently ignored in the input stream. This shall normally be the linefeed
        character. */
+#if SERIAL_INPUT_FILTERED_CHAR != 0
     if(c != SERIAL_INPUT_FILTERED_CHAR)
+#endif
     {
         /* Check for buffer full. Compute next write position at the same time. */
         volatile uint8_t * const pWrTmp = _pWrSerialInRingBuf
@@ -623,7 +625,6 @@ static void registerInterrupts(void)
 
     /* Register our IRQ handlers. Priority is chosen low for output DMA since we serve a
        slow data channel, which even has a four Byte queue inside. */
-    /// @todo Priorities to be aligned with rest of application, consider intended RTOS
     ihw_installINTCInterruptHandler( &dmaTransferCompleteInterrupt
                                    , /* vectorNum */ IDX_DMA_IRQ
                                    , /* psrPriority */ INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT
@@ -685,7 +686,6 @@ void ldf_initSerialInterface(unsigned int baudRate)
  */
 unsigned int sio_writeSerial(const char *msg, unsigned int noBytes)
 {
-    /// @todo limit to buffersize -1 to avoid overflow in address computation
     uint32_t msr = ihw_enterCriticalSection();
     {
         /* Note, most buffer addresses or indexes in this section of the code are
@@ -718,10 +718,8 @@ unsigned int sio_writeSerial(const char *msg, unsigned int noBytes)
         
         /* How many bytes would fit until we have to wrap? This limits the first copy
            operation. */
-        unsigned int noBytesTillEnd = MODULO(SERIAL_OUTPUT_RING_BUFFER_SIZE
-                                             - _serialOutRingBufIdxWrM
-                                            )
-                   , noBytesAtEnd;
+        const unsigned int noBytesTillEnd = MODULO(- _serialOutRingBufIdxWrM);
+        unsigned int noBytesAtEnd;
         if(noBytes <= noBytesTillEnd)
         {
             /* The message fits into the rest of the linear buffer, no wrapping required. */
@@ -758,7 +756,8 @@ unsigned int sio_writeSerial(const char *msg, unsigned int noBytes)
             /* Set the number of bytes to transfer by DMA to the UART. */
             assert((unsigned)noBytes <= SERIAL_OUTPUT_RING_BUFFER_SIZE-1);
             EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = noBytes;
-            EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytes;
+            //EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytes;
+            EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.R = (noBytes<<16);
 
             /* Enable the DMA channel to accept the UART's requests for bytes. This
                initiates a DMA transfer.
@@ -842,11 +841,12 @@ signed int sio_getChar()
 
 /**
  * The function reads a line of text from serial in and stores it into the string pointed
- * to by \a str. It stops when either the end of line character is read or the serial input
- * buffer is exhausted, whichever comes first.\n
+ * to by \a str. It stops when either the end of line character is read and returns an
+ * empty string if no such character has been received since system start or the previous
+ * call of this function.\n
  *   Note, the latter condition means that the function is non-blocking - it doesn't wait
  * for further serial input.\n
- *   The end of line character, if found, is not copied into \a str. A terminating null
+ *   The end of line character, if found, is not copied into \a str. A terminating zero
  * character is automatically appended after the characters copied to \a str.\n
  *   The end of line character is a part of this module's compile time configuration, see
  * #SERIAL_INPUT_EOL. Standard for terminals is '\r', not '\n'. The other character out of
@@ -854,13 +854,25 @@ signed int sio_getChar()
  * #SERIAL_INPUT_FILTERED_CHAR. This, too, is a matter of compile time configuration.
  *   @return
  * This function returns \a str on success, and NULL on error or if not enough characters
- * have been received meanwhile to form a complete line of text.
+ * have been received meanwhile to form a complete line of text.\n
+ *   Note the special situation of a full receive buffer without having received any end of
+ * line character. Ths system would be stuck - later received end of line characters would
+ * be discarded becaus eof the full buffer and this function could never again return a
+ * line of text. Therefore the function will return the complete buffer contents at once as
+ * a line of input.
  *   @param str
  * This is the pointer to an array of chars where the C string is stored. \a str is the
  * empty string if the function returns NULL.
  *   @param sizeOfStr
  * The capacity of \a str in Byte. The maximum message length is one less since a
- * terminating zero character is always appended. A value of zero is caught by assertion.
+ * terminating zero character is always appended. A value of zero is caught by assertion.\n
+ *   Note, if \a sizeOfStr is less than the line of text to be returned then the complete
+ * line of text will nonetheless be removed from the receive buffer. Some characters from
+ * the input stream would be lost.
+ *   @remark
+ * The serial interface is not restricted to text characters. If the source sends a zero
+ * byte then this byte will be placed into the client's buffer \a str and it'll truncate
+ * the message that is interpreted as C string.
  *   @remark
  * This function is a mixture of C lib's \a gets and \a fgets: Similar to \a gets it
  * doesn't put the end of line character into the result and similar to \a fgets it
@@ -903,7 +915,7 @@ char *sio_getLine(char str[], unsigned int sizeOfStr)
         volatile uint8_t * pRd = _pRdSerialInRingBuf;
 
         /* If no line has been received then we need to double-check that the buffer is not
-           entirely full; if sowe were stuck: No new characters (i.e. no new line) could
+           entirely full; if so we were stuck: No new characters (i.e. no newline) could
            ever be received and the application would never again get a line of input.
              If we find a full buffer then we consider the entire buffer as a single line
            of input. */
@@ -915,19 +927,46 @@ char *sio_getLine(char str[], unsigned int sizeOfStr)
                                                : pWr + 1;
             if(pWrNext == pRd)
             {
-                volatile uint8_t *pCopyFrom;
-                unsigned int noBytesToCopy;
 
                 /* pWr points immediately before pRd: Buffer is currently full. Copy
                    complete contents as a (pseudo-) line of text. */
-                pCopyFrom = pRd;
-                noBytesToCopy = SERIAL_INPUT_RING_BUFFER_SIZE-1;
+                unsigned int noBytesToCopy = SERIAL_INPUT_RING_BUFFER_SIZE-1;
+                /// @todo Count and report lost characters at least in DEBUG compilation
+                if(noBytesToCopy > sizeOfStr)
+                    noBytesToCopy = sizeOfStr;
 
-                /** @todo Copy the determined ring buffer area. Consider wrapping at the
-                    end of the linear area. */
-                assert(false);
+                /* Copy the ring buffer (limited to the requested number of characters).
+                   Consider wrapping at the end of the linear area. */
+                const unsigned int noBytesTillEnd = (unsigned int)(_pEndSerialInRingBuf - pRd)
+                                                    + 1;
+                unsigned int noBytesAtEnd;
+                if(noBytesTillEnd >= noBytesToCopy)
+                {
+                    /* The requested number of characters is still found at the end of the
+                       ring buffer. */
+                    noBytesAtEnd = noBytesToCopy;
+                }
+                else
+                {
+                    /* We need to copy a second character sequence from the beginning of
+                       the ring buffer into the destination. */
+                    noBytesAtEnd = noBytesTillEnd;
+                }
                 
-                /** Adjust read pointer such that it represents the empty buffer. */
+                assert(noBytesAtEnd <= sizeOfStr);
+                memcpy(str, (const uint8_t*)pRd, noBytesAtEnd);
+                if(noBytesAtEnd < noBytesToCopy)
+                {
+                    memcpy( str+noBytesAtEnd
+                          , (const uint8_t*)&_serialInRingBuf[0]
+                          , noBytesToCopy-noBytesAtEnd
+                          );
+                }
+                
+                /* The client code expects a zero terminated C string. */
+                str[sizeOfStr] = '\0';
+
+                /* Adjust read pointer such that it represents the empty buffer. */
                 _pRdSerialInRingBuf = pWr;
             }
             else
@@ -973,6 +1012,7 @@ char *sio_getLine(char str[], unsigned int sizeOfStr)
                     * pWrApp++ = *pRd;
                     -- sizeOfStr;
                 }
+                /// @todo else Count and report lost characters at least in DEBUG compilation
                 
                 /* Cyclically advance read pointer. */
                 pRd = pRd == _pEndSerialInRingBuf? &_serialInRingBuf[0]: pRd + 1;
@@ -988,89 +1028,5 @@ char *sio_getLine(char str[], unsigned int sizeOfStr)
     return result;
 
 } /* End of sio_getLine */
-
-
-#if 0
-/// @todo Let the write API with file ID become part of the printf compilation unit
-signed int write(int file, const void *msg, size_t noBytes)
-{
-    /// @todo Do we need EOL conversion? Likely yes
-    /// @todo Write elipsis (...) in case of buffer-full caused truncation. This requires beforehand computation of possible length
-    
-    if(noBytes == 0  ||  msg == NULL  ||  (file != stdout->_file  &&  file != stderr->_file))
-        return 0;
-    else
-        return sio_writeSerial(msg, noBytes);
-        
-} /* End of write */
-
-
-unsigned long sio_read_noInvocations = 0;
-int sio_read_fildes = -99;
-void *sio_read_buf = (void*)-99;
-size_t sio_read_nbytes = 99;
-unsigned int sio_read_noErrors = 0
-           , sio_read_noLostBytes = 0;
-
-/// @todo This API belongs into the printf module. We need a raw read char or read line
-ssize_t read(int fildes, void *buf, size_t nbytes)
-{
-    ++ sio_read_noInvocations;
-    sio_read_fildes = fildes;
-    sio_read_buf = buf;
-    sio_read_nbytes = nbytes;
-
-    ssize_t result;
-    uint32_t msr = ihw_enterCriticalSection();
-    {
-        const unsigned int noCharsReceived = (unsigned int)(_pRdBuf - &_readBuf[0]);
-        assert(noCharsReceived <= sizeof(_readBuf));
-        
-        /* Normally the clib request a maximum of data, so that the error situation of
-           having more characters received as requested will normally not happen. */
-        if(nbytes < noCharsReceived)
-        {
-            ++ sio_read_noErrors;
-            sio_read_noLostBytes += noCharsReceived - nbytes;
-        }
-        
-        if(nbytes > 0  &&  noCharsReceived == 0)
-        {
-            /* Catch the case, which is not intended by the blocking clib function: We need
-               but we don't have any character. We return an error code. If we simply
-               return 0 bytes the clib will not come back to ask later for more
-               characters.
-                 Note, this attempt to make the clib patiently waiting for later input
-               doesn't work neither. Its internal buffer handling seems to be corrupted,
-               the character strings returned to gets depend on our data but is not the
-               same; fragments are repeated, instead of returning nothing.
-                 Incorrect work around: We return an EOL, which actually isn't in the
-               stream. Some input functions from the clib will return the empty string,
-               which is s bit of correct. */
-            *(char*)buf = '\n';
-            result = 1;
-        }
-        else if(nbytes == 0)
-            result = 0;
-        else
-        {
-            if(nbytes > noCharsReceived)
-                nbytes = noCharsReceived;
-
-            /* Extract data and clear buffer. */
-            memcpy(buf, (const void*)&_readBuf[0], nbytes);
-            _pRdBuf = &_readBuf[0];
-            _serialInNoEOL = 0;
-            
-            result = (ssize_t)nbytes;
-        }
-    }
-    ihw_leaveCriticalSection(msr);
-
-    return result;
-
-} /* End of read */
-#endif
-
 
 
