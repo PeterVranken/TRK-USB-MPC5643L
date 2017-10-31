@@ -529,10 +529,20 @@ static void dmaTransferCompleteInterrupt(void)
 
     if(noBytesWrittenMeanwhile > 0)
     {
-        /* Set the number of bytes to transfer by DMA to the UART. */
+        /* Set the number of bytes to transfer by DMA to the UART.
+             Note, here we have a problem with the NXP support file MPC5643L.h. The same
+           value needs to be written to the two fields CITER and BITER of the Transfer
+           Control Words 5 and 7, respectivels. These fields are defined conditionally,
+           depending on the channel-to-channel linking bit e_link - they have either
+           9 or 15 Bit. This could be mapped by a support file e.g. in form of a union,
+           which allows both variants. Unfortunately, MPC5643L.h defines CITER and BITER
+           unconditionaly but differently. We use the 15 Bit length and may use MPC5643L.h
+           to access BITER but must not use the support file to access CITER. */
         EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = noBytesWrittenMeanwhile;
         //EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytesWrittenMeanwhile;
-        EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.R = (noBytesWrittenMeanwhile<<16);
+        const uint16_t doff = 0;
+        EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.R =
+                                            ((noBytesWrittenMeanwhile & 0x7fff) << 16) | doff;
 
         /* Enable the UART to request bytes from the DMA. This initiates a subsequent DMA
            transfer. */
@@ -753,11 +763,22 @@ unsigned int sio_writeSerial(const char *msg, unsigned int noBytes)
            initiated from its on-complete-interrupt. */
         if(noBytes > 0  &&  !_serialOutDmaTransferIsRunning)
         {
-            /* Set the number of bytes to transfer by DMA to the UART. */
+            /* Set the number of bytes to transfer by DMA to the UART. 
+                 Note, here we have a problem with the NXP support file MPC5643L.h. The
+               same value needs to be written to the two fields CITER and BITER of the
+               Transfer Control Words 5 and 7, respectivels. These fields are defined
+               conditionally, depending on the channel-to-channel linking bit e_link - they
+               have either 9 or 15 Bit. This could be mapped by a support file e.g. in form
+               of a union, which allows both variants. Unfortunately, MPC5643L.h defines
+               CITER and BITER unconditionaly but differently. We use the 15 Bit length and
+               may use MPC5643L.h to access BITER but must not use the support file to
+               access CITER. */
             assert((unsigned)noBytes <= SERIAL_OUTPUT_RING_BUFFER_SIZE-1);
             EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = noBytes;
             //EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytes;
-            EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.R = (noBytes<<16);
+            const uint16_t doff = 0;
+            EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.R =
+                                                        ((noBytes & 0x7fff) << 16) | doff;
 
             /* Enable the DMA channel to accept the UART's requests for bytes. This
                initiates a DMA transfer.
