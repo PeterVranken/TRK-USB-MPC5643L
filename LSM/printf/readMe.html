@@ -640,9 +640,17 @@ CPU contexts B, C, &#8230;&#8203;</p>
 </div>
 <div class="paragraph">
 <p>As a matter of experience, using <code>puts</code> or <code>printf</code> from the C library
-will retain atomicity. The stream implementation seems to ensure integrity
-of messages (where a "message" is the output of a single call of each of
-these functions). This statement is however not proven.</p>
+will retain atomicity on at least a per line of text base. The stream
+implementation seems to ensure integrity of single lines of text of a
+message (where a "message" is the output of a single call of each of these
+functions). A restriction to this is the newline character appended by
+<code>puts</code>. The appended newline character is implemented by an additional
+call of the interface function <code>write</code>, which means that the terminated
+line of text and its newline could be interrupted by the output from
+another context.</p>
+</div>
+<div class="paragraph">
+<p>Note, the statements about the C library are not proven.</p>
 </div>
 </div>
 <div class="sect2">
@@ -827,7 +835,7 @@ for details.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-25 23:06:45 W. Europe Daylight Time
+Last updated 2017-10-31 22:29:35 W. Europe Standard Time
 </div>
 </div>
 </body>

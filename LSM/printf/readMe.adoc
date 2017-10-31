@@ -1,9 +1,9 @@
 = Sample "printf" - Use of RS 232 serial interface for C's printf & Co.
-:Author:    Peter Vranken
+:Author:    Peter Vranken 
 :Email:     mailto:Peter_Vranken@Yahoo.de
-:Revision:  1
 :toc:       left
 :numbered:
+
 
 == About this sample
 
@@ -151,9 +151,16 @@ intermingled with those of messages written or read by other, concurrent
 CPU contexts B, C, ...
 
 As a matter of experience, using `puts` or `printf` from the C library
-will retain atomicity. The stream implementation seems to ensure integrity
-of messages (where a "message" is the output of a single call of each of
-these functions). This statement is however not proven.
+will retain atomicity on at least a per line of text base. The stream
+implementation seems to ensure integrity of single lines of text of a
+message (where a "message" is the output of a single call of each of these
+functions). A restriction to this is the newline character appended by
+`puts`. The appended newline character is implemented by an additional
+call of the interface function `write`, which means that the terminated
+line of text and its newline could be interrupted by the output from
+another context.
+
+Note, the statements about the C library are not proven.
 
 === Scalability of the solution
 

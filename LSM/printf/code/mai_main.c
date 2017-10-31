@@ -1,22 +1,23 @@
 /**
  * @file mai_main.c
- *   The main entry point of the C code. The assembler implemented startup code has been
- * executed and brought the MCU in a preliminary working state, such that the C compiler
- * constructs can safely work (e.g. stack pointer is initialized, memory access through MMU
- * is enabled). After that it branches here, into the C entry point main().\n
- *  The first operation of the main function is the call of the remaining hardware
- * initialization ihw_initMcuCoreHW() that is still needed to bring the MCU in basic stable
- * working state. The main difference to the preliminary working state of the assembler
- * startup code is the selection of appropriate clock rates. Furthermore, the interrupt
- * controller is configured. This part of the hardware configuration is widely application
- * independent. The only reason, why this code has not been called from the assembler code
- * prior to entry into main() is code transparency. It would mean to have a lot of C
- * code without an obvious point, where it is called.\n
- *   In this sample the main function implements ... TODOC\n
- *   The main function configures the application dependent hardware, which is a cyclic
- * timer (Programmable Interrupt Timer 0, PIT 0) with cycle time 1ms. An interrupt handler
- * for this timer is registered at the Interrupt Controller (INTC). ... TODOC.\n
- *   ...
+ *   The main entry point of the C code. The startup code of the MCU is identical to sample
+ * "startup"; refer to that sample for details.\n
+ *   In this sample the main function applies the API of the startup code to install a
+ * regular timer interrupt. The interrupt is used to let the LED on the evaluation board
+ * blink as alive indication.\n
+ *   This module includes the header \a f2d_float2Double.h and links file \a prf_printf.c
+ * in order to provide full support of the stdout functionality of the C library. Function
+ * main prints a greeting through RS 232 and USB to the host machine after it has completed
+ * the hardware setup and once the interrupts are running. Then it enters an infinite loop,
+ * which is used to regularly check the serial input buffer for newly received user input.
+ * If a new line of input is available it is interpreted as user command. Different
+ * responses are written to the serial output and different actions are taken depending on
+ * the command. The actions are related to control of the blinking LED.\n
+ *   The (virtual) RS 232 serial connection is implemented through the USB connection you
+ * anyway have with the evaluation board. To run the sample you need to run a terminal
+ * software on the host and open the connection to the board. The settings are 19200 Bd, 8
+ * Bit, no parity, 1 start and stop bit. After reset of the evaluation board, begin with
+ * typing help in the terminal program.
  *
  * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -37,8 +38,11 @@
  *   main
  * Local functions
  *   interruptPIT0Handler
- *   showC
+ *   setD4Frequency
+ *   tokenizeCmdLine
  *   showW
+ *   showC
+ *   help
  */
 
 /*
@@ -50,6 +54,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
 #include <float.h>
 #include <limits.h>
@@ -87,7 +92,10 @@
 volatile unsigned long mai_cntIdle = 0    /** Counter of cycles of infinite main loop. */
                      , mai_cntIntPIT0 = 0;/** Counter of calls of PIT 0 interrupts */
 
-/** The color currently used by the interrupt handlers are controlled through selection of
+/** The period time of the regularly blinking LED D4 in unit 2ms. */
+static volatile signed int _ledD4_periodTimeIn2Ms = 500;
+
+/** The color currently used by the interrupt handler is controlled through selection of
     a pin. The selection is made by global variable. Here for D4. */
 static volatile lbd_led_t _ledPIT0Handler = lbd_led_D4_red;
 
@@ -147,11 +155,102 @@ static void interruptPIT0Handler()
         lastStateButton = false;
 
     static int cntIsOn = 0;
-    if(++cntIsOn >= 500)
-        cntIsOn = -500;
+    if(++cntIsOn >= _ledD4_periodTimeIn2Ms)
+        cntIsOn = -_ledD4_periodTimeIn2Ms;
     lbd_setLED(_ledPIT0Handler, /* isOn */ cntIsOn >= 0);
 
 } /* End of interruptPIT0Handler */
+
+
+
+/**
+ * Change frequency of blinking LED.
+ *   @param strTiInMs
+ * The desired frequency is specified by a string holding an integer that is interpreted as
+ * wanted period time in ms.
+ */
+static void setD4Frequency(const char strTiInMs[])
+{
+    signed int i = atoi(strTiInMs);
+    if(i == 0)
+        i = 1000;
+    else if(i < 10)
+        i = 10;
+    else if(i > 50000)
+        i = 50000;
+
+    _ledD4_periodTimeIn2Ms = i / 2;
+
+} /* End of setD4Frequency */
+
+
+
+/**
+ * Simple command line parsing. Replace white space in the command line by string
+ * termination characters and record the beginnings of the non white space regions.
+ *   @param pArgC
+ * Prior to call: * \a pArgC is set by the caller to the number of entries available in
+ * argV.\n
+ *   After return: The number of found arguments, i.e. the number of non white space
+ * regions in the command line.
+ *   @param argV
+ * The vector of arguments, i.e. pointers to the non white space regions in the command
+ * line.
+ *   @param cmdLine
+ * Prior to call: The original command line.\n
+ *   After return: White space in the command line is replaced by zero bytes. Note, not
+ * necessarily all white space due to the restriction superimposed by \a pArgC.
+ */
+static void tokenizeCmdLine( unsigned int * const pArgC
+                           , const char *argV[]
+                           , char * const cmdLine
+                           )
+{
+    char *pC = cmdLine;
+    unsigned int noArgsFound = 0;
+    while(noArgsFound < *pArgC)
+    {
+        /* Look for beginning of next argument. */
+        while(isspace((int)*pC))
+            ++ pC;
+
+        /* Decide if we found a new argument of if we reached the end of the command line. */
+        if(*pC != '\0')
+        {
+            /* New argument found. Record the beginning. */
+            argV[noArgsFound++] = pC;
+
+            /* Look for its end. */
+            do
+            {
+                ++ pC;
+            }
+            while(*pC != '\0'  && !isspace((int)*pC));
+
+            if(*pC != '\0')
+            {
+                /* There are characters left in the command line. Terminate the found
+                   argument and continue with the outer loop. */
+                * pC++ = '\0';
+            }
+            else
+            {
+                /* Command line has been parsed completely, leave outer loop and return. */
+                break;
+            }
+        }
+        else
+        {
+            /* Command line has been parsed completely, leave outer loop and return. */
+            break;
+
+        } /* End if(Further non white space region found?) */
+
+    } /* End while(Still room left in ArgV) */
+
+    *pArgC = noArgsFound;
+
+} /* End of tokenizeCmdLine */
 
 
 
@@ -180,7 +279,7 @@ static void showW()
     "THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.\r\n";
 
     fiprintf(stdout, gplShowW);
-    
+
 } /* End of showW() */
 
 
@@ -210,7 +309,7 @@ static void showC()
     "along with this program.  If not, see <https://www.gnu.org/licenses/>.\r\n";
 
     puts(gplShowC);
-    
+
 } /* End of showC() */
 
 
@@ -226,12 +325,12 @@ static void help()
     "Type:\r\n"
     "help: Get this help text\r\n"
     "show c, show w: Show details of software license\r\n"
-    "green, red: Switch LED color\r\n"
+    "green, red: Switch LED color. The color may be followed by the desired period time in ms\r\n"
     "time: Print current time\r\n"
     "timing: Do some output and measure execution time\r\n";
 
     fputs(help, stderr);
-    
+
 } /* End of help() */
 
 
@@ -318,99 +417,128 @@ void main()
                proven.) */
             assert(tiNextCycle + tiCycleTime > tiNextCycle);
             tiNextCycle += tiCycleTime;
-            
+
             /* Look for possible user input through serial interface. */
-            char inputMsg[40+1];
+            char inputMsg[80+1];
             if(sio_getLine(inputMsg, sizeOfAry(inputMsg)) != NULL)
             {
-                sio_writeSerial("You've typed: ", sizeof("You've typed: ")-1);
-                sio_writeSerial(inputMsg, strlen(inputMsg));
-                sio_writeSerial("\r\n", 2);
-
-                /* Interpret the input as possible command. */
-                if(strcmp(inputMsg, "green") == 0)
+                const char *argV[10];
+                unsigned int argC = sizeOfAry(argV);
+                tokenizeCmdLine(&argC, argV, inputMsg);
+                if(argC >= 1)
                 {
-                    /* To avoid race conditions with the interrupt, we would actually
-                       require a critial section. */
-                    uint32_t msr = ihw_enterCriticalSection();
+                    /* Echo user input. */
+                    sio_writeSerial("You've typed: ", sizeof("You've typed: ")-1);
+                    unsigned int u;
+                    for(u=0; u<argC; ++u)
                     {
-                        lbd_setLED(_ledPIT0Handler, /* isOn */ false);
-                        _ledPIT0Handler = lbd_led_D4_grn;
+                        sio_writeSerial(argV[u], strlen(argV[u]));
+                        sio_writeSerial(" ", 1);
                     }
-                    ihw_leaveCriticalSection(msr);
-                }
-                else if(strcmp(inputMsg, "red") == 0)
-                {
-                    uint32_t msr = ihw_enterCriticalSection();
+                    sio_writeSerial("\r\n", 2);
+
+                    /* Interpret the input as possible command. */
+                    if(strcmp(argV[0], "green") == 0)
                     {
-                        lbd_setLED(_ledPIT0Handler, /* isOn */ false);
-                        _ledPIT0Handler = lbd_led_D4_red;
+                        /* To avoid race conditions with the interrupt, we require a
+                           critial section. */
+                        /// @todo Double-check, is likely wrong, read-modify-write involved?
+                        uint32_t msr = ihw_enterCriticalSection();
+                        {
+                            lbd_setLED(_ledPIT0Handler, /* isOn */ false);
+                            _ledPIT0Handler = lbd_led_D4_grn;
+                        }
+                        ihw_leaveCriticalSection(msr);
+
+                        /* Color followed by period time? Change frequency accordingly. */
+                        if(argC >= 2)
+                            setD4Frequency(argV[1]);
                     }
-                    ihw_leaveCriticalSection(msr);
-                }
-                else if(strcmp(inputMsg, "show c") == 0)
-                    showC();
-                else if(strcmp(inputMsg, "show w") == 0)
-                    showW();
-                else if(strcmp(inputMsg, "help") == 0)
-                    help();
-                else if(strcmp(inputMsg, "time") == 0)
-                {
-                    /* Tip: Consider using anywhere in your application the integer
-                       variants of printf from the new C library and do not link the
-                       floating point standard implementation. This will save ROM space and
-                       a lot of CPU load. */
-                    unsigned int h, m, s, ms;
-                    h = mai_cntIntPIT0 / 3600000;
-                    m = s = mai_cntIntPIT0 - h*3600000;
-                    m /= 60000;
-                    s = ms = s - m*60000;
-                    s /= 1000;
-                    ms = ms - s*1000;
+                    else if(strcmp(argV[0], "red") == 0)
+                    {
+                        uint32_t msr = ihw_enterCriticalSection();
+                        {
+                            lbd_setLED(_ledPIT0Handler, /* isOn */ false);
+                            _ledPIT0Handler = lbd_led_D4_red;
+                        }
+                        ihw_leaveCriticalSection(msr);
 
-                    iprintf( "%s: time=%u:%02u:%02u:%03u\r\n"
-                           , __func__
-                           , h, m, s, ms
-                           );
-                }
-                else if(strcmp(inputMsg, "timing") == 0)
-                {
-                    static unsigned int cnt_ = 0;
-                    uint32_t tiStart = getTBL();
+                        /* Color followed by period time? Change frequency accordingly. */
+                        if(argC >= 2)
+                            setD4Frequency(argV[1]);
+                    }
+                    else if(strcmp(argV[0], "show") == 0)
+                    {
+                        if(argC >= 2)
+                        {
+                            if(strcmp(argV[1], "c") == 0)
+                                showC();
+                            else if(strcmp(argV[1], "w") == 0)
+                                showW();
+                        }
+                    }
+                    else if(strcmp(argV[0], "help") == 0)
+                        help();
+                    else if(strcmp(argV[0], "time") == 0)
+                    {
+                        /* Tip: Consider using anywhere in your application the integer
+                           variants of printf from the new C library and do not link the
+                           floating point standard implementation. This will save ROM space and
+                           a lot of CPU load. */
+                        unsigned int h, m, s, ms;
+                        h = mai_cntIntPIT0 / 3600000;
+                        m = s = mai_cntIntPIT0 - h*3600000;
+                        m /= 60000;
+                        s = ms = s - m*60000;
+                        s /= 1000;
+                        ms = ms - s*1000;
 
-                    puts("Hello World, this is puts\r\n");
-                    fputs("Hello World, this is fputs(stdout)\r\n", stdout);
-                    fputs("Hello World, this is fputs(stderr)\r\n", stderr);
-                    fprintf(stdout, "Hello World, this is fprintf(%s)\r\n", "stdout");
-                    fprintf(stderr, "Hello World, this is fprintf(%s)\r\n", "stderr");
-                    putchar('x'); putchar('y'); putchar('z'); putchar('\r'); putchar('\n');
-                    
-                    /* Elapsed time for all output so far, basically measured in 8.33=25/3 ns
-                       units. */
-                    uint32_t tiPrintNs = 25*(getTBL() - tiStart)/3
-                           , tiPrintUs = tiPrintNs / 1000;
-                    tiPrintNs -= tiPrintUs * 1000;
-                    fiprintf( stdout, "Time to print all the greetings: %u.%03u us\r\n"
-                            , tiPrintUs, tiPrintNs
-                            );
-                    
-                    tiStart = getTBL();
-                    printf( "%s: cnt_=%i, time=%.3f min=%.3f h\r\n"
-                          , "Floating point"
-                          , cnt_
-                          , f2d(mai_cntIntPIT0/60.0e3)
-                          , f2d(mai_cntIntPIT0/3600.0e3)
-                          );
-                    tiPrintNs = 25*(getTBL() - tiStart)/3;
-                    tiPrintUs = tiPrintNs / 1000;
-                    fiprintf( stdout, "Time to print previous line: %u.%03u us\r\n"
-                            , tiPrintUs, tiPrintNs
-                            );
+                        iprintf( "%s: time=%u:%02u:%02u:%03u\r\n"
+                               , __func__
+                               , h, m, s, ms
+                               );
+                    }
+                    else if(strcmp(argV[0], "timing") == 0)
+                    {
+                        static unsigned int cnt_ = 0;
+                        uint32_t tiStart = getTBL();
 
-                    ++ cnt_;
-                }
+                        puts("Hello World, this is puts\r\n");
+                        fputs("Hello World, this is fputs(stdout)\r\n", stdout);
+                        fputs("Hello World, this is fputs(stderr)\r\n", stderr);
+                        fprintf(stdout, "Hello World, this is fprintf(%s)\r\n", "stdout");
+                        fprintf(stderr, "Hello World, this is fprintf(%s)\r\n", "stderr");
+                        putchar('x'); putchar('y'); putchar('z'); putchar('\r'); putchar('\n');
 
-                cntIdleLoops = 0;
+                        /* Elapsed time for all output so far, basically measured in 8.33=25/3 ns
+                           units. */
+                        uint32_t tiPrintNs = 25*(getTBL() - tiStart)/3
+                               , tiPrintUs = tiPrintNs / 1000;
+                        tiPrintNs -= tiPrintUs * 1000;
+                        fiprintf( stdout, "Time to print all the greetings: %u.%03u us\r\n"
+                                , tiPrintUs, tiPrintNs
+                                );
+
+                        tiStart = getTBL();
+                        printf( "%s: cnt_=%i, time=%.3f min=%.3f h\r\n"
+                              , "Floating point"
+                              , cnt_
+                              , f2d(mai_cntIntPIT0/60.0e3)
+                              , f2d(mai_cntIntPIT0/3600.0e3)
+                              );
+                        tiPrintNs = 25*(getTBL() - tiStart)/3;
+                        tiPrintUs = tiPrintNs / 1000;
+                        fiprintf( stdout, "Time to print previous line: %u.%03u us\r\n"
+                                , tiPrintUs, tiPrintNs
+                                );
+
+                        ++ cnt_;
+
+                    } /* End if/else if(Command) */
+
+                    cntIdleLoops = 0;
+
+                } /* End if(User input contains possible command) */
             }
             else
             {
@@ -419,7 +547,7 @@ void main()
                     puts("Type help to get software usage information\r\n");
                     cntIdleLoops = 0;
                 }
-                    
+
             } /* if(Got user input?) */
 
 #if 0
