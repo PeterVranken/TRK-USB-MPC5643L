@@ -2,22 +2,7 @@
  * @file mai_main.c
  *   The main entry point of the C code. The startup code of the MCU is identical to sample
  * "startup"; refer to that sample for details.\n
- *   In this sample the main function applies the API of the startup code to install a
- * regular timer interrupt. The interrupt is used to let the LED on the evaluation board
- * blink as alive indication.\n
- *   This module includes the header \a f2d_float2Double.h and links file \a prf_printf.c
- * in order to provide full support of the stdout functionality of the C library. Function
- * main prints a greeting through RS 232 and USB to the host machine after it has completed
- * the hardware setup and once the interrupts are running. Then it enters an infinite loop,
- * which is used to regularly check the serial input buffer for newly received user input.
- * If a new line of input is available it is interpreted as user command. Different
- * responses are written to the serial output and different actions are taken depending on
- * the command. The actions are related to control of the blinking LED.\n
- *   The (virtual) RS 232 serial connection is implemented through the USB connection you
- * anyway have with the evaluation board. To run the sample you need to run a terminal
- * software on the host and open the connection to the board. The settings are 19200 Bd, 8
- * Bit, no parity, 1 start and stop bit. After reset of the evaluation board, begin with
- * typing help in the terminal program.
+ *   In this sample the main function ... TODOC
  *
  * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -77,7 +62,8 @@
  */
 
 /** Software version */
-#define VERSION "0.10.2"
+#define VERSION "0.1.0"
+
 
 /*
  * Local type definitions
@@ -326,8 +312,8 @@ static void showW()
 static void showC()
 {
     static const char gplShowC[] =
-    "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
-    " interface\r\n"
+    "\rTRK-USB-MPC5643LAtGitHub - RTOS, a demonstration of our simple real time operating"
+    " system\r\n"
     "Copyright (C) 2017  Peter Vranken\r\n"
     "\r\n"
     "This program is free software: you can redistribute it and/or modify\r\n"
@@ -355,8 +341,8 @@ static void showC()
 static void version()
 {
     static const char version[] =
-    "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
-    " interface\r\n"
+    "\rTRK-USB-MPC5643LAtGitHub - RTOS, a demonstration of our simple real time operating"
+    " system\r\n"
     "Copyright (C) 2017  Peter Vranken\r\n"
     "Version " VERSION "\r\n";
 
@@ -371,8 +357,8 @@ static void version()
 static void help()
 {
     static const char help[] =
-    "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
-    " interface\r\n"
+    "\rTRK-USB-MPC5643LAtGitHub - RTOS, a demonstration of our simple real time operating"
+    " system\r\n"
     "Copyright (C) 2017  Peter Vranken\r\n"
     "Type:\r\n"
     "help: Get this help text\r\n"
@@ -440,7 +426,7 @@ void main()
 
     char msg[512];
     snprintf( msg, sizeOfAry(msg)
-            , "TRK-USB-MPC5643LAtGitHub - printf  Copyright (C) 2017  Peter Vranken\r\n"
+            , "TRK-USB-MPC5643LAtGitHub - RTOS  Copyright (C) 2017  Peter Vranken\r\n"
               "This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.\r\n"
               "This is free software, and you are welcome to redistribute it\r\n"
               "under certain conditions; type `show c' for details.\r\n"
