@@ -39,10 +39,12 @@
  * Local functions
  *   interruptPIT0Handler
  *   setD4Frequency
+ *   setD4DutyCycle
  *   tokenizeCmdLine
  *   showW
  *   showC
  *   help
+ *   version
  */
 
 /*
@@ -74,6 +76,8 @@
  * Defines
  */
 
+/** Software version */
+#define VERSION "0.10.1"
 
 /*
  * Local type definitions
@@ -92,8 +96,11 @@
 volatile unsigned long mai_cntIdle = 0    /** Counter of cycles of infinite main loop. */
                      , mai_cntIntPIT0 = 0;/** Counter of calls of PIT 0 interrupts */
 
-/** The period time of the regularly blinking LED D4 in unit 2ms. */
-static volatile signed int _ledD4_periodTimeIn2Ms = 500;
+/** The off-time of the period of the regularly blinking LED D4 in unit 2ms. */
+static volatile signed int _ledD4_tiOffIn2Ms = 250;
+
+/** The on-time of the period of the regularly blinking LED D4 in unit 2ms. */
+static volatile signed int _ledD4_tiOnIn2Ms = 250;
 
 /** The color currently used by the interrupt handler is controlled through selection of
     a pin. The selection is made by global variable. Here for D4. */
@@ -155,8 +162,8 @@ static void interruptPIT0Handler()
         lastStateButton = false;
 
     static int cntIsOn = 0;
-    if(++cntIsOn >= _ledD4_periodTimeIn2Ms)
-        cntIsOn = -_ledD4_periodTimeIn2Ms;
+    if(++cntIsOn >= _ledD4_tiOnIn2Ms)
+        cntIsOn = -_ledD4_tiOffIn2Ms;
     lbd_setLED(_ledPIT0Handler, /* isOn */ cntIsOn >= 0);
 
 } /* End of interruptPIT0Handler */
@@ -179,9 +186,37 @@ static void setD4Frequency(const char strTiInMs[])
     else if(i > 50000)
         i = 50000;
 
-    _ledD4_periodTimeIn2Ms = i / 2;
-
+    /* The duty cycle is reset to 50%. */
+    double ductCycle = (double)_ledD4_tiOnIn2Ms
+                       / (double)(_ledD4_tiOnIn2Ms + _ledD4_tiOffIn2Ms);
+    _ledD4_tiOnIn2Ms = ductCycle * (double)i;
+    _ledD4_tiOffIn2Ms = i - _ledD4_tiOnIn2Ms;
+    assert(_ledD4_tiOnIn2Ms >= 0  &&  _ledD4_tiOffIn2Ms >= 0);
+    
 } /* End of setD4Frequency */
+
+
+
+/**
+ * Change duty cyle of blinking LED.
+ *   @param strDutyCycleInPercent
+ * The desired duty cycle is specified by a string holding an integer that is interpreted as
+ * as percent of on time in relation to period time.
+ */
+static void setD4DutyCycle(const char strDutyCycleInPercent[])
+{
+    signed int i = atoi(strDutyCycleInPercent);
+    if(i < 0)
+        i = 0;
+    else if(i > 100)
+        i = 100;
+
+    signed int tiPeriod = _ledD4_tiOnIn2Ms + _ledD4_tiOffIn2Ms;
+    _ledD4_tiOnIn2Ms = (signed int)((double)i/100.0 * (double)tiPeriod);
+    _ledD4_tiOffIn2Ms = tiPeriod - _ledD4_tiOnIn2Ms;
+    assert(_ledD4_tiOnIn2Ms >= 0  &&  _ledD4_tiOffIn2Ms >= 0);
+
+} /* End of setD4DutyCycle */
 
 
 
@@ -315,6 +350,22 @@ static void showC()
 
 
 /**
+ * Print version designation.
+ */
+static void version()
+{
+    static const char version[] =
+    "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
+    " interface\r\n"
+    "Copyright (C) 2017  Peter Vranken\r\n"
+    "Version " VERSION "\r\n";
+
+    puts(version);
+    
+} /* End of version() */
+
+
+/**
  * Print usage text.
  */
 static void help()
@@ -322,12 +373,14 @@ static void help()
     static const char help[] =
     "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
     " interface\r\n"
+    "Copyright (C) 2017  Peter Vranken\r\n"
     "Type:\r\n"
     "help: Get this help text\r\n"
     "show c, show w: Show details of software license\r\n"
-    "green, red: Switch LED color. The color may be followed by the desired period time in ms\r\n"
+    "green, red: Switch LED color. The color may be followed by the desired period time in ms\r and the duty cycle in percent\n"
     "time: Print current time\r\n"
-    "timing: Do some output and measure execution time\r\n";
+    "timing: Do some output and measure execution time\r\n"
+    "version: Print software version designation\r\n";
 
     fputs(help, stderr);
 
@@ -453,6 +506,10 @@ void main()
                         /* Color followed by period time? Change frequency accordingly. */
                         if(argC >= 2)
                             setD4Frequency(argV[1]);
+
+                        /* Period time followed by duty cyle? Change DC accordingly. */
+                        if(argC >= 3)
+                            setD4DutyCycle(argV[2]);
                     }
                     else if(strcmp(argV[0], "red") == 0)
                     {
@@ -466,6 +523,10 @@ void main()
                         /* Color followed by period time? Change frequency accordingly. */
                         if(argC >= 2)
                             setD4Frequency(argV[1]);
+
+                        /* Period time followed by duty cyle? Change DC accordingly. */
+                        if(argC >= 3)
+                            setD4DutyCycle(argV[2]);
                     }
                     else if(strcmp(argV[0], "show") == 0)
                     {
@@ -479,6 +540,8 @@ void main()
                     }
                     else if(strcmp(argV[0], "help") == 0)
                         help();
+                    else if(strcmp(argV[0], "version") == 0)
+                        version();
                     else if(strcmp(argV[0], "time") == 0)
                     {
                         /* Tip: Consider using anywhere in your application the integer
