@@ -16,6 +16,9 @@ Furthermore, if we have produced such a binary file then it's still
 another matter to flash it and to find and setup a debugger to step through
 it.
 
+.The NXP evaluation board TRK-USB-MPC5643L
+image::doc/TRK-USB-MPC5643L.jpg[TRK-USB-MPC5643L,80%]
+
 None of these tasks can be solved in general. There are too many
 dependencies on the host machine, the specific chip from the PowerPC
 family and the hardware board it is mounted on. Any imaginable

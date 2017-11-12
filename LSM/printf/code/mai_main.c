@@ -77,7 +77,7 @@
  */
 
 /** Software version */
-#define VERSION "0.10.2"
+#define VERSION "0.10.4"
 
 /*
  * Local type definitions
@@ -161,10 +161,10 @@ static void interruptPIT0Handler()
     else
         lastStateButton = false;
 
-    static int cntIsOn = 0;
-    if(++cntIsOn >= _ledD4_tiOnInMs)
-        cntIsOn = -_ledD4_tiOffInMs;
-    lbd_setLED(_ledPIT0Handler, /* isOn */ cntIsOn >= 0);
+    static int cntIsOn_ = 0;
+    if(++cntIsOn_ >= _ledD4_tiOnInMs)
+        cntIsOn_ = -_ledD4_tiOffInMs;
+    lbd_setLED(_ledPIT0Handler, /* isOn */ cntIsOn_ >= 0);
 
 } /* End of interruptPIT0Handler */
 
