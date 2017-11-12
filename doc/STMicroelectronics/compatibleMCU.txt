@@ -1,0 +1,9 @@
+STMicroelectronics have MCUs, which are obviously based on the same source
+as the Freescale MPC series. The STMicroelectronics SPC56EL60 seems to be
+equivalent and the SPC56EL70l5 nearly equivalent to our Freescale
+MPS5643L. This opens a new source of sample code and documentation.
+
+Note, the license agreement of STMicroelectronics restricts their code to
+the execution on their own chips only.
+
+See http://www.st.com/en/automotive-microcontrollers/spc56el60l5.html.
