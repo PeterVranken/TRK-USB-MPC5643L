@@ -47,9 +47,10 @@
 /* Module interface
  *   main
  * Local functions
- *   testFloatingPointConfiguration
- *   task1s
+ *   checkAndIncrementTaskCnts
  *   task1ms
+ *   task3ms
+ *   task1s
  */
 
 /*
@@ -60,12 +61,14 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include <float.h>
 #include <limits.h>
 #include <assert.h>
 
 #include "MPC5643L.h"
+#include "typ_types.h"
 #include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
@@ -77,6 +80,9 @@
  * Defines
  */
  
+/** The number of application tasks created and used by this sample application. */
+#define NO_TASKS    3
+
 
 /*
  * Local type definitions
@@ -92,9 +98,16 @@
  * Data definitions
  */
  
+/** A task invokation counter, which is incremented by all application tasks. */
+volatile unsigned long long _cntAllTasks = 0;
+
+/** A cycle counter for each task. The last entry is meant for the idle task. */
+volatile unsigned long long _cntTaskAry[NO_TASKS+1] = {[0 ... NO_TASKS] = 0};
+
 volatile unsigned long mai_cntIdle = 0    /** Counter of cycles of infinite main loop. */
-                     , mai_cntTask1s = 0  /** Counter of calls of software interrupts 3 */
-                     , mai_cntTask1ms = 0;/** Counter of calls of PIT 0 interrupts */
+                     , mai_cntTask1ms = 0 /** Counter of calls of PIT 0 interrupts */
+                     , mai_cntTask3ms = 0 /** Counter of cyclic task. */
+                     , mai_cntTask1s = 0;  /** Counter of calls of software interrupts 3 */
 
 /** The color currently used by the interrupt handlers are controlled through selection of
     a pin. The selection is made by global variable. Here for D5. */
@@ -110,18 +123,48 @@ static volatile lbd_led_t _ledTask1ms = lbd_led_D4_red;
  */
 
 /**
- * Task function 1s.
+ * Test function, to be called from any of the tasks: A task related counter is incremented
+ * and in the same atomic operation is a task-shared counter incremented. The function then
+ * validates that the sum of all task related counters is identical to the value of the
+ * shared counter. The test result is validated by assertion, i.e. the application is
+ * halted in case of an error.
+ *   The test is aimed to prove the correct implementation of the offered mutual exclusion
+ * mechanisms.
+ *   @param taskId
+ * The ID (or index) of the calling task. Needed to identify the task related counter.
  */
-static void task1s()
+static void checkAndIncrementTaskCnts(unsigned int taskId)
 {
-    ++ mai_cntTask1s;
-
-    static int cntIsOn_ = 0;
-    if(++cntIsOn_ >= 1)
-        cntIsOn_ = -1;
-    lbd_setLED(_ledTask1s, /* isOn */ cntIsOn_ >= 0);
+    /* Increment task related counter and shared counter in an atomic operation. */
+    assert(taskId < sizeOfAry(_cntTaskAry));
+    ihw_suspendAllInterrupts();
+    {
+        ++ _cntTaskAry[taskId];
+        ++ _cntAllTasks;
+    }
+    ihw_resumeAllInterrupts();
     
-} /* End of task1s */
+    /* Get all task counters and the common counter in an atomic operation. Now, we apply
+       another offered mechanism for mutual exclusion of tasks. */
+    unsigned long long cntTaskAryCpy[NO_TASKS+1]
+                     , cntAllTasksCpy;
+    _Static_assert(sizeof(_cntTaskAry) == sizeof(cntTaskAryCpy), "Bad data definition");
+    const uint32_t msr = ihw_enterCriticalSection();
+    {
+        ihw_suspendAllInterrupts();
+        memcpy(&cntTaskAryCpy[0], (void*)&_cntTaskAry[0], sizeof(cntTaskAryCpy));
+        cntAllTasksCpy = _cntAllTasks;
+    }
+    ihw_leaveCriticalSection(msr);
+    
+    /* Check consistency of got data. +1: The last entry is meant for the idle task. */
+    unsigned int u;
+    for(u=0; u<NO_TASKS+1; ++u)
+        cntAllTasksCpy -= cntTaskAryCpy[u];
+    assert(cntAllTasksCpy == 0);
+    
+} /* End of checkAndIncrementTaskCnts. */
+
 
 
 
@@ -130,6 +173,8 @@ static void task1s()
  */
 static void task1ms()
 {
+    checkAndIncrementTaskCnts(/* taskId */ 0);
+    
     ++ mai_cntTask1ms;
 
     /* Read the current button status to possibly toggle the LED colors. */
@@ -164,6 +209,36 @@ static void task1ms()
 
 
 /**
+ * Task 1ms.
+ */
+static void task3ms()
+{
+    checkAndIncrementTaskCnts(/* taskId */ 1);
+    ++ mai_cntTask3ms;
+    
+} /* End of task3ms */
+
+
+
+/**
+ * Task function 1s.
+ */
+static void task1s()
+{
+    checkAndIncrementTaskCnts(/* taskId */ 2);
+
+    ++ mai_cntTask1s;
+
+    static int cntIsOn_ = 0;
+    if(++cntIsOn_ >= 1)
+        cntIsOn_ = -1;
+    lbd_setLED(_ledTask1s, /* isOn */ cntIsOn_ >= 0);
+    
+} /* End of task1s */
+
+
+
+/**
  * Entry point into C code. The C main function is entered without arguments and despite of
  * its return code definition it must never be left. (Returning from main would enter an
  * infinite loop in the calling assembler startup code.)
@@ -187,16 +262,6 @@ void main()
     lbd_initLEDAndButtonDriver();
     
     /* Register the application tasks at the RTOS. */
-    const unsigned int idTask1s = rtos_registerTask
-                                    (&(rtos_taskDesc_t){ .taskFct = task1s
-                                                       , .contextData = 0
-                                                       , .tiCycleInMs = 1000
-                                                       , .tiFirstActivationInMs = 100
-                                                       , .priority = 1
-                                                       }
-                                    );
-    assert(idTask1s == 0);
-
     const unsigned int idTask1ms = rtos_registerTask
                                     (&(rtos_taskDesc_t){ .taskFct = task1ms
                                                        , .contextData = 0
@@ -205,7 +270,27 @@ void main()
                                                        , .priority = 2
                                                        }
                                     );
-    assert(idTask1ms == 1);
+    assert(idTask1ms == 0);
+
+    const unsigned int idTask3ms = rtos_registerTask
+                                    (&(rtos_taskDesc_t){ .taskFct = task3ms
+                                                       , .contextData = 0
+                                                       , .tiCycleInMs = 3
+                                                       , .tiFirstActivationInMs = 17
+                                                       , .priority = 2
+                                                       }
+                                    );
+    assert(idTask3ms == 1);
+
+    const unsigned int idTask1s = rtos_registerTask
+                                    (&(rtos_taskDesc_t){ .taskFct = task1s
+                                                       , .contextData = 0
+                                                       , .tiCycleInMs = 1000
+                                                       , .tiFirstActivationInMs = 100
+                                                       , .priority = 1
+                                                       }
+                                    );
+    assert(idTask1s == 2);
 
     /* Initialize the RTOS kernel. */
     rtos_initKernel();
@@ -219,6 +304,7 @@ void main()
 
     while(true)
     {
+        checkAndIncrementTaskCnts(/* taskId */ NO_TASKS);
         ++ mai_cntIdle;
 
 #if 0
