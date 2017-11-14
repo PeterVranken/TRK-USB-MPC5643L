@@ -818,7 +818,7 @@ unsigned int sio_writeSerial(const char *msg, unsigned int noBytes)
  * having no input data temporarily. On reception of the more characters the function will
  * continue to return them.
  */
-signed int sio_getChar()
+signed int sio_getChar(void)
 {
     signed int c;
     

@@ -51,21 +51,13 @@ typedef struct rtos_taskDesc_t
 {
     /** The task function pointer. This function is regularly executed under control of the
         RTOS kernel. */
-    void (*taskFct)(uintptr_t contextData);
+    void (*taskFct)(void);
     
-    /** The task function is called with some user provided context data. The user can
-        install different tasks with the same function and the diffreent invokations can be
-        distinguished by the context information. */
-    uintptr_t contextData;
-
     /** The period time of the task activation in ms. The permitted range is 0..2^30-1. 0
         means no regular, timer controlled activation. This task is only enabled for
-        software triggered activation (by interrupts or other tasks). */
+        software triggered activation using rtos_activateTask() (by interrupts or other
+        tasks). */
     unsigned int tiCycleInMs;
-    
-    /** The first activation of the task in ms after start of kernel. The permitted range
-        is 0..2^30-1. */
-    unsigned int tiFirstActivationInMs;
     
     /** The priority of the task in the range 1..15. Different tasks can share the same
         priority or have different priorities. The execution of tasks, which share the
@@ -82,16 +74,89 @@ typedef struct rtos_taskDesc_t
 
 
 /*
+ * Inline functions
+ */
+
+/** 
+ * Partial interrupt lock: All interrupts up to the specified priority level won't be
+ * handled by the CPU. This function is intended for implementing mutual exclusion of
+ * sub-sets of tasks; the use of 
+ *   - ihw_enterCriticalSection() and
+ *   - ihw_leaveCriticalSection()
+ * or
+ *   - ihw_suspendAllInterrupts() and
+ *   - ihw_resumeAllInterrupts()
+ * locks all interrupt processing and no other task (or interrupt handler) can become
+ * active while the task is inside its critical section code. Using this function is much
+ * better: Call it with the highest priority of all tasks, which should be locked, i.e. which
+ * compete for the critical section to protect. This may still lock other, not competing
+ * tasks, but at least all non competing tasks of higher priority will still be served (and
+ * this will likely include most interrupt handlers).\n
+ *   Note, there is no counterpart function. To leave the critical section, call this
+ * function again to restore the interrupt/task priority level at entry into the critical
+ * section.
+ *   @param suspendUpToThisPriority
+ * All interrupts up to and including this interrupt priority will be locked. The CPU will
+ * not handle them until the priority level is lowered again.
+ *   @remark
+ *   The expense in terms of CPU consumption of using this function instead of the others
+ * mentioned above negligible for all critical section code, which consists of more than a
+ * few machine instructions.
+ *   @remark
+ * The use of this function to implement critical sections is usually quite static. For any
+ * protected entity (usually a data object or I/O device) the set of competing tasks
+ * normally is a compile time known. The priority level to set for entry into the critical
+ * section is the maximum of the priorities of all tasks in the set. The priority level to
+ * restore on exit from the critical section is the priority of the calling task. All of
+ * this static knowledge would typically be put into encapsulating macros that actually
+ * invoke this function. (OSEK/VDX like environments would use this function to implement
+ * the GetResource/ReleaseResource concept.)
+ *   @remark
+ * It is a severe application error if the priority is not restored again by the same task
+ * and before it ends. The RTOS behavior will become unpredictable if this happens. It is
+ * not possible to considere this function a mutex, which can be acquired in one task
+ * activation and which can be releases in an arbitrary later task activation or from
+ * another task.
+ *   @remark
+ * An application must use this function solely to (temporarily) rise the current priority
+ * level of handled tasks/ISRs. If the application code fails to manage the correct levels
+ * (as maximum of the task set on entry) and lowers the priority accidentally then the RTOS
+ * fails. The currently executed task/ISR will be recursively called again: The interrupt
+ * notifying bit will be reset at the end of the service routine and is still pending.
+ */
+static inline unsigned int rtos_suspendAllInterruptsByPriority
+                                            (unsigned int suspendUpToThisPriority)
+{
+    /* All priorities are in the range 0..15. Everything else points to an application
+       error even if the hardware wouldn't mind. */
+    assert((suspendUpToThisPriority & ~0xfu) == 0);
+
+    /* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority
+       in the INTC should be done under global interrupt lock. */
+    asm volatile ( "wrteei 0\n" ::: );
+    unsigned int priorityLevelSofar = INTC.CPR_PRC0.R;
+    INTC.CPR_PRC0.R = suspendUpToThisPriority;
+    asm volatile ( "wrteei 1\n" ::: );
+                 
+    return priorityLevelSofar;
+    
+} /* End of rtos_suspendAllInterruptsByPriority */
+
+
+
+/*
  * Global prototypes
  */
 
 /** Task registration. */
-unsigned int rtos_registerTask(const rtos_taskDesc_t *pTaskDesc);
+unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
+                              , unsigned int tiFirstActivationInMs
+                              );
 
 /** Kernel initialization. */
 void rtos_initKernel(void);
 
 /** Software triggered task activation. Can be called from other tasks or interrupts. */
-void rtos_activateTask(unsigned int id);
+bool rtos_activateTask(unsigned int id);
 
 #endif  /* RTOS_INCLUDED */

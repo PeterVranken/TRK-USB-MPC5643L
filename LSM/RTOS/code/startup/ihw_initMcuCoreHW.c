@@ -63,7 +63,7 @@
  */
 
 /** The empty default interrupt service routine. */
-void ihw_dummyINTCInterruptHandler();
+void ihw_dummyINTCInterruptHandler(void);
 
 
 /*
@@ -330,7 +330,7 @@ static void initPBridge()
  *   To implement a real service, you would replace the default handler by your service
  * implementation using ihw_installINTCInterruptHandler().
  */
-void ihw_dummyINTCInterruptHandler()
+void ihw_dummyINTCInterruptHandler(void)
 {
     /* If this assertion fired then you enabled an interrupt on hardware level (I/O device
        configuration) but you didn't use ihw_installINTCInterruptHandler() in your code to
@@ -517,7 +517,7 @@ void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
  *   @remark
  * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file main.c, l. 115ff.
  */
-void ihw_initMcuCoreHW()
+void ihw_initMcuCoreHW(void)
 {
     /* Check you have cleared all the faults RGM prior to moving from SAFE/DRUN Modes. */
     if(RGM.FES.B.F_FCCU_SAFE || RGM.FES.B.F_FCCU_HARD)

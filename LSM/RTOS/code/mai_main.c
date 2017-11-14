@@ -81,7 +81,7 @@
  */
  
 /** The number of application tasks created and used by this sample application. */
-#define NO_TASKS    3
+#define NO_TASKS    5
 
 
 /*
@@ -104,10 +104,16 @@ volatile unsigned long long _cntAllTasks = 0;
 /** A cycle counter for each task. The last entry is meant for the idle task. */
 volatile unsigned long long _cntTaskAry[NO_TASKS+1] = {[0 ... NO_TASKS] = 0};
 
-volatile unsigned long mai_cntIdle = 0    /** Counter of cycles of infinite main loop. */
-                     , mai_cntTask1ms = 0 /** Counter of calls of PIT 0 interrupts */
-                     , mai_cntTask3ms = 0 /** Counter of cyclic task. */
-                     , mai_cntTask1s = 0;  /** Counter of calls of software interrupts 3 */
+volatile unsigned long mai_cntIdle = 0      /** Counter of cycles of infinite main loop. */
+                     , mai_cntTask1ms = 0   /** Counter of cyclic task. */
+                     , mai_cntTask3ms = 0   /** Counter of cyclic task. */
+                     , mai_cntTask1s = 0    /** Counter of cyclic task. */
+                     , mai_cntTask17ms = 0  /** Counter of cyclic task. */
+                     , mai_cntTaskNonCyclic = 0  /** Counter of calls of software triggered
+                                                     task */
+                     , mai_cntActivationLossTaskNonCyclic = 0; /* Lost activations of non
+                                                                  cyclic task by 17ms
+                                                                  cyclic task. */
 
 /** The color currently used by the interrupt handlers are controlled through selection of
     a pin. The selection is made by global variable. Here for D5. */
@@ -137,12 +143,13 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
 {
     /* Increment task related counter and shared counter in an atomic operation. */
     assert(taskId < sizeOfAry(_cntTaskAry));
-    ihw_suspendAllInterrupts();
+    unsigned int priorityLevelSoFar = rtos_suspendAllInterruptsByPriority
+                                                        (/* suspendUpToThisPriority */ 4);
     {
         ++ _cntTaskAry[taskId];
         ++ _cntAllTasks;
     }
-    ihw_resumeAllInterrupts();
+    rtos_suspendAllInterruptsByPriority(priorityLevelSoFar);
     
     /* Get all task counters and the common counter in an atomic operation. Now, we apply
        another offered mechanism for mutual exclusion of tasks. */
@@ -151,7 +158,6 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
     _Static_assert(sizeof(_cntTaskAry) == sizeof(cntTaskAryCpy), "Bad data definition");
     const uint32_t msr = ihw_enterCriticalSection();
     {
-        ihw_suspendAllInterrupts();
         memcpy(&cntTaskAryCpy[0], (void*)&_cntTaskAry[0], sizeof(cntTaskAryCpy));
         cntAllTasksCpy = _cntAllTasks;
     }
@@ -163,13 +169,30 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
         cntAllTasksCpy -= cntTaskAryCpy[u];
     assert(cntAllTasksCpy == 0);
     
+    /* Get all task counters and the common counter again in an atomic operation. Now, we
+       apply the third offered mechanism for mutual exclusion of tasks to include it into
+       the test.
+         Note, this code requires that we are not yet inside a critical section; it's a
+       non-nestable call. */
+    ihw_suspendAllInterrupts();
+    {
+        memcpy(&cntTaskAryCpy[0], (void*)&_cntTaskAry[0], sizeof(cntTaskAryCpy));
+        cntAllTasksCpy = _cntAllTasks;
+    }
+    ihw_resumeAllInterrupts();
+    
+    /* Check consistency of got data. +1: The last entry is meant for the idle task. */
+    for(u=0; u<NO_TASKS+1; ++u)
+        cntAllTasksCpy -= cntTaskAryCpy[u];
+    assert(cntAllTasksCpy == 0);
+    
 } /* End of checkAndIncrementTaskCnts. */
 
 
 
 
 /**
- * Task 1ms.
+ * Task function, cyclically activated every Millisecond.
  */
 static void task1ms()
 {
@@ -177,6 +200,12 @@ static void task1ms()
     
     ++ mai_cntTask1ms;
 
+    /* Activate the non cyclic task.
+         Note, the non cyclic task is of higher priority than this task and it'll be
+       executed immediatly, preempting this task. The second activation below, on button
+       down must not lead to an activation loss. */
+    rtos_activateTask(3);
+    
     /* Read the current button status to possibly toggle the LED colors. */
     static bool lastStateButton_ = false;
     if(lbd_getButton(lbd_bt_button_SW3))
@@ -193,6 +222,10 @@ static void task1ms()
             
             lastStateButton_ = true;
             ++ cntButtonPress_;
+
+            /* Activate the non cyclic task. */
+            bool bSecondActivation = rtos_activateTask(3);
+            assert(bSecondActivation);
         }
     }
     else
@@ -209,7 +242,7 @@ static void task1ms()
 
 
 /**
- * Task 1ms.
+ * Task function, cyclically activated every 3ms.
  */
 static void task3ms()
 {
@@ -221,7 +254,7 @@ static void task3ms()
 
 
 /**
- * Task function 1s.
+ * Task function, cyclically activated every second.
  */
 static void task1s()
 {
@@ -235,6 +268,36 @@ static void task1s()
     lbd_setLED(_ledTask1s, /* isOn */ cntIsOn_ >= 0);
     
 } /* End of task1s */
+
+
+
+/**
+ * A non cyclic task, which is solely activated by software triggers from other tasks.
+ */
+static void taskNonCyclic()
+{
+    checkAndIncrementTaskCnts(/* taskId */ 3);
+    ++ mai_cntTaskNonCyclic;
+    
+} /* End of taskNonCyclic */
+
+
+
+/**
+ * Task function, cyclically activated every 17ms.
+ */
+static void task17ms()
+{
+    checkAndIncrementTaskCnts(/* taskId */ 4);
+    ++ mai_cntTask17ms;
+    
+    /* This task has a higher priority than the software triggered, non cyclic task. Since
+       the latter one is often active we have a significant likelihood of a failing
+       activation from here -- always if we preempted the non ccylic task. */
+    if(!rtos_activateTask(3))
+        ++ mai_cntActivationLossTaskNonCyclic;
+
+} /* End of task17ms */
 
 
 
@@ -261,44 +324,63 @@ void main()
     /* Initialize the button and LED driver for the eval board. */
     lbd_initLEDAndButtonDriver();
     
+    /* The external interrupts are enabled after configuring I/O devices. (Initialization
+       of the RTOS can be done later.) */
+    ihw_resumeAllInterrupts();
+    
     /* Register the application tasks at the RTOS. */
     const unsigned int idTask1ms = rtos_registerTask
-                                    (&(rtos_taskDesc_t){ .taskFct = task1ms
-                                                       , .contextData = 0
-                                                       , .tiCycleInMs = 1
-                                                       , .tiFirstActivationInMs = 10
-                                                       , .priority = 2
-                                                       }
+                                    ( &(rtos_taskDesc_t){ .taskFct = task1ms
+                                                        , .tiCycleInMs = 1
+                                                        , .priority = 2
+                                                        }
+                                    , /* tiFirstActivationInMs */ 10
                                     );
     assert(idTask1ms == 0);
 
     const unsigned int idTask3ms = rtos_registerTask
-                                    (&(rtos_taskDesc_t){ .taskFct = task3ms
-                                                       , .contextData = 0
-                                                       , .tiCycleInMs = 3
-                                                       , .tiFirstActivationInMs = 17
-                                                       , .priority = 2
-                                                       }
+                                    ( &(rtos_taskDesc_t){ .taskFct = task3ms
+                                                        , .tiCycleInMs = 3
+                                                        , .priority = 2
+                                                        }
+                                    , /* tiFirstActivationInMs */ 17
                                     );
     assert(idTask3ms == 1);
 
     const unsigned int idTask1s = rtos_registerTask
-                                    (&(rtos_taskDesc_t){ .taskFct = task1s
-                                                       , .contextData = 0
-                                                       , .tiCycleInMs = 1000
-                                                       , .tiFirstActivationInMs = 100
-                                                       , .priority = 1
-                                                       }
+                                    ( &(rtos_taskDesc_t){ .taskFct = task1s
+                                                        , .tiCycleInMs = 1000
+                                                        , .priority = 1
+                                                        }
+                                    , /* tiFirstActivationInMs */ 100
                                     );
     assert(idTask1s == 2);
+
+    const unsigned int idTaskNonCyclic = rtos_registerTask
+                                    ( &(rtos_taskDesc_t){ .taskFct = taskNonCyclic
+                                                        , .tiCycleInMs = 0 /* non-cyclic */
+                                                        , .priority = 3
+                                                        }
+                                    , /* tiFirstActivationInMs */ 0
+                                    );
+    assert(idTaskNonCyclic == 3);
+
+    const unsigned int idTask17ms = rtos_registerTask
+                                    ( &(rtos_taskDesc_t){ .taskFct = task17ms
+                                                        , .tiCycleInMs = 17
+                                                        , .priority = 4
+                                                        }
+                                    , /* tiFirstActivationInMs */ 0
+                                    );
+    assert(idTask17ms == 4);
+
+    /* This test and demonstration code uses unsafe literals, put an assertion to avoid
+       errors. */
+    assert(idTask17ms == NO_TASKS-1);
 
     /* Initialize the RTOS kernel. */
     rtos_initKernel();
 
-    /* The external interrupts are enabled after configuring I/O devices and initialization
-       of the RTOS. This step starts the RTOS kernel. */
-    ihw_resumeAllInterrupts();
-    
     /* The code down here becomes our idle task. It is executed when and only when no
        application task is running. */
 
@@ -307,6 +389,9 @@ void main()
         checkAndIncrementTaskCnts(/* taskId */ NO_TASKS);
         ++ mai_cntIdle;
 
+            /* Activate the non cyclic task. */
+            bool bSecondActivation = rtos_activateTask(3);
+            assert(bSecondActivation);
 #if 0
         /* Test of return from main: After 10s */
         if(mai_cntTask1ms >= 10000)

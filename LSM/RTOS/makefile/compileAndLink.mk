@@ -264,11 +264,11 @@ cFlags = $(targetFlags) -mno-string                                             
          -fshort-enums -fdiagnostics-show-option -finline-functions                         \
          -fzero-initialized-in-bss -fno-tree-loop-optimize                                  \
          -Wall -Wno-main -Wno-old-style-declaration -Winline -Wextra -Wstrict-overflow=4    \
-         -Wmissing-declarations -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat        \
-         -Wformat-security -Wignored-qualifiers -Wsign-conversion -Wsign-compare            \
+         -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat -Wformat-security             \
+         -Wignored-qualifiers -Wsign-conversion -Wsign-compare                              \
          -Werror=missing-declarations -Werror=implicit-function-declaration                 \
          -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
-         -Werror=pointer-to-int-cast -Werror=return-local-addr                              \
+         -Werror=pointer-to-int-cast -Werror=return-local-addr -Werror=missing-prototypes   \
          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                    \
          $(foreach path,$(srcDirList) $(incDirList),-I$(path))                              \
          $(cDefines) $(foreach def,$(defineList),-D$(def))
