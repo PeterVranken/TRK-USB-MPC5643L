@@ -149,7 +149,7 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
         ++ _cntTaskAry[taskId];
         ++ _cntAllTasks;
     }
-    rtos_suspendAllInterruptsByPriority(priorityLevelSoFar);
+    rtos_resumeAllInterruptsByPriority(priorityLevelSoFar);
     
     /* Get all task counters and the common counter in an atomic operation. Now, we apply
        another offered mechanism for mutual exclusion of tasks. */

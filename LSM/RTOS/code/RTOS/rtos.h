@@ -78,29 +78,43 @@ typedef struct rtos_taskDesc_t
  */
 
 /** 
- * Partial interrupt lock: All interrupts up to the specified priority level won't be
- * handled by the CPU. This function is intended for implementing mutual exclusion of
- * sub-sets of tasks; the use of 
+ * Priority ceiling protocol, partial interrupt lock: All interrupts up to the specified
+ * priority level won't be handled by the CPU. This function is intended for implementing
+ * mutual exclusion of sub-sets of tasks; the use of
  *   - ihw_enterCriticalSection() and
  *   - ihw_leaveCriticalSection()
  * or
  *   - ihw_suspendAllInterrupts() and
  *   - ihw_resumeAllInterrupts()
  * locks all interrupt processing and no other task (or interrupt handler) can become
- * active while the task is inside its critical section code. Using this function is much
+ * active while the task is inside the critical section code. Using this function is much
  * better: Call it with the highest priority of all tasks, which should be locked, i.e. which
  * compete for the critical section to protect. This may still lock other, not competing
  * tasks, but at least all non competing tasks of higher priority will still be served (and
  * this will likely include most interrupt handlers).\n
- *   Note, there is no counterpart function. To leave the critical section, call this
- * function again to restore the interrupt/task priority level at entry into the critical
- * section.
+ *   To leave the critical section, call the counterpart function
+ * rtos_resumeAllInterruptsByPriority(), which restores the original interrupt/task
+ * priority level.
+ *   @return
+ * The priority level at entry into this function (and into the critical section) is
+ * returned. This level needs to be restored on exit from the critical section using
+ * rtos_resumeAllInterruptsByPriority().
  *   @param suspendUpToThisPriority
- * All interrupts up to and including this interrupt priority will be locked. The CPU will
+ * All tasks/interrupts up to and including this priority will be locked. The CPU will
  * not handle them until the priority level is lowered again.
  *   @remark
- *   The expense in terms of CPU consumption of using this function instead of the others
- * mentioned above negligible for all critical section code, which consists of more than a
+ * To support the use case of nested calls of OSEK/VDX like GetResource/ReleaseResource
+ * functions, this function compares the stated value to the current priority level. If \a
+ * suspendUpToThisPriority is less than the current value then the current value is not
+ * altered. The function still returns the current value and the calling code doesn't need
+ * to take care: It can unconditionally end a critical section with
+ * rtos_resumeAllInterruptsByPriority() stating the returned priority level value. (The
+ * resume function will have no effect in this case.) This makes the OSEK like functions
+ * usable without deep inside or full transparency of the priority levels behind the scene;
+ * just use the pairs of Get-/ResumeResource, be they nested or not.
+ *   @remark
+ * The expense in terms of CPU consumption of using this function instead of the others
+ * mentioned above is negligible for all critical section code, which consists of more than a
  * few machine instructions.
  *   @remark
  * The use of this function to implement critical sections is usually quite static. For any
@@ -109,20 +123,14 @@ typedef struct rtos_taskDesc_t
  * section is the maximum of the priorities of all tasks in the set. The priority level to
  * restore on exit from the critical section is the priority of the calling task. All of
  * this static knowledge would typically be put into encapsulating macros that actually
- * invoke this function. (OSEK/VDX like environments would use this function to implement
- * the GetResource/ReleaseResource concept.)
+ * invoke this function. (OSEK/VDX like environments would use this function pair to
+ * implement the GetResource/ReleaseResource concept.)
  *   @remark
  * It is a severe application error if the priority is not restored again by the same task
  * and before it ends. The RTOS behavior will become unpredictable if this happens. It is
  * not possible to considere this function a mutex, which can be acquired in one task
  * activation and which can be releases in an arbitrary later task activation or from
  * another task.
- *   @remark
- * An application must use this function solely to (temporarily) rise the current priority
- * level of handled tasks/ISRs. If the application code fails to manage the correct levels
- * (as maximum of the task set on entry) and lowers the priority accidentally then the RTOS
- * fails. The currently executed task/ISR will be recursively called again: The interrupt
- * notifying bit will be reset at the end of the service routine and is still pending.
  */
 static inline unsigned int rtos_suspendAllInterruptsByPriority
                                             (unsigned int suspendUpToThisPriority)
@@ -134,13 +142,67 @@ static inline unsigned int rtos_suspendAllInterruptsByPriority
     /* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority
        in the INTC should be done under global interrupt lock. */
     asm volatile ( "wrteei 0\n" ::: );
-    unsigned int priorityLevelSofar = INTC.CPR_PRC0.R;
-    INTC.CPR_PRC0.R = suspendUpToThisPriority;
+    unsigned int priorityLevelSoFar = INTC.CPR_PRC0.R;
+    
+    /* It is useless and a waste of CPU but not a severe error to let this function set the
+       same priority level we already have.
+         It leads to immediate failure of the RTOS if we lower the level; however, from the
+       perspective of the application code it is not necessarily an error to do so: If an
+       application is organized in OSEK/VDX like resources it may be stringent (not
+       optimal) to acquire different resources before an operation on them is started. These
+       resources may be mapped onto different priority ceilings and the application may use
+       nested calls of GetResource to acquire all of them. We must not force the
+       application code to order the calls in order of increasing priority ceiling -- this
+       will be intransparent to the application.
+         These considerations leads to different strategies, and all of them are justified:
+         To force the application be optimal in terms of CPU consumption, we would place an
+       assertion: assert(suspendUpToThisPriority > priorityLevelSoFar);
+         To be relaxed about setting the same priority ceiling, we would place another
+       assertion: assert(suspendUpToThisPriority >= priorityLevelSoFar);
+         If we want to build an OSEK/VDX like GetResource on top of this function, we
+       should place a run-time condition: if(suspendUpToThisPriority > priorityLevelSoFar) */
+    //assert(suspendUpToThisPriority > priorityLevelSoFar);
+    //assert(suspendUpToThisPriority >= priorityLevelSoFar);
+    if(suspendUpToThisPriority > priorityLevelSoFar)
+        INTC.CPR_PRC0.R = suspendUpToThisPriority;
+
     asm volatile ( "wrteei 1\n" ::: );
                  
-    return priorityLevelSofar;
+    return priorityLevelSoFar;
     
 } /* End of rtos_suspendAllInterruptsByPriority */
+
+
+
+/** 
+ * This function is called to end a critical section of code, which requires mutual
+ * exclusion of two or more tasks/ISRs. It is the counterpart of function
+ * rtos_suspendAllInterruptsByPriority(), refer to this function for more details.\n
+ *   Note, this function simply and unconditionally sets the current task/interrupt
+ * priority level to the stated value. It can therefore be used to build further optimized
+ * mutual exclusion code if it is applied to begin \a and to end a critical section. This
+ * requires however much more control of the specified priority levels as when using the
+ * counterpart function rtos_suspendAllInterruptsByPriority() on entry. Accidental
+ * temporary lowering of the level will make the RTOS immediately fail.
+ *   @param resumeDownToThisPriority
+ * All tasks/interrupts above this priority level are resumed again. All tasks/interrupts
+ * up to and including this priority remain locked.
+ *   @remark
+ * An application can (temporarily) rise the current priority level of handled tasks/ISRs
+ * but must never lower them, the RTOS would fail: The hardware bit, that notified the
+ * currently executing task/interrupt will be reset only at the end of the service routine,
+ * so it is still pending. At the instance of lowering the priority level, the currently
+ * executed task/ISR would be recursively called again.
+ */ 
+static inline void rtos_resumeAllInterruptsByPriority(unsigned int resumeDownToThisPriority)
+{
+    /* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority
+       in the INTC should be done under global interrupt lock. */
+    asm volatile ( "wrteei 0\n" ::: );
+    INTC.CPR_PRC0.R = resumeDownToThisPriority;
+    asm volatile ( "wrteei 1\n" ::: );
+
+} /* End of rtos_resumeAllInterruptsByPriority */
 
 
 
