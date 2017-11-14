@@ -1,5 +1,5 @@
 // See https://isis.apache.org/guides/dg/resources/asciidoc-writers-guide.pdf
-= TRK-USB-MPC5643L -- Open Source Toolchain Support for a low-cost Power PC Evaluation Board
+= TRK-USB-MPC5643L -- Open Source Toolchain Support for a low-cost PowerPC Evaluation Board
 :Author:    Peter Vranken
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :Revision:  1
@@ -64,8 +64,9 @@ loose time with setting up your development environment.
 
 == The samples
 
-This project is at its very first beginning. At the moment we only have
-the samples "startup" and "printf".
+This project is at its beginning. At the moment we have the samples
+"startup" and "printf" and we offer a simple real time operating system
+(RTOS).
 
 "startup" configures the complete toolchain and implements a blinking LED
 on the evaluation board. It is available in two variants, using the elder
@@ -74,6 +75,10 @@ Book E instruction set or the newer, more compact VLE instructions.
 "printf" adds a serial communication interface with a terminal program
 running on the host computer, that can be used with formatted output
 through the C library functions `printf` and Co. More samples will follow.
+
+"RTOS" implements a reusable real time operating system offering the
+functionality similar to an OSEK/VDX kernel of conformance classes BCC1 or
+BCC2.
 
 All samples are self-contained. There are some common elements, which are
 same in all samples, like startup code and makefile. It would be natural

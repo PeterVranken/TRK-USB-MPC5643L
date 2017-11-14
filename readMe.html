@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 1.5.6.1">
 <meta name="author" content="Peter Vranken">
-<title>TRK-USB-MPC5643L&#8201;&#8212;&#8201;Open Source Toolchain Support for a low-cost Power PC Evaluation Board</title>
+<title>TRK-USB-MPC5643L&#8201;&#8212;&#8201;Open Source Toolchain Support for a low-cost PowerPC Evaluation Board</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /* Asciidoctor default stylesheet | MIT License | http://asciidoctor.org */
@@ -428,7 +428,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
-<h1>TRK-USB-MPC5643L&#8201;&#8212;&#8201;Open Source Toolchain Support for a low-cost Power PC Evaluation Board</h1>
+<h1>TRK-USB-MPC5643L&#8201;&#8212;&#8201;Open Source Toolchain Support for a low-cost PowerPC Evaluation Board</h1>
 <div class="details">
 <span id="author" class="author">Peter Vranken</span><br>
 <span id="email" class="email">mailto:Peter_Vranken@Yahoo.de</span><br>
@@ -542,8 +542,9 @@ loose time with setting up your development environment.</p>
 <h2 id="_the_samples">The samples</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This project is at its very first beginning. At the moment we only have
-the samples "startup" and "printf".</p>
+<p>This project is at its beginning. At the moment we have the samples
+"startup" and "printf" and we offer a simple real time operating system
+(RTOS).</p>
 </div>
 <div class="paragraph">
 <p>"startup" configures the complete toolchain and implements a blinking LED
@@ -554,6 +555,11 @@ Book E instruction set or the newer, more compact VLE instructions.</p>
 <p>"printf" adds a serial communication interface with a terminal program
 running on the host computer, that can be used with formatted output
 through the C library functions <code>printf</code> and Co. More samples will follow.</p>
+</div>
+<div class="paragraph">
+<p>"RTOS" implements a reusable real time operating system offering the
+functionality similar to an OSEK/VDX kernel of conformance classes BCC1 or
+BCC2.</p>
 </div>
 <div class="paragraph">
 <p>All samples are self-contained. There are some common elements, which are
@@ -597,7 +603,7 @@ found in the Internet.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-11-10 15:34:16 W. Europe Standard Time
+Last updated 2017-11-14 23:17:17 W. Europe Standard Time
 </div>
 </div>
 </body>
