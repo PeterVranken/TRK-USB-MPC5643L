@@ -77,7 +77,7 @@ running on the host computer, that can be used with formatted output
 through the C library functions `printf` and Co. More samples will follow.
 
 "RTOS" implements a reusable real time operating system offering the
-functionality similar to an OSEK/VDX kernel of conformance classes BCC1 or
+functionality similar to an OSEK/VDX kernel of conformance class BCC1 or
 BCC2.
 
 All samples are self-contained. There are some common elements, which are

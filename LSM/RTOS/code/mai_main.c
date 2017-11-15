@@ -72,7 +72,9 @@
 #include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
+#include "sio_serialIO.h"
 #include "RTOS.h"
+#include "gsl_systemLoad.h"
 #include "mai_main.h"
 
 
@@ -123,6 +125,8 @@ static volatile lbd_led_t _ledTask1s  = lbd_led_D5_grn;
     a pin. The selection is made by global variable. Here for D4. */
 static volatile lbd_led_t _ledTask1ms = lbd_led_D4_red;
 
+/** The average CPU load produced by all tasks and interrupts in tens of percent. */
+unsigned int mai_cpuLoad = 1000;
 
 /*
  * Function implementation
@@ -297,6 +301,10 @@ static void task17ms()
     if(!rtos_activateTask(3))
         ++ mai_cntActivationLossTaskNonCyclic;
 
+    /* A task can't activate itself, we do not queue activations and it's obviously active
+       at the moment. Test it. */
+    assert(!rtos_activateTask(4));
+    
 } /* End of task17ms */
 
 
@@ -323,6 +331,9 @@ void main()
 
     /* Initialize the button and LED driver for the eval board. */
     lbd_initLEDAndButtonDriver();
+    
+    /* Initialize the serial output channel as prerequisite of using printf. */
+    sio_initSerialInterface(/* baudRate */ 115200);
     
     /* The external interrupts are enabled after configuring I/O devices. (Initialization
        of the RTOS can be done later.) */
@@ -389,9 +400,18 @@ void main()
         checkAndIncrementTaskCnts(/* taskId */ NO_TASKS);
         ++ mai_cntIdle;
 
-            /* Activate the non cyclic task. */
-            bool bSecondActivation = rtos_activateTask(3);
-            assert(bSecondActivation);
+        /* Activate the non cyclic task. */
+        bool bSecondActivation = rtos_activateTask(3);
+        assert(bSecondActivation);
+
+        /* Compute the average CPU load. Note, this operation lasts about 1s and has a
+           significant impact on the cycling speed of this infinite loop. Furthermore, it
+           measures only the load produced by the tasks and system interrupts but not that
+           of the rest of the code in the idle loop. */
+        mai_cpuLoad = gsl_getSystemLoad();
+#ifdef DEBUG
+        iprintf("CPU load is %u.%u%%\r\n", mai_cpuLoad/10, mai_cpuLoad%10);
+#endif        
 #if 0
         /* Test of return from main: After 10s */
         if(mai_cntTask1ms >= 10000)

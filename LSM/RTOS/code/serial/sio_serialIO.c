@@ -29,7 +29,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   ldf_initSerialInterface
+ *   sio_initSerialInterface
  *   sio_writeSerial
  *   sio_getChar
  *   sio_getLine
@@ -661,7 +661,7 @@ static void registerInterrupts(void)
  * This function needs to be called at system initialization phase, when all External
  * Interrupts are still suspended.
  */
-void ldf_initSerialInterface(unsigned int baudRate)
+void sio_initSerialInterface(unsigned int baudRate)
 {
     initLINFlex(baudRate);
 
@@ -675,7 +675,7 @@ void ldf_initSerialInterface(unsigned int baudRate)
     _pWrSerialInRingBuf =
     _pRdSerialInRingBuf = &_serialInRingBuf[0];
     
-} /* End of ldf_initSerialInterface */
+} /* End of sio_initSerialInterface */
 
 
 
