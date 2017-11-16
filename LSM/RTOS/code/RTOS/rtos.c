@@ -262,7 +262,11 @@ static void osTimerTick()
  * compilation.
  *   @param pTaskDesc
  * All calls of this function need to be done prior to the start of the kernel using
- * rtos_initKernel().
+ * rtos_initKernel().\n
+ *   \a *pTaskDesc contains the priority of the task. Note, the order in which tasks are
+ * registers can affect the priority in a certain sense. If two tasks are registered with
+ * same priority and when they at runtime become ready at the same OS time tick then the
+ * earlier registered task will be executed before the later registered task.
  *   @param tiFirstActivationInMs
  * The first activation of the task in ms after start of kernel. The permitted range
  * is 0..2^30-1.\n

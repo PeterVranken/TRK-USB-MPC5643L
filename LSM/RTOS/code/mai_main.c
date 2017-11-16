@@ -1,5 +1,14 @@
 /**
  * @file mai_main.c
+ *   Blinking LED: Note the slight phase shift due to the differing task start times.
+ *   CPU load: At nominal 100% it drops to about 50%: The execution time of the cyclic task
+ * that produces the load exceeds the nominal cycle time of the task and every second
+ * activation is lost. The activation loss counter in the RTOS' task array constantly
+ * increases.
+ *   @todo The function documentation is still a copy of the root code, which this sample
+ * has been copied and derived from.
+ *   ...
+ *
  *   The main entry point of the C code. The assembler implemented startup code has been
  * executed and brought the MCU in a preliminary working state, such that the C compiler
  * constructs can safely work (e.g. stack pointer is initialized, memory access through MMU
@@ -99,6 +108,7 @@ enum
     , idTaskNonCyclic
     , idTask17ms
     , idTaskOnButtonDown
+    , idTaskCpuLoad
     , noTasks
 
       /** The idle task is not a task under control of the RTOS and it doesn't have an ID.
@@ -120,7 +130,9 @@ enum
     , prioTaskNonCyclic = 3
     , prioTask17ms = 4
     , prioTaskOnButtonDown = 1
+    , prioTaskCpuLoad = 1
 };
+
 
 /** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
     for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
@@ -179,6 +191,7 @@ volatile unsigned long mai_cntIdle = 0      /** Counter of cycles of infinite ma
                                                      task */
                      , mai_cntTask17ms = 0  /** Counter of cyclic task. */
                      , mai_cntTaskOnButtonDown = 0  /** Counter of button event task. */
+                     , mai_cntTaskCpuLoad = 0   /** Counter of cyclic task. */
                      , mai_cntActivationLossTaskNonCyclic = 0; /* Lost activations of non
                                                                   cyclic task by 17ms
                                                                   cyclic task. */
@@ -193,6 +206,12 @@ static volatile lbd_led_t _ledTask1ms = lbd_led_D4_red;
 
 /** The average CPU load produced by all tasks and interrupts in tens of percent. */
 unsigned int mai_cpuLoad = 1000;
+
+/** Test of CPU load estimation: This variable controls the production of some artificial
+    CPU load. This is done in a task of low priority so that all higher prioritized task
+    should not or barely be affected. (One LED is, the other isn't affected.) */
+static unsigned int _cpuLoadInPercent = 0;
+
 
 /*
  * Function implementation
@@ -261,7 +280,8 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
 
 
 /**
- * Task function, cyclically activated every Millisecond.
+ * Task function, cyclically activated every Millisecond. The LED D4 is switched on and off
+ * and the button SW3 is read and evaluated.
  */
 static void task1ms()
 {
@@ -273,7 +293,7 @@ static void task1ms()
          Note, the non cyclic task is of higher priority than this task and it'll be
        executed immediatly, preempting this task. The second activation below, on button
        down must not lead to an activation loss. */
-    rtos_activateTask(3);
+    rtos_activateTask(idTaskNonCyclic);
     
     /* Read the current button status to possibly toggle the LED colors. */
     static bool lastStateButton_ = false;
@@ -289,12 +309,20 @@ static void task1ms()
             _ledTask1s  = (cntButtonPress_ & 0x1) != 0? lbd_led_D5_red: lbd_led_D5_grn;
             _ledTask1ms = (cntButtonPress_ & 0x2) != 0? lbd_led_D4_red: lbd_led_D4_grn;
             
+            /* Activate the non cyclic task a second time. The priority of the activated
+               task is higher than of this activating task so the first activation should
+               have been processed meanwhile and this one should be accepted, too.*/
+            bool bActivationAccepted = rtos_activateTask(idTaskNonCyclic);
+            assert(bActivationAccepted);
+            
+            /* Activate our button down event task. The activation will normally succeed
+               but at high load and very fast button press events it it theoretically
+               possible that not. We don't place an assertion. */
+            bActivationAccepted = rtos_activateTask(idTaskOnButtonDown);
+            //assert(bActivationAccepted);
+            
             lastStateButton_ = true;
             ++ cntButtonPress_;
-
-            /* Activate the non cyclic task. */
-            bool bSecondActivation = rtos_activateTask(3);
-            assert(bSecondActivation);
         }
     }
     else
@@ -362,13 +390,13 @@ static void task17ms()
     
     /* This task has a higher priority than the software triggered, non cyclic task. Since
        the latter one is often active we have a significant likelihood of a failing
-       activation from here -- always if we preempted the non ccylic task. */
-    if(!rtos_activateTask(3))
+       activation from here -- always if we preempted the non cyclic task. */
+    if(!rtos_activateTask(idTaskNonCyclic))
         ++ mai_cntActivationLossTaskNonCyclic;
 
     /* A task can't activate itself, we do not queue activations and it's obviously active
        at the moment. Test it. */
-    assert(!rtos_activateTask(4));
+    assert(!rtos_activateTask(idTask17ms));
     
 } /* End of task17ms */
 
@@ -382,8 +410,48 @@ static void taskOnButtonDown()
 {
     checkAndIncrementTaskCnts(idTaskOnButtonDown);
     ++ mai_cntTaskOnButtonDown;
+    iprintf("You pressed the button the %lu. time\r\n", mai_cntTaskOnButtonDown);
     
+    /* Change the value of artificial CPU load on every click by 10%. */
+    if(_cpuLoadInPercent < 100)
+        _cpuLoadInPercent += 10;
+    else
+        _cpuLoadInPercent = 0;
+    iprintf("The additional, artificial CPU load has been set to %u%%\r\n", _cpuLoadInPercent);
+
 } /* End of taskOnButtonDown */
+
+
+/**
+ * A cyclic task of low priority, which is used to produce some artificial CPU load.
+ *   @remark
+ * We need to consider that in this sample, the measurement is inaccurate because the
+ * idle loop is not empty (besides measuring the load) and so the observation window is
+ * discontinuous. The task has a cycle time of much less than the CPU measurement
+ * observation window, which compensates for the effect of the discontinuous observation
+ * window.
+ */
+static void taskCpuLoad()
+{
+    checkAndIncrementTaskCnts(idTaskCpuLoad);
+    ++ mai_cntTaskCpuLoad;
+    
+    const unsigned int tiDelayInUs = 23 /* ms = cycle time of this task */
+                                     * 1000 /* ms to us to improve resolution */
+                                     * _cpuLoadInPercent
+                                     / 100;
+
+    /* The factor 120 is required to consider the unit of __builtin_ppc_get_timebase(),
+       which is the CPU clock tick. */
+    const uint64_t tiEnd = __builtin_ppc_get_timebase() + tiDelayInUs*120;
+    
+    /* Busy loop. Note, preemption is possible, which effectively lowers the additional CPU
+       load, this loop produces. The higher the system load, the more grows this effect. */
+    while(__builtin_ppc_get_timebase() < tiEnd)
+        ;
+
+} /* End of taskCpuLoad */
+
 
 
 
@@ -416,6 +484,9 @@ void main()
     /* The external interrupts are enabled after configuring I/O devices. (Initialization
        of the RTOS can be done later.) */
     ihw_resumeAllInterrupts();
+    
+    /* The RTOS is restricted to eight tasks at maximum. */
+    _Static_assert(noTasks <= 8, "RTOS only supports eight tasks");
     
     /* Register the application tasks at the RTOS. Note, we do not really respect the ID,
        which is assigned to the task by the RTOS API rtos_registerTask(). The returned
@@ -488,6 +559,17 @@ void main()
                      );
     assert(idTask == idTaskOnButtonDown);
 
+#ifdef DEBUG
+    idTask =
+#endif
+    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = taskCpuLoad
+                                         , .tiCycleInMs = 23 /* ms */
+                                         , .priority = prioTaskCpuLoad
+                                         }
+                     , /* tiFirstActivationInMs */ 3
+                     );
+    assert(idTask == idTaskCpuLoad);
+
     /* The last check ensures that we didn't forget to register a task. */
     assert(idTask == noTasks-1);
 
@@ -499,21 +581,19 @@ void main()
 
     while(true)
     {
-        checkAndIncrementTaskCnts(/* taskId */ noTasks);
+        checkAndIncrementTaskCnts(pseudoIdTaskIdle);
         ++ mai_cntIdle;
 
         /* Activate the non cyclic task. */
-        bool bSecondActivation = rtos_activateTask(3);
-        assert(bSecondActivation);
+        bool bActivationAccepted = rtos_activateTask(idTaskNonCyclic);
+        assert(bActivationAccepted);
 
         /* Compute the average CPU load. Note, this operation lasts about 1s and has a
            significant impact on the cycling speed of this infinite loop. Furthermore, it
            measures only the load produced by the tasks and system interrupts but not that
            of the rest of the code in the idle loop. */
         mai_cpuLoad = gsl_getSystemLoad();
-#ifdef DEBUG
         iprintf("CPU load is %u.%u%%\r\n", mai_cpuLoad/10, mai_cpuLoad%10);
-#endif        
 #if 0
         /* Test of return from main: After 10s */
         if(mai_cntTask1ms >= 10000)
