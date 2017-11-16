@@ -51,6 +51,9 @@
  *   task1ms
  *   task3ms
  *   task1s
+ *   taskNonCyclic
+ *   task17ms
+ *   taskOnButtonDown
  */
 
 /*
@@ -82,8 +85,70 @@
  * Defines
  */
  
-/** The number of application tasks created and used by this sample application. */
-#define NO_TASKS    5
+/** The enumeration of all tasks; the values are the task IDs. Actually, the ID is provided
+    by the RTOS at runtime, when registering the task. However, it is guaranteed that the
+    IDs returned by rtos_registerTask() are dealt out form the series 0, 1, 2, ..., 7. So
+    we don't need to have a dynamic storage of the IDs; we define them as constants and
+    double-check by assertion that we got the correct expected IDs. Note, this requires
+    that the order of registering the tasks follows the order here in the enumeration. */
+enum
+{
+    idTask1ms = 0
+    , idTask3ms
+    , idTask1s
+    , idTaskNonCyclic
+    , idTask17ms
+    , idTaskOnButtonDown
+    , noTasks
+
+      /** The idle task is not a task under control of the RTOS and it doesn't have an ID.
+          We assign it a pseudo task ID that is used to store some task related data in the
+          same array here in this sample application as we do by true task ID for all true
+          tasks. */
+    , pseudoIdTaskIdle = noTasks
+};
+
+
+/** The RTOS uses constant task priorities, which are defined here. (The concept and
+    architecture of the RTOS allows dynamic changeing of a task's priority at runtime, but
+    we didn't provide an API for that yet; where are the use cases?) */
+enum
+{
+    prioTask1ms = 2
+    , prioTask3ms = 2
+    , prioTask1s = 1
+    , prioTaskNonCyclic = 3
+    , prioTask17ms = 4
+    , prioTaskOnButtonDown = 1
+};
+
+/** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
+    for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
+      Here, for getting the resource, i.e. for entering a critical section of code. */
+#define GetResource(resource)                                                               \
+            { uint32_t priorityLevelSoFar = rtos_suspendAllInterruptsByPriority             \
+                                                (/* suspendUpToThisPriority */ (resource));
+
+/** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
+    for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
+      Here, for returning the resource, i.e. for leaving a critical section of code. */
+#define ReleaseResource() rtos_resumeAllInterruptsByPriority(priorityLevelSoFar); }
+
+/** The task counter array is accessed by all tasks. Here it is modelled as an OSEK/VDX
+    like resource to be used with #GetResource and #ReleaseResource. */
+#define RESOURCE_CNT_TASK_ARY   RESOURCE_ALL_TASKS
+
+/** The priority level to set if all tasks should be mutually excluded from accessing a
+    shared resource. The macro is named such that the code resembles the resource API from
+    the OSEK/VDX standard*/
+#define RESOURCE_ALL_TASKS  (MAXP(prioTask1ms,MAXP(prioTask3ms, \
+                             MAXP(prioTask1s,MAXP(prioTaskNonCyclic, \
+                             MAXP(prioTask17ms,prioTaskOnButtonDown))))))
+
+
+/** Some helper code to get the maximum task priority as a constant for the priority ceiling
+    protocol. */
+#define MAXP(p1,p2)  ((p2)>(p1)?(p2):(p1))
 
 
 /*
@@ -104,15 +169,16 @@
 volatile unsigned long long _cntAllTasks = 0;
 
 /** A cycle counter for each task. The last entry is meant for the idle task. */
-volatile unsigned long long _cntTaskAry[NO_TASKS+1] = {[0 ... NO_TASKS] = 0};
+volatile unsigned long long _cntTaskAry[noTasks+1] = {[0 ... noTasks] = 0};
 
 volatile unsigned long mai_cntIdle = 0      /** Counter of cycles of infinite main loop. */
                      , mai_cntTask1ms = 0   /** Counter of cyclic task. */
                      , mai_cntTask3ms = 0   /** Counter of cyclic task. */
                      , mai_cntTask1s = 0    /** Counter of cyclic task. */
-                     , mai_cntTask17ms = 0  /** Counter of cyclic task. */
                      , mai_cntTaskNonCyclic = 0  /** Counter of calls of software triggered
                                                      task */
+                     , mai_cntTask17ms = 0  /** Counter of cyclic task. */
+                     , mai_cntTaskOnButtonDown = 0  /** Counter of button event task. */
                      , mai_cntActivationLossTaskNonCyclic = 0; /* Lost activations of non
                                                                   cyclic task by 17ms
                                                                   cyclic task. */
@@ -147,17 +213,16 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
 {
     /* Increment task related counter and shared counter in an atomic operation. */
     assert(taskId < sizeOfAry(_cntTaskAry));
-    unsigned int priorityLevelSoFar = rtos_suspendAllInterruptsByPriority
-                                                        (/* suspendUpToThisPriority */ 4);
+    GetResource(RESOURCE_CNT_TASK_ARY);
     {
         ++ _cntTaskAry[taskId];
         ++ _cntAllTasks;
     }
-    rtos_resumeAllInterruptsByPriority(priorityLevelSoFar);
+    ReleaseResource();
     
     /* Get all task counters and the common counter in an atomic operation. Now, we apply
        another offered mechanism for mutual exclusion of tasks. */
-    unsigned long long cntTaskAryCpy[NO_TASKS+1]
+    unsigned long long cntTaskAryCpy[noTasks+1]
                      , cntAllTasksCpy;
     _Static_assert(sizeof(_cntTaskAry) == sizeof(cntTaskAryCpy), "Bad data definition");
     const uint32_t msr = ihw_enterCriticalSection();
@@ -169,7 +234,7 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
     
     /* Check consistency of got data. +1: The last entry is meant for the idle task. */
     unsigned int u;
-    for(u=0; u<NO_TASKS+1; ++u)
+    for(u=0; u<noTasks+1; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
     assert(cntAllTasksCpy == 0);
     
@@ -186,7 +251,7 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
     ihw_resumeAllInterrupts();
     
     /* Check consistency of got data. +1: The last entry is meant for the idle task. */
-    for(u=0; u<NO_TASKS+1; ++u)
+    for(u=0; u<noTasks+1; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
     assert(cntAllTasksCpy == 0);
     
@@ -200,7 +265,7 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
  */
 static void task1ms()
 {
-    checkAndIncrementTaskCnts(/* taskId */ 0);
+    checkAndIncrementTaskCnts(idTask1ms);
     
     ++ mai_cntTask1ms;
 
@@ -250,7 +315,7 @@ static void task1ms()
  */
 static void task3ms()
 {
-    checkAndIncrementTaskCnts(/* taskId */ 1);
+    checkAndIncrementTaskCnts(idTask3ms);
     ++ mai_cntTask3ms;
     
 } /* End of task3ms */
@@ -262,7 +327,7 @@ static void task3ms()
  */
 static void task1s()
 {
-    checkAndIncrementTaskCnts(/* taskId */ 2);
+    checkAndIncrementTaskCnts(idTask1s);
 
     ++ mai_cntTask1s;
 
@@ -280,7 +345,7 @@ static void task1s()
  */
 static void taskNonCyclic()
 {
-    checkAndIncrementTaskCnts(/* taskId */ 3);
+    checkAndIncrementTaskCnts(idTaskNonCyclic);
     ++ mai_cntTaskNonCyclic;
     
 } /* End of taskNonCyclic */
@@ -292,7 +357,7 @@ static void taskNonCyclic()
  */
 static void task17ms()
 {
-    checkAndIncrementTaskCnts(/* taskId */ 4);
+    checkAndIncrementTaskCnts(idTask17ms);
     ++ mai_cntTask17ms;
     
     /* This task has a higher priority than the software triggered, non cyclic task. Since
@@ -306,6 +371,19 @@ static void task17ms()
     assert(!rtos_activateTask(4));
     
 } /* End of task17ms */
+
+
+
+/**
+ * A non cyclic task, which is activated by software trigger every time the button on the
+ * evaluation board is pressed.
+ */
+static void taskOnButtonDown()
+{
+    checkAndIncrementTaskCnts(idTaskOnButtonDown);
+    ++ mai_cntTaskOnButtonDown;
+    
+} /* End of taskOnButtonDown */
 
 
 
@@ -339,55 +417,79 @@ void main()
        of the RTOS can be done later.) */
     ihw_resumeAllInterrupts();
     
-    /* Register the application tasks at the RTOS. */
-    const unsigned int idTask1ms = rtos_registerTask
-                                    ( &(rtos_taskDesc_t){ .taskFct = task1ms
-                                                        , .tiCycleInMs = 1
-                                                        , .priority = 2
-                                                        }
-                                    , /* tiFirstActivationInMs */ 10
-                                    );
-    assert(idTask1ms == 0);
+    /* Register the application tasks at the RTOS. Note, we do not really respect the ID,
+       which is assigned to the task by the RTOS API rtos_registerTask(). The returned
+       value is redundant. This technique requires that we register the task in the right
+       order and this requires in practice a double-check by assertion - later maintenance
+       errors are unavoidable otherwise. */
+#ifdef DEBUG
+    unsigned int idTask =
+#endif
+    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = task1ms
+                                         , .tiCycleInMs = 1
+                                         , .priority = prioTask1ms
+                                         }
+                     , /* tiFirstActivationInMs */ 10
+                     );
+    assert(idTask == idTask1ms);
 
-    const unsigned int idTask3ms = rtos_registerTask
-                                    ( &(rtos_taskDesc_t){ .taskFct = task3ms
-                                                        , .tiCycleInMs = 3
-                                                        , .priority = 2
-                                                        }
-                                    , /* tiFirstActivationInMs */ 17
-                                    );
-    assert(idTask3ms == 1);
+#ifdef DEBUG
+    idTask =
+#endif
+    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = task3ms
+                                         , .tiCycleInMs = 3
+                                         , .priority = prioTask3ms
+                                         }
+                     , /* tiFirstActivationInMs */ 17
+                     );
+    assert(idTask == idTask3ms);
 
-    const unsigned int idTask1s = rtos_registerTask
-                                    ( &(rtos_taskDesc_t){ .taskFct = task1s
-                                                        , .tiCycleInMs = 1000
-                                                        , .priority = 1
-                                                        }
-                                    , /* tiFirstActivationInMs */ 100
-                                    );
-    assert(idTask1s == 2);
+#ifdef DEBUG
+    idTask =
+#endif
+    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = task1s
+                                         , .tiCycleInMs = 1000
+                                         , .priority = prioTask1s
+                                         }
+                     , /* tiFirstActivationInMs */ 100
+                     );
+    assert(idTask == idTask1s);
 
-    const unsigned int idTaskNonCyclic = rtos_registerTask
-                                    ( &(rtos_taskDesc_t){ .taskFct = taskNonCyclic
-                                                        , .tiCycleInMs = 0 /* non-cyclic */
-                                                        , .priority = 3
-                                                        }
-                                    , /* tiFirstActivationInMs */ 0
-                                    );
-    assert(idTaskNonCyclic == 3);
+#ifdef DEBUG
+    idTask =
+#endif
+    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = taskNonCyclic
+                                         , .tiCycleInMs = 0 /* non-cyclic */
+                                         , .priority = prioTaskNonCyclic
+                                         }
+                     , /* tiFirstActivationInMs */ 0
+                     );
+    assert(idTask == idTaskNonCyclic);
 
-    const unsigned int idTask17ms = rtos_registerTask
-                                    ( &(rtos_taskDesc_t){ .taskFct = task17ms
-                                                        , .tiCycleInMs = 17
-                                                        , .priority = 4
-                                                        }
-                                    , /* tiFirstActivationInMs */ 0
-                                    );
-    assert(idTask17ms == 4);
+#ifdef DEBUG
+    idTask =
+#endif
+    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = task17ms
+                                         , .tiCycleInMs = 17
+                                         , .priority = prioTask17ms
+                                         }
+                     , /* tiFirstActivationInMs */ 0
+                     );
+    assert(idTask == idTask17ms);
 
-    /* This test and demonstration code uses unsafe literals, put an assertion to avoid
-       errors. */
-    assert(idTask17ms == NO_TASKS-1);
+#ifdef DEBUG
+    idTask =
+#endif
+    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = taskOnButtonDown
+                                         , .tiCycleInMs = 0 /* Event task, no coycle time */
+                                         , .priority = prioTaskOnButtonDown
+                                         }
+                     , /* tiFirstActivationInMs */ 0
+                     );
+    assert(idTask == idTaskOnButtonDown);
+
+    /* The last check ensures that we didn't forget to register a task. */
+    assert(idTask == noTasks-1);
 
     /* Initialize the RTOS kernel. */
     rtos_initKernel();
@@ -397,7 +499,7 @@ void main()
 
     while(true)
     {
-        checkAndIncrementTaskCnts(/* taskId */ NO_TASKS);
+        checkAndIncrementTaskCnts(/* taskId */ noTasks);
         ++ mai_cntIdle;
 
         /* Activate the non cyclic task. */

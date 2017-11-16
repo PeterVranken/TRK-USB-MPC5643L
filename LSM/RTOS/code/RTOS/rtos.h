@@ -132,7 +132,7 @@ typedef struct rtos_taskDesc_t
  * activation and which can be releases in an arbitrary later task activation or from
  * another task.
  */
-static inline unsigned int rtos_suspendAllInterruptsByPriority
+static inline uint32_t rtos_suspendAllInterruptsByPriority
                                             (unsigned int suspendUpToThisPriority)
 {
     /* All priorities are in the range 0..15. Everything else points to an application
@@ -142,7 +142,7 @@ static inline unsigned int rtos_suspendAllInterruptsByPriority
     /* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority
        in the INTC should be done under global interrupt lock. */
     asm volatile ( "wrteei 0\n" ::: );
-    unsigned int priorityLevelSoFar = INTC.CPR_PRC0.R;
+    uint32_t priorityLevelSoFar = INTC.CPR_PRC0.R;
     
     /* It is useless and a waste of CPU but not a severe error to let this function set the
        same priority level we already have.
