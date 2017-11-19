@@ -36,9 +36,9 @@ compiler installation needs to be known and the PATH variable needs to
 contain the paths to the required tools. 
 
 For Windows users there is a shortcut to PowerShell in the root of this
-project, which opens the shell with the prepared environment. Furthermore,
-it creates an alias to the appropriate GNU make executable. You can simply
-type `make` from any location to run MinGW32 GNU make.
+project (not sample), which opens the shell with the prepared environment.
+Furthermore, it creates an alias to the appropriate GNU make executable.
+You can simply type `make` from any location to run MinGW32 GNU make.
 
 The PowerShell process reads the script `setEnv.ps1`, located in the
 project root, too, to configure the environment. This script requires
@@ -73,28 +73,37 @@ Once everything is prepared, the CodeWarrior Eclipse IDE will never be
 started other than by clicking the script `CW-IDE.ps1` or its equivalent
 on non-Windows hosts.
 
+See https://github.com/PeterVranken/TRK-USB-MPC5643L[project overview] and
+https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation[GitHub
+Wiki] for more details about downloading and installing the required
+tools.
 
-=== Compiler and Debugger
+=== Compiler and makefile
 
-The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
-be flashed and debugged with the CodeWarrior IDE. (See project overview
-for more details.)
-
-=== Makefile
-
-Compilation and linkage are makefile controlled. The makefile is made
-generic and can be reused for other VLE projects, not only for a tiny
-"Hello World" with a few source files. It supports a number of options
-(targets); get an overview by typing:
+Compilation and linkage are makefile controlled. The compiler is GCC
+(MinGW-powerpc-eabivle-4.9.4). The makefile is made generic and can be
+reused for other VLE projects, not only for a tiny "Hello World" with a few
+source files. It supports a number of options (targets); get an overview
+by typing:
  
-    cd <rootFolderOfSampleWhereGNUmakefileResides>
+    cd <projectRoot>/LSM/startup-VLE
     mingw32-make help
 
-The makefile requires a little number of configuration settings, among
-which a list of source code directories. These directories are recursively
-searched for `*.c` and `*.S` files and all of these files are compiled or
-assembled, respectively, and all of the object files are linked to the
-flashable binary file. Open main file `GNUmakefile` to get more details.
+The main makefile `GNUmakefile` requires a little number of configuration
+settings, among which a list of source code directories. These directories
+are recursively searched for `*.c` and `*.S` files and all of these files
+are compiled or assembled, respectively, and all of the object files are
+linked to the flashable binary file. Open main file `GNUmakefile` to get
+more details.
+
+Here, the main makefile has been configured for the build of sample
+"startup". Type:
+
+    mingw32-make -s build 
+    mingw32-make -s build CONFIG=PRODUCTION
+
+to produce the flashable files (`bin\ppc\DEBUG\TRK-USB-MPC5643L-startup-VLE.elf`
+and `bin\ppc\PRODUCTION\TRK-USB-MPC5643L-startup-VLE.elf`).
 
 NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
 port will fail with obscure, misleading error messages. It's safe to use
@@ -135,6 +144,29 @@ well-documented solution for some target specific issues:
 - The compiler is configured for PowerPC EABI support. Different options
   exist and we have enabled the small data addressing mode for RAM and
   ROM, which reduces code size and increases performance
+
+=== Flashing and debugging
+
+The sample code can be flashed and debugged with the CodeWarrior IDE.
+
+To flash the `*.elf` file, open the CodeWarrior IDE, go to the menu, click
+"Window/Show View/Other/Debug/Debugger Shell". In the debugger shell
+window, type:
+
+    cd <rootFolderOfSample>/makefile/debugger
+    source flashDEBUG.tcl
+    
+or
+
+    source flashPRODUCTION.tcl
+
+The debugger is started by a click on the black triangle next to the blue
+icon "bug", then click "Debug Configurations.../CodeWarrior/Debug startup-VLE
+(DEBUG)". Confirm and start the debugger with a last click on button
+"Debug".
+
+You can find more details on using the CodeWarrior IDE at
+https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 
 == Code architecture
 

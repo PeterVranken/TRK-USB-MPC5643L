@@ -440,8 +440,8 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_tools">2. Tools</a>
 <ul class="sectlevel2">
 <li><a href="#_environment">2.1. Environment</a></li>
-<li><a href="#_compiler_and_debugger">2.2. Compiler and Debugger</a></li>
-<li><a href="#_makefile">2.3. Makefile</a></li>
+<li><a href="#_compiler_and_makefile">2.2. Compiler and makefile</a></li>
+<li><a href="#_flashing_and_debugging">2.3. Flashing and debugging</a></li>
 </ul>
 </li>
 <li><a href="#_code_architecture">3. Code architecture</a>
@@ -488,9 +488,9 @@ contain the paths to the required tools.</p>
 </div>
 <div class="paragraph">
 <p>For Windows users there is a shortcut to PowerShell in the root of this
-project, which opens the shell with the prepared environment. Furthermore,
-it creates an alias to the appropriate GNU make executable. You can simply
-type <code>make</code> from any location to run MinGW32 GNU make.</p>
+project (not sample), which opens the shell with the prepared environment.
+Furthermore, it creates an alias to the appropriate GNU make executable.
+You can simply type <code>make</code> from any location to run MinGW32 GNU make.</p>
 </div>
 <div class="paragraph">
 <p>The PowerShell process reads the script <code>setEnv.ps1</code>, located in the
@@ -532,36 +532,50 @@ of Eclipse and prepare an according script for their native shell.</p>
 started other than by clicking the script <code>CW-IDE.ps1</code> or its equivalent
 on non-Windows hosts.</p>
 </div>
+<div class="paragraph">
+<p>See <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L">project overview</a> and
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation">GitHub
+Wiki</a> for more details about downloading and installing the required
+tools.</p>
+</div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_compiler_and_debugger">2.2. Compiler and Debugger</h3>
+<h3 id="_compiler_and_makefile">2.2. Compiler and makefile</h3>
 <div class="paragraph">
-<p>The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
-be flashed and debugged with the CodeWarrior IDE. (See project overview
-for more details.)</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_makefile">2.3. Makefile</h3>
-<div class="paragraph">
-<p>Compilation and linkage are makefile controlled. The makefile is made
-generic and can be reused for other projects, not only for a tiny "Hello World"
-with a few source files. It supports a number of options (targets); get an
-overview by typing:</p>
+<p>Compilation and linkage are makefile controlled. The compiler is GCC
+(MinGW-powerpc-eabivle-4.9.4). The makefile is made generic and can be
+reused for other projects, not only for a tiny "Hello World" with a few
+source files. It supports a number of options (targets); get an overview
+by typing:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>cd &lt;rootFolderOfSampleWhereGNUmakefileResides&gt;
+<pre>cd &lt;projectRoot&gt;/LSM/startup
 mingw32-make help</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The makefile requires a little number of configuration settings, among
-which a list of source code directories. These directories are recursively
-searched for <code><strong>.c</code> and <code></strong>.S</code> files and all of these files are compiled or
-assembled, respectively, and all of the object files are linked to the
-flashable binary file. Open main file <code>GNUmakefile</code> to get more details.</p>
+<p>The main makefile <code>GNUmakefile</code> requires a little number of configuration
+settings, among which a list of source code directories. These directories
+are recursively searched for <code><strong>.c</code> and <code></strong>.S</code> files and all of these files
+are compiled or assembled, respectively, and all of the object files are
+linked to the flashable binary file. Open main file <code>GNUmakefile</code> to get
+more details.</p>
+</div>
+<div class="paragraph">
+<p>Here, the main makefile has been configured for the build of sample
+"startup". Type:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>mingw32-make -s build
+mingw32-make -s build CONFIG=PRODUCTION</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>to produce the flashable files (<code>bin\ppc\DEBUG\TRK-USB-MPC5643L-startup.elf</code>
+and <code>bin\ppc\PRODUCTION\TRK-USB-MPC5643L-startup.elf</code>).</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -587,7 +601,7 @@ add more source code folders to hold all of your application code. The
 makefile as it is should be capable of building your application.</p>
 </div>
 <div class="sect3">
-<h4 id="_floating_point_spe_and_eabi">2.3.1. Floating point, SPE and EABI</h4>
+<h4 id="_floating_point_spe_and_eabi">2.2.1. Floating point, SPE and EABI</h4>
 <div class="paragraph">
 <p>Compiling C code for an embedded target is much more complex than on the
 host machine, where the simple command line <code>gcc helloWorld.c</code> can already
@@ -625,6 +639,41 @@ ROM, which reduces code size and increases performance</p>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_flashing_and_debugging">2.3. Flashing and debugging</h3>
+<div class="paragraph">
+<p>The sample code can be flashed and debugged with the CodeWarrior IDE.</p>
+</div>
+<div class="paragraph">
+<p>To flash the <code>*.elf</code> file, open the CodeWarrior IDE, go to the menu, click
+"Window/Show View/Other/Debug/Debugger Shell". In the debugger shell
+window, type:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>cd &lt;rootFolderOfSample&gt;/makefile/debugger
+source flashDEBUG.tcl</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>or</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>source flashPRODUCTION.tcl</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The debugger is started by a click on the black triangle next to the blue
+icon "bug", then click "Debug Configurations&#8230;&#8203;/CodeWarrior/Debug startup
+(DEBUG)". Confirm and start the debugger with a last click on button
+"Debug".</p>
+</div>
+<div class="paragraph">
+<p>You can find more details on using the CodeWarrior IDE at
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation" class="bare">https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation</a>.</p>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -644,11 +693,11 @@ can be done later and already in C. Both files implement a basic
 configuration of the MCU, which permits safe operation of the code. They
 do not configure more of the MCU hardware as required to run code, there&#8217;s
 for example nothing about ADC. If an application wants to use analogue
-inputs then it&#8217;ll add the hardware configuration of the ADC as
-appropriate. The two mentioned files contain only the basic initialization
-and most of this initialization can be considered application independent
-or, with other words, you can likely reuse these files without
-modification for most applications. This is what they do:</p>
+inputs or other I/O then it&#8217;ll add the hardware configuration of the
+requires devices as appropriate. The two mentioned files contain only the
+basic initialization and most of this initialization can be considered
+application independent or, with other words, you can likely reuse these
+files without modification for most applications. This is what they do:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -735,7 +784,7 @@ revision of GCC.
 </div>
 <div class="paragraph">
 <p>This has been decided for sake of transparency and reliability. At many
-points of the implementation it would have been quite clear, how to put
+points of the implementation it would have been quite clear, how to place
 some preprocessor statements or makefile if-clauses in order to support
 e.g. VLE code or the CodeWarrior compiler. As a matter of experience, the
 consequent use of such preprocessor constructs can strongly degrade the
@@ -1048,7 +1097,7 @@ atomic_thread_fence(memory_order_seq_cst);</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-17 23:16:49 W. Europe Daylight Time
+Last updated 2017-11-19 20:45:09 W. Europe Standard Time
 </div>
 </div>
 </body>

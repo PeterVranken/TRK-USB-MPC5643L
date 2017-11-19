@@ -454,10 +454,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_tools">4. Tools</a>
 <ul class="sectlevel2">
 <li><a href="#_environment">4.1. Environment</a></li>
-<li><a href="#_compiler_and_debugger">4.2. Compiler and Debugger</a></li>
-<li><a href="#_makefile">4.3. Makefile</a></li>
+<li><a href="#_compiler_and_makefile">4.2. Compiler and makefile</a></li>
+<li><a href="#_flashing_and_debugging">4.3. Flashing and debugging</a></li>
 </ul>
 </li>
+<li><a href="#_code_architecture">5. Code architecture</a></li>
 </ul>
 </div>
 </div>
@@ -766,21 +767,22 @@ of Eclipse and prepare an according script for their native shell.</p>
 started other than by clicking the script <code>CW-IDE.ps1</code> or its equivalent
 on non-Windows hosts.</p>
 </div>
+<div class="paragraph">
+<p>See <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L">project overview</a> and
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation">GitHub
+Wiki</a> for more details about downloading and installing the required
+tools.</p>
+</div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_compiler_and_debugger">4.2. Compiler and Debugger</h3>
+<h3 id="_compiler_and_makefile">4.2. Compiler and makefile</h3>
 <div class="paragraph">
-<p>The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
-be flashed and debugged with the CodeWarrior IDE. (See project overview
-for more details.)</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_makefile">4.3. Makefile</h3>
-<div class="paragraph">
-<p>Compilation and linkage are makefile controlled. The makefile supports a
-number of options (targets); get an overview by typing:</p>
+<p>Compilation and linkage are makefile controlled. The compiler is GCC
+(MinGW-powerpc-eabivle-4.9.4). The makefile is made generic and can be
+reused for other projects, not only for a tiny "Hello World" with a few
+source files. It supports a number of options (targets); get an overview
+by typing:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -794,11 +796,13 @@ sample "printf". Type:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>mingw32-make -s build</pre>
+<pre>mingw32-make -s build
+mingw32-make -s build CONFIG=PRODUCTION</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>to produce the flashable file (<code>TRK-USB-MPC5643L-printf.elf</code>).</p>
+<p>to produce the flashable files (<code>bin\ppc\DEBUG\TRK-USB-MPC5643L-printf.elf</code>
+and <code>bin\ppc\PRODUCTION\TRK-USB-MPC5643L-printf.elf</code>).</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -816,13 +820,53 @@ designed to run on different host systems but has been tested with Windows
 </tr>
 </table>
 </div>
+</div>
+<div class="sect2">
+<h3 id="_flashing_and_debugging">4.3. Flashing and debugging</h3>
+<div class="paragraph">
+<p>The sample code can be flashed and debugged with the CodeWarrior IDE.</p>
+</div>
+<div class="paragraph">
+<p>To flash the <code>*.elf</code> file, open the CodeWarrior IDE, go to the menu, click
+"Window/Show View/Other/Debug/Debugger Shell". In the debugger shell
+window, type:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>cd &lt;rootFolderOfSample&gt;/makefile/debugger
+source flashDEBUG.tcl</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>or</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>source flashPRODUCTION.tcl</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The debugger is started by a click on the black triangle next to the blue
+icon "bug", then click "Debug Configurations&#8230;&#8203;/CodeWarrior/Debug printf
+(DEBUG)". Confirm and start the debugger with a last click on button
+"Debug".</p>
+</div>
+<div class="paragraph">
+<p>You can find more details on using the CodeWarrior IDE at
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation" class="bare">https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation</a>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_code_architecture">5. Code architecture</h2>
+<div class="sectionbody">
 <div class="paragraph">
 <p>This sample builds on the basic sample "startup" located in a sibling folder.
 "printf" is compiled for the Book E instruction set. All build settings
 and the software architecture are identical to "startup". Please refer to
 <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc" class="bare">https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc</a>
 for details.</p>
-</div>
 </div>
 </div>
 </div>
@@ -835,7 +879,7 @@ for details.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-31 22:29:35 W. Europe Standard Time
+Last updated 2017-11-19 20:48:34 W. Europe Standard Time
 </div>
 </div>
 </body>

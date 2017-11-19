@@ -357,7 +357,7 @@ unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
  * preempted to the advantage of the activated task. Otherwise the activated task is
  * chained and executed after the activating task.
  *   @return
- * There is no acivation queueing. If the activated task is already activated (i.e. it is
+ * There is no activation queuing. If the activated task is already activated (i.e. it is
  * in ready or running state) then no (further) activation is possible. The function
  * returns \a false and the activation loss counter of the task is incremented. (See
  * rtos_getNoActivationLoss().)
@@ -432,7 +432,7 @@ bool rtos_activateTask(unsigned int taskId)
 
 
 
-
+/// @todo Implement it
 //unsigned int rtos_getNoActivationLoss(void)
 //{
 //} /* End of rtos_getNoActivationLoss */

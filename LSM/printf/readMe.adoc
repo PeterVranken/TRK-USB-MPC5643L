@@ -254,17 +254,18 @@ Once everything is prepared, the CodeWarrior Eclipse IDE will never be
 started other than by clicking the script `CW-IDE.ps1` or its equivalent
 on non-Windows hosts.
 
+See https://github.com/PeterVranken/TRK-USB-MPC5643L[project overview] and
+https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation[GitHub
+Wiki] for more details about downloading and installing the required
+tools.
 
-=== Compiler and Debugger
+=== Compiler and makefile
 
-The sample is compiled with GCC (MinGW-powerpc-eabivle-4.9.4) and it can
-be flashed and debugged with the CodeWarrior IDE. (See project overview
-for more details.)
-
-=== Makefile
-
-Compilation and linkage are makefile controlled. The makefile supports a
-number of options (targets); get an overview by typing:
+Compilation and linkage are makefile controlled. The compiler is GCC
+(MinGW-powerpc-eabivle-4.9.4). The makefile is made generic and can be
+reused for other projects, not only for a tiny "Hello World" with a few
+source files. It supports a number of options (targets); get an overview
+by typing:
  
     cd <projectRoot>/LSM/printf
     mingw32-make help
@@ -273,14 +274,41 @@ The main makefile `GNUmakefile` has been configured for the build of
 sample "printf". Type:
 
     mingw32-make -s build 
+    mingw32-make -s build CONFIG=PRODUCTION
 
-to produce the flashable file (`TRK-USB-MPC5643L-printf.elf`).
+to produce the flashable files (`bin\ppc\DEBUG\TRK-USB-MPC5643L-printf.elf`
+and `bin\ppc\PRODUCTION\TRK-USB-MPC5643L-printf.elf`).
 
 NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
 port will fail with obscure, misleading error messages. It's safe to use
 the `make.exe` from the compiler installation archive. The makefile is
 designed to run on different host systems but has been tested with Windows
 7 only.
+
+=== Flashing and debugging
+
+The sample code can be flashed and debugged with the CodeWarrior IDE.
+
+To flash the `*.elf` file, open the CodeWarrior IDE, go to the menu, click
+"Window/Show View/Other/Debug/Debugger Shell". In the debugger shell
+window, type:
+
+    cd <rootFolderOfSample>/makefile/debugger
+    source flashDEBUG.tcl
+    
+or
+
+    source flashPRODUCTION.tcl
+
+The debugger is started by a click on the black triangle next to the blue
+icon "bug", then click "Debug Configurations.../CodeWarrior/Debug printf
+(DEBUG)". Confirm and start the debugger with a last click on button
+"Debug".
+
+You can find more details on using the CodeWarrior IDE at
+https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
+
+== Code architecture
 
 This sample builds on the basic sample "startup" located in a sibling folder. 
 "printf" is compiled for the Book E instruction set. All build settings

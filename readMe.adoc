@@ -8,7 +8,7 @@
 == Introduction
 
 This project aims to support the software development for the NXP PowerPC
-micro controller MPC5643L with professional yet free of charge software
+microcontroller MPC5643L with professional yet free of charge software
 development tools. It's not difficult to find a GNU C cross compiler for the
 PowerPC architecture in the Internet but as a matter of experience it's
 quite cumbersome to make it produce a flashable and running piece of code.
@@ -26,7 +26,7 @@ configuration of these will need particular investigation and specific
 solutions. This project focuses on a single such configuration and offers
 a clean solution for that one. It might be possible or not possible, more
 or less difficult or more or less effortful to migrate this solution to other
-revisions or ports of GCC or other derivates from the micro controller
+revisions or ports of GCC or other derivates from the microcontroller
 family but this is considered your responsibility and out of scope of this
 project.
 
@@ -40,7 +40,7 @@ The configuration for this project is:
 
 [frame="none",options="noheader",width="100%",cols="1,2"]
 |=======
-|Micro controller|https://www.nxp.com/products/microcontrollers-and-processors/power-architecture-processors/mpc5xxx-55xx-32-bit-mcus/ultra-reliable-mpc56xx-32-bit-automotive-and-industrial-microcontrollers-mcus/ultra-reliable-dual-core-32-bit-mcu-for-automotive-and-industrial-applications:MPC564xL[NXP PowerPC MPC5643L]
+|microcontroller|https://www.nxp.com/products/microcontrollers-and-processors/power-architecture-processors/mpc5xxx-55xx-32-bit-mcus/ultra-reliable-mpc56xx-32-bit-automotive-and-industrial-microcontrollers-mcus/ultra-reliable-dual-core-32-bit-mcu-for-automotive-and-industrial-applications:MPC564xL[NXP PowerPC MPC5643L]
 |Evaluation board|https://www.nxp.com/support/developer-resources/hardware-development-tools/startertrak-development-boards/mpc5643l-startertrak-for-safety-applications:TRK-USB-MPC5643L[NXP TRK-USB-5643L]
 |Host|Windows 7
 |C compiler|https://drive.google.com/open?id=0B_3zBh2c7LroNEFIOVlJcUVKRWc[MinGW-powerpc-eabivle-4.9.4]
@@ -58,9 +58,10 @@ The most prominent sample is the blinking LED, here called "startup".
 While it is not of any use as such it does contain a lot of reusable stuff
 for real development: As there is the toolchain setup (compiler, linker,
 flash tool, debugger), a powerful, generic, fully reusable makefile and a
-clean piece of startup code, which will suffice for most applications.
-Remove the LED blink code and start writing your application but don't
-loose time with setting up your development environment.
+clean piece of startup code -- either in Book E or VLE instruction set
+--, which will suffice for most applications. Remove the LED blink code
+and start writing your application but don't loose time with setting up
+your development environment.
 
 == The samples
 
@@ -102,6 +103,6 @@ particular added value.
 
 The code and scripts are documented by source code comments.
 
-Most relevant documentation about the evaluation board and the micro
-controller has been collected in folder `doc` and much, much more can be
-found in the Internet.
+Most relevant documentation about the evaluation board and the
+microcontroller has been collected in folder `doc` and much, much more can
+be found in the Internet.
