@@ -1,4 +1,4 @@
-= Sample "RTOS" - Use of RS 232 serial interface for C's printf & Co.
+= Sample "RTOS" - A simple but effective RTOS for MPC5643L
 :Author:    Peter Vranken 
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
