@@ -1,13 +1,61 @@
 /**
  * @file rtos.c
- * This file implements a simple Real Time Operating System (RTOS) for the MPC5643L. Only a
- * few lines of code are required - this is because of the hardware capabilities of the
- * interrupt controller INTC, which has much of an RTOS kernel in hardware. The RTOS is
- * just a wrapper around these hardware capabilities. The reference manual of the INTC
- * partly reads like an excerpt from the OSEK/VDX specification, it effectivly implements
- * the basic task conformance classes BCC1 and BCC2 from the standard. Since we barely add
- * software support, our operating system is by principle restricted to these conformance
- * classes.\n
+ * This file implements a simple Real Time Operating System (RTOS) for the MPC5643L.\n
+ *   The RTOS offers a strictly priority controlled scheduler for up to eight application
+ * tasks. Prior to the start of the scheduler (and thus prior to the beginning of the
+ * pseudo parallel, concurrent execution of the tasks) all later used task are registered
+ * at the scheduler, an application will repeatedly use the API rtos_registerTask().\n
+ *   After all needed tasks are registered the application will start the RTOS' kernel
+ * by calling the API rtos_initKernel(), task scheduling begins.
+ *   A task is mainly characterized by a task function and a priority; the C code function
+ * is invoked when the task is activated. The function is unconditionally executed until it
+ * normally ends - this designates the end of the task.\n
+ *   Activated does still not necessarily mean executing; the more precise wording is that
+ * the activation makes a task immediately and unconditionally "ready" (i.e. ready for
+ * execution). If more than a single task are ready at a time then the function of the task
+ * with higher priority is executed first and the function of the other task will be served
+ * only after completion of the first. Several tasks can be simultaneously ready and one of
+ * them will be executed, this is the one and only "running" task.\n
+ *   "Are ready at a time" does not necessarily mean that both tasks have been activated at
+ * the same point in time. If task A of priority Pa is activated first and as only task
+ * then it'll be executed regardless of its priority. If task B of priority Pb is activated
+ * later, but still before A has completed then we have two tasks which have been activated
+ * "at a time". The priority relation decides what happens:\n
+ *   If Pa >= Pb then A is completed and B will be started and executed only after A has
+ * completed.
+ *   If Pb > Pa then task A turns from state running back to state ready and B becomes the
+ * running task until it completes. Now A as remaining ready, not yet completed task
+ * becomes the running task again and it can complete.\n
+ *   With other words, if a task is activated and it has a higher priority than the running
+ * task then it'll preempt the running task and it'll become the running task itself.\n
+ *   If no task is ready at all then the scheduler continues the original code thread,
+ * which is the code thread starting in function main() and which first registers the tasks
+ * and then starts the kernel. (Everything from this code thread, which is placed behind
+ * the call of API rtos_initKernel() is called the "idle task".)\n
+ *   The implemented scheduling scheme leads to a strictly hierarchical execution order of
+ * tasks. It's simple, less than what most RTOSs offer but still powerful enough for the
+ * majority of industrial use cases.\n
+ *   The activation of a task can be done by software, using API function
+ * rtos_activateTask() or it can be done by the scheduler on a regular time base. In the
+ * former case the task is called an event task, the latter is a cyclic task with fixed
+ * period time.\n
+ *   Any I/O interrupts can be combined with the tasks. Different to most RTOS we don't
+ * impose a priority ordering between tasks and interrupts. A conventional design would put
+ * interrupt service routines (ISR) at higher priorities than the highest task priority but
+ * this is not a must. The RTOS doesn't have an API for interrupt handling; continue to use
+ * the API from the infrastructure provided by the startup code to install your interrupt
+ * handlers. This works fine with the RTOS. Please refer to
+ * ihw_installINTCInterruptHandler().\n
+ *   Effectively, there's no difference between tasks and ISRs. All what has been said for
+ * tasks with respect to priority, states and preemption holds for ISRs and the combination
+ * of tasks and ISRs, too.\n
+ *   Only an amazingly little number of lines of code is required to implement the RTOS -
+ * this is because of the hardware capabilities of the interrupt controller INTC, which has
+ * much of an RTOS kernel in hardware. The RTOS is just a wrapper around these hardware
+ * capabilities. The reference manual of the INTC partly reads like an excerpt from the
+ * OSEK/VDX specification, it effectively implements the basic task conformance classes BCC1
+ * and partly BCC2 from the standard. Since we barely add software support, our operating
+ * system is by principle restricted to these conformance classes.\n
  *   Basic conformance class means that a task cannot suspend intentionally and ahead of
  * its normal termination. Once started, it needs to be entirely executed. Due to the
  * strict priority scheme it'll temporarily suspend only for the sake of tasks of higher
@@ -32,9 +80,9 @@
  */
 /* Module interface
  *   rtos_registerTask
+ *   rtos_initKernel
  *   rtos_activateTask
  *   rtos_getNoActivationLoss
- *   rtos_initKernel
  * Local functions
  *   osTimerTick
  */
@@ -47,6 +95,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 #include <assert.h>
 
 #include "MPC5643L.h"
@@ -94,7 +143,7 @@ typedef struct task_t
         implementation maximum.
           @remark This field is shared with the external client code of the module. There,
         it is read only. Only the scheduler code must update the field. */
-    /// @todo We can queue task activations. By not adjusting the due time. Some limitation code required to make this safe
+    /// @todo We can queue task activations for cyclic tasks by not adjusting the due time. Some limitation code required to make this safe
     unsigned int noActivationLoss;
 
 } task_t;
@@ -253,13 +302,20 @@ static void osTimerTick()
 
 
 /**
- * Registration of a (cyclically activated) application task.
+ * Registration of a (cyclically activated) application task. This function is repeatedly
+ * called by the application code as often as tasks are required. All calls are completed
+ * before the scheduler can be started.
  *   @return
  * All application tasks are identified by a positive integer. Normally this ID is
  * returned. The maximum number of tasks is limited to eight by hardware constraints. If
  * the task cannot be started due to this constraint or if the task descriptor contains
  * invalid data then the function returns (unsigned int)-1 and an assertion fires in DEBUG
- * compilation.
+ * compilation.\n
+ *   Note, it is guaranteed to the caller that the returned ID is not any meaningless
+ * number. Instead, the ID is counted from zero in order of registering tasks. The first
+ * call of this function will return 0, the second 1, and so on. This simplifies ID
+ * handling in the application code, constants can mostly be applied as the IDs are
+ * effectively known at compile time.
  *   @param pTaskDesc
  * All calls of this function need to be done prior to the start of the kernel using
  * rtos_initKernel().\n
@@ -273,6 +329,8 @@ static void osTimerTick()
  *   Note, this setting is useless if a cycle time zero in \a pTaskDesc->tiCycleInMs
  * specifies a non regular task. \a tiFirstActivationInMs needs to be zero in this case,
  * too.
+ *   @remark
+ * Never call this function after the call of rtos_initKernel()!
  */
 unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
                               , unsigned int tiFirstActivationInMs
@@ -345,6 +403,48 @@ unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
     return _noTasks++;
 
 } /* End of rtos_registerTask */
+
+
+
+/**
+ * Initialization of the RTOS kernel. Can be called before or after the External Interrupts
+ * are enabled at the CPU (see ihw_resumeAllInterrupts()).
+ *   @remark
+ * The RTOS kernel uses a tick of 1ms. It applies the Periodic Interrupt Timer 0 for this
+ * purpose. This timer is reserved to the RTOS and must not be used at all by some
+ * application code.
+ *   @param
+ * All application tasks need to be registered before invoking this function, see
+ * rtos_registerTask().
+ */
+
+void rtos_initKernel(void)
+{
+    /* Disable all PIT timers during configuration. */
+    PIT.PITMCR.R = 0x2;
+
+    /* Install the interrupt handler for cyclic timer PIT 0. It drives the OS scheduler for
+       cyclic task activation. */
+    ihw_installINTCInterruptHandler( osTimerTick
+                                   , /* vectorNum */ 59
+                                   , /* psrPriority */ 15
+                                   , /* isPreemptable */ false
+                                   );
+
+    /* Peripheral clock has been initialized to 120 MHz. To get a 1ms interrupt tick we
+       need to count till 120000.
+         -1: See MCU reference manual, 36.5.1, p. 1157. */
+    PIT.LDVAL0.R = 120000-1; /* Interrupt rate 1ms */
+
+    /* Enable interrupts by this timer and start it. */
+    PIT.TCTRL0.R = 0x3;
+    
+    /* Enable timer operation and let them be stopped on debugger entry. Note, this is a
+       global setting for all four timers, even if we use and reserve only one for the
+       RTOS. */
+    PIT.PITMCR.R = 0x1;
+
+} /* End of rtos_initKernel */
 
 
 
@@ -432,53 +532,90 @@ bool rtos_activateTask(unsigned int taskId)
 
 
 
-/// @todo Implement it
-//unsigned int rtos_getNoActivationLoss(void)
-//{
-//} /* End of rtos_getNoActivationLoss */
+/**
+ * Any time a task function should be started is an activation. It doesn't matter if this
+ * happens because a cyclic task becomes due or because an event task has been triggered by
+ * software. The activation will however fail if the task is still busy, i.e. if the
+ * execution of the task function has not completed from the previous activation. The
+ * scheduler counts the failing activation on a per task base. The current value can be
+ * queried with this function.
+ *   @return
+ * Get the current number of failed task activations since start of the RTOS scheduler. The
+ * counter is saturated and will not wrap around.
+ *   @param idTask
+ * Each task has its own counter. The value is returned for the given task. The range is 0
+ * .. number of registered tasks (double-checked by assertion).
+ */
+unsigned int rtos_getNoActivationLoss(unsigned int idTask)
+{
+    if(idTask < _noTasks)
+        return _taskAry[idTask].noActivationLoss;
+    else
+    {
+        assert(false);
+        return UINT_MAX;
+    }
+} /* End of rtos_getNoActivationLoss */
 
 
 
 
 /**
- * Initialization of the RTOS kernel. Can be called before or after the External Interrupts
- * are enabled at the CPU (see ihw_resumeAllInterrupts()).
+ * Compute how many bytes of the stack area of a task are still unused. If the value is
+ * requested after an application has been run a long while and has been forced to run
+ * through all its paths many times, it may be used to optimize the static stack
+ * allocation. The function is useful only for diagnosis purpose as there's no chance to
+ * dynamically increase or decrease the stack area at runtime.\n
+ *   The function may be called from a task, ISR and from the idle task.\n
+ *   The algorithm is as follows: The unused part of the stack is initialized with a
+ * specific pattern word. This routine counts the number of subsequent pattern words down
+ * from the top of the stack area. The result is returned as number of Bytes.\n
+ *   The returned result must not be trusted too much: It could of course be that a pattern
+ * word is found not because of the initialization but because it has been pushed onto the
+ * stack - in which case the return value is too great (too optimistic). The probability
+ * that this happens is significantly greater than zero. The chance that two pattern words
+ * had been pushed is however much less and the probability of three, four, five such words
+ * in sequence is negligible. (Except the irrelevant, pathologic case you initialize an
+ * automatic array variable with all pattern words.) Any stack size optimization based on
+ * this routine should therefore subtract e.g. eight bytes from the returned reserve and
+ * diminish the stack outermost by this modified value.\n
+ *   Be careful with stack size optimization based on this routine: Even if the application
+ * ran a long time there's a non-zero probability that there has not yet been a system
+ * timer interrupt in the very instance that the code excution was busy in the deepest
+ * nested sub-routine, i.e. when having the largest stack consumption. A good suggestion is
+ * to have another xxx Byte of reserve - this is the stack consumption if an interrupt
+ * occurs.\n
+ *   Recipe: Run your application a long time, ensure that it ran through all paths, get
+ * the stack reserve from this routine, subtract 8+xxx Byte and diminish the stack by this
+ * value.
+ *   @return
+ * The number of still unused stack bytes. See function description for details.
  *   @remark
- * The RTOS kernel uses a tick of 1ms. It applies the Periodic Interrupt Timer 0 for this
- * purpose. This timer is reserved to the RTOS and must not be used at all by some
- * application code.
- *   @param
- * All application tasks need to be registered before invoking this function, see
- * rtos_registerTask().
+ * The computation is a linear search for the first non-pattern word and thus relatively
+ * expensive. It's suggested to call it only in some specific diagnosis compilation or
+ * occasionally from the idle task.
+ *   @remark
+ * This code has been adopted from
+ * https://sourceforge.net/p/rtuinos/code/HEAD/tree/trunk/code/RTOS/rtos.c, downloaded on
+ * Nov 20, 2017.
  */
-
-void rtos_initKernel(void)
+unsigned int rtos_getStackReserve(void)
 {
-    /* Disable all PIT timers during configuration. */
-    PIT.PITMCR.R = 0x2;
+    /* The stack area is defined by the linker script. We can access the information by
+       declaring the linker defined symbols. */
+    extern uint32_t ld_memStackStart[];
+    uint32_t *sp = &ld_memStackStart[0];
 
-    /* Install the interrupt handler for cyclic timer PIT 0. It drives the OS scheduler for
-       cyclic task activation. */
-    ihw_installINTCInterruptHandler( osTimerTick
-                                   , /* vectorNum */ 59
-                                   , /* psrPriority */ 15
-                                   , /* isPreemptable */ false
-                                   );
+    /* The bottom of the stack is always initialized with a non pattern word (e.g. there's
+       an illegal return address 0xffffffff). Therefore we don't need a limitation of the
+       search loop - it'll always find a non-pattern word in the stack area. */
+    while(*sp == 0xa5a5a5a5)
+        ++ sp;
 
-    /* Peripheral clock has been initialized to 120 MHz. To get a 1ms interrupt tick we
-       need to count till 120000.
-         -1: See MCU reference manual, 36.5.1, p. 1157. */
-    PIT.LDVAL0.R = 120000-1; /* Interrupt rate 1ms */
+    return sizeof(uint32_t)*(unsigned int)(sp - &ld_memStackStart[0]);
 
-    /* Enable interrupts by this timer and start it. */
-    PIT.TCTRL0.R = 0x3;
-    
-    /* Enable timer operation and let them be stopped on debugger entry. Note, this is a
-       global setting for all four timers, even if we use and reserve only one for the
-       RTOS. */
-    PIT.PITMCR.R = 0x1;
+} /* End of rtos_getStackReserve */
 
-} /* End of rtos_initKernel */
 
 
 

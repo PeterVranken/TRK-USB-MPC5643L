@@ -221,4 +221,10 @@ void rtos_initKernel(void);
 /** Software triggered task activation. Can be called from other tasks or interrupts. */
 bool rtos_activateTask(unsigned int id);
 
+/** Get the current number of failed task activations since start of the RTOS scheduler. */
+unsigned int rtos_getNoActivationLoss(unsigned int idTask);
+
+/** Compute how many bytes of the stack area are still unused. */
+unsigned int rtos_getStackReserve(void);
+
 #endif  /* RTOS_INCLUDED */

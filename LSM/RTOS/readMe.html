@@ -513,7 +513,7 @@ infrastructure offered by the startup code.</p>
 <p>For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
 lock API is offered that implements the priority ceiling protocol (PCP).
 The already known mechanisms from the startup code can however still be
-used. The globally lock and resume all interrupts.</p>
+used. It permits to globally lock and resume all interrupts.</p>
 </div>
 <div class="paragraph">
 <p>The use of the RTOS is further supported by some less essential diagnostic
@@ -557,7 +557,8 @@ running) and the task running so far is preempted. This task enters state
 "ready". Toggling between the states "running" and "ready" is all what can
 happen with the tasks as long as they are alive. This leads to a simple
 hierarchical structure of possible preemptions, see figure
-<a href="#figSchemeOfPreemptions">Task preemption in a BCC kernel</a>.</p>
+<a href="#figSchemeOfPreemptions">Task preemption in a BCC kernel</a>.
+  <sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
 </div>
 <div id="figSchemeOfPreemptions" class="imageblock" style="text-align: center">
 <div class="content">
@@ -629,7 +630,7 @@ bounds by choosing appropriate cycle times.</p>
 <p>The RTOS implementation is not specific to one of the instruction sets.
 The sample uses the Book E environment but <code>mai_main.c</code> and the RTOS
 itself can be compiled and run with the VLE startup code, too.
-  <sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
+  <sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnote_3" title="View footnote.">3</a>]</sup></p>
 </div>
 </div>
 </div>
@@ -827,12 +828,15 @@ debugging an RTOS application. Then the INTC and the code work fine.</p>
 <a href="#_footnoteref_1">1</a>. Counted with <a href="https://github.com/AlDanial/cloc">cloc</a> in revision c9fb69f4ed4af39434fc53d485cce6210fcd14e5 of this project.
 </div>
 <div class="footnote" id="_footnote_2">
-<a href="#_footnoteref_2">2</a>. As of writing, Nov 2017, this has not been proven yet.
+<a href="#_footnoteref_2">2</a>. The picture has been downloaded at <a href="http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg" class="bare">http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg</a> on Nov 19, 2017.
+</div>
+<div class="footnote" id="_footnote_3">
+<a href="#_footnoteref_3">3</a>. As of writing, Nov 2017, this has not been proven yet.
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-11-19 20:55:00 W. Europe Standard Time
+Last updated 2017-11-20 20:55:09 W. Europe Standard Time
 </div>
 </div>
 </body>

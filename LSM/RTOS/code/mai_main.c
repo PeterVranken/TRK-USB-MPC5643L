@@ -1,42 +1,37 @@
 /**
  * @file mai_main.c
- *   Blinking LED: Note the slight phase shift due to the differing task start times.
- *   CPU load: At nominal 100% it drops to about 50%: The execution time of the cyclic task
- * that produces the load exceeds the nominal cycle time of the task and every second
- * activation is lost. The activation loss counter in the RTOS' task array constantly
- * increases.
- *   @todo The function documentation is still a copy of the root code, which this sample
- * has been copied and derived from.
- *   ...
+ * The main entry point of the C code. In this sample it configures and runs the RTOS.
+ * Some tasks are registered that implement blinking LEDs and more.\n
+ *   A cyclic 1ms task controls one LED such that it blinks at 1 Hz. The task reads the
+ * state of the buttons on the evaluation board. On button press an according event task,
+ * taskOnButtonDown, is activated.\n
+ *   The event task taskOnButtonDown reports each button event by printing a message to the
+ * serial COM channel. At the same time it increments the amount of CPU load by 10%, load
+ * which is (artificially) produced by task taskCpuLoad. This is a cyclic task with a busy
+ * wait loop.\n
+ *   A cyclic 1000ms task toggles the second LED at a rate of 0.5 Hz.\n
+ *   An event task taskNonCyclic is activated by several other tasks under different
+ * conditions. It can be observed that the activation sometime succeeds and sometime fails
+ * - depending on these conditions.\n
+ *   The idle task is used to report the system state, CPU load, stack usage and task
+ * overrun events (more precise: failed activations).
  *
- *   The main entry point of the C code. The assembler implemented startup code has been
- * executed and brought the MCU in a preliminary working state, such that the C compiler
- * constructs can safely work (e.g. stack pointer is initialized, memory access through MMU
- * is enabled). After that it branches here, into the C entry point main().\n
- *  The first operation of the main function is the call of the remaining hardware
- * initialization ihw_initMcuCoreHW() that is still needed to bring the MCU in basic stable
- * working state. The main difference to the preliminary working state of the assembler
- * startup code is the selection of appropriate clock rates. Furthermore, the interrupt
- * controller is configured. This part of the hardware configuration is widely application
- * independent. The only reason, why this code has not been called from the assembler code
- * prior to entry into main() is code transparency. It would mean to have a lot of C
- * code without an obvious point, where it is used.\n
- *   In this most basic sample the main function implements the standard Hello World
- * program of the Embedded Software World, the blinking LED.\n
- *   The main function configures the application dependent hardware, which is a cyclic
- * timer (Programmable Interrupt Timer 0, PIT 0) with cycle time 1ms. An interrupt handler
- * for this timer is registered at the Interrupt Controller (INTC). A second interrupt
- * handler is registered for software interrupt 3. Last but not least the LED outputs and
- * button inputs of the TRK-USB-MPC5643L are initialized.\n
- *   The code enters an infinite loop and counts the cycles. Any 500000 cycles it triggers
- * the software interrupt.\n
- *   Both interrupt handlers control one of the LEDs. LED 4 is toggled every 500ms by the
- * cyclic timer interrupt. We get a blink frequency of 1 Hz.\n 
- *   The software interrupt toggles LED 5 every other time it is raised. This leads to a
- * blinking of irrelated frequency.\n
- *   The buttons are unfortunately connected to GPIO inputs, which are not interrupt
- * enabled. We use the timer interrupt handler to poll the status. On button press of
- * Switch 3 the colors of the LEDs are toggled.
+ * The application should be run with a connected terminal. The terminal should be
+ * configured for 115200 Bd, 8 Bits, no parity, 1 start and 1 stop bit.
+ *
+ * Some observations:\n
+ *   Blinking LEDs: Note the slight phase shift due to the differing task start times.\n
+ *   Reported CPU load: At nominal 100% artificial load it drops to about 50%. The
+ * execution time of the cyclic task that produces the load exceeds the nominal cycle time
+ * of the task and every second activation is lost. The activation loss counter in the
+ * RTOS' task array constantly increases.\n
+ *   Occasional activation losses can be reported for task taskNonCyclic. It can be
+ * preempted by task task17ms and this task activates task taskNonCyclic. If it tries to
+ * do, while it has preempted task taskNonCyclic, the activation is not possible.\n
+ *   The code runs a permanent test of the different offered mechanisms of mutual exclusion
+ * of tasks that access some shared data objects. A recognized failure is reported by
+ * assertion, which will halt the code execution (in DEBUG compilation only). Everything is
+ * fine as long as the LEDs continue blinking.
  *
  * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -63,6 +58,7 @@
  *   taskNonCyclic
  *   task17ms
  *   taskOnButtonDown
+ *   taskCpuLoad
  */
 
 /*
@@ -93,46 +89,6 @@
 /*
  * Defines
  */
- 
-/** The enumeration of all tasks; the values are the task IDs. Actually, the ID is provided
-    by the RTOS at runtime, when registering the task. However, it is guaranteed that the
-    IDs returned by rtos_registerTask() are dealt out form the series 0, 1, 2, ..., 7. So
-    we don't need to have a dynamic storage of the IDs; we define them as constants and
-    double-check by assertion that we got the correct expected IDs. Note, this requires
-    that the order of registering the tasks follows the order here in the enumeration. */
-enum
-{
-    idTask1ms = 0
-    , idTask3ms
-    , idTask1s
-    , idTaskNonCyclic
-    , idTask17ms
-    , idTaskOnButtonDown
-    , idTaskCpuLoad
-    , noTasks
-
-      /** The idle task is not a task under control of the RTOS and it doesn't have an ID.
-          We assign it a pseudo task ID that is used to store some task related data in the
-          same array here in this sample application as we do by true task ID for all true
-          tasks. */
-    , pseudoIdTaskIdle = noTasks
-};
-
-
-/** The RTOS uses constant task priorities, which are defined here. (The concept and
-    architecture of the RTOS allows dynamic changeing of a task's priority at runtime, but
-    we didn't provide an API for that yet; where are the use cases?) */
-enum
-{
-    prioTask1ms = 2
-    , prioTask3ms = 2
-    , prioTask1s = 1
-    , prioTaskNonCyclic = 3
-    , prioTask17ms = 4
-    , prioTaskOnButtonDown = 1
-    , prioTaskCpuLoad = 1
-};
-
 
 /** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
     for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
@@ -155,8 +111,8 @@ enum
     the OSEK/VDX standard*/
 #define RESOURCE_ALL_TASKS  (MAXP(prioTask1ms,MAXP(prioTask3ms, \
                              MAXP(prioTask1s,MAXP(prioTaskNonCyclic, \
-                             MAXP(prioTask17ms,prioTaskOnButtonDown))))))
-
+                             MAXP(prioTask17ms,MAXP(prioTaskOnButtonDown, \
+                             prioTaskCpuLoad)))))))
 
 /** Some helper code to get the maximum task priority as a constant for the priority ceiling
     protocol. */
@@ -166,17 +122,59 @@ enum
 /*
  * Local type definitions
  */
- 
- 
+
+/** The enumeration of all tasks; the values are the task IDs. Actually, the ID is provided
+    by the RTOS at runtime, when registering the task. However, it is guaranteed that the
+    IDs, which are dealt out by rtos_registerTask() form the series 0, 1, 2, ..., 7. So
+    we don't need to have a dynamic storage of the IDs; we define them as constants and
+    double-check by assertion that we got the correct, expected IDs. Note, this requires
+    that the order of registering the tasks follows the order here in the enumeration. */
+enum
+{
+    idTask1ms = 0
+    , idTask3ms
+    , idTask1s
+    , idTaskNonCyclic
+    , idTask17ms
+    , idTaskOnButtonDown
+    , idTaskCpuLoad
+    
+    /** The number of tasks to register. */
+    , noTasks
+
+    /** The idle task is not a task under control of the RTOS and it doesn't have an ID.
+        We assign it a pseudo task ID that is used to store some task related data in the
+        same array here in this sample application as we do by true task ID for all true
+        tasks. */
+    , pseudoIdTaskIdle = noTasks
+};
+
+
+/** The RTOS uses constant task priorities, which are defined here. (The concept and
+    architecture of the RTOS allows dynamic changeing of a task's priority at runtime, but
+    we didn't provide an API for that yet; where are the use cases?) */
+enum
+{
+    prioTask1ms = 2
+    , prioTask3ms = 2
+    , prioTask1s = 1
+    , prioTaskNonCyclic = 3
+    , prioTask17ms = 4
+    , prioTaskOnButtonDown = 1
+    , prioTaskCpuLoad = 1
+};
+
+
+
 /*
  * Local prototypes
  */
- 
- 
+
+
 /*
  * Data definitions
  */
- 
+
 /** A task invokation counter, which is incremented by all application tasks. */
 volatile unsigned long long _cntAllTasks = 0;
 
@@ -199,7 +197,7 @@ volatile unsigned long mai_cntIdle = 0      /** Counter of cycles of infinite ma
 /** The color currently used by the interrupt handlers are controlled through selection of
     a pin. The selection is made by global variable. Here for D5. */
 static volatile lbd_led_t _ledTask1s  = lbd_led_D5_grn;
- 
+
 /** The color currently used by the interrupt handlers are controlled through selection of
     a pin. The selection is made by global variable. Here for D4. */
 static volatile lbd_led_t _ledTask1ms = lbd_led_D4_red;
@@ -238,7 +236,7 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
         ++ _cntAllTasks;
     }
     ReleaseResource();
-    
+
     /* Get all task counters and the common counter in an atomic operation. Now, we apply
        another offered mechanism for mutual exclusion of tasks. */
     unsigned long long cntTaskAryCpy[noTasks+1]
@@ -250,13 +248,13 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
         cntAllTasksCpy = _cntAllTasks;
     }
     ihw_leaveCriticalSection(msr);
-    
+
     /* Check consistency of got data. +1: The last entry is meant for the idle task. */
     unsigned int u;
     for(u=0; u<noTasks+1; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
     assert(cntAllTasksCpy == 0);
-    
+
     /* Get all task counters and the common counter again in an atomic operation. Now, we
        apply the third offered mechanism for mutual exclusion of tasks to include it into
        the test.
@@ -268,12 +266,12 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
         cntAllTasksCpy = _cntAllTasks;
     }
     ihw_resumeAllInterrupts();
-    
+
     /* Check consistency of got data. +1: The last entry is meant for the idle task. */
     for(u=0; u<noTasks+1; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
     assert(cntAllTasksCpy == 0);
-    
+
 } /* End of checkAndIncrementTaskCnts. */
 
 
@@ -286,7 +284,7 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
 static void task1ms()
 {
     checkAndIncrementTaskCnts(idTask1ms);
-    
+
     ++ mai_cntTask1ms;
 
     /* Activate the non cyclic task.
@@ -294,7 +292,7 @@ static void task1ms()
        executed immediatly, preempting this task. The second activation below, on button
        down must not lead to an activation loss. */
     rtos_activateTask(idTaskNonCyclic);
-    
+
     /* Read the current button status to possibly toggle the LED colors. */
     static bool lastStateButton_ = false;
     if(lbd_getButton(lbd_bt_button_SW3))
@@ -303,24 +301,30 @@ static void task1ms()
         {
             /* Button down event: Toggle colors */
             static unsigned int cntButtonPress_ = 0;
-            
+
             lbd_setLED(_ledTask1s, /* isOn */ false);
             lbd_setLED(_ledTask1ms, /* isOn */ false);
             _ledTask1s  = (cntButtonPress_ & 0x1) != 0? lbd_led_D5_red: lbd_led_D5_grn;
             _ledTask1ms = (cntButtonPress_ & 0x2) != 0? lbd_led_D4_red: lbd_led_D4_grn;
-            
+
             /* Activate the non cyclic task a second time. The priority of the activated
                task is higher than of this activating task so the first activation should
                have been processed meanwhile and this one should be accepted, too.*/
-            bool bActivationAccepted = rtos_activateTask(idTaskNonCyclic);
+#ifdef DEBUG
+            bool bActivationAccepted =
+#endif
+            rtos_activateTask(idTaskNonCyclic);
             assert(bActivationAccepted);
-            
+
             /* Activate our button down event task. The activation will normally succeed
                but at high load and very fast button press events it it theoretically
                possible that not. We don't place an assertion. */
-            bActivationAccepted = rtos_activateTask(idTaskOnButtonDown);
+#ifdef DEBUG
+            bActivationAccepted =
+#endif
+            rtos_activateTask(idTaskOnButtonDown);
             //assert(bActivationAccepted);
-            
+
             lastStateButton_ = true;
             ++ cntButtonPress_;
         }
@@ -332,7 +336,7 @@ static void task1ms()
     if(++cntIsOn_ >= 500)
         cntIsOn_ = -500;
     lbd_setLED(_ledTask1ms, /* isOn */ cntIsOn_ >= 0);
-    
+
 } /* End of task1ms */
 
 
@@ -345,7 +349,7 @@ static void task3ms()
 {
     checkAndIncrementTaskCnts(idTask3ms);
     ++ mai_cntTask3ms;
-    
+
 } /* End of task3ms */
 
 
@@ -363,7 +367,7 @@ static void task1s()
     if(++cntIsOn_ >= 1)
         cntIsOn_ = -1;
     lbd_setLED(_ledTask1s, /* isOn */ cntIsOn_ >= 0);
-    
+
 } /* End of task1s */
 
 
@@ -375,7 +379,7 @@ static void taskNonCyclic()
 {
     checkAndIncrementTaskCnts(idTaskNonCyclic);
     ++ mai_cntTaskNonCyclic;
-    
+
 } /* End of taskNonCyclic */
 
 
@@ -387,7 +391,7 @@ static void task17ms()
 {
     checkAndIncrementTaskCnts(idTask17ms);
     ++ mai_cntTask17ms;
-    
+
     /* This task has a higher priority than the software triggered, non cyclic task. Since
        the latter one is often active we have a significant likelihood of a failing
        activation from here -- always if we preempted the non cyclic task. */
@@ -397,7 +401,7 @@ static void task17ms()
     /* A task can't activate itself, we do not queue activations and it's obviously active
        at the moment. Test it. */
     assert(!rtos_activateTask(idTask17ms));
-    
+
 } /* End of task17ms */
 
 
@@ -411,7 +415,7 @@ static void taskOnButtonDown()
     checkAndIncrementTaskCnts(idTaskOnButtonDown);
     ++ mai_cntTaskOnButtonDown;
     iprintf("You pressed the button the %lu. time\r\n", mai_cntTaskOnButtonDown);
-    
+
     /* Change the value of artificial CPU load on every click by 10%. */
     if(_cpuLoadInPercent < 100)
         _cpuLoadInPercent += 10;
@@ -435,7 +439,7 @@ static void taskCpuLoad()
 {
     checkAndIncrementTaskCnts(idTaskCpuLoad);
     ++ mai_cntTaskCpuLoad;
-    
+
     const unsigned int tiDelayInUs = 23 /* ms = cycle time of this task */
                                      * 1000 /* ms to us to improve resolution */
                                      * _cpuLoadInPercent
@@ -444,7 +448,7 @@ static void taskCpuLoad()
     /* The factor 120 is required to consider the unit of __builtin_ppc_get_timebase(),
        which is the CPU clock tick. */
     const uint64_t tiEnd = __builtin_ppc_get_timebase() + tiDelayInUs*120;
-    
+
     /* Busy loop. Note, preemption is possible, which effectively lowers the additional CPU
        load, this loop produces. The higher the system load, the more grows this effect. */
     while(__builtin_ppc_get_timebase() < tiEnd)
@@ -462,9 +466,20 @@ static void taskCpuLoad()
  */
 void main()
 {
-    /* Init core HW of MCU so that it can be safely operated. */
+    /* The first operation of the main function is the call of ihw_initMcuCoreHW(). The
+       assembler implemented startup code has brought the MCU in a preliminary working
+       state, such that the C compiler constructs can safely work (e.g. stack pointer is
+       initialized, memory access through MMU is enabled).
+         ihw_initMcuCoreHW() does the remaining hardware initialization, that is still
+       needed to bring the MCU in a basic stable working state. The main difference to the
+       preliminary working state of the assembler startup code is the selection of
+       appropriate clock rates. Furthermore, the interrupt controller is configured.
+         This part of the hardware configuration is widely application independent. The
+       only reason, why this code has not been called directly from the assembler code
+       prior to entry into main() is code transparency. It would mean to have a lot of C
+       code without an obvious point, where it is called. */
     ihw_initMcuCoreHW();
-    
+
 #ifdef DEBUG
     /* Check linker script. It's error prone with respect to keeping the initialized RAM
        sections and the according initial-data ROM sections strictly in sync. As long as
@@ -477,17 +492,17 @@ void main()
 
     /* Initialize the button and LED driver for the eval board. */
     lbd_initLEDAndButtonDriver();
-    
+
     /* Initialize the serial output channel as prerequisite of using printf. */
     sio_initSerialInterface(/* baudRate */ 115200);
-    
+
     /* The external interrupts are enabled after configuring I/O devices. (Initialization
        of the RTOS can be done later.) */
     ihw_resumeAllInterrupts();
-    
+
     /* The RTOS is restricted to eight tasks at maximum. */
     _Static_assert(noTasks <= 8, "RTOS only supports eight tasks");
-    
+
     /* Register the application tasks at the RTOS. Note, we do not really respect the ID,
        which is assigned to the task by the RTOS API rtos_registerTask(). The returned
        value is redundant. This technique requires that we register the task in the right
@@ -585,7 +600,10 @@ void main()
         ++ mai_cntIdle;
 
         /* Activate the non cyclic task. */
-        bool bActivationAccepted = rtos_activateTask(idTaskNonCyclic);
+#ifdef DEBUG
+        bool bActivationAccepted =
+#endif
+        rtos_activateTask(idTaskNonCyclic);
         assert(bActivationAccepted);
 
         /* Compute the average CPU load. Note, this operation lasts about 1s and has a
@@ -593,7 +611,24 @@ void main()
            measures only the load produced by the tasks and system interrupts but not that
            of the rest of the code in the idle loop. */
         mai_cpuLoad = gsl_getSystemLoad();
-        iprintf("CPU load is %u.%u%%\r\n", mai_cpuLoad/10, mai_cpuLoad%10);
+        iprintf( "CPU load is %u.%u%%. Stack reserve: %u Byte. Failed task activations:\r\n"
+                 "  task1ms: %u\r\n"
+                 "  task3ms: %u\r\n"
+                 "  task1s: %u\r\n"
+                 "  taskNonCyclic: %u\r\n"
+                 "  task17ms: %u\r\n"
+                 "  taskOnButtonDown: %u\r\n"
+                 "  taskCpuLoad: %u\r\n"
+               , mai_cpuLoad/10, mai_cpuLoad%10
+               , rtos_getStackReserve()
+               , rtos_getNoActivationLoss(idTask1ms)
+               , rtos_getNoActivationLoss(idTask3ms)
+               , rtos_getNoActivationLoss(idTask1s)
+               , rtos_getNoActivationLoss(idTaskNonCyclic)
+               , rtos_getNoActivationLoss(idTask17ms)
+               , rtos_getNoActivationLoss(idTaskOnButtonDown)
+               , rtos_getNoActivationLoss(idTaskCpuLoad)
+               );
 #if 0
         /* Test of return from main: After 10s */
         if(mai_cntTask1ms >= 10000)

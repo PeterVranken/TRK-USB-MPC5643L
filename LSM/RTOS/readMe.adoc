@@ -48,7 +48,7 @@ infrastructure offered by the startup code.
 For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
 lock API is offered that implements the priority ceiling protocol (PCP).
 The already known mechanisms from the startup code can however still be
-used. The globally lock and resume all interrupts.
+used. It permits to globally lock and resume all interrupts.
 
 The use of the RTOS is further supported by some less essential diagnostic
 functions. They offer stack usage information, task overrun information
@@ -90,7 +90,10 @@ running) and the task running so far is preempted. This task enters state
 happen with the tasks as long as they are alive. This leads to a simple
 hierarchical structure of possible preemptions, see figure
 <<figSchemeOfPreemptions>>.
-
+  footnote:[The picture has been downloaded at
+http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg
+on Nov 19, 2017.]
+  
 [[figSchemeOfPreemptions]]
 .Task preemption in a BCC kernel
 image::doc/taskSwitchesBCC.jpg[width="60%",align="center"]
