@@ -3,7 +3,7 @@
 :Author:    Peter Vranken
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :Revision:  1
-:toc:       right
+:toc:       left
 
 == Introduction
 
