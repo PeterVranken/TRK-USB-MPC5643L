@@ -10,7 +10,7 @@ This sample implements an easy to reuse RTOS for the NXP MPC5643L. The
 sample started as a copy of sample "printf". The RTOS implementation has
 been added (new folder `code\RTOS`) and the main module `code\mai_main.c`
 has been modified in order to make use of the RTOS; the functionality is
-similar to sample "startup" with its blinked LEDs. Several tasks are
+similar to sample "startup" with its blinking LEDs. Several tasks are
 running concurrently and the LEDs are driven by different tasks. Some
 progress information is printed to the serial output but much of the
 operation can be observed only in the debugger.
@@ -249,6 +249,10 @@ This sample builds on the basic sample "startup" located in a sibling folder.
 and the software architecture are identical to "startup". Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc
 for details.
+
+=== API
+
+TODOC Provide an API description similar to sample "startup".
 
 == Known issues
 

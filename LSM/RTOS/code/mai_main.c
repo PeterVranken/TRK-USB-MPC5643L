@@ -52,6 +52,7 @@
  *   main
  * Local functions
  *   checkAndIncrementTaskCnts
+ *   testPCP
  *   task1ms
  *   task3ms
  *   task1s
@@ -108,11 +109,22 @@
 
 /** The priority level to set if all tasks should be mutually excluded from accessing a
     shared resource. The macro is named such that the code resembles the resource API from
-    the OSEK/VDX standard*/
+    the OSEK/VDX standard. */
 #define RESOURCE_ALL_TASKS  (MAXP(prioTask1ms,MAXP(prioTask3ms, \
                              MAXP(prioTask1s,MAXP(prioTaskNonCyclic, \
                              MAXP(prioTask17ms,MAXP(prioTaskOnButtonDown, \
                              prioTaskCpuLoad)))))))
+
+/** The priority level to set for the activation of task taskNonCyclic. The call of
+    rtos_activateTask(task) is not reentrant; if several tasks want to activate one and the
+    same task then this call needs to be placed into a critical section. The macro is named
+    such that the code resembles the resource API from the OSEK/VDX standard. */
+#define RESOURCE_ACTIVATE_TASK_NON_CYCLIC  (MAXP(prioTask1ms,MAXP(prioTask17ms,prioTaskIdle)))
+
+/** The priority level to set for the atomic operations done in function testPCP(). The
+    macro is named such that the code resembles the resource API from the OSEK/VDX
+    standard. */
+#define RESOURCE_TEST_PCP  (MAXP(prioTask1ms,MAXP(prioTaskCpuLoad,prioTaskIdle)))
 
 /** Some helper code to get the maximum task priority as a constant for the priority ceiling
     protocol. */
@@ -162,6 +174,7 @@ enum
     , prioTask17ms = 4
     , prioTaskOnButtonDown = 1
     , prioTaskCpuLoad = 1
+    , prioTaskIdle = 0
 };
 
 
@@ -210,6 +223,35 @@ unsigned int mai_cpuLoad = 1000;
     should not or barely be affected. (One LED is, the other isn't affected.) */
 static unsigned int _cpuLoadInPercent = 0;
 
+/** Test of priority ceiling protocol. A sub-set of tasks, whereof non of highest priority
+    in use, share this data object. Is has redundant fields so that a sharing conflict can
+    be recognized. Try compiling the code with bad resource definition and see if the
+    problem is reported (in DEBUG compilation by assertion, too). */
+static volatile struct sharedDataTasksIdleAnd1msAndCpuLoad_t
+{
+    /** Counter incremented on execution of task task1ms. */
+    unsigned int cntTask1ms;
+    
+    /** Counter incremented on execution of task taskCpuLoad. */
+    unsigned int cntTaskCpuLoad;
+    
+    /** Counter incremented on execution of the idle task. */
+    unsigned int cntTaskIdle;
+    
+    /** Total count, sum of all others. */
+    unsigned int cntTotal;
+    
+    /** The number of recognized data consistency errors. */
+    unsigned int noErrors;
+    
+} _sharedDataTasksIdleAnd1msAndCpuLoad =
+    { .cntTask1ms = 0
+    , .cntTaskCpuLoad = 0
+    , .cntTaskIdle = 0
+    , .cntTotal = 0
+    , .noErrors = 0
+    };
+    
 
 /*
  * Function implementation
@@ -223,16 +265,16 @@ static unsigned int _cpuLoadInPercent = 0;
  * halted in case of an error.
  *   The test is aimed to prove the correct implementation of the offered mutual exclusion
  * mechanisms.
- *   @param taskId
+ *   @param idTask
  * The ID (or index) of the calling task. Needed to identify the task related counter.
  */
-static void checkAndIncrementTaskCnts(unsigned int taskId)
+static void checkAndIncrementTaskCnts(unsigned int idTask)
 {
     /* Increment task related counter and shared counter in an atomic operation. */
-    assert(taskId < sizeOfAry(_cntTaskAry));
+    assert(idTask < sizeOfAry(_cntTaskAry));
     GetResource(RESOURCE_CNT_TASK_ARY);
     {
-        ++ _cntTaskAry[taskId];
+        ++ _cntTaskAry[idTask];
         ++ _cntAllTasks;
     }
     ReleaseResource();
@@ -278,20 +320,101 @@ static void checkAndIncrementTaskCnts(unsigned int taskId)
 
 
 /**
+ * Test function for priority ceiling portocol. To be called from a sub-set of tasks, idle
+ * task, task1ms and taskCpuLoad.
+ *   The test is aimed to prove the correct implementation of the offered mutual exclusion
+ * mechanism for this sub-set of tasks.
+ *   @param idTask
+ * The ID (or index) of the calling task. Needed to identify the task related counter.
+ */
+static void testPCP(unsigned int idTask)
+{
+    /* Increment task related counter and shared counter in an atomic operation. */
+    if(idTask == pseudoIdTaskIdle)
+    {
+        GetResource(RESOURCE_TEST_PCP);
+        {
+            ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskIdle;
+            ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal;
+        }
+        ReleaseResource();
+    }
+    else if(idTask == idTaskCpuLoad)
+    {
+        GetResource(RESOURCE_TEST_PCP);
+        {
+            ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskCpuLoad;
+            ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal;
+        }
+        ReleaseResource();
+    }
+    else if(idTask == idTask1ms)
+    {
+        /* Here, we want to prove that the resource doesn't need to be acquired by a task,
+           which has the highest priority in the sub-set. Omitting the critical section
+           code invalidates the code if the task priorities are redefined in the heading
+           part of the file and we need to put an assertion to double check this. */
+        _Static_assert( prioTask1ms >= prioTaskIdle  &&  prioTask1ms >= prioTask1ms
+                      , "Task priorities do not meet the requirements of function testPCP"
+                      );
+        ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTask1ms;
+        ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal;
+    }
+    else
+    {
+        /* This function is intended only for a sub-set of tasks. */
+        assert(false);
+    }
+
+    /* Validate the consistency of the redundant data in an atomic operation. */
+    GetResource(RESOURCE_TEST_PCP);
+    {
+        const unsigned int sum = _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskIdle
+                                 + _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskCpuLoad
+                                 + _sharedDataTasksIdleAnd1msAndCpuLoad.cntTask1ms;
+        if(sum != _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal)
+        {
+            /* Resynchronize to enable further error recognition. */
+            _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal = sum;
+            
+            const unsigned int noErr = _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors+1;
+            if(noErr > 0)
+                _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors = noErr;
+           
+            /* The application is halted in DEBUG compilation. This makes the error
+               observable without connected terminal. */
+            assert(false);
+        }
+    }
+    ReleaseResource();
+
+} /* End of testPCP. */
+
+
+
+
+/**
  * Task function, cyclically activated every Millisecond. The LED D4 is switched on and off
  * and the button SW3 is read and evaluated.
  */
 static void task1ms()
 {
     checkAndIncrementTaskCnts(idTask1ms);
+    testPCP(idTask1ms);
 
     ++ mai_cntTask1ms;
 
     /* Activate the non cyclic task.
          Note, the non cyclic task is of higher priority than this task and it'll be
        executed immediatly, preempting this task. The second activation below, on button
-       down must not lead to an activation loss. */
-    rtos_activateTask(idTaskNonCyclic);
+       down must not lead to an activation loss.
+         Note, activating one and the same task from different contexts requires a critical
+       section. */
+    GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
+    {
+        rtos_activateTask(idTaskNonCyclic);
+    }
+    ReleaseResource();
 
     /* Read the current button status to possibly toggle the LED colors. */
     static bool lastStateButton_ = false;
@@ -309,11 +432,20 @@ static void task1ms()
 
             /* Activate the non cyclic task a second time. The priority of the activated
                task is higher than of this activating task so the first activation should
-               have been processed meanwhile and this one should be accepted, too.*/
+               have been processed meanwhile and this one should be accepted, too.
+                 Note, activating one and the same task from different contexts requires a
+               critical section. */
 #ifdef DEBUG
-            bool bActivationAccepted =
+            bool bActivationAccepted;
 #endif
-            rtos_activateTask(idTaskNonCyclic);
+            GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
+            {
+#ifdef DEBUG
+                bActivationAccepted =
+#endif
+                rtos_activateTask(idTaskNonCyclic);
+            }
+            ReleaseResource();
             assert(bActivationAccepted);
 
             /* Activate our button down event task. The activation will normally succeed
@@ -394,13 +526,26 @@ static void task17ms()
 
     /* This task has a higher priority than the software triggered, non cyclic task. Since
        the latter one is often active we have a significant likelihood of a failing
-       activation from here -- always if we preempted the non cyclic task. */
-    if(!rtos_activateTask(idTaskNonCyclic))
-        ++ mai_cntActivationLossTaskNonCyclic;
+       activation from here -- always if we preempted the non cyclic task.
+         Note, activating one and the same task from different contexts requires a critical
+       section. This task had got the high application task priority so that the explicit
+       Get/ReleaseResource could be omitted. Doing so would however break the possibility
+       to play with the sample code and to arbitrarily change the priorities in the
+       heading part of this file. */
+    GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
+    {
+        if(!rtos_activateTask(idTaskNonCyclic))
+            ++ mai_cntActivationLossTaskNonCyclic;
+    }
+    ReleaseResource();
 
     /* A task can't activate itself, we do not queue activations and it's obviously active
        at the moment. Test it. */
-    assert(!rtos_activateTask(idTask17ms));
+#ifdef DEBUG
+    bool bActivationAccepted =
+#endif
+    rtos_activateTask(idTask17ms);
+    assert(!bActivationAccepted);
 
 } /* End of task17ms */
 
@@ -438,6 +583,8 @@ static void taskOnButtonDown()
 static void taskCpuLoad()
 {
     checkAndIncrementTaskCnts(idTaskCpuLoad);
+    testPCP(idTaskCpuLoad);
+    
     ++ mai_cntTaskCpuLoad;
 
     const unsigned int tiDelayInUs = 23 /* ms = cycle time of this task */
@@ -597,6 +744,7 @@ void main()
     while(true)
     {
         checkAndIncrementTaskCnts(pseudoIdTaskIdle);
+        testPCP(pseudoIdTaskIdle);
         ++ mai_cntIdle;
 
         /* Activate the non cyclic task. */
@@ -629,6 +777,14 @@ void main()
                , rtos_getNoActivationLoss(idTaskOnButtonDown)
                , rtos_getNoActivationLoss(idTaskCpuLoad)
                );
+      
+        /* In PRODUCTION compilation we print the inconsistencies found in the PCP test. */
+        if(_sharedDataTasksIdleAnd1msAndCpuLoad.noErrors != 0)
+        {
+            iprintf( "CAUTION: %u errors found in PCP self-test!\n"
+                   , _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors
+                   );
+        }
 #if 0
         /* Test of return from main: After 10s */
         if(mai_cntTask1ms >= 10000)

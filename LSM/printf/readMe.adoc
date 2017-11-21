@@ -95,7 +95,7 @@ a more appropriate, centralized code location.
 The simple API of the serial interface allows to write given messages of
 known length and to read single characters or lines of text. More
 flexible, formatted output become possible through the C library. The
-standard streams `stdout` and `stderr` have been connected the serial
+standard streams `stdout` and `stderr` have been connected to the serial
 interface. All according output functions from the C library can thus be
 used to write messages to the host. These are mainly `puts`, `printf` and
 `iprintf`. (`fprintf` with `stdout`/`stderr` does work, too, but has no
@@ -193,6 +193,10 @@ directly use solely the `iprintf` variants from the new C library to
 further save ROM. An application doing so would include `stdio.h` and
 compile `sio_serialIO.c` and `prf_printf.c`. It doesn't need to include
 `sio_serialIO.h` and it must not include `f2d_float2Double.h`.
+  footnote:[The file `sio_serialIO.h` is still included by the application
+initialization code; the call of sio_initSerialInterface() is required to
+initialize the serial communication channel and to set the wanted Baud
+rate.]
 
 An application which wants to pay for full floating point support, will
 additionally include `f2d_float2Double.h`. This enables the use of
@@ -202,7 +206,7 @@ Note, including the header `f2d_float2Double.h` does not only offer the
 wrapper `f2d` but has an important (negative) side effect on using
 `printf` in general: It switches the compiler warning in case of a
 mismatch between format string and actual argument list off. This is
-required because of the 32/64 Bit type faking done by `f2d` but impacts
+required because of the 32/64 Bit type faking done by `f2d` but it impacts
 all `printf` arguments.
 
 == Tools

@@ -262,7 +262,7 @@ change the assembler startup code a bit. Declare your handler using the
 e.g. `sup_IVOR1trap`, in function `initExceptionHandlers` with your
 handler.
 
-Place your handler in the linker text section `.ivor` in order to
+Place your handler in the linker text section `.text.ivor` in order to
 guarantee that it resides in the same 64k memory page as all the other
 handlers, which is a hardware constraint.
 

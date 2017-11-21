@@ -261,7 +261,9 @@ static void osTimerTick()
                     /* CLRi is still set, interrupt has not completed yet, task has not
                        terminated yet.
                          This code requires a critical section. The loss counter can be
-                       written concurrently from a task invoking rtos_activateTask(). */
+                       written concurrently from a task invoking rtos_activateTask(). Here,
+                       the implementation of the critical section is implicit, this code is
+                       running on highest interrupt level. */
                     const unsigned int noActivationLoss = _taskAry[idxTask].noActivationLoss
                                                           + 1;
                     if(noActivationLoss > 0)
@@ -465,9 +467,15 @@ void rtos_initKernel(void)
  * The ID of the task to activate as it had been got by the registering call for that task.
  * (See rtos_registerTask().)
  *   @remark
+ * Caution, this function has restricted reentrance. It is reentrant with respect to
+ * different tasks but \a not reentrant with respect to one and the same task. With other
+ * words, different ISRs/tasks can use this function to activate different tasks but they
+ * need to place the call of this function into a critical section if they are going to
+ * activate the same task.
+ *   @remark
  * The function is indented to start a non cyclic task by application software trigger but
  * can be applied to cyclic tasks, too. In which case the task function of the cyclic task
- * would be invoked once addtionally. Note, that a task activation loss is not unliekly in
+ * would be invoked once addtionally. Note, that a task activation loss is not unlikely in
  * this case; the cyclic task may currently be busy.
  *   @remark
  * It is not forbidden but useless to let a task activate itself. This will have no effect
@@ -537,14 +545,14 @@ bool rtos_activateTask(unsigned int taskId)
  * happens because a cyclic task becomes due or because an event task has been triggered by
  * software. The activation will however fail if the task is still busy, i.e. if the
  * execution of the task function has not completed from the previous activation. The
- * scheduler counts the failing activation on a per task base. The current value can be
+ * scheduler counts the failing activations on a per task base. The current value can be
  * queried with this function.
  *   @return
  * Get the current number of failed task activations since start of the RTOS scheduler. The
  * counter is saturated and will not wrap around.
  *   @param idTask
  * Each task has its own counter. The value is returned for the given task. The range is 0
- * .. number of registered tasks (double-checked by assertion).
+ * .. number of registered tasks minus one (double-checked by assertion).
  */
 unsigned int rtos_getNoActivationLoss(unsigned int idTask)
 {

@@ -572,7 +572,7 @@ a more appropriate, centralized code location.</p>
 <p>The simple API of the serial interface allows to write given messages of
 known length and to read single characters or lines of text. More
 flexible, formatted output become possible through the C library. The
-standard streams <code>stdout</code> and <code>stderr</code> have been connected the serial
+standard streams <code>stdout</code> and <code>stderr</code> have been connected to the serial
 interface. All according output functions from the C library can thus be
 used to write messages to the host. These are mainly <code>puts</code>, <code>printf</code> and
 <code>iprintf</code>. (<code>fprintf</code> with <code>stdout</code>/<code>stderr</code> does work, too, but has no
@@ -690,7 +690,8 @@ decide to use only the integer formatting characters of <code>printf</code>&#820
 directly use solely the <code>iprintf</code> variants from the new C library to
 further save ROM. An application doing so would include <code>stdio.h</code> and
 compile <code>sio_serialIO.c</code> and <code>prf_printf.c</code>. It doesn&#8217;t need to include
-<code>sio_serialIO.h</code> and it must not include <code>f2d_float2Double.h</code>.</p>
+<code>sio_serialIO.h</code> and it must not include <code>f2d_float2Double.h</code>.
+  <sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
 </div>
 <div class="paragraph">
 <p>An application which wants to pay for full floating point support, will
@@ -702,7 +703,7 @@ additionally include <code>f2d_float2Double.h</code>. This enables the use of
 wrapper <code>f2d</code> but has an important (negative) side effect on using
 <code>printf</code> in general: It switches the compiler warning in case of a
 mismatch between format string and actual argument list off. This is
-required because of the 32/64 Bit type faking done by <code>f2d</code> but impacts
+required because of the 32/64 Bit type faking done by <code>f2d</code> but it impacts
 all <code>printf</code> arguments.</p>
 </div>
 </div>
@@ -876,10 +877,13 @@ for details.</p>
 <div class="footnote" id="_footnote_1">
 <a href="#_footnoteref_1">1</a>. See our heap implementation in file <code>prf_printf.c</code>, function <code>sbrk</code>.
 </div>
+<div class="footnote" id="_footnote_2">
+<a href="#_footnoteref_2">2</a>. The file <code>sio_serialIO.h</code> is still included by the application initialization code; the call of sio_initSerialInterface() is required to initialize the serial communication channel and to set the wanted Baud rate.
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-11-19 20:48:34 W. Europe Standard Time
+Last updated 2017-11-21 21:11:22 W. Europe Standard Time
 </div>
 </div>
 </body>

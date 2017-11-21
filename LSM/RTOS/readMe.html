@@ -450,7 +450,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_flashing_and_debugging">3.3. Flashing and debugging</a></li>
 </ul>
 </li>
-<li><a href="#_code_architecture">4. Code architecture</a></li>
+<li><a href="#_code_architecture">4. Code architecture</a>
+<ul class="sectlevel2">
+<li><a href="#_api">4.1. API</a></li>
+</ul>
+</li>
 <li><a href="#_known_issues">5. Known issues</a></li>
 </ul>
 </div>
@@ -464,7 +468,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 sample started as a copy of sample "printf". The RTOS implementation has
 been added (new folder <code>code\RTOS</code>) and the main module <code>code\mai_main.c</code>
 has been modified in order to make use of the RTOS; the functionality is
-similar to sample "startup" with its blinked LEDs. Several tasks are
+similar to sample "startup" with its blinking LEDs. Several tasks are
 running concurrently and the LEDs are driven by different tasks. Some
 progress information is printed to the serial output but much of the
 operation can be observed only in the debugger.</p>
@@ -795,6 +799,12 @@ and the software architecture are identical to "startup". Please refer to
 <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc" class="bare">https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc</a>
 for details.</p>
 </div>
+<div class="sect2">
+<h3 id="_api">4.1. API</h3>
+<div class="paragraph">
+<p>TODOC Provide an API description similar to sample "startup".</p>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -836,7 +846,7 @@ debugging an RTOS application. Then the INTC and the code work fine.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-11-20 22:57:06 W. Europe Standard Time
+Last updated 2017-11-20 23:01:23 W. Europe Standard Time
 </div>
 </div>
 </body>
