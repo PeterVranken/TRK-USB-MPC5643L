@@ -432,7 +432,7 @@ void main()
     lbd_initLEDAndButtonDriver();
 
     /* Initialize the serial interface. */
-    ldf_initSerialInterface(/* baudRate */ 19200);
+    sio_initSerialInterface(/* baudRate */ 19200);
 
     /* The external interrupts are enabled after configuring I/O devices and registering
        the interrupt handlers. */

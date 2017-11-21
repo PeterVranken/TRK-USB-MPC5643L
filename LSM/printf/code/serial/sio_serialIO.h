@@ -95,7 +95,7 @@ extern volatile unsigned long sio_serialInNoRxBytes;
  */
 
 /** Module initialization. Configure the I/O devices for serial output. */
-void ldf_initSerialInterface(unsigned int baudRate);
+void sio_initSerialInterface(unsigned int baudRate);
 
 /** A byte string is sent through the serial interface. */
 unsigned int sio_writeSerial(const char *msg, size_t noBytes);
