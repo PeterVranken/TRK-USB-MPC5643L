@@ -159,6 +159,13 @@ A noticeable difference between ISRs and tasks is the option for ISRs to
 be started with inhibited interrupt handling by the CPU, while tasks are
 always started with enabled interrupt handling.
 
+Additional application tasks, beyond the eight, can be implemented by the
+application itself. It can install any kind of interrupt source with a
+handler function. If the interrupt source is a cyclically firing timer
+device then the handler function becomes a new, cyclic task. For example,
+there are three PID timers left. The disadvantage of this trick is that
+any further task occupies a interrupt capable (timer) device.
+
 ==== Priority and sub-ordinated priority
 
 The RTOS knows the priority range 0..15. 0 is the priority of the
@@ -328,14 +335,117 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 == Code architecture
 
 This sample builds on the basic sample "startup" located in a sibling folder. 
-"printf" is compiled for the Book E instruction set. All build settings
+"RTOS" is compiled for the Book E instruction set. All build settings
 and the software architecture are identical to "startup". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
 for details.
 
 === API
 
-TODOC Provide an API description similar to sample "startup".
+The RTOS offers an API for using it. This API is an extension to the
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
+offered by the startup code] and which is still required, too. This
+section outline, which functions are available and how to use them.
+Detailed information is found as
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/RTOS/code/RTOS/rtos.c[source
+code] comments.
+
+==== Registering a task
+
+Tasks are not created dynamically, on demand, but they are registered at
+the RTOS once before the scheduler is started. The registration of a task
+specifies the task function, which is either cyclically activated or on software
+demand, the priority, the cycle time as a number of Milliseconds and the
+time of first activation:
+
+    #include "rtos.h"
+    unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
+                                  , unsigned int tiFirstActivationInMs
+                                  );
+
+The returned task IDs form a sequence of numbers 0, 1, 2, ... in the order
+of registration calls. The ID is required as input to some other API
+functions that relate to a specific task.
+
+==== Registering an ISR
+
+This function from the startup API lets your application define a handler
+for all needed interrupt sources.
+
+    #include "ihw_initMcuCoreHW.h"
+    void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
+                                        , unsigned short vectorNum
+                                        , unsigned char psrPriority
+                                        , bool isPreemptable
+                                        );
+
+==== Start of kernel
+
+The scheduler of the RTOS is started with a simple API call. All required
+tasks have been registered before:
+
+    #include "rtos.h"
+    void rtos_initKernel(void);
+
+The tasks are running after return from the function and the code behind this
+function call becomes the idle task.
+
+==== Activate a task by software
+
+Non cyclic tasks can be activated on event, e.g. from a true ISR to let
+the task evaluate and process the data it has fetched from a device
+(interrupt deferring):
+
+    #include "rtos.h"
+    bool rtos_activateTask(unsigned int idTask);
+
+An activation can fail if the activated task is still ready, if it has not
+yet completed the previous activation.
+
+==== Mutual exclusion of tasks by priority ceiling protocol
+
+A cheap method of inhibiting other tasks from accessing same shared
+resources (mostly data objects in RAM) at the same time is the priority
+ceiling protocol. The currently running task is given a new, higher
+priority and all other tasks of same or lower priority will sure not
+become running. There's a function to raise and another one to restore the
+original priority:
+
+    #include "rtos.h"
+    uint32_t rtos_suspendAllInterruptsByPriority
+                  (unsigned int suspendUpToThisPriority)
+
+    void rtos_resumeAllInterruptsByPriority
+                  (uint32_t resumeDownToThisPriority)
+
+See API of startup code for more functions for mutual exclusion.
+
+==== Diagnosis: Average CPU load
+
+A function is available to estimate the current system load. The function
+is continuously called from the idle task and consumes most of the time,
+which is left to the idle task.
+
+    #include "gsl_systemLoad.h"
+    unsigned int gsl_getSystemLoad(void);
+
+The load is returned in tens of percent.
+
+==== Diagnosis: Counter for failed activations
+
+All failed activations of a task are counted.
+
+    #include "rtos.h"
+    unsigned int rtos_getNoActivationLoss(unsigned int idTask);
+
+==== Diagnosis: Stack usage
+
+A diagnostic function can compute the amount of stack space, which has
+never been used since system startup. This can help at development time to
+save RAM. The number of never used bytes is returned:
+
+    #include "rtos.h"
+    unsigned int rtos_getStackReserve(void);
 
 == Known issues
 

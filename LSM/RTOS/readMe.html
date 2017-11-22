@@ -641,6 +641,14 @@ section <em>Code architecture/API</em>, for details.</p>
 be started with inhibited interrupt handling by the CPU, while tasks are
 always started with enabled interrupt handling.</p>
 </div>
+<div class="paragraph">
+<p>Additional application tasks, beyond the eight, can be implemented by the
+application itself. It can install any kind of interrupt source with a
+handler function. If the interrupt source is a cyclically firing timer
+device then the handler function becomes a new, cyclic task. For example,
+there are three PID timers left. The disadvantage of this trick is that
+any further task occupies a interrupt capable (timer) device.</p>
+</div>
 </div>
 <div class="sect3">
 <h4 id="_priority_and_sub_ordinated_priority">2.1.3. Priority and sub-ordinated priority</h4>
@@ -873,15 +881,166 @@ icon "bug", then click "Debug Configurations&#8230;&#8203;/CodeWarrior/Debug RTO
 <div class="sectionbody">
 <div class="paragraph">
 <p>This sample builds on the basic sample "startup" located in a sibling folder.
-"printf" is compiled for the Book E instruction set. All build settings
+"RTOS" is compiled for the Book E instruction set. All build settings
 and the software architecture are identical to "startup". Please refer to
-<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc" class="bare">https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc</a>
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc">LSM/startup/readMe.adoc</a>
 for details.</p>
 </div>
 <div class="sect2">
 <h3 id="_api">4.1. API</h3>
 <div class="paragraph">
-<p>TODOC Provide an API description similar to sample "startup".</p>
+<p>The RTOS offers an API for using it. This API is an extension to the
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc">API
+offered by the startup code</a> and which is still required, too. This
+section outline, which functions are available and how to use them.
+Detailed information is found as
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/RTOS/code/RTOS/rtos.c">source
+code</a> comments.</p>
+</div>
+<div class="sect3">
+<h4 id="_registering_a_task">4.1.1. Registering a task</h4>
+<div class="paragraph">
+<p>Tasks are not created dynamically, on demand, but they are registered at
+the RTOS once before the scheduler is started. The registration of a task
+specifies the task function, which is either cyclically activated or on software
+demand, the priority, the cycle time as a number of Milliseconds and the
+time of first activation:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "rtos.h"
+unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
+                              , unsigned int tiFirstActivationInMs
+                              );</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The returned task IDs form a sequence of numbers 0, 1, 2, &#8230;&#8203; in the order
+of registration calls. The ID is required as input to some other API
+functions that relate to a specific task.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_registering_an_isr">4.1.2. Registering an ISR</h4>
+<div class="paragraph">
+<p>This function from the startup API lets your application define a handler
+for all needed interrupt sources.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "ihw_initMcuCoreHW.h"
+void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
+                                    , unsigned short vectorNum
+                                    , unsigned char psrPriority
+                                    , bool isPreemptable
+                                    );</pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_start_of_kernel">4.1.3. Start of kernel</h4>
+<div class="paragraph">
+<p>The scheduler of the RTOS is started with a simple API call. All required
+tasks have been registered before:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "rtos.h"
+void rtos_initKernel(void);</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The tasks are running after return from the function and the code behind this
+function call becomes the idle task.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_activate_a_task_by_software">4.1.4. Activate a task by software</h4>
+<div class="paragraph">
+<p>Non cyclic tasks can be activated on event, e.g. from a true ISR to let
+the task evaluate and process the data it has fetched from a device
+(interrupt deferring):</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "rtos.h"
+bool rtos_activateTask(unsigned int idTask);</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>An activation can fail if the activated task is still ready, if it has not
+yet completed the previous activation.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_mutual_exclusion_of_tasks_by_priority_ceiling_protocol">4.1.5. Mutual exclusion of tasks by priority ceiling protocol</h4>
+<div class="paragraph">
+<p>A cheap method of inhibiting other tasks from accessing same shared
+resources (mostly data objects in RAM) at the same time is the priority
+ceiling protocol. The currently running task is given a new, higher
+priority and all other tasks of same or lower priority will sure not
+become running. There&#8217;s a function to raise and another one to restore the
+original priority:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "rtos.h"
+uint32_t rtos_suspendAllInterruptsByPriority
+              (unsigned int suspendUpToThisPriority)</pre>
+</div>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>void rtos_resumeAllInterruptsByPriority
+              (uint32_t resumeDownToThisPriority)</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>See API of startup code for more functions for mutual exclusion.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_diagnosis_average_cpu_load">4.1.6. Diagnosis: Average CPU load</h4>
+<div class="paragraph">
+<p>A function is available to estimate the current system load. The function
+is continuously called from the idle task and consumes most of the time,
+which is left to the idle task.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "gsl_systemLoad.h"
+unsigned int gsl_getSystemLoad(void);</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The load is returned in tens of percent.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_diagnosis_counter_for_failed_activations">4.1.7. Diagnosis: Counter for failed activations</h4>
+<div class="paragraph">
+<p>All failed activations of a task are counted.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "rtos.h"
+unsigned int rtos_getNoActivationLoss(unsigned int idTask);</pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_diagnosis_stack_usage">4.1.8. Diagnosis: Stack usage</h4>
+<div class="paragraph">
+<p>A diagnostic function can compute the amount of stack space, which has
+never been used since system startup. This can help at development time to
+save RAM. The number of never used bytes is returned:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "rtos.h"
+unsigned int rtos_getStackReserve(void);</pre>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -925,7 +1084,7 @@ debugging an RTOS application. Then the INTC and the code work fine.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-11-21 23:12:15 W. Europe Standard Time
+Last updated 2017-11-22 23:10:20 W. Europe Standard Time
 </div>
 </div>
 </body>

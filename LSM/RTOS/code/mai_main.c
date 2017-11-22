@@ -781,7 +781,7 @@ void main()
         /* In PRODUCTION compilation we print the inconsistencies found in the PCP test. */
         if(_sharedDataTasksIdleAnd1msAndCpuLoad.noErrors != 0)
         {
-            iprintf( "CAUTION: %u errors found in PCP self-test!\n"
+            iprintf( "CAUTION: %u errors found in PCP self-test!\r\n"
                    , _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors
                    );
         }

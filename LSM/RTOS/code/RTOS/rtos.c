@@ -154,7 +154,7 @@ typedef struct task_t
  */
  
 /* The prototypes of all possible task functions. */
-#define TASK(taskId)    static void swInt##taskId(void);
+#define TASK(idTask)    static void swInt##idTask(void);
 TASK(0)
 TASK(1)
 TASK(2)
@@ -199,12 +199,12 @@ static void (* const _swIntAry[8])(void) =
  * task function for all possible tasks. Each one contains the branch into the user
  * specified code and the individual termination code.
  */
-#define TASK(taskId)                                \
-static void swInt##taskId(void)                     \
+#define TASK(idTask)                                \
+static void swInt##idTask(void)                     \
 {                                                   \
-    const task_t * const pTask = &_taskAry[taskId]; \
+    const task_t * const pTask = &_taskAry[idTask]; \
     (*pTask->taskDesc.taskFct)();                   \
-    ACKN_ISR(/*idxSwIsr*/ taskId);                  \
+    ACKN_ISR(/*idxSwIsr*/ idTask);                  \
 }
 TASK(0)
 TASK(1)
@@ -481,9 +481,9 @@ void rtos_initKernel(void)
  * It is not forbidden but useless to let a task activate itself. This will have no effect
  * besides incrementing the activation loss counter for that task.
  */
-bool rtos_activateTask(unsigned int taskId)
+bool rtos_activateTask(unsigned int idTask)
 {
-    assert(taskId < _noTasks);
+    assert(idTask < _noTasks);
     
     /* The tasks are related tothe eight available software interrupts. Each SI is
        controlled by two bits in one out of two status registers of the INTC.
@@ -495,15 +495,15 @@ bool rtos_activateTask(unsigned int taskId)
        position in order to apply a normal 32 Bit access. */
     vuint32_t *pINTC_SSCIR;
     uint32_t mask = 0x03000000;
-    if(taskId <= 3)
+    if(idTask <= 3)
     {
         pINTC_SSCIR = &INTC.SSCIR0_3.R;
-        mask >>= 8*taskId;
+        mask >>= 8*idTask;
     }
     else
     {
         pINTC_SSCIR = &INTC.SSCIR4_7.R;
-        mask >>= 8*(taskId-4);
+        mask >>= 8*(idTask-4);
     }
     
     /* Read software interrupt bit of the task. If it is still set then we have a task
@@ -527,9 +527,9 @@ bool rtos_activateTask(unsigned int taskId)
            concurrently from the task scheduler in case of cyclic tasks. */
         const uint32_t msr = ihw_enterCriticalSection();
         {
-            const unsigned int noActivationLoss = _taskAry[taskId].noActivationLoss + 1;
+            const unsigned int noActivationLoss = _taskAry[idTask].noActivationLoss + 1;
             if(noActivationLoss > 0)
-                _taskAry[taskId].noActivationLoss = noActivationLoss;
+                _taskAry[idTask].noActivationLoss = noActivationLoss;
         }
         ihw_leaveCriticalSection(msr);
         

@@ -194,7 +194,7 @@ static inline uint32_t rtos_suspendAllInterruptsByPriority
  * so it is still pending. At the instance of lowering the priority level, the currently
  * executed task/ISR would be recursively called again.
  */ 
-static inline void rtos_resumeAllInterruptsByPriority(unsigned int resumeDownToThisPriority)
+static inline void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)
 {
     /* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority
        in the INTC should be done under global interrupt lock. */
@@ -219,7 +219,7 @@ unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
 void rtos_initKernel(void);
 
 /** Software triggered task activation. Can be called from other tasks or interrupts. */
-bool rtos_activateTask(unsigned int id);
+bool rtos_activateTask(unsigned int idTask);
 
 /** Get the current number of failed task activations since start of the RTOS scheduler. */
 unsigned int rtos_getNoActivationLoss(unsigned int idTask);
