@@ -394,6 +394,30 @@ static void testPCP(unsigned int idTask)
 
 
 /**
+ * This function produces some CPU load for testing. A busy loop is executed for a give
+ * duration. Note, this does not necessarily mean a 100% of load during this time span; a
+ * task calling this function can be preempted and the time would elapse without the task
+ * producing load.
+ *   @param fullLoadThisNoMicroseconds
+ * The duration in us during which the busy loop is executed. The function returns after
+ * about this time, regardless whether it had produced load or whether it had mostly been
+ * preempted.
+ */
+static void produceLoad(unsigned int fullLoadThisNoMicroseconds)
+{
+    /* The factor 120 is required to consider the unit of __builtin_ppc_get_timebase(),
+       which is the CPU clock tick. */
+    const uint64_t tiEnd = __builtin_ppc_get_timebase() + fullLoadThisNoMicroseconds*120;
+
+    /* Busy loop. Note, preemption is possible, which effectively lowers the additional CPU
+       load, this loop produces. The higher the system load, the more grows this effect. */
+    while(__builtin_ppc_get_timebase() < tiEnd)
+        ;
+} /* End of produceLoad */
+
+
+
+/**
  * Task function, cyclically activated every Millisecond. The LED D4 is switched on and off
  * and the button SW3 is read and evaluated.
  */
@@ -416,6 +440,9 @@ static void task1ms()
     }
     ReleaseResource();
 
+    /* Produce a bit of CPU load. This call simulates some true application software. */
+    produceLoad(/* fullLoadThisNoMicroseconds */ 50 /* approx. 5% load */);
+    
     /* Read the current button status to possibly toggle the LED colors. */
     static bool lastStateButton_ = false;
     if(lbd_getButton(lbd_bt_button_SW3))
@@ -482,6 +509,9 @@ static void task3ms()
     checkAndIncrementTaskCnts(idTask3ms);
     ++ mai_cntTask3ms;
 
+    /* Produce a bit of CPU load. This call simulates some true application software. */
+    produceLoad(/* fullLoadThisNoMicroseconds */ 150 /* approx. 5% load */);
+    
 } /* End of task3ms */
 
 
@@ -499,6 +529,13 @@ static void task1s()
     if(++cntIsOn_ >= 1)
         cntIsOn_ = -1;
     lbd_setLED(_ledTask1s, /* isOn */ cntIsOn_ >= 0);
+
+    /* Produce a bit of CPU load. This call simulates some true application software.
+         Note, the cyclic task taskCpuLoad has a period time of 23 ms and it has the same
+       priority as this task. Because of the busy loop here and because the faster task
+       itself has a non negligible execution time, there's a significant chance of loosing
+       an activation of the faster task once a second. */
+    produceLoad(/* fullLoadThisNoMicroseconds */ 20000 /* approx. 2% load */);
 
 } /* End of task1s */
 
@@ -539,6 +576,9 @@ static void task17ms()
     }
     ReleaseResource();
 
+    /* Produce a bit of CPU load. This call simulates some true application software. */
+    produceLoad(/* fullLoadThisNoMicroseconds */ 17*50 /* approx. 5% load */);
+    
     /* A task can't activate itself, we do not queue activations and it's obviously active
        at the moment. Test it. */
 #ifdef DEBUG
@@ -587,19 +627,15 @@ static void taskCpuLoad()
     
     ++ mai_cntTaskCpuLoad;
 
+    /* Producing load is implemented as producing full load for a given span of world time.
+       This is not the same as producing an additional load of according percentage to the
+       system since the task may be preempted and time elapses while this task is not
+       loading the CPU. The percent value is only approximately. */
     const unsigned int tiDelayInUs = 23 /* ms = cycle time of this task */
                                      * 1000 /* ms to us to improve resolution */
                                      * _cpuLoadInPercent
                                      / 100;
-
-    /* The factor 120 is required to consider the unit of __builtin_ppc_get_timebase(),
-       which is the CPU clock tick. */
-    const uint64_t tiEnd = __builtin_ppc_get_timebase() + tiDelayInUs*120;
-
-    /* Busy loop. Note, preemption is possible, which effectively lowers the additional CPU
-       load, this loop produces. The higher the system load, the more grows this effect. */
-    while(__builtin_ppc_get_timebase() < tiEnd)
-        ;
+    produceLoad(/* fullLoadThisNoMicroseconds */ tiDelayInUs);
 
 } /* End of taskCpuLoad */
 
