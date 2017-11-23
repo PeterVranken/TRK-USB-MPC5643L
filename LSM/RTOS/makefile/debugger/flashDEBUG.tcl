@@ -17,7 +17,7 @@
 # of flashing (e.g. by makefile rule). This requires a "quitIDE" as last TCL command in the
 # script and the command line would resemble:
 #
-#   cwide.exe -data "c:\tmp\wsp_StandaloneFlsh" -vmargsplus -Dcw.script=TRK-USB-MPC5643LAtGitHub\LSM\RTOS\makefile\debugger\flashDEBUG.tcl
+#   cwide.exe -data "c:\tmp\wsp_StandaloneFlsh" -vmargsplus -Dcw.script=(...)\TRK-USB-MPC5643L\LSM\RTOS\makefile\debugger\flashDEBUG.tcl
 #
 # However, we couldn't make this work.
 #   More related links are:
@@ -46,6 +46,11 @@ fl::target -v off -l off
 # Select flash device, organization and memory range.
 cmdwin::fl::device -d "MPC5643L_BOOKE" -o "1Mx32x1" -a 0x0 0xfffff
  
+# Unprotect the device. This is essential the very first time with a new device, but later
+# only if we protect it again after flashing. This script doesn't protect again, so you may
+# consider commenting out this line after first flashing in order to speed up the procedure.
+cmdwin::fl::protect all off
+
 # Specify target file, auto detect format, range settings on followed by the flash range,
 # offset settings off.
 cmdwin::fl::image -f ..\\..\\bin\\ppc\\DEBUG\\TRK-USB-MPC5643L-RTOS.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off

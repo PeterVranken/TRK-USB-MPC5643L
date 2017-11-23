@@ -6,7 +6,7 @@
 #   In the CodeWarrior IDE open the debugger shell to run this script. Click menu
 # Window/Show View/Debugger Shell to dos so. In the debugger shell window, type:
 #
-#   cd ../LSM/RTOS/makefile/debugger (depending on where you are)
+#   cd ../LSM/startup-VLE/makefile/debugger (depending on where you are)
 #   pwd
 #   dir
 #   source flashPRODUCTION.tcl
@@ -17,7 +17,7 @@
 # of flashing (e.g. by makefile rule). This requires a "quitIDE" as last TCL command in the
 # script and the command line would resemble:
 #
-#   cwide.exe -data "c:\tmp\wsp_StandaloneFlsh" -vmargsplus -Dcw.script=(...)\TRK-USB-MPC5643L\LSM\RTOS\makefile\debugger\flashPRODUCTION.tcl
+#   cwide.exe -data "c:\tmp\wsp_StandaloneFlsh" -vmargsplus -Dcw.script=(...)\TRK-USB-MPC5643L\LSM\startup-VLE\makefile\debugger\flashPRODUCTION.tcl
 #
 # However, we couldn't make this work.
 #   More related links are:
@@ -35,7 +35,7 @@
 fl::disconnect
  
 # Set launch configuration.
-fl::target -lc "Debug RTOS (PRODUCTION)"
+fl::target -lc "Debug startup-VLE (PRODUCTION)"
  
 # Set the target RAM buffer for downloading image data.
 fl::target -b 0x40000000 0x20000
@@ -44,7 +44,7 @@ fl::target -b 0x40000000 0x20000
 fl::target -v off -l off
  
 # Select flash device, organization and memory range.
-cmdwin::fl::device -d "MPC5643L_BOOKE" -o "1Mx32x1" -a 0x0 0xfffff
+cmdwin::fl::device -d "MPC5643L_VLE" -o "1Mx32x1" -a 0x0 0xfffff
  
 # Unprotect the device. This is essential the very first time with a new device, but later
 # only if we protect it again after flashing. This script doesn't protect again, so you may
@@ -53,7 +53,7 @@ cmdwin::fl::protect all off
 
 # Specify target file, auto detect format, range settings on followed by the flash range,
 # offset settings off.
-cmdwin::fl::image -f ..\\..\\bin\\ppc\\PRODUCTION\\TRK-USB-MPC5643L-RTOS.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
+cmdwin::fl::image -f ..\\..\\bin\\ppc\\PRODUCTION\\TRK-USB-MPC5643L-startup-VLE.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
  
 # Now erase the flash...
 cmdwin::fl::erase image
