@@ -152,7 +152,7 @@ priority than an interrupt.
 
 ISRs are installed using the known API from the startup code:
 `ihw_installINTCInterruptHandler()`, see
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc,
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc],
 section _Code architecture/API_, for details.
 
 A noticeable difference between ISRs and tasks is the option for ISRs to
@@ -407,7 +407,7 @@ yet completed the previous activation.
 A cheap method of inhibiting other tasks from accessing same shared
 resources (mostly data objects in RAM) at the same time is the priority
 ceiling protocol. The currently running task is given a new, higher
-priority and all other tasks of same or lower priority will sure not
+priority and all other tasks of same or lower priority will surely not
 become running. There's a function to raise and another one to restore the
 original priority:
 
