@@ -96,8 +96,9 @@ and Installation].
 
 == Documentation
 
-* The Wiki pages of this project tell more about download and installation
-  of the tools and how to run the samples
+* The https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki[Wiki pages] of
+  this project tell more about download and installation of the tools and
+  how to run the samples
 * Each sample has a "readMe", which outlines the functionality and its
   particular added value
 * The code and scripts are documented by source code comments

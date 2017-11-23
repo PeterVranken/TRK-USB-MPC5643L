@@ -64,15 +64,15 @@ revision c9fb69f4ed4af39434fc53d485cce6210fcd14e5 of this project.]
 the anyway needed startup code from the other samples.
 
 With this number of lines of code our RTOS is likely one of the shortest
-32 Bit RTOSs far and wide! This barely believable conciseness of code has
-a single explanation: The MPC5643L actually implements the OSEK/VDX BCC
-standard by hardware and the required C code is no more than a thin
-wrapper layer around the hardware in order to make the hardware
-functionality available to the C-coded application software. This
-explanation is at the same time the reason, why an extension of the RTOS'
-functionality is not possible by nature: An implementation of e.g. the
-Extended Conformance Classes (ECC) of the OSEK/VDX standard would mean a
-complete software implementation of an according kernel.
+32 Bit RTOSs far and wide! The extreme conciseness of code has a single
+explanation: The MPC5643L actually implements the OSEK/VDX BCC standard by
+hardware and the required C code is no more than a thin wrapper layer
+around the hardware in order to make the hardware functionality available
+to the C-coded application software. This explanation is at the same time
+the reason, why an extension of the RTOS' functionality is not possible by
+nature: An implementation of e.g. the Extended Conformance Classes (ECC)
+of the OSEK/VDX standard would mean a complete software implementation of
+an according kernel.
 
 
 === The kernel operation
