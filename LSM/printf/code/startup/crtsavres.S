@@ -47,6 +47,10 @@
 // -O1 -O2 -O3:
 // #define __OPTIMIZE__ 1
 
+#ifdef __VLE__
+# error This file is intended for compilation for Book E instruction set only
+#endif
+
 #ifdef __OPTIMIZE_SIZE__
 #include <ppc-asm.h>
 
