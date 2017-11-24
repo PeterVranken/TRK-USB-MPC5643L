@@ -30,6 +30,7 @@
  *   clearCriticalFaultFlags
  *   clearNonCriticalFaultFlags
  *   initModesAndClks
+ *   initPBridge
  *   initINTCInterruptController
  */
 
@@ -282,6 +283,39 @@ static void initModesAndClks(bool enableClkOutputAtPB6)
 
 
 /**
+ * Basic configuration of the peripheral bridge. A general purpose setting is chosen,
+ * suitable for all of the samples in this project: All masters can access the peripherals
+ * without access protection for any of them.
+ *   @remark
+ * A true application would tend to do the peripheral bridge configuration much more
+ * restrictive!
+ */
+static void initPBridge()
+{
+    /* Peripheral bridge is completely open; all masters can go through AIPS and the
+       peripherals have no protection. */
+    AIPS.MPROT0_7.R   = 0x77777777;
+    AIPS.MPROT8_15.R  = 0x77000000;
+    AIPS.PACR0_7.R    = 0x0;
+    AIPS.PACR8_15.R   = 0x0;
+    AIPS.PACR16_23.R  = 0x0;
+
+    AIPS.OPACR0_7.R   = 0x0;
+    AIPS.OPACR16_23.R = 0x0;
+    AIPS.OPACR24_31.R = 0x0;
+    AIPS.OPACR32_39.R = 0x0;
+    AIPS.OPACR40_47.R = 0x0;
+    AIPS.OPACR48_55.R = 0x0;
+    AIPS.OPACR56_63.R = 0x0;
+    AIPS.OPACR64_71.R = 0x0;
+    AIPS.OPACR80_87.R = 0x0;
+    AIPS.OPACR88_95.R = 0x0;
+
+} /* End of initPBridge */
+
+
+
+/**
  * Dummy interrupt handler. On initialization of the INTC
  * (initINTCInterruptController()), this function is put into all 256 interrupt vectors
  * in the table.\n
@@ -501,6 +535,9 @@ void ihw_initMcuCoreHW()
        board. */
     initModesAndClks(/* enableClkOutputAtPB6 */ false);
 
+    /* Grant access to the bus masters to the peripherals, particularly CPU and DMA. */
+    initPBridge();
+    
     /* Initialize the interrupt controller for the external interrupts. No interrupts are
        enabled but the mechansim is in place to register handlers from the user code. */
     initINTCInterruptController();

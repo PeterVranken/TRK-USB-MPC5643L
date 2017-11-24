@@ -24,6 +24,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef __VLE__
+# error This file is intended for compilation for VLE instruction set only
+#endif
+
 /*
  * Include files
  */

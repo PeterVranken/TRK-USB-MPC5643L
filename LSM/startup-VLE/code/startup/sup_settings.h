@@ -40,11 +40,6 @@
 # endif
 #endif
 
-/** Define this macro if the application is compiled with VLE instruction set.
-      @remark As of writing (Sep 2017) VLE instruction set is not yet supported by GCC. The
-    option must not be enabled. */
-#define SUP_USE_VLE_INSTRUCTION_SET
-
 /** Define this macro if the application is compiled in lock step mode (LSM).
       @remark As of writing (Sep 2017) this macro must be defined as decoupled processor
     mode (DP) is not yet supported by the implementation of the startup code. */

@@ -1,6 +1,6 @@
 /**
  * @file int_INTCInterruptHandler.S
- * Book E assembler implementation of interrupt handler for external interrupts handled by
+ * VLE assembler implementation of interrupt handler for external interrupts handled by
  * the INTC. Used for MPC5643L in Lockstep Mode (LSM). The code has been designed for use
  * with GCC for PowerPC EABI.
  *
@@ -23,6 +23,10 @@
  *   int_INTCInterruptHandler
  * Local functions
  */
+
+#ifndef __VLE__
+# error This file is intended for compilation for VLE instruction set only
+#endif
 
 /*
  * Include files

@@ -33,6 +33,10 @@
  *   initFlash
  */
 
+#ifndef __VLE__
+# error This file is intended for compilation for VLE instruction set only
+#endif
+
 /*
  * Include files
  */
