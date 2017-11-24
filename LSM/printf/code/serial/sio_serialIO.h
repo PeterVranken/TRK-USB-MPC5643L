@@ -101,7 +101,7 @@ void sio_initSerialInterface(unsigned int baudRate);
 unsigned int sio_writeSerial(const char *msg, size_t noBytes);
 
 /** Application API function to read a single character from serial input. */
-signed int sio_getChar();
+signed int sio_getChar(void);
 
 /* Read a line of input text from the serial interface. */
 char *sio_getLine(char buf[], unsigned int sizeOfBuf);
