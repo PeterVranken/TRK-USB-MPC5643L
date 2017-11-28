@@ -491,7 +491,7 @@ should print the messages, which are regularly sent by the sample code
 running on the evaluation board.</p>
 </div>
 <div class="paragraph">
-<p>Try to press button SW3 on the evaluation board and see what happens.</p>
+<p>Try pressing button SW3 on the evaluation board and see what happens.</p>
 </div>
 </div>
 </div>
@@ -500,24 +500,30 @@ running on the evaluation board.</p>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The proposed RTOS is little exciting with respect to its functionality.
-The scheduler implements the Basic Conformance Class (BCC) 1 of the
-OSEK/VDX standard and BCC 2 with the exception of activation queuing.</p>
+The scheduler implements the Basic Conformance Class 1 (BCC1) of the
+OSEK/VDX standard and BCC2 with the exception of activation queuing.</p>
 </div>
 <div class="paragraph">
-<p>The scheduler offers an API to register periodic tasks and event tasks. It
-has an API to activate event tasks by software, from interrupt service
-routines (ISR) or other tasks. All scheduling is strictly priority
-controlled.</p>
+<p>The scheduler offers an API to register periodic tasks and event tasks.
+The former are regularly activated by the RTOS system clock while the
+latter need to be explicitly activated by software with an offered API,
+from interrupt service routines (ISR) or other tasks.</p>
 </div>
 <div class="paragraph">
-<p>ISRs are installed and used as in the other tasks, this is done with the
+<p>All scheduling is strictly priority controlled. The activation of a task
+just makes it ready to run. At any time, the scheduler decides by
+priority, which of the <em>ready</em> tasks becomes the one and only <em>running</em>
+task. This may involve preemption of tasks.</p>
+</div>
+<div class="paragraph">
+<p>ISRs are installed and used as in the other samples, this is done with the
 infrastructure offered by the startup code.</p>
 </div>
 <div class="paragraph">
 <p>For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
 lock API is offered that implements the priority ceiling protocol (PCP).
 The already known mechanisms from the startup code can however still be
-used. It permits to globally lock and resume all interrupts.</p>
+used. They permit to globally lock and resume all interrupts.</p>
 </div>
 <div class="paragraph">
 <p>The use of the RTOS is further supported by some less essential diagnostic
@@ -531,7 +537,8 @@ start of scheduler, the scheduler and the PCP implementation) requires no
 more than 209 lines of C code.
   <sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup>
   All code has been counted, which was written for the RTOS in addition to
-the anyway needed startup code from the other samples.</p>
+the anyway needed startup code from the other samples.
+  <sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
 </div>
 <div class="paragraph">
 <p>With this number of lines of code our RTOS is likely one of the shortest
@@ -548,21 +555,21 @@ an according kernel.</p>
 <div class="sect2">
 <h3 id="_the_kernel_operation">2.1. The kernel operation</h3>
 <div class="paragraph">
-<p>Like for an OSEK/VDX BCC1 system, a task is started (activated), executed
-and eventually terminated. The activation can be done periodically or
-event triggered. The event can be sent by another task or an ISR. A task
-can however not prematurely suspend and doesn&#8217;t know blocking states in
+<p>Like for an OSEK/VDX BCC1 system, a task is activated, executed and
+eventually terminated. The activation can be done periodically or event
+triggered. The event can be sent by another task or an ISR. A task can
+however not prematurely suspend and it doesn&#8217;t know blocking states in
 which it waits for some event.</p>
 </div>
 <div class="paragraph">
 <p>The preemption of tasks is purely priority controlled. A task of higher
 priority, that is activated will immediately be executed (i.e. it becomes
-running) and the task running so far is preempted. This task enters state
-"ready". Toggling between the states "running" and "ready" is all what can
-happen with the tasks as long as they are alive. This leads to a simple
-hierarchical structure of possible preemptions, see figure
-<a href="#figSchemeOfPreemptions">Task preemption in a BCC kernel</a>.
-  <sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
+running) and the task running so far is preempted. The preempted task
+returns to state "ready". Toggling between the states "running" and
+"ready" is all what can happen with the tasks as long as they are alive.
+This leads to a simple hierarchical structure of possible preemptions, see
+figure <a href="#figSchemeOfPreemptions">Figure 1</a>.
+  <sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnote_3" title="View footnote.">3</a>]</sup></p>
 </div>
 <div id="figSchemeOfPreemptions" class="imageblock" style="text-align: center">
 <div class="content">
@@ -571,9 +578,9 @@ hierarchical structure of possible preemptions, see figure
 <div class="title">Figure 1. Task preemption in a BCC kernel</div>
 </div>
 <div class="paragraph">
-<p>The hierarchical preemption scheme permits having a single data stack. The
+<p>The hierarchical preemption scheme permits to have a single data stack. The
 information to push onto the stack in order to implement a context switch
-from one task to another task is just the same as in any simple, RTOS free
+from one task to another task is just the same as in any simple, RTOS-free
 system, which makes use of interrupts. This explains, why the RTOS can be
 implemented as an extension of the anyway required startup code and why it
 doesn&#8217;t require any assembler code.</p>
@@ -581,17 +588,18 @@ doesn&#8217;t require any assembler code.</p>
 <div class="paragraph">
 <p>Although BCC means a significant reduction of complexity and functionality
 in comparison to a full featured real time kernel, the embedded practice
-mostly doesn&#8217;t require more than this. The typical data flow paradigm is
-to have event triggered tasks, which serve the asynchronous I/O channels
-and strictly cyclic application tasks, which process the data and
-implement the control strategies. The communication between ISRs and tasks
-is done either by queues or by overwriting (last recent value supersedes
-earlier ones), that depents. It&#8217;s a simple model, which has the advantage
-of being well understood, transparent and by nature free of dead locks.
-The latency times are higher than for consequently designed event
-controlled systems but they are predictable and have easy to determine
-upper bounds. Last but not least, software design can determine the upper
-bounds by choosing appropriate cycle times.</p>
+mostly doesn&#8217;t require more than this. The typical data flow paradigm of
+an industrial embbeded application is to have event triggered tasks, which
+serve the asynchronous I/O channels and strictly cyclic application tasks,
+which process the data and implement the control strategies. The
+communication between ISRs and tasks is done either by queues or by
+overwriting (last recent value supersedes earlier ones), that depents.
+It&#8217;s a simple model, which has the advantage of being well understood,
+transparent and by nature free of dead locks. The latency times are higher
+than for consequently designed event controlled systems but they are
+predictable and have easy to determine upper bounds. Last but not least,
+software design can determine the upper bounds by choosing appropriate
+cycle times.</p>
 </div>
 <div class="sect3">
 <h4 id="_the_operating_system_clock">2.1.1. The operating system clock</h4>
@@ -647,7 +655,7 @@ application itself. It can install any kind of interrupt source with a
 handler function. If the interrupt source is a cyclically firing timer
 device then the handler function becomes a new, cyclic task. For example,
 there are three PID timers left. The disadvantage of this trick is that
-any further task occupies a interrupt capable (timer) device.</p>
+each further task occupies an interrupt capable (timer) device.</p>
 </div>
 </div>
 <div class="sect3">
@@ -675,7 +683,7 @@ are executed sequentially, i.e. one after another. This introduces a kind
 of sub-ordinated priority, which determines the order of execution in this
 situation. This sub-ordinated priority is hard-wired in the MCU and
 there&#8217;s no software handle to change it. The interrupt number, which is an
-argument in the call to <code>ihw_installINTCInterruptHandler()</code>, is the
+argument to the call to <code>ihw_installINTCInterruptHandler()</code>, is the
 inverted priority; the higher the interrupt number, the lower this
 sub-ordinated priority.</p>
 </div>
@@ -721,7 +729,7 @@ the application may use them.</p>
 <p>The RTOS implementation is not specific to one of the instruction sets.
 The sample uses the Book E environment but <code>mai_main.c</code> and the RTOS
 itself can be compiled and run with the VLE startup code, too.
-  <sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnote_3" title="View footnote.">3</a>]</sup></p>
+  <sup class="footnote">[<a id="_footnoteref_4" class="footnote" href="#_footnote_4" title="View footnote.">4</a>]</sup></p>
 </div>
 </div>
 </div>
@@ -892,7 +900,7 @@ for details.</p>
 <p>The RTOS offers an API for using it. This API is an extension to the
 <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc">API
 offered by the startup code</a> and which is still required, too. This
-section outline, which functions are available and how to use them.
+section outlines, which functions are available and how to use them.
 Detailed information is found as
 <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/RTOS/code/RTOS/rtos.c">source
 code</a> comments.</p>
@@ -977,10 +985,10 @@ yet completed the previous activation.</p>
 <div class="paragraph">
 <p>A cheap method of inhibiting other tasks from accessing same shared
 resources (mostly data objects in RAM) at the same time is the priority
-ceiling protocol. The currently running task is given a new, higher
-priority and all other tasks of same or lower priority will surely not
-become running. There&#8217;s a function to raise and another one to restore the
-original priority:</p>
+ceiling protocol. The currently running task is temporarily given a new,
+higher priority and all other tasks of same or lower priority will surely
+not become running. There&#8217;s a function to raise and another one to restore
+the original priority:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -994,6 +1002,10 @@ uint32_t rtos_suspendAllInterruptsByPriority
 <pre>void rtos_resumeAllInterruptsByPriority
               (uint32_t resumeDownToThisPriority)</pre>
 </div>
+</div>
+<div class="paragraph">
+<p>The source code comments of these functions explains them much more in
+detail.</p>
 </div>
 <div class="paragraph">
 <p>See API of startup code for more functions for mutual exclusion.</p>
@@ -1076,15 +1088,18 @@ debugging an RTOS application. Then the INTC and the code work fine.</p>
 <a href="#_footnoteref_1">1</a>. Counted with <a href="https://github.com/AlDanial/cloc">cloc</a> in revision c9fb69f4ed4af39434fc53d485cce6210fcd14e5 of this project.
 </div>
 <div class="footnote" id="_footnote_2">
-<a href="#_footnoteref_2">2</a>. The picture has been downloaded at <a href="http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg" class="bare">http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg</a> on Nov 19, 2017.
+<a href="#_footnoteref_2">2</a>. The footprint with respect to RAM and ROM consumption could even be lowered by replacing the runtime task configuration with application specific #define&#8217;s and compile-time initialized constant data structures. This has not been done for sake of readability and ease of reuse of the RTOS.
 </div>
 <div class="footnote" id="_footnote_3">
-<a href="#_footnoteref_3">3</a>. As of writing, Nov 2017, this has not been proven yet.
+<a href="#_footnoteref_3">3</a>. The picture has been downloaded at <a href="http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg" class="bare">http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg</a> on Nov 19, 2017.
+</div>
+<div class="footnote" id="_footnote_4">
+<a href="#_footnoteref_4">4</a>. As of writing, Nov 2017, this has not been proven yet.
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-11-23 18:59:17 W. Europe Standard Time
+Last updated 2017-11-28 22:58:44 W. Europe Standard Time
 </div>
 </div>
 </body>

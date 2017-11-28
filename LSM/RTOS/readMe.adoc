@@ -2,6 +2,7 @@
 :Author:    Peter Vranken 
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
+:xrefstyle: short
 :numbered:
 
 == About this sample
@@ -29,26 +30,31 @@ out.) The Baud rate has been selected as 115200 Bd in file
 should print the messages, which are regularly sent by the sample code
 running on the evaluation board.
 
-Try to press button SW3 on the evaluation board and see what happens.
+Try pressing button SW3 on the evaluation board and see what happens.
 
 == The RTOS
 
 The proposed RTOS is little exciting with respect to its functionality.
-The scheduler implements the Basic Conformance Class (BCC) 1 of the
-OSEK/VDX standard and BCC 2 with the exception of activation queuing.
+The scheduler implements the Basic Conformance Class 1 (BCC1) of the
+OSEK/VDX standard and BCC2 with the exception of activation queuing.
 
-The scheduler offers an API to register periodic tasks and event tasks. It
-has an API to activate event tasks by software, from interrupt service
-routines (ISR) or other tasks. All scheduling is strictly priority
-controlled. 
+The scheduler offers an API to register periodic tasks and event tasks.
+The former are regularly activated by the RTOS system clock while the
+latter need to be explicitly activated by software with an offered API,
+from interrupt service routines (ISR) or other tasks.
 
-ISRs are installed and used as in the other tasks, this is done with the
+All scheduling is strictly priority controlled. The activation of a task
+just makes it ready to run. At any time, the scheduler decides by
+priority, which of the _ready_ tasks becomes the one and only _running_
+task. This may involve preemption of tasks.
+
+ISRs are installed and used as in the other samples, this is done with the
 infrastructure offered by the startup code.
 
 For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
 lock API is offered that implements the priority ceiling protocol (PCP).
 The already known mechanisms from the startup code can however still be
-used. It permits to globally lock and resume all interrupts.
+used. They permit to globally lock and resume all interrupts.
 
 The use of the RTOS is further supported by some less essential diagnostic
 functions. They offer stack usage information, task overrun information
@@ -62,6 +68,11 @@ more than 209 lines of C code.
 revision c9fb69f4ed4af39434fc53d485cce6210fcd14e5 of this project.]
   All code has been counted, which was written for the RTOS in addition to
 the anyway needed startup code from the other samples.
+  footnote:[The footprint with respect to RAM and ROM consumption could even
+be lowered by replacing the runtime task configuration with application
+specific #define's and compile-time initialized constant data structures.
+This has not been done for sake of readability and ease of reuse of the
+RTOS.]
 
 With this number of lines of code our RTOS is likely one of the shortest
 32 Bit RTOSs far and wide! The extreme conciseness of code has a single
@@ -77,19 +88,19 @@ an according kernel.
 
 === The kernel operation
 
-Like for an OSEK/VDX BCC1 system, a task is started (activated), executed
-and eventually terminated. The activation can be done periodically or
-event triggered. The event can be sent by another task or an ISR. A task
-can however not prematurely suspend and doesn't know blocking states in
+Like for an OSEK/VDX BCC1 system, a task is activated, executed and
+eventually terminated. The activation can be done periodically or event
+triggered. The event can be sent by another task or an ISR. A task can
+however not prematurely suspend and it doesn't know blocking states in
 which it waits for some event.
 
 The preemption of tasks is purely priority controlled. A task of higher
 priority, that is activated will immediately be executed (i.e. it becomes
-running) and the task running so far is preempted. This task enters state
-"ready". Toggling between the states "running" and "ready" is all what can
-happen with the tasks as long as they are alive. This leads to a simple
-hierarchical structure of possible preemptions, see figure
-<<figSchemeOfPreemptions>>.
+running) and the task running so far is preempted. The preempted task
+returns to state "ready". Toggling between the states "running" and
+"ready" is all what can happen with the tasks as long as they are alive.
+This leads to a simple hierarchical structure of possible preemptions, see
+figure <<figSchemeOfPreemptions>>.
   footnote:[The picture has been downloaded at
 http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg
 on Nov 19, 2017.]
@@ -98,26 +109,27 @@ on Nov 19, 2017.]
 .Task preemption in a BCC kernel
 image::doc/taskSwitchesBCC.jpg[width="60%",align="center"]
 
-The hierarchical preemption scheme permits having a single data stack. The
+The hierarchical preemption scheme permits to have a single data stack. The
 information to push onto the stack in order to implement a context switch
-from one task to another task is just the same as in any simple, RTOS free
+from one task to another task is just the same as in any simple, RTOS-free
 system, which makes use of interrupts. This explains, why the RTOS can be
 implemented as an extension of the anyway required startup code and why it
 doesn't require any assembler code.
 
 Although BCC means a significant reduction of complexity and functionality
 in comparison to a full featured real time kernel, the embedded practice
-mostly doesn't require more than this. The typical data flow paradigm is
-to have event triggered tasks, which serve the asynchronous I/O channels
-and strictly cyclic application tasks, which process the data and
-implement the control strategies. The communication between ISRs and tasks
-is done either by queues or by overwriting (last recent value supersedes
-earlier ones), that depents. It's a simple model, which has the advantage
-of being well understood, transparent and by nature free of dead locks.
-The latency times are higher than for consequently designed event
-controlled systems but they are predictable and have easy to determine
-upper bounds. Last but not least, software design can determine the upper
-bounds by choosing appropriate cycle times.
+mostly doesn't require more than this. The typical data flow paradigm of
+an industrial embbeded application is to have event triggered tasks, which
+serve the asynchronous I/O channels and strictly cyclic application tasks,
+which process the data and implement the control strategies. The
+communication between ISRs and tasks is done either by queues or by
+overwriting (last recent value supersedes earlier ones), that depents.
+It's a simple model, which has the advantage of being well understood,
+transparent and by nature free of dead locks. The latency times are higher
+than for consequently designed event controlled systems but they are
+predictable and have easy to determine upper bounds. Last but not least,
+software design can determine the upper bounds by choosing appropriate
+cycle times.
 
 ==== The operating system clock
 
@@ -164,7 +176,7 @@ application itself. It can install any kind of interrupt source with a
 handler function. If the interrupt source is a cyclically firing timer
 device then the handler function becomes a new, cyclic task. For example,
 there are three PID timers left. The disadvantage of this trick is that
-any further task occupies a interrupt capable (timer) device.
+each further task occupies an interrupt capable (timer) device.
 
 ==== Priority and sub-ordinated priority
 
@@ -188,7 +200,7 @@ are executed sequentially, i.e. one after another. This introduces a kind
 of sub-ordinated priority, which determines the order of execution in this
 situation. This sub-ordinated priority is hard-wired in the MCU and
 there's no software handle to change it. The interrupt number, which is an
-argument in the call to `ihw_installINTCInterruptHandler()`, is the
+argument to the call to `ihw_installINTCInterruptHandler()`, is the
 inverted priority; the higher the interrupt number, the lower this
 sub-ordinated priority.
 
@@ -345,7 +357,7 @@ for details.
 The RTOS offers an API for using it. This API is an extension to the
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
 offered by the startup code] and which is still required, too. This
-section outline, which functions are available and how to use them.
+section outlines, which functions are available and how to use them.
 Detailed information is found as
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/RTOS/code/RTOS/rtos.c[source
 code] comments.
@@ -406,10 +418,10 @@ yet completed the previous activation.
 
 A cheap method of inhibiting other tasks from accessing same shared
 resources (mostly data objects in RAM) at the same time is the priority
-ceiling protocol. The currently running task is given a new, higher
-priority and all other tasks of same or lower priority will surely not
-become running. There's a function to raise and another one to restore the
-original priority:
+ceiling protocol. The currently running task is temporarily given a new,
+higher priority and all other tasks of same or lower priority will surely
+not become running. There's a function to raise and another one to restore
+the original priority:
 
     #include "rtos.h"
     uint32_t rtos_suspendAllInterruptsByPriority
@@ -417,6 +429,9 @@ original priority:
 
     void rtos_resumeAllInterruptsByPriority
                   (uint32_t resumeDownToThisPriority)
+
+The source code comments of these functions explains them much more in
+detail.
 
 See API of startup code for more functions for mutual exclusion.
 
