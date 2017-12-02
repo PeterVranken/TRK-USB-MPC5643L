@@ -41,10 +41,6 @@
  * Local functions
  */
 
-#ifdef __VLE__
-# error This file is intended for compilation for Book E instruction set only
-#endif
-
 /*
  * Include files
  */
@@ -85,6 +81,29 @@
     .global f2d
     .type   f2d, @function
 f2d:
+#ifdef __VLE__
+
+    e_stwu  sp, -16(sp)     /* Create stack frame */
+    mflr    r0              /* Save return address in local stack space */
+    se_stw  r0, 20(sp)
+    
+    /* Call the required function in the library. The effect results from a basic error: We
+       don't have a suiting library, which has been compiled with the same settings as our
+       own code. We use short double, all data which would be double in C is actually
+       computed and stores as float. Since we don't have a library using this switch, many
+       library function still expect or return true 64 Bit values although they will always
+       interface with 32 Bit pseudo double values from our code compilation. Normally this
+       leads to bad results, here it is the wanted effect: we get a real 64 Bit value
+       back in r3/r4. */
+    e_bl    __extendsfdf2
+
+    se_lwz  r0, 20(sp)      /* Load return address back into linkr register */
+    mtlr    r0
+    e_la    sp, 16(sp)      /* Delete stack frame */
+    se_blr                  /* Return */
+    
+#else /* Book E */
+
     stwu    sp, -16(sp)     /* Create stack frame */
     mflr    r0              /* Save return address in local stack space */
     stw     r0, 20(sp)
@@ -103,6 +122,8 @@ f2d:
     mtlr    r0
     la      sp, 16(sp)      /* Delete stack frame */
     blr                     /* Return */
+
+#endif
 
     .size   f2d, .-f2d
 /* End of f2d */
