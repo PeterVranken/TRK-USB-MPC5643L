@@ -71,7 +71,7 @@ the anyway needed startup code from the other samples.
   footnote:[The footprint with respect to RAM and ROM consumption could even
 be lowered by replacing the runtime task configuration with application
 specific #define's and compile-time initialized constant data structures.
-This has not been done for sake of readability and ease of reuse of the
+This has not been done for sake of readability and ease of use of the
 RTOS.]
 
 With this number of lines of code our RTOS is likely one of the shortest
@@ -88,7 +88,7 @@ an according kernel.
 
 === The kernel operation
 
-Like for an OSEK/VDX BCC1 system, a task is activated, executed and
+Like for an OSEK/VDX BCC system, a task is activated, executed and
 eventually terminated. The activation can be done periodically or event
 triggered. The event can be sent by another task or an ISR. A task can
 however not prematurely suspend and it doesn't know blocking states in
@@ -156,9 +156,9 @@ supported in hardware by the INTC and the application tasks are in fact
 the ISRs of these interrupts.
 
 The equivalence of ISRs and tasks distinguishes this RTOS from most others
-and it makes it even simpler in use. All API function of the RTOS can be
+and it makes it even simpler in use. All API functions of the RTOS can be
 invoked from tasks and from ISRs. The priority relationship between ISRs
-and tasks is purely a matter of software design; unlike for most RTOS, can
+and tasks is only a matter of software design; unlike for most RTOS, can
 a task share the priority with an interrupt or can it have a higher
 priority than an interrupt.
 
@@ -312,8 +312,8 @@ sample "RTOS". Type:
     mingw32-make -s build 
     mingw32-make -s build CONFIG=PRODUCTION
 
-to produce the flashable files (`bin\ppc\DEBUG\TRK-USB-MPC5643L-RTOS.elf`
-and `bin\ppc\PRODUCTION\TRK-USB-MPC5643L-RTOS.elf`).
+to produce the flashable files `bin\ppc\DEBUG\TRK-USB-MPC5643L-RTOS.elf`
+and `bin\ppc\PRODUCTION\TRK-USB-MPC5643L-RTOS.elf`.
 
 NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
 port will fail with obscure, misleading error messages. It's safe to use

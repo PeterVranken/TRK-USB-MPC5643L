@@ -224,7 +224,7 @@ TASK(7)
  * and these are activated by this routine when they become due. All the rest is done by
  * the interrupt controller INTC.
  */
-static void osTimerTick()
+static void osTimerTick(void)
 {
     /* Note, the scheduler function is run at highest priority, which means that no task or
        ISR can preempt this code. No mutual exclusion code is required. */
