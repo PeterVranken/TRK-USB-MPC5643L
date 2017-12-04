@@ -1,7 +1,7 @@
 /**
  * @file gsl_systemLoad.c
- *   Measure the current CPU load of the application. A support function for the
- * use with the PowerPC RTOS.
+ *   Measure the current CPU load produced by the application code. A support function for
+ * the use with the PowerPC RTOS.
  *   @see uint8_t gsl_getSystemLoad(void)
  *
  * This file is an adoption from the Arduino RTOS RTuinOS. The original file has been
@@ -9,9 +9,10 @@
  * on Nov 15, 2017.
  *   The major difference of this implementation to the original RTuinOS source is the
  * change to the native 32 Bit data type for the calculations. The Arduino function
- * delayMicroseconds() has been replaced by the PowerPC substitute delay100Milliseconds().
+ * delayMicroseconds() has been replaced by the PowerPC substitute
+ * del_delay100Milliseconds().
  *
- * Copyright (C) 2012 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2012-2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -39,6 +40,7 @@
 
 #include "typ_types.h"
 #include "ihw_initMcuCoreHW.h"
+#include "del_delay.h"
 #include "gsl_systemLoad.h"
 
 
@@ -89,58 +91,6 @@ static uint32_t gsl_tiCalResult[32];
  */
 
 /**
- * This function does nothing but consumes exactely 100ms of CPU execution time before it
- * returns. The CPU load is measured by comparing these 100ms with the world time which
- * elapses until return. If this function is called from the idle task then the resting
- * time is CPU load in the sense of the CPU executing application or RTOS kernel code.
- *   @remark The implementation is done in assembler in order to keep the execution time
- * independent of the compiler's optimization settings; particularly the compile
- * configuration DEBUG/PRODUCTION.
- */
-static inline void delay100Milliseconds()
-{
-#if defined(__GNUC__) && defined(__PPC__)
-
-# ifdef __VLE__
-#  define NO_CYCLES "1999999"
-# else
-#  define NO_CYCLES "1333333"
-# endif
-
-    /* See https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html */
-# ifdef __VLE__
-    asm volatile ( /* AssemblerTemplate */
-                   "e_lis   %[cnt], "NO_CYCLES"@h\n\t"
-                   "e_or2i  %[cnt], "NO_CYCLES"@l\n"
-                   "loopDelay100MilliSeconds:\n\t"
-                   "e_add2i. %[cnt], -1\n\t"
-                   "se_bne  loopDelay100MilliSeconds\n"
-                 : /* OutputOperands */
-                 : /* InputOperands */ [cnt] "r" (0)
-                 : /* Clobbers */ "cr0"
-                 );
-# else
-    asm volatile ( /* AssemblerTemplate */
-                   "lis     %[cnt], "NO_CYCLES"@h\n\t"
-                   "ori     %[cnt], %[cnt], "NO_CYCLES"@l\n"
-                   "loopDelay100MilliSeconds:\n\t"
-                   "addi    %[cnt], %[cnt], -1\n\t"
-                   "cmpwi   cr7, %[cnt], 0\n\t"
-                   "bne+    cr7, loopDelay100MilliSeconds\n"
-                 : /* OutputOperands */
-                 : /* InputOperands */ [cnt] "r" (0)
-                 : /* Clobbers */ "cr7"
-                 );
-# endif
-# undef NO_CYCLES
-#else
-# error Implementation does not support your compiler or platform
-#endif
-} /* End of delay100Milliseconds */
-
-
-
-/**
  * A diagnostic function, which can be used to estimate the current system load. The
  * function executes some test code of known CPU execution time and relates this known time
  * to the measured, actually elapsed world time. The function needs to be called from the
@@ -174,7 +124,7 @@ unsigned int gsl_getSystemLoad()
 {
     unsigned int step = 0;
     uint64_t tiEnd;
-    uint64_t tiStart = __builtin_ppc_get_timebase();
+    uint64_t tiStart = GSL_PPC_GET_TIMEBASE();
     uint64_t tiEndMin = tiStart + TI_WINDOW_LEN_MS*120000ull;
     
 #if MODULE_CALIBRATION_MODE == 1
@@ -191,14 +141,14 @@ unsigned int gsl_getSystemLoad()
 
 #if MODULE_CALIBRATION_MODE == 1
         uint32_t msr = ihw_enterCriticalSection();
-        uint64_t tiDelayTimeAct = __builtin_ppc_get_timebase();
+        uint64_t tiDelayTimeAct = GSL_PPC_GET_TIMEBASE();
 #endif
         /* One step is exactly 100 ms of code execution time - regardless of how long this
            will take because of interruptions by ISRs and other tasks. */
-        delay100Milliseconds();
+        del_delay100Milliseconds();
 
 #if MODULE_CALIBRATION_MODE == 1
-        uint64_t tiDelayTimeEnd = __builtin_ppc_get_timebase();
+        uint64_t tiDelayTimeEnd = GSL_PPC_GET_TIMEBASE();
         ihw_leaveCriticalSection(msr);
         
         tiDelayTimeAct = tiDelayTimeEnd - tiDelayTimeAct;
@@ -208,7 +158,7 @@ unsigned int gsl_getSystemLoad()
         idxCalResult_ = (idxCalResult_+1) % sizeOfAry(gsl_tiCalResult);
 #endif
 
-        tiEnd = __builtin_ppc_get_timebase();
+        tiEnd = GSL_PPC_GET_TIMEBASE();
     }
     while(tiEnd < tiEndMin);
     

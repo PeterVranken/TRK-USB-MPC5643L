@@ -27,10 +27,17 @@
  * Include files
  */
 
+#include <stdint.h>
 
 /*
  * Defines
  */
+
+#ifdef __VLE__
+# define GSL_PPC_GET_TIMEBASE() gsl_ppc_get_timebase()
+#else
+# define GSL_PPC_GET_TIMEBASE() __builtin_ppc_get_timebase()
+#endif
 
 
 /*
@@ -41,6 +48,43 @@
 /*
  * Global data declarations
  */
+
+
+/*
+ * Global inline functions
+ */
+
+#ifdef __VLE__
+/**
+ * Return the world time since power up in units of CPU clock ticks. This function is a
+ * substitute for the GCC builtin \a __builtin_ppc_get_timebase(), which fails to compile
+ * with MinGW-powerpc-eabivle-4.9.4.
+ *   @return Get the world time elapsed since power up in units of 8.333... ns; our startup
+ * code configures the CPU clock frequency to 120 Mhz=1/(8+1/3)ns.
+ *   @remark
+ * The function is compiled only in VLE mode, use \a __builtin_ppc_get_timebase() instead
+ * in Book E applications.
+ */
+static inline uint64_t gsl_ppc_get_timebase()
+{
+    uint32_t TBU, TBU2nd, TBL;
+    while(true)
+    {
+        asm volatile ( /* AssemblerTemplate */
+                       "mfspr %0, 269\n\r" // SPR 269 = TBU
+                       "mfspr %2, 268\n\r" // SPR 268 = TBL
+                       "mfspr %1, 269\n\r" // SPR 269 = TBU
+                     : /* OutputOperands */ "=r" (TBU),  "=r" (TBU2nd), "=r" (TBL)
+                     : /* InputOperands */
+                     : /* Clobbers */
+                     );
+        if(TBU == TBU2nd)
+            break;
+    }
+    return ((uint64_t)TBU << 32) | TBL;
+    
+} /* End of gsl_ppc_get_timebase */
+#endif
 
 
 /*

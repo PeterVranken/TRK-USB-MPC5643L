@@ -24,7 +24,8 @@ toolsSearchPath := $(subst ;, ,$(call w2u,$(PATH)))
 else
 toolsSearchPath := $(subst :, ,$(PATH))
 endif
-toolsSearchPath := $(GCC_POWERPC_HOME) $(toolsSearchPath)
+toolsSearchPath := $(call trailingSlash,$(GCC_POWERPC_HOME))bin $(toolsSearchPath)
+toolsSearchPath := $(call w2u,$(toolsSearchPath))
 #$(info Search path for external tools: $(toolsSearchPath))
 
 # Under Windows we have to look for gcc.exe rather than for gcc.
