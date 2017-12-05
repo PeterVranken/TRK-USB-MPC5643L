@@ -72,8 +72,8 @@ name:
 /* function, just beyond the end of the integer save area.  */
 
 /// @todo This is a naive migration of the original Book E file to VLE. We should instead
-// use the multiple register store and load instructions, which are effectively emulated
-// by all of this code
+// use the multiple register store (e_stmw) and load instructions, which are effectively
+// emulated by all of this code
 
 _GLOBAL(_savegpr_14)
 _GLOBAL(_save32gpr_14)

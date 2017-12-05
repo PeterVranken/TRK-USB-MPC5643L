@@ -239,7 +239,6 @@ the application may use them.
 The RTOS implementation is not specific to one of the instruction sets.
 The sample uses the Book E environment but `mai_main.c` and the RTOS
 itself can be compiled and run with the VLE startup code, too.
-  footnote:[As of writing, Nov 2017, this has not been proven yet.]
 
 == Tools
 

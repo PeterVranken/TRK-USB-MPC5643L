@@ -79,7 +79,7 @@
     all bytes of the last recently initiated transfer are sent.
       @remark The chosen priority needs to be greater or equal than the priority of any
     context, that makes use of the API functions of this module. */
-#define INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT     1
+#define INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT     5
 
 /** The interrupt priority for serial input. The interrupt is requested by the UART when
     another byte has been received.
@@ -87,7 +87,7 @@
     context, that makes use of the API functions of this module.
       @remark Because of the larger UART buffer applied for serial output, this priority
     should normally be chosen higher than #INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT. */
-#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     2
+#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     6
 
 /** The size of the ring buffer for serial output can be chosen as a power of two of bytes.
       @remark Note, the permitted range of values depends on the reservation of space made

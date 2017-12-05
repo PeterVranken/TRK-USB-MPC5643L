@@ -83,6 +83,7 @@
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"
 #include "RTOS.h"
+#include "del_delay.h"
 #include "gsl_systemLoad.h"
 #include "mai_main.h"
 
@@ -90,6 +91,10 @@
 /*
  * Defines
  */
+
+/** The demo can be compiled with a ground load. Most tasks produce some CPU load if this
+    switch is set to 1. */
+#define TASKS_PRODUCE_GROUND_LOAD   0
 
 /** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
     for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
@@ -194,7 +199,7 @@ volatile unsigned long long _cntAllTasks = 0;
 /** A cycle counter for each task. The last entry is meant for the idle task. */
 volatile unsigned long long _cntTaskAry[noTasks+1] = {[0 ... noTasks] = 0};
 
-volatile unsigned long mai_cntIdle = 0      /** Counter of cycles of infinite main loop. */
+volatile unsigned long mai_cntTaskIdle = 0  /** Counter of cycles of infinite main loop. */
                      , mai_cntTask1ms = 0   /** Counter of cyclic task. */
                      , mai_cntTask3ms = 0   /** Counter of cyclic task. */
                      , mai_cntTask1s = 0    /** Counter of cyclic task. */
@@ -394,34 +399,10 @@ static void testPCP(unsigned int idTask)
 
 
 /**
- * This function produces some CPU load for testing. A busy loop is executed for a give
- * duration. Note, this does not necessarily mean a 100% of load during this time span; a
- * task calling this function can be preempted and the time would elapse without the task
- * producing load.
- *   @param fullLoadThisNoMicroseconds
- * The duration in us during which the busy loop is executed. The function returns after
- * about this time, regardless whether it had produced load or whether it had mostly been
- * preempted.
- */
-static void produceLoad(unsigned int fullLoadThisNoMicroseconds)
-{
-    /* The factor 120 is required to consider the unit of __builtin_ppc_get_timebase(),
-       which is the CPU clock tick. */
-    const uint64_t tiEnd = __builtin_ppc_get_timebase() + fullLoadThisNoMicroseconds*120;
-
-    /* Busy loop. Note, preemption is possible, which effectively lowers the additional CPU
-       load, this loop produces. The higher the system load, the more grows this effect. */
-    while(__builtin_ppc_get_timebase() < tiEnd)
-        ;
-} /* End of produceLoad */
-
-
-
-/**
  * Task function, cyclically activated every Millisecond. The LED D4 is switched on and off
  * and the button SW3 is read and evaluated.
  */
-static void task1ms()
+static void task1ms(void)
 {
     checkAndIncrementTaskCnts(idTask1ms);
     testPCP(idTask1ms);
@@ -430,7 +411,7 @@ static void task1ms()
 
     /* Activate the non cyclic task.
          Note, the non cyclic task is of higher priority than this task and it'll be
-       executed immediatly, preempting this task. The second activation below, on button
+       executed immediately, preempting this task. The second activation below, on button
        down must not lead to an activation loss.
          Note, activating one and the same task from different contexts requires a critical
        section. */
@@ -440,9 +421,11 @@ static void task1ms()
     }
     ReleaseResource();
 
+#if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
-    produceLoad(/* fullLoadThisNoMicroseconds */ 50 /* approx. 5% load */);
-    
+    del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ 50 /* approx. 5% load */);
+#endif    
+
     /* Read the current button status to possibly toggle the LED colors. */
     static bool lastStateButton_ = false;
     if(lbd_getButton(lbd_bt_button_SW3))
@@ -504,13 +487,15 @@ static void task1ms()
 /**
  * Task function, cyclically activated every 3ms.
  */
-static void task3ms()
+static void task3ms(void)
 {
     checkAndIncrementTaskCnts(idTask3ms);
     ++ mai_cntTask3ms;
 
+#if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
-    produceLoad(/* fullLoadThisNoMicroseconds */ 150 /* approx. 5% load */);
+    del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ 150 /* approx. 5% load */);
+#endif    
     
 } /* End of task3ms */
 
@@ -519,7 +504,7 @@ static void task3ms()
 /**
  * Task function, cyclically activated every second.
  */
-static void task1s()
+static void task1s(void)
 {
     checkAndIncrementTaskCnts(idTask1s);
 
@@ -530,12 +515,41 @@ static void task1s()
         cntIsOn_ = -1;
     lbd_setLED(_ledTask1s, /* isOn */ cntIsOn_ >= 0);
 
+#if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software.
          Note, the cyclic task taskCpuLoad has a period time of 23 ms and it has the same
        priority as this task. Because of the busy loop here and because the faster task
        itself has a non negligible execution time, there's a significant chance of loosing
        an activation of the faster task once a second. */
-    produceLoad(/* fullLoadThisNoMicroseconds */ 20000 /* approx. 2% load */);
+    del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ 20000 /* approx. 2% load */);
+#endif    
+
+    /* Simple code: First calculation of time to print is wrong. */
+    static unsigned long tiPrintf = 0;
+    unsigned long long tiFrom = GSL_PPC_GET_TIMEBASE();
+    iprintf( "CPU load is %u.%u%%. Stack reserve: %u Byte. Task activations (lost):\r\n"
+             "  task1ms: %lu (%u)\r\n"
+             "  task3ms: %lu (%u)\r\n"
+             "  task1s: %lu (%u)\r\n"
+             "  taskNonCyclic: %lu (%u)\r\n"
+             "  task17ms: %lu (%u)\r\n"
+             "  taskOnButtonDown: %lu (%u)\r\n"
+             "  taskCpuLoad: %lu (%u)\r\n"
+             "  taskIdle: %lu\r\n"
+             "  tiPrintf = %luus\r\n"
+           , mai_cpuLoad/10, mai_cpuLoad%10
+           , rtos_getStackReserve()
+           , mai_cntTask1ms, rtos_getNoActivationLoss(idTask1ms)
+           , mai_cntTask3ms, rtos_getNoActivationLoss(idTask3ms)
+           , mai_cntTask1s, rtos_getNoActivationLoss(idTask1s)
+           , mai_cntTaskNonCyclic, rtos_getNoActivationLoss(idTaskNonCyclic)
+           , mai_cntTask17ms, rtos_getNoActivationLoss(idTask17ms)
+           , mai_cntTaskOnButtonDown, rtos_getNoActivationLoss(idTaskOnButtonDown)
+           , mai_cntTaskCpuLoad, rtos_getNoActivationLoss(idTaskCpuLoad)
+           , mai_cntTaskIdle
+           , tiPrintf
+           );
+    tiPrintf = (unsigned long)(GSL_PPC_GET_TIMEBASE() - tiFrom) / 120;
 
 } /* End of task1s */
 
@@ -544,7 +558,7 @@ static void task1s()
 /**
  * A non cyclic task, which is solely activated by software triggers from other tasks.
  */
-static void taskNonCyclic()
+static void taskNonCyclic(void)
 {
     checkAndIncrementTaskCnts(idTaskNonCyclic);
     ++ mai_cntTaskNonCyclic;
@@ -556,7 +570,7 @@ static void taskNonCyclic()
 /**
  * Task function, cyclically activated every 17ms.
  */
-static void task17ms()
+static void task17ms(void)
 {
     checkAndIncrementTaskCnts(idTask17ms);
     ++ mai_cntTask17ms;
@@ -576,8 +590,10 @@ static void task17ms()
     }
     ReleaseResource();
 
+#if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
-    produceLoad(/* fullLoadThisNoMicroseconds */ 17*50 /* approx. 5% load */);
+    del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ 17*40 /* approx. 4% load */);
+#endif    
     
     /* A task can't activate itself, we do not queue activations and it's obviously active
        at the moment. Test it. */
@@ -595,7 +611,7 @@ static void task17ms()
  * A non cyclic task, which is activated by software trigger every time the button on the
  * evaluation board is pressed.
  */
-static void taskOnButtonDown()
+static void taskOnButtonDown(void)
 {
     checkAndIncrementTaskCnts(idTaskOnButtonDown);
     ++ mai_cntTaskOnButtonDown;
@@ -620,7 +636,7 @@ static void taskOnButtonDown()
  * observation window, which compensates for the effect of the discontinuous observation
  * window.
  */
-static void taskCpuLoad()
+static void taskCpuLoad(void)
 {
     checkAndIncrementTaskCnts(idTaskCpuLoad);
     testPCP(idTaskCpuLoad);
@@ -635,7 +651,7 @@ static void taskCpuLoad()
                                      * 1000 /* ms to us to improve resolution */
                                      * _cpuLoadInPercent
                                      / 100;
-    produceLoad(/* fullLoadThisNoMicroseconds */ tiDelayInUs);
+    del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ tiDelayInUs);
 
 } /* End of taskCpuLoad */
 
@@ -647,7 +663,7 @@ static void taskCpuLoad()
  * its return code definition it must never be left. (Returning from main would enter an
  * infinite loop in the calling assembler startup code.)
  */
-void main()
+void main(void)
 {
     /* The first operation of the main function is the call of ihw_initMcuCoreHW(). The
        assembler implemented startup code has brought the MCU in a preliminary working
@@ -781,9 +797,11 @@ void main()
     {
         checkAndIncrementTaskCnts(pseudoIdTaskIdle);
         testPCP(pseudoIdTaskIdle);
-        ++ mai_cntIdle;
+        ++ mai_cntTaskIdle;
 
-        /* Activate the non cyclic task. */
+        /* Activate the non cyclic task. Note, the execution time of this task activation
+           will by principle not be considered by the CPU load measurement started from the
+           same task (the idle task). */
 #ifdef DEBUG
         bool bActivationAccepted =
 #endif
@@ -795,25 +813,7 @@ void main()
            measures only the load produced by the tasks and system interrupts but not that
            of the rest of the code in the idle loop. */
         mai_cpuLoad = gsl_getSystemLoad();
-        iprintf( "CPU load is %u.%u%%. Stack reserve: %u Byte. Failed task activations:\r\n"
-                 "  task1ms: %u\r\n"
-                 "  task3ms: %u\r\n"
-                 "  task1s: %u\r\n"
-                 "  taskNonCyclic: %u\r\n"
-                 "  task17ms: %u\r\n"
-                 "  taskOnButtonDown: %u\r\n"
-                 "  taskCpuLoad: %u\r\n"
-               , mai_cpuLoad/10, mai_cpuLoad%10
-               , rtos_getStackReserve()
-               , rtos_getNoActivationLoss(idTask1ms)
-               , rtos_getNoActivationLoss(idTask3ms)
-               , rtos_getNoActivationLoss(idTask1s)
-               , rtos_getNoActivationLoss(idTaskNonCyclic)
-               , rtos_getNoActivationLoss(idTask17ms)
-               , rtos_getNoActivationLoss(idTaskOnButtonDown)
-               , rtos_getNoActivationLoss(idTaskCpuLoad)
-               );
-      
+
         /* In PRODUCTION compilation we print the inconsistencies found in the PCP test. */
         if(_sharedDataTasksIdleAnd1msAndCpuLoad.noErrors != 0)
         {

@@ -376,17 +376,7 @@ initExceptionHandlers:
     e_li    r0, sup_IVOR3trap@l
     mtspr   403, r0     /* IVOR3 Instruction storage */
     
-/// @todo Find out why the next load fails to get the right address if code is not in boot
-// sector:
-// e_li    r0, int_INTCInterruptHandler@l
-// doesn't work depending on address, okay if int_INTCInterruptHandler is in boot sector,
-// not if behind. The next statements substitute the short form by using the full address
-// (and shifting). The Book E specification explains @l to be the lower 16 Bit of the word,
-// normally used signed extended. e_li seems to take a 17 Bit signed operand. We would
-// expect no problem but it doesn't work. Does VLE define @l differently?
-//   The other traps are handled correct. Maybe because it are locally defined symbols,
-// the distance is known at compile time and another reclocation entry can be used.
-    e_lis    r0, int_INTCInterruptHandler@ha
+    e_lis   r0, int_INTCInterruptHandler@ha
     e_la    r0, int_INTCInterruptHandler@l(r0)
     e_rlwinm r0, r0, 0, 16, 31
 
@@ -964,8 +954,8 @@ zeroizeSRAM:
     se_li   r28, 0
 
 zreg_loop:
-    /* ECC SRAM must be initialized with 64-bit writes, hence stmw;
-     * 16-btye alignment should work always */
+    /* ECC SRAM must be initialized with 64-bit writes, hence stmw; 16-btye alignment
+       should work always */
     e_stmw  r28, 0(r8)      /* Write registers 28-31 thus 16 Byte */
     e_la    r8, 16(r8)
     e_bdnz  zreg_loop

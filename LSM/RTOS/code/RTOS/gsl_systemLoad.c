@@ -6,11 +6,10 @@
  *
  * This file is an adoption from the Arduino RTOS RTuinOS. The original file has been
  * downloaded from https://svn.code.sf.net/p/rtuinos/code/trunk/code/RTOS/gsl_systemLoad.c
- * on Nov 15, 2017.
+ * on Nov 15, 2017.\n
  *   The major difference of this implementation to the original RTuinOS source is the
  * change to the native 32 Bit data type for the calculations. The Arduino function
- * delayMicroseconds() has been replaced by the PowerPC substitute
- * del_delay100Milliseconds().
+ * delayMicroseconds() has been replaced by the PowerPC substitute del_delayMicroseconds().
  *
  * Copyright (C) 2012-2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -59,8 +58,10 @@
 
 /** Averaging time window of gsl_getSystemLoad(void) in ms. The window should contain a full
     cycle of tasks activations. To avoid integer overflows, the window size must be no more
-    than 30s. */
-#define TI_WINDOW_LEN_MS    1000ul
+    than 30s. We prefer a prime number to get most likely a sliding window with respect to
+    the typical RTOS configurations with their regular tasks as multiples of a Millisecond
+    (better average). */
+#define TI_WINDOW_LEN_MS    1493ul
  
 
 /*
@@ -145,7 +146,7 @@ unsigned int gsl_getSystemLoad()
 #endif
         /* One step is exactly 100 ms of code execution time - regardless of how long this
            will take because of interruptions by ISRs and other tasks. */
-        del_delay100Milliseconds();
+        del_delayMicroseconds(100000);
 
 #if MODULE_CALIBRATION_MODE == 1
         uint64_t tiDelayTimeEnd = GSL_PPC_GET_TIMEBASE();
