@@ -139,21 +139,12 @@ int_INTCInterruptHandlerAry:
     .align  4
 int_INTCInterruptHandler:
 
-int_prolog:
-    e_stwu  sp, -0x50(sp)       /* Create stack frame */
+    e_stwu  sp, -80(sp)         /* Create stack frame */
     
-    /* Store locally needed working registers. */
-    se_stw  r0, 0x24(sp)
-    mfcr    r0                  /* Store CR */
-    se_stw  r0, 0x20(sp)
-    se_stw  r3, 0x28(sp)        /* Store r3 to work with */
-    se_stw  r4, 0x2c(sp)        /* Store r4 to work with */
-    
-    /* Save SRR0 and SRR1 */
-    mfsrr0  r0                  /* Store SRR0 (before enabling EE) */
-    se_stw  r0, 0x0c(sp)
-    mfsrr1  r0                  /* Store SRR1 (before enabling EE) */
-    se_stw  r0, 0x10(sp)
+    /* Store all GPRegisters and SPR, which are volatile according to the EABI. */
+    e_stmvgprw  8(sp)           /* r0, r3-r12: 11*4 Byte */
+    e_stmvsprw  52(sp)          /* CR, LR, CTR, XER: 4*4 Byte */
+    e_stmvsrrw  68(sp)          /* SRR0/SRR1: 2*4 Byte */
 
     /* Clear request to processor; r3 contains the address of the ISR */
     e_lis   r3, INTC_IACKR_PRC0@ha      /* Read pointer into ISR Vector Table
@@ -192,47 +183,16 @@ int_endIfPreemptable:
     e_or2is r4, 0x0202
     e_or2i  r4, 0x1000
 
-    mtmsr   r4
-
-    /* Save rest of context required by EABI */
-    e_stw   r12, 0x4c(sp)       /* Store r12 */
-    e_stw   r11, 0x48(sp)       /* Store r11 */
-    e_stw   r10, 0x44(sp)       /* Store r10 */
-    e_stw   r9, 0x40(sp)        /* Store r9 */
-    e_stw   r8, 0x3c(sp)        /* Store r8 */
-    se_stw  r7, 0x38(sp)        /* Store r7 */
-    se_stw  r6, 0x34(sp)        /* Store r6 */
-    se_stw  r5, 0x30(sp)        /* Store r5 */
-    mfxer   r0                  /* Store XER */
-    se_stw  r0, 0x1c(sp)
-    mfctr   r0                  /* Store CTR */
-    se_stw  r0, 0x18(sp)
-    mflr    r0                  /* Store LR */
-    se_stw  r0, 0x14(sp)
+    mtmsr   r4          /* From here, other external interrupts can be enabled again. */
 
     /* Branch to ISR handler address from SW vector table */
     mtlr    r3                  /* Store ISR address to LR */
     se_blrl                     /* Branch to ISR, but return here */
 
-int_epilog:
-    /* Restore context required by EABI (except still used working registers) */
-    se_lwz  r0, 0x14(sp)        /* Restore LR */
-    mtlr    r0
-    se_lwz  r0, 0x18(sp)        /* Restore CTR */
-    mtctr   r0
-    se_lwz  r0, 0x1c(sp)        /* Restore XER */
-    mtxer   r0
-    se_lwz  r0, 0x20(sp)        /* Restore CR */
-    mtcr    r0
-    se_lwz  r5, 0x30(sp)        /* Restore r5 */
-    se_lwz  r6, 0x34(sp)        /* Restore r6 */
-    se_lwz  r7, 0x38(sp)        /* Restore r7 */
-    e_lwz   r8, 0x3c(sp)        /* Restore r8 */
-    e_lwz   r9, 0x40(sp)        /* Restore r9 */
-    e_lwz   r10, 0x44(sp)       /* Restore r10 */
-    e_lwz   r11, 0x48(sp)       /* Restore r11 */
-    e_lwz   r12, 0x4c(sp)       /* Restore r12 */
-
+    /* Restore those registers, which don't need interrupt lock. */
+    e_lmvsprw   52(sp)          /* CR, LR, CTR, XER: 4*4 Byte */
+    e_lmvsrrw   68(sp)          /* SRR0/SRR1: 2*4 Byte */
+    
     /* Disable processor recognition of interrupts. */
     wrteei  0
 
@@ -247,29 +207,15 @@ int_epilog:
     e_lis   r4, INTC_EOIR_PRC0@ha   /* Load upper half of INTC_EOIR address */
     e_stw   r3, INTC_EOIR_PRC0@l(r4)/* Write 0 to INTC_EOIR */
 
-    /* Restore Working Registers */
-    se_lwz  r3, 0x28(sp)        /* Restore r3 */
-    se_lwz  r4, 0x2c(sp)        /* Restore r4 */
-
-    /* Retrieve SRR0 and SRR1 */
-    se_lwz  r0, 0x0c(sp)        /* Restore SRR0 */
-    mtsrr0  r0
-    se_lwz  r0, 0x10(sp)        /* Restore SRR1 */
-    mtsrr1  r0
-
-    /* Restore remaining working register r0 */
-    se_lwz  r0,  0x24(sp)       /* Restore r0 */
+    /* Restore GPRegisters r0, r3-r12 */
+    e_lmvgprw   8(sp)           /* r0, r3-r12: 11*4 Byte */
 
     /* Restore space on stack */
-    e_la    sp, 0x50(sp)
+    e_la    sp, 80(sp)
 
     /* End of Interrupt */
     se_rfi
-
-// @todo See doc\e200zCore\EB696-NewVLEInstructionsForImprovingInterruptHandlerEfficiency.pdf:
-//    e_stmvgprw      0x24 (r1)           ;# Save GPRs, r[0,3-12]
-// Use these efficient statements
-
+    
     .size   int_INTCInterruptHandler, .-int_INTCInterruptHandler
 /* End of int_INTCInterruptHandler */
 
