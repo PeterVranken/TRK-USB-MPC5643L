@@ -189,10 +189,6 @@ int_endIfPreemptable:
     mtlr    r3                  /* Store ISR address to LR */
     se_blrl                     /* Branch to ISR, but return here */
 
-    /* Restore those registers, which don't need interrupt lock. */
-    e_lmvsprw   52(sp)          /* CR, LR, CTR, XER: 4*4 Byte */
-    e_lmvsrrw   68(sp)          /* SRR0/SRR1: 2*4 Byte */
-    
     /* Disable processor recognition of interrupts. */
     wrteei  0
 
@@ -209,11 +205,13 @@ int_endIfPreemptable:
 
     /* Restore GPRegisters r0, r3-r12 */
     e_lmvgprw   8(sp)           /* r0, r3-r12: 11*4 Byte */
+    e_lmvsprw   52(sp)          /* CR, LR, CTR, XER: 4*4 Byte */
+    e_lmvsrrw   68(sp)          /* SRR0/SRR1: 2*4 Byte */
 
-    /* Restore space on stack */
+    /* Remove the no longer needed stack frame. */
     e_la    sp, 80(sp)
 
-    /* End of Interrupt */
+    /* End of interrupt, restore MSR and PC from the SRR0/1. */
     se_rfi
     
     .size   int_INTCInterruptHandler, .-int_INTCInterruptHandler
