@@ -275,7 +275,7 @@ cFlags = $(targetFlags) -mno-string                                             
 ifeq ($(SAVE_TMP),1)
     # Debugging the build: Put preprocessed C file and assembler listing in the output
     # directory
-    cFlags += -save-temps=obj -fverbose-asm 
+    cFlags += -save-temps=obj -fverbose-asm #-dp
 endif
 ifeq ($(CONFIG),DEBUG)
     cFlags += -g3 -gdwarf-2 -Og

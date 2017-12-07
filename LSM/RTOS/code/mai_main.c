@@ -13,8 +13,13 @@
  *   An event task taskNonCyclic is activated by several other tasks under different
  * conditions. It can be observed that the activation sometime succeeds and sometime fails
  * - depending on these conditions.\n
- *   The idle task is used to report the system state, CPU load, stack usage and task
- * overrun events (more precise: failed activations).
+ *   The regular 1s task is used to report the system state, CPU load, stack usage and task
+ * overrun events (more precise: failed activations).\n
+ *   The idle task measures the CPU load.\n
+ *   Three timer interrupts fire at high speed and on a time grid, which is asynchronous to
+ * the normal application tasks. This leads to most variable preemption patterns. The
+ * interrupts do nothing but producing system load and one of them participates the
+ * software self-test (consistency check of shared data).
  *
  * The application should be run with a connected terminal. The terminal should be
  * configured for 115200 Bd, 8 Bits, no parity, 1 start and 1 stop bit.
@@ -53,6 +58,9 @@
  * Local functions
  *   checkAndIncrementTaskCnts
  *   testPCP
+ *   isrPid1
+ *   isrPid2
+ *   isrPid3
  *   task1ms
  *   task3ms
  *   task1s
@@ -60,6 +68,7 @@
  *   task17ms
  *   taskOnButtonDown
  *   taskCpuLoad
+ *   installInterruptServiceRoutines
  */
 
 /*
@@ -96,6 +105,12 @@
     switch is set to 1. */
 #define TASKS_PRODUCE_GROUND_LOAD   0
 
+/** The test of the priority ceiling protocol counts recognized errors, which are reproted
+    by console output and to the debugger. Alternatively and by setting this macro to 1,
+    the software execution can be halted on recognition of the first error. The no longer
+    blinking LEDs would indicate the problem. */
+#define HALT_ON_PSP_TEST_FAILURE    1
+
 /** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
     for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
       Here, for getting the resource, i.e. for entering a critical section of code. */
@@ -110,7 +125,7 @@
 
 /** The task counter array is accessed by all tasks. Here it is modelled as an OSEK/VDX
     like resource to be used with #GetResource and #ReleaseResource. */
-#define RESOURCE_CNT_TASK_ARY   RESOURCE_ALL_TASKS
+#define RESOURCE_CNT_TASK_ARY   (MAXP(RESOURCE_ALL_TASKS,prioISRPid1))
 
 /** The priority level to set if all tasks should be mutually excluded from accessing a
     shared resource. The macro is named such that the code resembles the resource API from
@@ -148,6 +163,8 @@
     that the order of registering the tasks follows the order here in the enumeration. */
 enum
 {
+    /** The ID of the registered application tasks. They occupy the index range starting
+        from zero. */
     idTask1ms = 0
     , idTask3ms
     , idTask1s
@@ -157,13 +174,30 @@ enum
     , idTaskCpuLoad
     
     /** The number of tasks to register. */
-    , noTasks
+    , noRegisteredTasks
 
+    /** The interrupts that are applied mainly to produce system load for testing, continue
+        the sequence of ids, so that they can share the shared data container with test
+        data. */
+    , idISRPid1 = noRegisteredTasks    
+    , idISRPid2
+    , idISRPid3
+    
+    /** The number of registered tasks and ISRs. */
+    , noRegisteredTasksAndISRs
+    
+    /** The number of ISRs. */
+    , noISRs = noRegisteredTasksAndISRs - noRegisteredTasks
+    
     /** The idle task is not a task under control of the RTOS and it doesn't have an ID.
         We assign it a pseudo task ID that is used to store some task related data in the
         same array here in this sample application as we do by true task ID for all true
         tasks. */
-    , pseudoIdTaskIdle = noTasks
+    , idTaskIdle = noRegisteredTasksAndISRs
+    
+    /** The number of all concurrent excution threads: The ISRs, the application tasks and
+        the idle task. */
+    , noExecutionContexts
 };
 
 
@@ -180,6 +214,10 @@ enum
     , prioTaskOnButtonDown = 1
     , prioTaskCpuLoad = 1
     , prioTaskIdle = 0
+    
+    , prioISRPid1 = 5
+    , prioISRPid2 = 6
+    , prioISRPid3 = 15
 };
 
 
@@ -197,7 +235,8 @@ enum
 volatile unsigned long long _cntAllTasks = 0;
 
 /** A cycle counter for each task. The last entry is meant for the idle task. */
-volatile unsigned long long _cntTaskAry[noTasks+1] = {[0 ... noTasks] = 0};
+volatile unsigned long long _cntTaskAry[noExecutionContexts] =
+                                                        {[0 ... noExecutionContexts-1] = 0};
 
 volatile unsigned long mai_cntTaskIdle = 0  /** Counter of cycles of infinite main loop. */
                      , mai_cntTask1ms = 0   /** Counter of cyclic task. */
@@ -208,9 +247,12 @@ volatile unsigned long mai_cntTaskIdle = 0  /** Counter of cycles of infinite ma
                      , mai_cntTask17ms = 0  /** Counter of cyclic task. */
                      , mai_cntTaskOnButtonDown = 0  /** Counter of button event task. */
                      , mai_cntTaskCpuLoad = 0   /** Counter of cyclic task. */
-                     , mai_cntActivationLossTaskNonCyclic = 0; /* Lost activations of non
+                     , mai_cntActivationLossTaskNonCyclic = 0  /* Lost activations of non
                                                                   cyclic task by 17ms
                                                                   cyclic task. */
+                     , mai_cntISRPid1 = 0
+                     , mai_cntISRPid2 = 0
+                     , mai_cntISRPid3 = 0;
 
 /** The color currently used by the interrupt handlers are controlled through selection of
     a pin. The selection is made by global variable. Here for D5. */
@@ -286,7 +328,7 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
 
     /* Get all task counters and the common counter in an atomic operation. Now, we apply
        another offered mechanism for mutual exclusion of tasks. */
-    unsigned long long cntTaskAryCpy[noTasks+1]
+    unsigned long long cntTaskAryCpy[noExecutionContexts]
                      , cntAllTasksCpy;
     _Static_assert(sizeof(_cntTaskAry) == sizeof(cntTaskAryCpy), "Bad data definition");
     const uint32_t msr = ihw_enterCriticalSection();
@@ -298,9 +340,20 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
 
     /* Check consistency of got data. +1: The last entry is meant for the idle task. */
     unsigned int u;
-    for(u=0; u<noTasks+1; ++u)
+    for(u=0; u<noExecutionContexts; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
+#ifdef DEBUG
     assert(cntAllTasksCpy == 0);
+#else
+    /* PRODUCTION compilation: Code execution is halted, LEDs stop blinking as indication
+       of a severe problem. */
+    if(cntAllTasksCpy != 0)
+    {
+        ihw_suspendAllInterrupts();
+        while(true)
+            ;
+    }
+#endif
 
     /* Get all task counters and the common counter again in an atomic operation. Now, we
        apply the third offered mechanism for mutual exclusion of tasks to include it into
@@ -315,10 +368,18 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
     ihw_resumeAllInterrupts();
 
     /* Check consistency of got data. +1: The last entry is meant for the idle task. */
-    for(u=0; u<noTasks+1; ++u)
+    for(u=0; u<noExecutionContexts; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
+#ifdef DEBUG
     assert(cntAllTasksCpy == 0);
-
+#else
+    if(cntAllTasksCpy != 0)
+    {
+        ihw_suspendAllInterrupts();
+        while(true)
+            ;
+    }
+#endif
 } /* End of checkAndIncrementTaskCnts. */
 
 
@@ -335,7 +396,7 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
 static void testPCP(unsigned int idTask)
 {
     /* Increment task related counter and shared counter in an atomic operation. */
-    if(idTask == pseudoIdTaskIdle)
+    if(idTask == idTaskIdle)
     {
         GetResource(RESOURCE_TEST_PCP);
         {
@@ -368,7 +429,13 @@ static void testPCP(unsigned int idTask)
     else
     {
         /* This function is intended only for a sub-set of tasks. */
+#ifdef DEBUG
         assert(false);
+# else
+        ihw_suspendAllInterrupts();
+        while(true)
+            ;
+#endif
     }
 
     /* Validate the consistency of the redundant data in an atomic operation. */
@@ -386,15 +453,73 @@ static void testPCP(unsigned int idTask)
             if(noErr > 0)
                 _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors = noErr;
            
-            /* The application is halted in DEBUG compilation. This makes the error
-               observable without connected terminal. */
+            /* On desire, the application is halted. This makes the error observable
+               without connected terminal. */
+#if HALT_ON_PSP_TEST_FAILURE == 1
+# ifdef DEBUG
             assert(false);
+# else
+            ihw_suspendAllInterrupts();
+            while(true)
+                ;
+# endif
+#endif
         }
     }
     ReleaseResource();
 
 } /* End of testPCP. */
 
+
+
+/**
+ * A regularly triggered interrupt handler for the timer PID1. The interrupt does nothing
+ * but counting a variable. The ISR participates the test of safely sharing data with the
+ * application tasks. It is triggered at medium frequency and asynchronously to the
+ * kernel's clock tick to prove the system stability and properness of the context
+ * switches.
+ */
+static void isrPid1()
+{
+    checkAndIncrementTaskCnts(idISRPid1);
+    ++ mai_cntISRPid1;
+    
+    /* Acknowledge the interrupt in the causing HW device. */
+    PIT.TFLG1.B.TIF = 0x1;
+
+} /* End of isrPid1 */
+
+
+
+/**
+ * A regularly triggered interrupt handler for the timer PID2. The interrupt does nothing
+ * but counting a variable. It is triggered at high frequency and asynchronously to the
+ * kernel's clock tick to prove the system stability and properness of the context switches.
+ */
+static void isrPid2()
+{
+    ++ mai_cntISRPid2;
+    
+    /* Acknowledge the interrupt in the causing HW device. */
+    PIT.TFLG2.B.TIF = 0x1;
+
+} /* End of isrPid2 */
+
+
+
+/**
+ * A regularly triggered interrupt handler for the timer PID3. The interrupt does nothing
+ * but counting a variable. It is triggered at high frequency and asynchronously to the
+ * kernel's clock tick to prove the system stability and properness of the context switches.
+ */
+static void isrPid3()
+{
+    ++ mai_cntISRPid3;
+    
+    /* Acknowledge the interrupt in the causing HW device. */
+    PIT.TFLG3.B.TIF = 0x1;
+
+} /* End of isrPid3 */
 
 
 
@@ -622,8 +747,19 @@ static void taskOnButtonDown(void)
         _cpuLoadInPercent += 10;
     else
         _cpuLoadInPercent = 0;
-    iprintf("The additional, artificial CPU load has been set to %u%%\r\n", _cpuLoadInPercent);
 
+    iprintf("The additional, artificial CPU load has been set to %u%%\r\n", _cpuLoadInPercent);
+#ifdef __VLE__
+    /* This code is a work around for a bug in MinGW-powerpc-eabivle-4.9.4. If the code is
+       compiled with optimization and for VLE instructions and if the iprintf (likely the
+       same for all kinds of printf) is the very last operation of the C function, then the
+       compiler emits a Book E instruction instead of the VLE equivalent. The execution goes
+       into a trap. See https://community.nxp.com/message/966809 for details.
+         Note, this is likely due to a specific optimizer decision, which is really related
+       to the conditions "printf" and "last statement" but not a common error, which could
+       unpredictedly anywhere else. */
+    asm volatile ("se_nop\n");
+#endif
 } /* End of taskOnButtonDown */
 
 
@@ -654,6 +790,63 @@ static void taskCpuLoad(void)
     del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ tiDelayInUs);
 
 } /* End of taskCpuLoad */
+
+
+
+/**
+ * This demonstartion software uses a number of fast interrupts to produce system load and
+ * prove stability. The interrupts are timer controlled (for simplicity) but the
+ * activations are chosen as asynchonous to the operating system clock as possible to
+ * provoke a most variable preemption pattern.
+ */
+static void installInterruptServiceRoutines(void)
+{
+    /* 0x2: Disable all PIT timers during configuration. Note, this is a
+       global setting for all four timers. Accessing the bits makes this rountine have race
+       conditions with the RTOS initialization that uses timer PID0. Both routines must not
+       be called in concurrency. */
+    PIT.PITMCR.R |= 0x2u;
+    
+    /* Install the ISRs now that all timers are stopped.
+         Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
+    
+    ihw_installINTCInterruptHandler( isrPid1
+                                   , /* vectorNum */ 60
+                                   , /* psrPriority */ prioISRPid1
+                                   , /* isPreemptable */ true
+                                   );
+    ihw_installINTCInterruptHandler( isrPid2
+                                   , /* vectorNum */ 61
+                                   , /* psrPriority */ prioISRPid2
+                                   , /* isPreemptable */ true
+                                   );
+    ihw_installINTCInterruptHandler( isrPid3
+                                   , /* vectorNum */ 127
+                                   , /* psrPriority */ prioISRPid3
+                                   , /* isPreemptable */ true
+                                   );
+
+    /* Peripheral clock has been initialized to 120 MHz. The timer counts at this rate. The
+       RTOS operates in ticks of 1ms we use prime numbers to get good asynchronity with the
+       RTOS clock.
+         Note, one interrupt is much slower than the two others. The reason is it does much
+       more, it takes part at the test of safely accessing data shared with the application
+       tasks.
+         -1: See MCU reference manual, 36.5.1, p. 1157. */
+    PIT.LDVAL1.R = 11987-1;/* Interrupt rate approx. 10kHz */
+    PIT.LDVAL2.R = 4001-1; /* Interrupt rate approx. 30kHz */
+    PIT.LDVAL3.R = 3989-1; /* Interrupt rate approx. 30kHz */
+
+    /* Enable interrupts by the timers and start them. */
+    PIT.TCTRL1.R = 0x3;
+    PIT.TCTRL2.R = 0x3;
+    PIT.TCTRL3.R = 0x3;
+    
+    /* Enable timer operation, all four timers are affected. Interrupt processing should
+       start. */
+    PIT.PITMCR.R &= ~0x2u;
+    
+} /* End of installInterruptServiceRoutines */
 
 
 
@@ -700,7 +893,7 @@ void main(void)
     ihw_resumeAllInterrupts();
 
     /* The RTOS is restricted to eight tasks at maximum. */
-    _Static_assert(noTasks <= 8, "RTOS only supports eight tasks");
+    _Static_assert(noRegisteredTasks <= 8, "RTOS only supports eight tasks");
 
     /* Register the application tasks at the RTOS. Note, we do not really respect the ID,
        which is assigned to the task by the RTOS API rtos_registerTask(). The returned
@@ -785,18 +978,23 @@ void main(void)
     assert(idTask == idTaskCpuLoad);
 
     /* The last check ensures that we didn't forget to register a task. */
-    assert(idTask == noTasks-1);
+    assert(idTask == noRegisteredTasks-1);
 
     /* Initialize the RTOS kernel. */
     rtos_initKernel();
 
+    /* Installing more interrupts should be possible while the system is already running.
+       We place the PID timer initialization here to prove this statement. */
+    del_delayMicroseconds(500000);
+    installInterruptServiceRoutines();
+       
     /* The code down here becomes our idle task. It is executed when and only when no
        application task is running. */
 
     while(true)
     {
-        checkAndIncrementTaskCnts(pseudoIdTaskIdle);
-        testPCP(pseudoIdTaskIdle);
+        checkAndIncrementTaskCnts(idTaskIdle);
+        testPCP(idTaskIdle);
         ++ mai_cntTaskIdle;
 
         /* Activate the non cyclic task. Note, the execution time of this task activation

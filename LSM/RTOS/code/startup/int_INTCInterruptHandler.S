@@ -140,20 +140,23 @@ int_INTCInterruptHandlerAry:
 int_INTCInterruptHandler:
 
 int_prolog:
-    stwu    sp, -0x50(sp)       /* Create stack frame */
+    stwu    sp, -72(sp)         /* Create stack frame */
     
     /* Store locally needed working registers. */
-    stw     r0, 0x24(sp)
+    stw     r0, 28(sp)
     mfcr    r0                  /* Store CR */
-    stw     r0, 0x20(sp)
-    stw     r3, 0x28(sp)        /* Store r3 to work with */
-    stw     r4, 0x2c(sp)        /* Store r4 to work with */
+    stw     r0, 24(sp)
+    stw     r3, 32(sp)          /* Store r3 to work with */
+    stw     r4, 36(sp)          /* Store r4 to work with */
     
-    /* Save SRR0 and SRR1 */
+    /* Save SRR0 and SRR1. Note that we save SRR0 at the standard location of the LR in
+       normal sub-routine branches. This supports the debugger in displaying the call
+       stack; an activated task is shown like a sub-routine call from the pre-empted
+       task. */
     mfsrr0  r0                  /* Store SRR0 (before enabling EE) */
-    stw     r0, 0x0c(sp)
+    stw     r0, 76(sp)
     mfsrr1  r0                  /* Store SRR1 (before enabling EE) */
-    stw     r0, 0x10(sp)
+    stw     r0, 8(sp)
 
     /* Clear request to processor; r3 contains the address of the ISR */
     lis     r3, INTC_IACKR_PRC0@ha      /* Read pointer into ISR Vector Table
@@ -194,20 +197,20 @@ int_endIfPreemptable:
     mtmsr   r4
 
     /* Save rest of context required by EABI */
-    stw     r12, 0x4c(sp)       /* Store r12 */
-    stw     r11, 0x48(sp)       /* Store r11 */
-    stw     r10, 0x44(sp)       /* Store r10 */
-    stw     r9, 0x40(sp)        /* Store r9 */
-    stw     r8, 0x3c(sp)        /* Store r8 */
-    stw     r7, 0x38(sp)        /* Store r7 */
-    stw     r6, 0x34(sp)        /* Store r6 */
-    stw     r5, 0x30(sp)        /* Store r5 */
+    stw     r12, 68(sp)         /* Store r12 */
+    stw     r11, 64(sp)         /* Store r11 */
+    stw     r10, 60(sp)         /* Store r10 */
+    stw     r9, 56(sp)          /* Store r9 */
+    stw     r8, 52(sp)          /* Store r8 */
+    stw     r7, 48(sp)          /* Store r7 */
+    stw     r6, 44(sp)          /* Store r6 */
+    stw     r5, 40(sp)          /* Store r5 */
     mfxer   r0                  /* Store XER */
-    stw     r0, 0x1c(sp)
+    stw     r0, 20(sp)
     mfctr   r0                  /* Store CTR */
-    stw     r0, 0x18(sp)
+    stw     r0, 16(sp)
     mflr    r0                  /* Store LR */
-    stw     r0, 0x14(sp)
+    stw     r0, 12(sp)
 
     /* Branch to ISR handler address from SW vector table */
     mtlr    r3                  /* Store ISR address to LR */
@@ -215,22 +218,22 @@ int_endIfPreemptable:
 
 int_epilog:
     /* Restore context required by EABI (except still used working registers) */
-    lwz     r0, 0x14(sp)        /* Restore LR */
+    lwz     r0, 12(sp)          /* Restore LR */
     mtlr    r0
-    lwz     r0, 0x18(sp)        /* Restore CTR */
+    lwz     r0, 16(sp)          /* Restore CTR */
     mtctr   r0
-    lwz     r0, 0x1c(sp)        /* Restore XER */
+    lwz     r0, 20(sp)          /* Restore XER */
     mtxer   r0
-    lwz     r0, 0x20(sp)        /* Restore CR */
+    lwz     r0, 24(sp)          /* Restore CR */
     mtcr    r0
-    lwz     r5, 0x30(sp)        /* Restore r5 */
-    lwz     r6, 0x34(sp)        /* Restore r6 */
-    lwz     r7, 0x38(sp)        /* Restore r7 */
-    lwz     r8, 0x3c(sp)        /* Restore r8 */
-    lwz     r9, 0x40(sp)        /* Restore r9 */
-    lwz     r10, 0x44(sp)       /* Restore r10 */
-    lwz     r11, 0x48(sp)       /* Restore r11 */
-    lwz     r12, 0x4c(sp)       /* Restore r12 */
+    lwz     r5, 40(sp)          /* Restore r5 */
+    lwz     r6, 44(sp)          /* Restore r6 */
+    lwz     r7, 48(sp)          /* Restore r7 */
+    lwz     r8, 52(sp)          /* Restore r8 */
+    lwz     r9, 56(sp)          /* Restore r9 */
+    lwz     r10, 60(sp)         /* Restore r10 */
+    lwz     r11, 64(sp)         /* Restore r11 */
+    lwz     r12, 68(sp)         /* Restore r12 */
 
     /* Disable processor recognition of interrupts. */
     wrteei  0
@@ -247,20 +250,20 @@ int_epilog:
     stw     r3, INTC_EOIR_PRC0@l(r4)/* Write 0 to INTC_EOIR */
 
     /* Restore Working Registers */
-    lwz     r3, 0x28(sp)        /* Restore r3 */
-    lwz     r4, 0x2c(sp)        /* Restore r4 */
+    lwz     r3, 32(sp)          /* Restore r3 */
+    lwz     r4, 36(sp)          /* Restore r4 */
 
     /* Retrieve SRR0 and SRR1 */
-    lwz     r0, 0x0c(sp)        /* Restore SRR0 */
+    lwz     r0, 76(sp)          /* Restore SRR0 */
     mtsrr0  r0
-    lwz     r0, 0x10(sp)        /* Restore SRR1 */
+    lwz     r0, 8(sp)           /* Restore SRR1 */
     mtsrr1  r0
 
     /* Restore remaining working register r0 */
-    lwz     r0,  0x24(sp)       /* Restore r0 */
+    lwz     r0, 28(sp)          /* Restore r0 */
 
-    /* Restore space on stack */
-    addi    sp, sp, 0x50
+    /* Discard stack frame */
+    addi    sp, sp, 72
 
     /* End of Interrupt */
     rfi
