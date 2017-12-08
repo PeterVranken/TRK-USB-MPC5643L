@@ -1,4 +1,4 @@
-= Sample "printf" - Use of RS 232 serial interface for C's printf & Co.
+= Sample "printf" (VLE) - Use of RS 232 serial interface for C's printf & Co.
 :Author:    Peter Vranken 
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
