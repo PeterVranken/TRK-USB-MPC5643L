@@ -79,7 +79,7 @@
     all bytes of the last recently initiated transfer are sent.
       @remark The chosen priority needs to be greater or equal than the priority of any
     context, that makes use of the API functions of this module. */
-#define INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT     1
+#define INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT     5
 
 /** The interrupt priority for serial input. The interrupt is requested by the UART when
     another byte has been received.
@@ -87,7 +87,7 @@
     context, that makes use of the API functions of this module.
       @remark Because of the larger UART buffer applied for serial output, this priority
     should normally be chosen higher than #INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT. */
-#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     2
+#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     6
 
 /** The size of the ring buffer for serial output can be chosen as a power of two of bytes.
       @remark Note, the permitted range of values depends on the reservation of space made
@@ -105,12 +105,12 @@
     behaves like any ordinary character, it becomes part of the read message that is passed
     on to the application.
       Here we have the end of line character. Should normally be carriage return but may
-    also be the linefeed. */
+    also be the linefeed. Which one can depend on the terminal software you use. */
 #define SERIAL_INPUT_EOL    '\r'
 
 /** See #SERIAL_INPUT_EOL for an explanation. Here we have a character to be filtered out
-    from the input stream. Should normally be linefeed or inactive. Inactive is expressed
-    by '\0' (but the zero byte is not filtered). */
+    from the input stream. Should normally be the other one as configure for
+    #SERIAL_INPUT_EOL. Inactive is expressed by '\0' (but the zero byte is not filtered). */
 #define SERIAL_INPUT_FILTERED_CHAR  '\n'
 
 /** Compute the size of the output ring buffer as number of bytes. */

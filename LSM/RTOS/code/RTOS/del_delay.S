@@ -6,7 +6,7 @@
  * code had initially been developed as inline assembly in the C module, where it is
  * required but this approach failed: The execution time of the statements, which are
  * applied to realize the delay, depends on the load address of the code. This is due to
- * the 64 Bit instruction adress bus; the delay code can either be in a single double word
+ * the 64 Bit instruction address bus; the delay code can either be in a single double word
  * or be spread across two such words. The load address can't be controlled from C inline
  * assembly.
  *

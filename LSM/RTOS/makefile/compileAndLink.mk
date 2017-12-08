@@ -269,6 +269,7 @@ cFlags = $(targetFlags) -mno-string                                             
          -Werror=missing-declarations -Werror=implicit-function-declaration                 \
          -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
          -Werror=pointer-to-int-cast -Werror=return-local-addr -Werror=missing-prototypes   \
+         -Werror=missing-field-initializers                                                 \
          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                    \
          $(foreach path,$(srcDirList) $(incDirList),-I$(path))                              \
          $(cDefines) $(foreach def,$(defineList),-D$(def))

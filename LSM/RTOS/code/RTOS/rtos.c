@@ -592,7 +592,7 @@ unsigned int rtos_getNoActivationLoss(unsigned int idTask)
  * timer interrupt in the very instance that the code execution was busy in the deepest
  * nested sub-routine, i.e. when having the largest stack consumption. A good suggestion is
  * to have another 200 Byte of reserve; the stack consumption when an interrupt occurs is
- * 80 Byte for the EABI context plus the stack frame of the service routine.\n
+ * 72 Byte for the EABI context plus the stack frame of the service routine.\n
  *   Recipe: Run your application a long time, ensure that it ran through all paths, get
  * the stack reserve from this routine, subtract approximately 200 Byte and diminish the
  * stack by this value.

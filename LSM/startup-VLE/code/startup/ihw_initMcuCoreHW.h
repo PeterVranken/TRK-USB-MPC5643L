@@ -166,7 +166,7 @@ static inline void ihw_leaveCriticalSection(uint32_t msr)
  */
 
 /** Init core HW of MCU so that it can be safely operated. */
-void ihw_initMcuCoreHW();
+void ihw_initMcuCoreHW(void);
 
 /** Let the client code install an interrupt handler. */
 void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)

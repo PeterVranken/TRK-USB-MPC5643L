@@ -105,12 +105,12 @@
     behaves like any ordinary character, it becomes part of the read message that is passed
     on to the application.
       Here we have the end of line character. Should normally be carriage return but may
-    also be the linefeed. */
+    also be the linefeed. Which one can depend on the terminal software you use. */
 #define SERIAL_INPUT_EOL    '\r'
 
 /** See #SERIAL_INPUT_EOL for an explanation. Here we have a character to be filtered out
-    from the input stream. Should normally be linefeed or inactive. Inactive is expressed
-    by '\0' (but the zero byte is not filtered). */
+    from the input stream. Should normally be the other one as configure for
+    #SERIAL_INPUT_EOL. Inactive is expressed by '\0' (but the zero byte is not filtered). */
 #define SERIAL_INPUT_FILTERED_CHAR  '\n'
 
 /** Compute the size of the output ring buffer as number of bytes. */

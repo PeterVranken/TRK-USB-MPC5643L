@@ -28,6 +28,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /*
  * Defines
@@ -56,10 +57,10 @@
 
 #ifdef __VLE__
 /**
- * Return the world time since power up in units of CPU clock ticks. This function is a
- * substitute for the GCC builtin \a __builtin_ppc_get_timebase(), which fails to compile
- * with MinGW-powerpc-eabivle-4.9.4. See https://community.nxp.com/message/966808 for
- * details.
+ * Return the world time, which has elapsed since power up in units of CPU clock ticks. This
+ * function is a substitute for the GCC builtin \a __builtin_ppc_get_timebase(), which fails
+ * to compile with MinGW-powerpc-eabivle-4.9.4. See https://community.nxp.com/message/966808
+ * for details.
  *   @return Get the world time elapsed since power up in units of 8.333... ns; our startup
  * code configures the CPU clock frequency to 120 Mhz=1/(8+1/3)ns.
  *   @remark

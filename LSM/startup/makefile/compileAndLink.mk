@@ -264,18 +264,19 @@ cFlags = $(targetFlags) -mno-string                                             
          -fshort-enums -fdiagnostics-show-option -finline-functions                         \
          -fzero-initialized-in-bss -fno-tree-loop-optimize                                  \
          -Wall -Wno-main -Wno-old-style-declaration -Winline -Wextra -Wstrict-overflow=4    \
-         -Wmissing-declarations -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat        \
-         -Wformat-security -Wignored-qualifiers -Wsign-conversion -Wsign-compare            \
+         -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat -Wformat-security             \
+         -Wignored-qualifiers -Wsign-conversion -Wsign-compare                              \
          -Werror=missing-declarations -Werror=implicit-function-declaration                 \
          -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
-         -Werror=pointer-to-int-cast -Werror=return-local-addr                              \
+         -Werror=pointer-to-int-cast -Werror=return-local-addr -Werror=missing-prototypes   \
+         -Werror=missing-field-initializers                                                 \
          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                    \
          $(foreach path,$(srcDirList) $(incDirList),-I$(path))                              \
          $(cDefines) $(foreach def,$(defineList),-D$(def))
 ifeq ($(SAVE_TMP),1)
     # Debugging the build: Put preprocessed C file and assembler listing in the output
     # directory
-    cFlags += -save-temps=obj -fverbose-asm 
+    cFlags += -save-temps=obj -fverbose-asm #-dp
 endif
 ifeq ($(CONFIG),DEBUG)
     cFlags += -g3 -gdwarf-2 -Og
