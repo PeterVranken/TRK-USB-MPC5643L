@@ -1,0 +1,482 @@
+= Sample "RTOS" (VLE) - A simple but effective RTOS for MPC5643L
+:Author:    Peter Vranken 
+:Email:     mailto:Peter_Vranken@Yahoo.de
+:toc:       left
+:xrefstyle: short
+:numbered:
+
+== About this sample
+
+This sample implements an easy to reuse RTOS for the NXP MPC5643L. The
+sample started as a copy of sample "printf". The RTOS implementation has
+been added (new folder `code\RTOS`) and the main module `code\mai_main.c`
+has been modified in order to make use of the RTOS; the functionality is
+similar to sample "startup" with its blinking LEDs. Several tasks are
+running concurrently and the LEDs are driven by different tasks. Some
+progress information is printed to the serial output but much of the
+operation can be observed only in the debugger.
+
+The startup code in folder `code\startup` is the same as for the other
+samples, the RTOS makes use of the infrastructure it offers.
+
+To see how the sample works you need to open a terminal software on your
+host machine. You can find a terminal as part of the CodeWarrior Eclipse
+IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal".
+
+Open the serial port, which is offered by the TRK-USB-MPC5643L. (On
+Windows, open the Computer Management and go to the Device Manager to find
+out.) The Baud rate has been selected as 115200 Bd in file
+`code\mai_main.c`, 8 Bit, no parity, 1 start and stop Bit. The terminal
+should print the messages, which are regularly sent by the sample code
+running on the evaluation board.
+
+Try pressing button SW3 on the evaluation board and see what happens.
+
+== The RTOS
+
+The proposed RTOS is little exciting with respect to its functionality.
+The scheduler implements the Basic Conformance Class 1 (BCC1) of the
+OSEK/VDX standard and BCC2 with the exception of activation queuing.
+
+The scheduler offers an API to register periodic tasks and event tasks.
+The former are regularly activated by the RTOS system clock while the
+latter need to be explicitly activated by software with an offered API,
+from interrupt service routines (ISR) or other tasks.
+
+All scheduling is strictly priority controlled. The activation of a task
+just makes it ready to run. At any time, the scheduler decides by
+priority, which of the _ready_ tasks becomes the one and only _running_
+task. This may involve preemption of tasks.
+
+ISRs are installed and used as in the other samples, this is done with the
+infrastructure offered by the startup code.
+
+For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
+lock API is offered that implements the priority ceiling protocol (PCP).
+The already known mechanisms from the startup code can however still be
+used. They permit to globally lock and resume all interrupts.
+
+The use of the RTOS is further supported by some less essential diagnostic
+functions. They offer stack usage information, task overrun information
+and averaged CPU load information.
+
+What's much more exciting than functionality is the code size of the RTOS.
+The complete kernel (RTOS initialization with task registering and
+start of scheduler, the scheduler and the PCP implementation) requires no
+more than 209 lines of C code.
+  footnote:[Counted with https://github.com/AlDanial/cloc[cloc] in
+revision c9fb69f4ed4af39434fc53d485cce6210fcd14e5 of this project.]
+  All code has been counted, which was written for the RTOS in addition to
+the anyway needed startup code from the other samples.
+  footnote:[The footprint with respect to RAM and ROM consumption could even
+be lowered by replacing the runtime task configuration with application
+specific #define's and compile-time initialized constant data structures.
+This has not been done for sake of readability and ease of use of the
+RTOS.]
+
+With this number of lines of code our RTOS is likely one of the shortest
+32 Bit RTOSs far and wide! The extreme conciseness of code has a single
+explanation: The MPC5643L actually implements the OSEK/VDX BCC standard by
+hardware and the required C code is no more than a thin wrapper layer
+around the hardware in order to make the hardware functionality available
+to the C-coded application software. This explanation is at the same time
+the reason, why an extension of the RTOS' functionality is not possible by
+nature: An implementation of e.g. the Extended Conformance Classes (ECC)
+of the OSEK/VDX standard would mean a complete software implementation of
+an according kernel.
+
+
+=== The kernel operation
+
+Like for an OSEK/VDX BCC system, a task is activated, executed and
+eventually terminated. The activation can be done periodically or event
+triggered. The event can be sent by another task or an ISR. A task can
+however not prematurely suspend and it doesn't know blocking states in
+which it waits for some event.
+
+The preemption of tasks is purely priority controlled. A task of higher
+priority, that is activated will immediately be executed (i.e. it becomes
+running) and the task running so far is preempted. The preempted task
+returns to state "ready". Toggling between the states "running" and
+"ready" is all what can happen with the tasks as long as they are alive.
+This leads to a simple hierarchical structure of possible preemptions, see
+figure <<figSchemeOfPreemptions>>.
+  footnote:[The picture has been downloaded at
+http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg
+on Nov 19, 2017.]
+  
+[[figSchemeOfPreemptions]]
+.Task preemption in a BCC kernel
+image::doc/taskSwitchesBCC.jpg[width="60%",align="center"]
+
+The hierarchical preemption scheme permits to have a single data stack. The
+information to push onto the stack in order to implement a context switch
+from one task to another task is just the same as in any simple, RTOS-free
+system, which makes use of interrupts. This explains, why the RTOS can be
+implemented as an extension of the anyway required startup code and why it
+doesn't require any assembler code.
+
+Although BCC means a significant reduction of complexity and functionality
+in comparison to a full featured real time kernel, the embedded practice
+mostly doesn't require more than this. The typical data flow paradigm of
+an industrial embbeded application is to have event triggered tasks, which
+serve the asynchronous I/O channels and strictly cyclic application tasks,
+which process the data and implement the control strategies. The
+communication between ISRs and tasks is done either by queues or by
+overwriting (last recent value supersedes earlier ones), that depents.
+It's a simple model, which has the advantage of being well understood,
+transparent and by nature free of dead locks. The latency times are higher
+than for consequently designed event controlled systems but they are
+predictable and have easy to determine upper bounds. Last but not least,
+software design can determine the upper bounds by choosing appropriate
+cycle times.
+
+==== The operating system clock
+
+The RTOS is clocked by a 1 ms clock tick. This clock tick is the
+resolution of controlling the period of cyclic tasks.
+
+The clock is generated by the MCU's device PID0. This timer is not
+available to the application. If the application requires to use the other
+PID timers then the initialization needs to be done with care: There are
+common settings, which affect all PID timers. You need to align your
+initialization code with the RTOS kernel initialization.
+
+The change of the RTOS system clock (e.g. to save some system overhead in
+an application where a 10 ms clock tick suffices) is as easy as changing
+the counter reload register of the PID to another number of CPU clock
+cycles. There's no technical issue in doing so, but the RTOS documentation
+will become wrong wherever it mentions the unit of time designations.
+
+==== Tasks and interrupts
+
+For this RTOS, ISRs and tasks are just the same. An application task is
+implemented as a software interrupt. Up to eight software interrupts are
+supported in hardware by the INTC and the application tasks are in fact
+the ISRs of these interrupts.
+
+The equivalence of ISRs and tasks distinguishes this RTOS from most others
+and it makes it even simpler in use. All API functions of the RTOS can be
+invoked from tasks and from ISRs. The priority relationship between ISRs
+and tasks is only a matter of software design; unlike for most RTOS, can
+a task share the priority with an interrupt or can it have a higher
+priority than an interrupt.
+
+ISRs are installed using the known API from the startup code:
+`ihw_installINTCInterruptHandler()`, see
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc],
+section _Code architecture/API_, for details.
+
+A noticeable difference between ISRs and tasks is the option for ISRs to
+be started with inhibited interrupt handling by the CPU, while tasks are
+always started with enabled interrupt handling.
+
+Additional application tasks, beyond the eight, can be implemented by the
+application itself. It can install any kind of interrupt source with a
+handler function. If the interrupt source is a cyclically firing timer
+device then the handler function becomes a new, cyclic task. For example,
+there are three PID timers left. The disadvantage of this trick is that
+each further task occupies an interrupt capable (timer) device.
+
+==== Priority and sub-ordinated priority
+
+The RTOS knows the priority range 0..15. 0 is the priority of the
+main execution thread (i.e. the idle task) and which must not be used for
+ISRs and tasks -- they would never be executed at all. 15 is the highest
+priority and it is used by the RTOS' scheduler. Priority 15 needs to be
+used with care: If an ISR or task is running on this level then it is in
+fact non preemptable -- not even by the scheduler -- , which will have a
+strong and harmful impact on the timing of all the other tasks unless its
+execution time is very short.
+
+Due to the limited number of available priorities it'll be quite normal
+that some ISR and/or tasks will share the same priority level. This is not
+an issue but some considerations apply:
+
+Preemption takes place only by higher priority; once a task or ISR is
+running it'll not be preempted by the others of same level. If two or more
+ISRs and/or tasks of same level become ready at the same time then they
+are executed sequentially, i.e. one after another. This introduces a kind
+of sub-ordinated priority, which determines the order of execution in this
+situation. This sub-ordinated priority is hard-wired in the MCU and
+there's no software handle to change it. The interrupt number, which is an
+argument to the call to `ihw_installINTCInterruptHandler()`, is the
+inverted priority; the higher the interrupt number, the lower this
+sub-ordinated priority.
+
+The software interrupts have the lowest number of all interrupts. This
+leads to a kind of priority inversion: If an ISR and a task become ready
+at the same time than the task wins the race -- this is contrary to what
+most RTOS would decide. If it should matter, assign a higher priority to
+the ISR than to the task. 
+
+For tasks of same priority, the order of registration at the RTOS kernel
+decides the sub-ordinated priority. Tasks registered first get a lower
+task ID and have the higher sub-ordinated priority.
+
+What does "become ready at the same time" mean? This can be as easy as two
+cyclic tasks that become due at the same nominal operating system clock
+tick. For interrupts, which can occur at virtually any CPU clock tick it's
+less evident. They are coincidental not only if they occur in the very
+same CPU clock tick but also when they occur in the same time span in
+which the CPU handling of interrupts of their level is inhibited. While
+"in the same CPU clock tick" is nearly negligible unlikely, is the latter
+condition frequently fulfilled. Not only during execution of critical
+sections but during execution of ISRS and/or tasks of higher priority,
+too. Therefore, the impact of the sub-ordinated priority can not generally
+be neglected.
+
+==== Availability of software interrupts to the application
+
+The RTOS uses the software interrupts in the order 0, 1, 2, ..., 7. If the
+application registers less than eight tasks then the remaining software
+interrupts with the highest indexes are not used at all by the kernel and
+the application may use them.
+
+
+=== Book E versus VLE
+
+The RTOS implementation is not specific to one of the instruction sets.
+Here, the build scripts of the sample compile it for the VLE instruction
+set. The RTOS source code and folder `code\serial` is identical only the
+startup code in folder `startup` has been taken from the other sample
+`startup-VLE`.
+
+== Tools
+
+=== Environment
+
+==== Command line based build
+
+The makefiles and related scripts require a few settings of the
+environment in the host machine. In particular, the location of the GNU
+compiler installation needs to be known and the PATH variable needs to
+contain the paths to the required tools. 
+
+For Windows users there is a shortcut to PowerShell in the root of this
+project (not sample), which opens the shell with the prepared environment.
+Furthermore, it creates an alias to the appropriate GNU make executable.
+You can simply type `make` from any location to run MinGW32 GNU make.
+
+The PowerShell process reads the script `setEnv.ps1`, located in the
+project root, too, to configure the environment. This script requires
+configuration prior to its first use. Windows users open it in a text
+editor and follow the given instructions that are marked by TODO tags.
+Mainly, it's about specifying the installation directory of GCC.
+
+Non-Windows users will read this script to see, which (few) environmental
+settings are needed to successfully run the build and prepare an according
+script for their native shell.
+
+==== Eclipse for building, flashing and debugging
+
+Flashing and debugging is always done using the NXP CodeWarrior Eclipse
+IDE, which is available for free download. If you are going to run the
+application build from Eclipse, too, then the same environmental settings
+as decribed above for a shell based build need to be done for Eclipse. The
+easiest way to do so is starting Eclipse from a shell, that has executed
+the script `setEnv.ps1` prior to opening Eclipse.
+
+For Windows users the script `CW-IDE.ps1` has been prepared. This script
+requires configuration prior to its first use. Windows users open it in a
+text editor and follow the given instructions that are marked by TODO
+tags. Mainly, it's about specifying the installation directory of
+CodeWarrior.
+
+Non-Windows users will read this script to see, which (few) environmental
+and path settings are needed to successfully run the build under control
+of Eclipse and prepare an according script for their native shell.
+
+Once everything is prepared, the CodeWarrior Eclipse IDE will never be
+started other than by clicking the script `CW-IDE.ps1` or its equivalent
+on non-Windows hosts.
+
+See https://github.com/PeterVranken/TRK-USB-MPC5643L[project overview] and
+https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation[GitHub
+Wiki] for more details about downloading and installing the required
+tools.
+
+=== Compiler and makefile
+
+Compilation and linkage are makefile controlled. The compiler is GCC
+(MinGW-powerpc-eabivle-4.9.4). The makefile is made generic and can be
+reused for other projects, not only for a tiny "Hello World" with a few
+source files. It supports a number of options (targets); get an overview
+by typing:
+ 
+    cd <projectRoot>/LSM/RTOS
+    mingw32-make help
+
+The main makefile `GNUmakefile` has been configured for the build of
+sample "RTOS". Type:
+
+    mingw32-make -s build 
+    mingw32-make -s build CONFIG=PRODUCTION
+
+to produce the flashable files `bin\ppc\DEBUG\TRK-USB-MPC5643L-RTOS.elf`
+and `bin\ppc\PRODUCTION\TRK-USB-MPC5643L-RTOS.elf`.
+
+NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
+port will fail with obscure, misleading error messages. It's safe to use
+the `make.exe` from the compiler installation archive. The makefile is
+designed to run on different host systems but has been tested with Windows
+7 only.
+
+=== Flashing and debugging
+
+The sample code can be flashed and debugged with the CodeWarrior IDE.
+
+To flash the `*.elf` file, open the CodeWarrior IDE, go to the menu, click
+"Window/Show View/Other/Debug/Debugger Shell". In the debugger shell
+window, type:
+
+    cd <rootFolderOfSample>/makefile/debugger
+    source flashDEBUG.tcl
+    
+or
+
+    source flashPRODUCTION.tcl
+
+The debugger is started by a click on the black triangle next to the blue
+icon "bug", then click "Debug Configurations.../CodeWarrior/Debug RTOS
+(DEBUG)". Confirm and start the debugger with a last click on button
+"Debug".
+
+You can find more details on using the CodeWarrior IDE at
+https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
+
+== Code architecture
+
+This sample builds on the basic sample "startup-VLE" located in a sibling folder. 
+"RTOS" is compiled for the VLE instruction set. All build settings
+and the software architecture are identical to "startup-VLE". Please refer to
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc]
+for details.
+
+=== API
+
+The RTOS offers an API for using it. This API is an extension to the
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
+offered by the startup code] and which is still required, too. This
+section outlines, which functions are available and how to use them.
+Detailed information is found as
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/RTOS/code/RTOS/rtos.c[source
+code] comments.
+
+==== Registering a task
+
+Tasks are not created dynamically, on demand, but they are registered at
+the RTOS once before the scheduler is started. The registration of a task
+specifies the task function, which is either cyclically activated or on software
+demand, the priority, the cycle time as a number of Milliseconds and the
+time of first activation:
+
+    #include "rtos.h"
+    unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
+                                  , unsigned int tiFirstActivationInMs
+                                  );
+
+The returned task IDs form a sequence of numbers 0, 1, 2, ... in the order
+of registration calls. The ID is required as input to some other API
+functions that relate to a specific task.
+
+==== Registering an ISR
+
+This function from the startup API lets your application define a handler
+for all needed interrupt sources.
+
+    #include "ihw_initMcuCoreHW.h"
+    void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
+                                        , unsigned short vectorNum
+                                        , unsigned char psrPriority
+                                        , bool isPreemptable
+                                        );
+
+==== Start of kernel
+
+The scheduler of the RTOS is started with a simple API call. All required
+tasks have been registered before:
+
+    #include "rtos.h"
+    void rtos_initKernel(void);
+
+The tasks are running after return from the function and the code behind this
+function call becomes the idle task.
+
+==== Activate a task by software
+
+Non cyclic tasks can be activated on event, e.g. from a true ISR to let
+the task evaluate and process the data it has fetched from a device
+(interrupt deferring):
+
+    #include "rtos.h"
+    bool rtos_activateTask(unsigned int idTask);
+
+An activation can fail if the activated task is still ready, if it has not
+yet completed the previous activation.
+
+==== Mutual exclusion of tasks by priority ceiling protocol
+
+A cheap method of inhibiting other tasks from accessing same shared
+resources (mostly data objects in RAM) at the same time is the priority
+ceiling protocol. The currently running task is temporarily given a new,
+higher priority and all other tasks of same or lower priority will surely
+not become running. There's a function to raise and another one to restore
+the original priority:
+
+    #include "rtos.h"
+    uint32_t rtos_suspendAllInterruptsByPriority
+                  (unsigned int suspendUpToThisPriority)
+
+    void rtos_resumeAllInterruptsByPriority
+                  (uint32_t resumeDownToThisPriority)
+
+The source code comments of these functions explains them much more in
+detail.
+
+See API of startup code for more functions for mutual exclusion.
+
+==== Diagnosis: Average CPU load
+
+A function is available to estimate the current system load. The function
+is continuously called from the idle task and consumes most of the time,
+which is left to the idle task.
+
+    #include "gsl_systemLoad.h"
+    unsigned int gsl_getSystemLoad(void);
+
+The load is returned in tens of percent.
+
+==== Diagnosis: Counter for failed activations
+
+All failed activations of a task are counted.
+
+    #include "rtos.h"
+    unsigned int rtos_getNoActivationLoss(unsigned int idTask);
+
+==== Diagnosis: Stack usage
+
+A diagnostic function can compute the amount of stack space, which has
+never been used since system startup. This can help at development time to
+save RAM. The number of never used bytes is returned:
+
+    #include "rtos.h"
+    unsigned int rtos_getStackReserve(void);
+
+== Known issues
+
+Debugger: If the view shows the INTC0 register set then the debugger
+harmfully affects program execution and the RTOS fails: The write to
+INTC_EOIR_PRC0, which normally restores the current priority level
+INTC_CPR_PRC0, now fails to do so. The complete interrupt handling fails
+from now on. Mostly the effect is that the OS tick interrupt, which has a
+high priority, leaves this high priority level set in the INTC_CPR_PRC0,
+so that effectively no interrupts (including itself) are handled any more.
+Only the code of the idle task is executed any longer.
+
+This effect can be observed with other samples, too. It had not been found
+before as observing the current priority level from the debugger had been
+done intensively only when putting the RTOS code to operation.
+
+Workaround: Don't open the view of the INTC0 in the debugger when
+debugging an RTOS application. Then the INTC and the code work fine.
