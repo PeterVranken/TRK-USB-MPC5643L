@@ -318,11 +318,10 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 == Code architecture
 
 This sample builds on the basic sample "startup" located in a sibling folder. 
-"printf" is compiled for the Book E instruction set. All build settings
-and the software architecture are identical to "startup". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc
+"printf" is compiled for the VLE instruction set. All build settings
+and the software architecture are identical to "startup-VLE". Please refer to
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup-VLE/readMe.adoc
 for details.
-
 
 == Known issues
 
