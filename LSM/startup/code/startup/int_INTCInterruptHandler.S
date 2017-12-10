@@ -153,6 +153,7 @@ int_prolog:
        normal sub-routine branches. This supports the debugger in displaying the call
        stack; an activated task is shown like a sub-routine call from the pre-empted
        task. */
+    /// @todo Double-check. This concept has the normal order of stack frame buildup instructions as prerequisite. If one would however first store the LR at 4(sp) and only then adjust sp to reserve the required stack frame space then we could overwrite the saved LR of the preempted code. Decision problem: We will likely never see such code but we need to respect that it is hypothetically possible. (It's likely not forbidden by EABI to code like that.)
     mfsrr0  r0                  /* Store SRR0 (before enabling EE) */
     stw     r0, 76(sp)
     mfsrr1  r0                  /* Store SRR1 (before enabling EE) */
