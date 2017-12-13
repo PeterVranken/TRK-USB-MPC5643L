@@ -237,7 +237,7 @@ endif
     # O1: 52%
     # Os: 50%, requires linkage of crtsavres.S
     # Ofast: 41%, likely same as -O3
-productionCodeOptimization := -Os
+productionCodeOptimization := -Ofast
 
 # Pattern rules for assembler language source files.
 asmFlags = $(targetFlags)                                                                   \

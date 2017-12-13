@@ -84,6 +84,7 @@
  *   rtos_activateTask
  *   rtos_getNoActivationLoss
  * Local functions
+ *   checkTaskDue
  *   osTimerTick
  */
 
@@ -217,6 +218,94 @@ TASK(7)
 #undef TASK
 
 
+/**
+ * Process four out of eight software interrupts, those four which are grouped by a single
+ * 32 Bit INTC register. The four tasks are checked for becoming due meanwhile and they are
+ * made ready in case (i.e. the software interrupt is raised in the INTC).
+ *   @param tiOs
+ * The system clock tick, normally at rate one Millisecond. The tasks's due time is
+ * defined in this time grid.
+ *   @param idxFirstTask
+ * The index of the first task in the group. Needs to be 0 or 4.
+ *   @param maxIdxTask
+ * The index of the last task in the group plus one.
+ *   @param pINTC_SSCIR
+ * The software interrupt register of the INTC, which is responsible for the given group.
+ */
+static inline void checkTaskDue( unsigned long tiOs
+                               , unsigned int idxFirstTask
+                               , unsigned int maxIdxTask
+                               , vuint32_t *pINTC_SSCIR
+                               )
+{
+    unsigned int idxTask;
+    uint32_t mask = 0x03000000
+           , INTC_SSCIR = *pINTC_SSCIR;
+    task_t *pTask = &_taskAry[idxFirstTask];
+
+    /* Note, it is important to avoid a read-modify-write operation on *pINTC_SSCIR for a
+       single interrupt entry, so don't simply set a single bit, the other three interrupts
+       in the same register could be harmed. */
+
+    for(idxTask=idxFirstTask; idxTask<maxIdxTask; ++idxTask, ++pTask)
+    {
+        if(pTask->taskDesc.tiCycleInMs > 0)
+        {
+            if((signed int)(pTask->tiDue - tiOs) <= 0)
+            {
+                /* Task is due. Read software interrupt bit. If it is still set then we
+                   have a task overrun otherwise we activate task by requesting the
+                   software interrupt. */
+                assert(mask >= 3);
+                if((INTC_SSCIR & mask) == 0)
+                {
+                    /* Put task into ready state (and leave the activation to the INTC).
+                       Note, it's not necessary to set both bits (set and clear) but
+                       allowed and if we do we save a second mask or bit operation. */
+                    INTC_SSCIR |= mask;
+                }
+                else
+                {
+                    /* CLRi is still set, interrupt has not completed yet, task has not
+                       terminated yet. We neither set nor clear the interrupt bits. */
+                    INTC_SSCIR &= ~mask;
+
+                    /* Counting the loss events requires a critical section. The loss
+                       counter can be written concurrently from a task invoking
+                       rtos_activateTask(). Here, the implementation of the critical
+                       section is implicit, this code is running on highest interrupt
+                       level. */
+                    const unsigned int noActivationLoss = _taskAry[idxTask].noActivationLoss
+                                                          + 1;
+                    if(noActivationLoss > 0)
+                        _taskAry[idxTask].noActivationLoss = noActivationLoss;
+                }
+
+                /* Adjust the due time. */
+                pTask->tiDue += pTask->taskDesc.tiCycleInMs;
+
+            } /* End if(Task is due?) */
+        }        
+        else
+        {
+            /* Non regular tasks: nothing to be done. These tasks are started only by
+               explicit software call of rtos_activateTask. */
+
+        } /* End if(Timer or application software activated task?) */
+
+        /* 4 software interrupts share a 32 Bit register; update the mask for the next one. */
+        mask >>= 8;
+
+    } /* End for(All tasks handled by register INTC_SSCIR) */
+
+    /* Write register value back. It's necessary only if there's at least one bit set but a
+       conditional statement is more expensive than a useless but permitted write of all
+       null bits. */
+    *pINTC_SSCIR = INTC_SSCIR;
+    
+} /* End of checkTaskDue */
+
+
 
 /**
  * The OS timer handler. This routine is invoked once a Millisecond and triggers most of
@@ -233,70 +322,25 @@ static void osTimerTick(void)
 
     /* The scheduler is most simple; the only condition to make a task ready is the next
        periodic due time. The task activation is fully left to the hardware of the INTC and
-       we don't have to bother with priority handling or task/context switching. */
-    /// @todo reorganize loop. Read HW register once, evaluate and modify the four entries in the copy and write result back once.
-    unsigned idxTask;
-    task_t *pTask = &_taskAry[0];
-    vuint32_t *pINTC_SSCIR = &INTC.SSCIR0_3.R;
-    uint32_t mask = 0x03000000;
-    for(idxTask=0; idxTask<_noTasks; ++idxTask, ++pTask)
-    {
-        if(pTask->taskDesc.tiCycleInMs > 0)
-        {
-            if((signed int)(pTask->tiDue - tiOs_) <= 0)
-            {
-                /* Task is due. Read software interrupt bit. If it is still set then we
-                   have a task overrun otherwise we activate task by requesting the
-                   software interrupt. */
-                if((*pINTC_SSCIR & mask) == 0)
-                {
-                    /* Put task into ready state (and leave the activation to the INTC). It
-                       is important to avoid a read-modify-write operation, don't simply
-                       set a single bit, the other three interrupts in the same register
-                       could be harmed. */
-                    *pINTC_SSCIR = mask;
-                }
-                else
-                {
-                    /* CLRi is still set, interrupt has not completed yet, task has not
-                       terminated yet.
-                         This code requires a critical section. The loss counter can be
-                       written concurrently from a task invoking rtos_activateTask(). Here,
-                       the implementation of the critical section is implicit, this code is
-                       running on highest interrupt level. */
-                    const unsigned int noActivationLoss = _taskAry[idxTask].noActivationLoss
-                                                          + 1;
-                    if(noActivationLoss > 0)
-                        _taskAry[idxTask].noActivationLoss = noActivationLoss;
-                }
-
-                /* Adjust the due time. */
-                pTask->tiDue += pTask->taskDesc.tiCycleInMs;
-                
-            } /* End if(Task is due?) */
-        }        
-        else
-        {
-            /* Non regular tasks: nothing to be done. These tasks are started only by
-               explicit software call of rtos_activateTask. */
-
-        } /* End if(Timer or application software activated task?) */
-
-        /* 4 software interrupts share a 32 Bit register; update the mask for the next one.
-           After four loops move pointer and reset mask to first byte. */
-        if(idxTask != 3)
-            mask >>= 8;
-        else
-        {
-            ++ pINTC_SSCIR;
-            assert(pINTC_SSCIR == &INTC.SSCIR4_7.R);
-            mask = 0x03000000;
-        }
-    } /* End for(All registered tasks) */
-    
+       we don't have to bother with priority handling or task/context switching.
+         The INTC is organized in two 32 Bit register, which handle four software
+       interrupts each. The manual doesn't offer the one-byte-per-object access (as
+       explicitly done for many other, structural similar hardware constructs), so we
+       better process the interrupts in groups of four and access the register as a whole.
+       The loop to handle all interrupts of one group is put into a reusable sub-routine. */
+    checkTaskDue( tiOs_
+                , /* idxFirstTask */ 0
+                , /* maxIdxTask */ _noTasks > 4? 4: _noTasks
+                , /* pINTC_SSCIR */ &INTC.SSCIR0_3.R
+                );
+    checkTaskDue( tiOs_
+                , /* idxFirstTask */ 4
+                , /* maxIdxTask */ _noTasks
+                , /* pINTC_SSCIR */ &INTC.SSCIR4_7.R
+                );
     ++ tiOs_;
 
-    /* Acknowledge the interrupt in the causing HW device. */
+    /* Acknowledge the timer interrupt in the causing HW device. */
     PIT.TFLG0.B.TIF = 0x1;
 
 } /* End of osTimerTick */
