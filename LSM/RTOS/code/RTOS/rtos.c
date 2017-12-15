@@ -240,7 +240,8 @@ static inline void checkTaskDue( unsigned long tiOs
 {
     unsigned int idxTask;
     uint32_t mask = 0x03000000
-           , INTC_SSCIR = *pINTC_SSCIR;
+           , INTC_SSCIR_set = 0;
+    const uint32_t INTC_SSCIR = *pINTC_SSCIR;
     task_t *pTask = &_taskAry[idxFirstTask];
 
     /* Note, it is important to avoid a read-modify-write operation on *pINTC_SSCIR for a
@@ -261,14 +262,13 @@ static inline void checkTaskDue( unsigned long tiOs
                 {
                     /* Put task into ready state (and leave the activation to the INTC).
                        Note, it's not necessary to set both bits (set and clear) but
-                       allowed and if we do we save a second mask or bit operation. */
-                    INTC_SSCIR |= mask;
+                       allowed and if we do so we save a second mask or bit operation. */
+                    INTC_SSCIR_set |= mask;
                 }
                 else
                 {
                     /* CLRi is still set, interrupt has not completed yet, task has not
                        terminated yet. We neither set nor clear the interrupt bits. */
-                    INTC_SSCIR &= ~mask;
 
                     /* Counting the loss events requires a critical section. The loss
                        counter can be written concurrently from a task invoking
@@ -301,7 +301,7 @@ static inline void checkTaskDue( unsigned long tiOs
     /* Write register value back. It's necessary only if there's at least one bit set but a
        conditional statement is more expensive than a useless but permitted write of all
        null bits. */
-    *pINTC_SSCIR = INTC_SSCIR;
+    *pINTC_SSCIR = INTC_SSCIR_set;
     
 } /* End of checkTaskDue */
 
