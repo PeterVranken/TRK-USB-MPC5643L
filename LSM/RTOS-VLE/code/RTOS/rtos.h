@@ -134,8 +134,7 @@ typedef struct rtos_taskDesc_t
  * activation and which can be releases in an arbitrary later task activation or from
  * another task.
  */
-static inline uint32_t rtos_suspendAllInterruptsByPriority
-                                            (unsigned int suspendUpToThisPriority)
+static inline uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority)
 {
     /* All priorities are in the range 0..15. Everything else points to an application
        error even if the hardware wouldn't mind. */
