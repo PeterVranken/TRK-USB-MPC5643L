@@ -27,6 +27,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "MPC5643L.h"
+
 
 /*
  * Defines
