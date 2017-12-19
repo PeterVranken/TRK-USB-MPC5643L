@@ -1,9 +1,9 @@
 /**
  * @file sup_startup.S
- * Book E assembler implementation of a function double f2d(float f). The function can be
- * used when calling functions with double arguments in code, which has been compiled not
- * using switch -fshort-double; our code is compiled with this switch and will therefore
- * not by itself provide the called function with a double argument.\n
+ * Assembler implementation of a function double f2d(float f). The function can be used
+ * when calling functions with double arguments in code, which has been compiled not using
+ * switch -fshort-double; our code is compiled with this switch and will therefore not by
+ * itself provide the called function with a double argument.\n
  *   The intended use case is the call of the library function printf with format character
  * %f or similar. printf had been compiled using true 64 Bit double and will expect such a
  * number in the variable argument list. Wrapping the application provided pseudo-double

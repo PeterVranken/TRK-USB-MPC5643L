@@ -1,6 +1,6 @@
 /**
  * @file sup_startup.S
- * Book E assembler implementation of startup code for MPC5643L in Lockstep Mode (LSM). The
+ * VLE assembler implementation of startup code for MPC5643L in Lockstep Mode (LSM). The
  * code has been designed for use with GCC for PowerPC EABI.
  *
  * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)

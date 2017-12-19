@@ -146,14 +146,6 @@ int_INTCInterruptHandler:
     e_stmvsprw  52(sp)          /* CR, LR, CTR, XER: 4*4 Byte */
     e_stmvsrrw  68(sp)          /* SRR0/SRR1: 2*4 Byte */
 
-#ifdef DEBUG
-    /* Put the return address into the stack frame in order to support the debugger when
-       displaying the call stack. Now, the interrupt appears to the debugger like any normal
-       subroutine call. */
-    mfsrr0  r3
-    e_stw   r3, 84(sp)
-#endif
-
     /* Clear request to processor; r3 contains the address of the ISR */
     e_lis   r3, INTC_IACKR_PRC0@ha      /* Read pointer into ISR Vector Table
                                            int_INTCInterruptHandlerAry */
