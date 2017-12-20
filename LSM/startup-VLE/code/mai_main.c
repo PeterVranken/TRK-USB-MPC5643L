@@ -195,7 +195,7 @@ static void interruptSW3Handler()
     ++ mai_cntIntSW3;
 
     /* Acknowledge our SW interrupt 3 (test) in the causing HW device. */
-    INTC.SSCIR0_3.B.CLR3 = 1;
+    INTC.SSCIR3.R = 1<<0;
     
     /* Access to LED doesn't require a critical section since this interrupt is registered
        as non preemptable. */
@@ -314,10 +314,7 @@ void main()
         if((mai_cntIdle % 500000) == 0)
         {
             /* Request SW interrupt 3 (test) */
-/// @todo This statement generates a 32 Bit write but we need a byte access. This is an
-// error if there are race conditions. We would clear another SW IRQ by reading and writing
-// back that bit
-            INTC.SSCIR0_3.B.SET3 = 1;
+            INTC.SSCIR3.R = 1<<1;
         }
 #if 0
         /* Test of return from main: After 10s */
