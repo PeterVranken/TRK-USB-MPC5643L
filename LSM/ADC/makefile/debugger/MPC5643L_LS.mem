@@ -1,0 +1,34 @@
+// memory config file for MPC5643L
+reservedchar 0x21	// display '!' for invalid reads
+
+//Flash-memory array partition
+//range		0x00000000 0x000FFFFF 4 ReadWrite
+reserved	0x00100000 0x00EFFFFF
+
+// Shadow block,
+//range		0x00F00000 0x00F03FFF 4 ReadWrite
+reserved	0x00F04000 0x3FFFFFFF
+
+
+//SRAM 128K SLM
+//range		0x40000000 0x4001FFFF 4 ReadWrite
+reserved	0x40020000 0x8FEFFFFF
+
+//
+//range		0x8FF00000 0x8FF4BFFF 4 ReadWrite
+reserved	0x8FF4C000 0xC3F87FFF
+
+// Off-platform peripherals
+//range		0xC3F88000 0xC3FF7FFF 4 ReadWrite
+reserved	0xC3FF8000 0xFFDFFFFF
+
+//Off-platform peripherals
+//range		0xFFE00000 0xFFE7BFFF 4 ReadWrite
+reserved	0xFFE7C000 0xFFEFFFFF
+
+//On Platform 0 Peripherals
+//range		0xFFF00000 0xFFF4BFFF 4 ReadWrite
+reserved	0xFFF4C000 0xFFF8FFFF
+
+//Off Platform Peripherals
+//range		0xFFF90000 0xFFFFFFFF 4 ReadWrite
