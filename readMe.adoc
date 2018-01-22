@@ -77,15 +77,20 @@ is the very lean implementation of a reusable real time operating system
 offering the functionality similar to an OSEK/VDX kernel of conformance
 class BCC1 or BCC2.
 
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/ADC["ADC"]
+adds the reusable implementation of an analog input driver. Furthermore it
+provides a reusable module for reading the test and calibration data page
+of the MPC5643L.
+
 All samples are self-contained. There are some common elements, which are
-same in all samples, like startup code and makefile. It would be natural
-to put them in a shared directory and reuse them across the samples. We
-decided not to do so in order to make the reuse of the samples as simple as
-possible. Once you have installed the tools you will be able to copy any
-sample to an arbitrary local directory and either run the makefile from
-the command line or use the CodeWarrior IDE with our Eclipse project file
-to build the sample. The CodeWarrior IDE is in either case required to
-flash and debug the built software.
+same in some or all samples, like startup code and makefile. It would be
+natural to put them in a shared directory and reuse them across the
+samples. We decided not to do so in order to make the reuse of the samples
+as simple as possible. Once you have installed the tools you will be able
+to copy any sample to an arbitrary local directory and either run the
+makefile from the command line or use the CodeWarrior IDE with our Eclipse
+project file to build the sample. The CodeWarrior IDE is in either case
+required to flash and debug the built software.
 
 == Installation
 

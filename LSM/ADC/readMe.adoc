@@ -280,6 +280,11 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/ad
 TODOC Coherent reading of single results, several results with respect to
 conversion cycle, configuration at compile-time
 
+==== Retrieving conversion results
+
+TODOC Calibration with bandgap reference source, coherency of readings
+with respect to conversion cycles
+
 ==== Mutual exclusion of tasks by priority ceiling protocol
 TODOC ihw_, PCP not if RTOS connected (highest prio)
 
