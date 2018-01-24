@@ -837,6 +837,12 @@ static void isrCtuAllConversionsDone(void)
  *   @remark
  * This function must be called once and only once at system startup time. Reconfiguration
  * of the driver is not supported.
+ *   @remark
+ * If channel 15 of one or both ADCs is enabled for conversion, i.e. if the internal chip
+ * temperature sensors are configured for use, then the driver depends on the availability
+ * of the test and calibration data and the initialization of module \a mcuTestAndCalData
+ * needs to be done prior to the initialization of the ADC driver. See
+ * tac_initTestAndCalibrationDataAry() for details.
  */
 void adc_initDriver(unsigned int priorityOfIRQ, void (*cbEndOfConversion)(void))
 {
@@ -931,7 +937,9 @@ void adc_startConversions()
  * very low likelihood of a recognized conversion error.
  *   @return
  * Get the age of the conversion results in the unit #ADC_T_CYCLE_IN_US. Should normally
- * zero if no problem is apparent.
+ * zero if no problem is apparent.\n
+ *   The value is saturated at its implementation maximum. The same vale is returned after
+ * driver initialization and before the first conversion result is available.
  *   @remark
  * Coherent reading of ADC channel result(s) and the age of the conversion result is
  * subject to the design of the client code. If coherency is an issue then it needs to
@@ -952,7 +960,9 @@ unsigned short adc_getChannelAge()
  * adc_getChannelVoltage() and adc_getChannelVoltageAbdAge() for getting calibrated
  * results.)
  *   @return
- * Get the conversion result in as ADC counts as read from the ADC register.
+ * Get the conversion result in as ADC counts as read from the ADC register. The scaling is
+ * lienar, zero means zero and 0x10000 means input voltage is same as reference voltage
+ * supplied to the MCU. (3.3 V in case of the TRK-UBS-MPC5643L.)
  *   @param idxChn
  * The index of the channel to be read. Note, this index doesn't relate to the sixteen ADC
  * channels available in hardware but to the set of user configured channels. A

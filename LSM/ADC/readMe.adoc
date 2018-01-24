@@ -37,12 +37,12 @@ sampling time of the inputs. Naive, software controlled regular sampling
 of an analog input can ensure the correct mean value of the timing but the
 particular sampling times undergo a jitter. Such a jitter means a sampling
 error, which increases in first order with the frequency of the input
-information. The sampling times need to be chosen without SW interaction.
+information. So the sampling times need to be chosen without SW interaction.
 
 For the MPC5643L, the ADC can be triggered from different I/O devices. The
-trigger clock is routed from these devices to the ADC by the CTU. This ADC
-driver uses the Enhanced Motor Control Timer as trigger source. All in all
-it configures four devices:
+trigger clock is routed from the selected device through the CTU to the ADC.
+This ADC driver uses the Enhanced Motor Control Timer as trigger source.
+All in all it configures four devices:
 
 * It uses one channel of one of the two Enhanced Motor Control Timer
   modules eTimer_0 or eTimer_1 (module eTimer_2 is not connected to the
@@ -59,10 +59,10 @@ conversion cycle. The application code can be notified by callback about
 the availability of a new result. This supports synchronous processing of
 the sampled analog input signal.
 
-Fetching the channel conversion results after completion of a conversion
-cycle is done by interrupt and CPU interaction. No support of the DMA mode
-is implemented. This design fits well to the aimed sampling rates in the
-magnitude of a Kilohertz.
+Fetching the channel conversion results from the ADC devices after
+completion of a conversion cycle is done by interrupt and CPU interaction.
+No support of the DMA mode is implemented. This design fits well to the
+aimed sampling rates in the magnitude of a Kilohertz.
 
 === Pin routing using SIUL
 
@@ -72,18 +72,25 @@ be done by the client code prior to starting the conversions.
 
 === Selection of channels
 
-The set of channels, which is converted in every cycle is statically
-configured at compile time. (The header file `adc_eTimerClockedAdc.h`
-contains a #define for each physically available channel, which has to be
-set to either one or zero.) It is not possible to define or change the set
-of enabled channels at run-time. Moreover, it is not possible to sample
-different channels at different rates. The conversion cycle is defined
-(set of channels, cycle time and settings for a single conversion) and
-this cycle is repeated all time long. The configuration is done with
-preprocessor macros, mainly found in the header file
-`adc_eTimerClockedAdc.h`.
+The configuration of the driver is done at compile time and using
+preprocessor #define's. See files
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.h[`adc_eTimerClockedAdc.h`]
+and
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c[`adc_eTimerClockedAdc.c`]
+for details.
 
-The internal signals (TSENS_0 and TSENS_1) and VREG_1.2V can be configured
+The principal setting is the definition of the set of channels, which is
+converted in every cycle. The header file `adc_eTimerClockedAdc.h`
+contains a #define for each physically available channel (e.g.
+`ADC_USE_ADC_0_CHANNEL_01`), which has to be set to either one or zero. It
+is not possible to define or change the set of enabled channels at
+run-time. Moreover, it is not possible to sample different channels at
+different rates. The conversion cycle is defined (set of channels, cycle
+time and settings for a single conversion) and this cycle is repeated all
+time long. The configuration is done with preprocessor macros, mainly
+found in the header file `adc_eTimerClockedAdc.h`.
+
+The internal signals TSENS_0,  TSENS_1 and VREG_1.2V can be configured
 for conversion as any other channel, however this has specific side
 effects:
 
@@ -93,19 +100,34 @@ effects:
   Celsius
 * If the reference voltage VREG_1.2V, channels 10, ADC_0 and ADC_1,
   respectively, are element of the set of converted channels then the
-  averaged measured reference voltage is used to calibrate all the other
-  channels in Volt
+  averaged measured reference voltage is used to calibrate all other
+  channels of the given ADC unit in Volt
+
+=== The conversion cycle time
+
+The next important setting is the duration of the conversion cycle, see
+macro `ADC_T_CYCLE_IN_US`. The settings for the timing of a single
+conversion are hard-coded in the driver but the period at which the
+conversion of all enabled channels is repeated is user configured. As an
+example, our sample sets this value to 1000 in order to achieve a sampling
+frequency of 1 kHz. Sampling and conversion of the few enabled channels
+roughly takes 10 us per cycle; it's quite normal for an ADC application
+that the cycle time has a long idle phase.
+
+Some more settings are documented in both, the header and the
+implementation file of the ADC driver. Please refer directly to these
+files.
 
 === Limitations
 
 Some configuration items of the driver are hard-coded and not modelled as
 compile-time #define's. Depending on the application, these settings and
-thus the implementation of the driver can become subject to modifications.
-A prominent example is the conversion timing. The related settings are
-chosen for a rather slow sampling rate but better accuracy; a rate of a
-few Kilohertz is targeted. Higher rates may require another timing
-configuration and much higher rates could even require structural code
-changes, like DMA support.
+thus the implementation of the driver may become subject to your
+modifications. A prominent example is the conversion timing. The related
+settings are chosen for a rather slow sampling rate but better accuracy; a
+rate of a few Kilohertz is targeted. Higher rates may require another
+timing configuration and much higher rates could even require structural
+code changes, like DMA support.
 
 === Static check of configuration
 
@@ -142,8 +164,27 @@ it mentions the unit of time designations.
 
 == The test and calibration data of the MCU
 
-TODOC Reusable module to read the test and calibration data page of the
-MCU
+Some elements of the ADC functionality depend on the test and calibration
+data of the MCU. This data is specific to an individual device and is
+programmed into it as part of the production process. The operation of the
+ADC requires reading this data from a hidden area of the flash ROM. 
+
+Reading the test and calibration data is complex insofar as it cannot be
+done on the fly by some dependent code -- like our ADC driver -- , which
+needs to know it. The hardware permits exactly one read access per
+power-up cycle. Consequently, an application that depends on the test and
+calibration data, needs to have a global instance, which reads the data
+once at system startup time and which provides the information later on
+demand to whom it may concern.
+
+Module `mcuTestAndCalData`, which is provided by this sample, implements
+this concept. It is kept independent from the ADC driver. The
+self-contained module can be easily reused in other contexts, where access
+to the test and calibration data is an issue.
+
+Technical constraints make it impossible to access the test and
+calibration data from C code. The core function is written in assembler
+but it has a C API for convenient usage.
 
 == Book E versus VLE
 
@@ -267,26 +308,160 @@ for details.
 
 === API
 
-The ADC driver offers an API for using it. 
-  footnote:[This API is an extension to the
+The ADC driver offers an API for using it.
+  footnote:[If coherent reading of more than one channel result from one
+conversion cycle is a requirement then the
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
-offered by the startup code], which is required, too, for implementing critical sections if coherent reading of more than one channel result is a requirement.]
-  This section outlines, which functions are available and how to use them.
-Detailed information is found as
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c[source code] comments.
+offered by the startup code] is required, too, for implementing critical
+sections.]
+  This section outlines, which functions are available and how to use
+them. Detailed information is found as
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c[source
+code] comments.
 
-==== Driver initialization
+==== Read the MCU's test and calibration data
 
-TODOC Coherent reading of single results, several results with respect to
-conversion cycle, configuration at compile-time
+If the internal chip temperature sensors are configured for use then the
+driver depends on the availability of the test and calibration data and
+the initialization of module `mcuTestAndCalData` needs to be done prior to
+the initialization of the ADC driver:
 
-==== Retrieving conversion results
+    #include "tac_mcuTestAndCalibrationData.h"
+    void tac_initTestAndCalibrationDataAry(void)
 
-TODOC Calibration with bandgap reference source, coherency of readings
-with respect to conversion cycles
+After this call, the global array
 
-==== Mutual exclusion of tasks by priority ceiling protocol
-TODOC ihw_, PCP not if RTOS connected (highest prio)
+    const uint16_t *tac_mcuTestAndCalibrationDataAry[]
+    
+provides direct access to the test and calibration data to any code
+instance, which depends on it. The contents of the table are described in
+the MCU reference manual, section 23.1.8, p. 591, table 23-24. Note, table
+23-24 is formatted in 32 Bit entries, whereas our array uses 16 Bit words.
 
-==== Diagnosis: Age
+==== ADC driver initialization
 
+Before use of any other API function and before conversions can start the
+initialization routine needs to be called. The invocation is done at
+system startup time, normally before External Interrupt processing is
+enabled, but this is not a must.
+
+         #include "adc_eTimerClockedAdc.h"
+         void adc_initDriver( unsigned int priorityOfIRQ
+                            , void (*cbEndOfConversion)(void)
+                            )
+
+Data fetching is done by interrupt after the end of a conversion cycle.
+The priority of the ISR can be controlled through `priorityOfIRQ`. The ISR
+itself is internal to the driver.
+
+The callback into the client code is optional. If enabled, it is invoked
+from the same data-fetch ISR after retrieval of all conversion results. It
+can be applied to evaluate or propagate the new results.
+
+Note, if channel 15 of at least one ADC is enabled, i.e. if the internal
+chip temperature is measured, then `tac_initTestAndCalibrationDataAry()`
+needs to be called prior to `adc_initDriver()`.
+
+==== Getting conversion results
+
+After each conversion cycle, the results are stored in an API buffer. From
+here and using the notification callback, they can be processed
+synchronously with the conversion cycles. If not using the callback, they
+can be fetched at any time from the buffer. In this case coherency of
+reading several results becomes an issue.
+
+    #include "adc_eTimerClockedAdc.h"
+    uint16_t adc_getChannelRawValue(adc_idxEnabledChannel_t idxChn)
+
+Get the raw conversion result of a single channel, i.e. the counter value
+read for the ADC. The voltage range [0V .. supplied reference voltage] is
+represented by counts from 0 till 2^16^.
+
+The channel index relates to the set of enabled channels and the
+enumeration `adc_idxEnabledChannel_t` is provided, which shapes the
+association between index and physical channel
+
+    #include "adc_eTimerClockedAdc.h"
+    float adc_getChannelVoltage(adc_idxEnabledChannel_t idxChn)
+
+The conversion result of a channel can be fetched as voltage, too. The
+re-scaling from count to Volt is either done assuming the nominal,
+configured reference voltage or based on the comparison of a continuously
+acquired measurement result of an internal band-gap reference voltage
+source with the known voltage of that source. Which technique is applied
+is decided by configuration at compile time.
+
+The measured voltage can be fetched from the API buffer together with the
+age (see below):
+
+    #include "adc_eTimerClockedAdc.h"
+    float adc_getChannelVoltageAndAge( unsigned short *pAge
+                                     , adc_idxEnabledChannel_t idxChn
+                                     )
+
+This call ensures that channel result and age information origin from the
+same conversion cycle.
+
+==== Diagnosis: Age of conversion results
+
+The ADC can report different run-time problems. These are not made
+available at the API, since they will likely never occur once a
+configuration is proven to work. However, they are respected by the driver
+and the conversion results in the API buffer are not renewed if the
+conversion cycle or a channel result reports a problem. This situation is
+reported to the client code as age of the available results. The unit of
+the age is the duration of a single conversion cycle, 1 ms in our sample.
+As long as no problem is recognized the value will always be reported as
+zero.
+
+    #include "adc_eTimerClockedAdc.h"
+    unsigned short adc_getChannelAge(void)
+
+==== Coherent reading of several channel results
+
+The API buffer is updated for all channels at once at the end of a
+conversion cycle. It'll generally be the case that the chosen priority of the
+ADC ISR will be higher than that of the application tasks, insofar is the
+update of all channel buffers an atomic operation to the application code.
+
+Reading of channel results from the API buffer is however done channel by
+channel and the buffer update can happen after the application read only a
+subset of all channels.
+
+Several possibilities exist if the application depends on getting all
+channel results from one and the same conversion cycle:
+
+* The notification callback can be used to fetch (and process) the data
+synchronously with its acquisition. Coherent reading of all channels is
+granted if only the execution time of the callback is shorter than the
+difference between conversion cycle time and conversion time. Our sample
+demonstrates this possibility by clocking the RTOS from the notification
+callback
+* The application reads all channels in a critical section. The methods
+from the startup code can be used, see
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup#api
+* If our RTOS is used then its priority ceiling protocol API can be
+applied to mutually exclude the application code and the ADC ISR
+* If the concern only is reading the value of a single channel coherently
+with its age information then the dedicated method
+`adc_getChannelVoltageAndAge` can be used
+* The reading of a single channel value has no issues. Both, raw value and
+voltage, are implemented with basic data types, having atomic load and
+store instructions. The functions `adc_getChannelRawValue()` and
+`adc_getChannelVoltage()` can be called from any context at any time and
+will return the last recently acquired conversion result
+
+==== Internal chip temperature
+
+Simply by enabling channel 15 for one or both ADC units, the API for
+computation and retrieval of the internal chip temperatures is generated in
+the compiled code. (Otherwise this code is excluded from compilation.) The
+temperature values are acquired like all analog channels in the each
+conversion cycle and can be fetched at any time and from any context using
+these API functions:
+
+    #incude "adc_eTimerClockedAdc.h"
+    float adc_getTsens0(void);
+    float adc_getTsens1(void);
+
+The values are calibrated in degrees Celsius.

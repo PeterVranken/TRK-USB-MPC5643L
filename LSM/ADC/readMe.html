@@ -441,21 +441,23 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#_pin_routing_using_siul">2.1. Pin routing using SIUL</a></li>
 <li><a href="#_selection_of_channels">2.2. Selection of channels</a></li>
-<li><a href="#_limitations">2.3. Limitations</a></li>
-<li><a href="#_static_check_of_configuration">2.4. Static check of configuration</a></li>
+<li><a href="#_the_conversion_cycle_time">2.3. The conversion cycle time</a></li>
+<li><a href="#_limitations">2.4. Limitations</a></li>
+<li><a href="#_static_check_of_configuration">2.5. Static check of configuration</a></li>
 </ul>
 </li>
-<li><a href="#_book_e_versus_vle">3. Book E versus VLE</a></li>
-<li><a href="#_tools">4. Tools</a>
+<li><a href="#_the_test_and_calibration_data_of_the_mcu">3. The test and calibration data of the MCU</a></li>
+<li><a href="#_book_e_versus_vle">4. Book E versus VLE</a></li>
+<li><a href="#_tools">5. Tools</a>
 <ul class="sectlevel2">
-<li><a href="#_environment">4.1. Environment</a></li>
-<li><a href="#_compiler_and_makefile">4.2. Compiler and makefile</a></li>
-<li><a href="#_flashing_and_debugging">4.3. Flashing and debugging</a></li>
+<li><a href="#_environment">5.1. Environment</a></li>
+<li><a href="#_compiler_and_makefile">5.2. Compiler and makefile</a></li>
+<li><a href="#_flashing_and_debugging">5.3. Flashing and debugging</a></li>
 </ul>
 </li>
-<li><a href="#_code_architecture">5. Code architecture</a>
+<li><a href="#_code_architecture">6. Code architecture</a>
 <ul class="sectlevel2">
-<li><a href="#_api">5.1. API</a></li>
+<li><a href="#_api">6.1. API</a></li>
 </ul>
 </li>
 </ul>
@@ -504,13 +506,13 @@ sampling time of the inputs. Naive, software controlled regular sampling
 of an analog input can ensure the correct mean value of the timing but the
 particular sampling times undergo a jitter. Such a jitter means a sampling
 error, which increases in first order with the frequency of the input
-information. The sampling times need to be chosen without SW interaction.</p>
+information. So the sampling times need to be chosen without SW interaction.</p>
 </div>
 <div class="paragraph">
 <p>For the MPC5643L, the ADC can be triggered from different I/O devices. The
-trigger clock is routed from these devices to the ADC by the CTU. This ADC
-driver uses the Enhanced Motor Control Timer as trigger source. All in all
-it configures four devices:</p>
+trigger clock is routed from the selected device through the CTU to the ADC.
+This ADC driver uses the Enhanced Motor Control Timer as trigger source.
+All in all it configures four devices:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -538,10 +540,10 @@ the availability of a new result. This supports synchronous processing of
 the sampled analog input signal.</p>
 </div>
 <div class="paragraph">
-<p>Fetching the channel conversion results after completion of a conversion
-cycle is done by interrupt and CPU interaction. No support of the DMA mode
-is implemented. This design fits well to the aimed sampling rates in the
-magnitude of a Kilohertz.</p>
+<p>Fetching the channel conversion results from the ADC devices after
+completion of a conversion cycle is done by interrupt and CPU interaction.
+No support of the DMA mode is implemented. This design fits well to the
+aimed sampling rates in the magnitude of a Kilohertz.</p>
 </div>
 <div class="sect2">
 <h3 id="_pin_routing_using_siul">2.1. Pin routing using SIUL</h3>
@@ -554,19 +556,27 @@ be done by the client code prior to starting the conversions.</p>
 <div class="sect2">
 <h3 id="_selection_of_channels">2.2. Selection of channels</h3>
 <div class="paragraph">
-<p>The set of channels, which is converted in every cycle is statically
-configured at compile time. (The header file <code>adc_eTimerClockedAdc.h</code>
-contains a #define for each physically available channel, which has to be
-set to either one or zero.) It is not possible to define or change the set
-of enabled channels at run-time. Moreover, it is not possible to sample
-different channels at different rates. The conversion cycle is defined
-(set of channels, cycle time and settings for a single conversion) and
-this cycle is repeated all time long. The configuration is done with
-preprocessor macros, mainly found in the header file
-<code>adc_eTimerClockedAdc.h</code>.</p>
+<p>The configuration of the driver is done at compile time and using
+preprocessor #define&#8217;s. See files
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.h"><code>adc_eTimerClockedAdc.h</code></a>
+and
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c"><code>adc_eTimerClockedAdc.c</code></a>
+for details.</p>
 </div>
 <div class="paragraph">
-<p>The internal signals (TSENS_0 and TSENS_1) and VREG_1.2V can be configured
+<p>The principal setting is the definition of the set of channels, which is
+converted in every cycle. The header file <code>adc_eTimerClockedAdc.h</code>
+contains a #define for each physically available channel (e.g.
+<code>ADC_USE_ADC_0_CHANNEL_01</code>), which has to be set to either one or zero. It
+is not possible to define or change the set of enabled channels at
+run-time. Moreover, it is not possible to sample different channels at
+different rates. The conversion cycle is defined (set of channels, cycle
+time and settings for a single conversion) and this cycle is repeated all
+time long. The configuration is done with preprocessor macros, mainly
+found in the header file <code>adc_eTimerClockedAdc.h</code>.</p>
+</div>
+<div class="paragraph">
+<p>The internal signals TSENS_0,  TSENS_1 and VREG_1.2V can be configured
 for conversion as any other channel, however this has specific side
 effects:</p>
 </div>
@@ -581,27 +591,45 @@ Celsius</p>
 <li>
 <p>If the reference voltage VREG_1.2V, channels 10, ADC_0 and ADC_1,
 respectively, are element of the set of converted channels then the
-averaged measured reference voltage is used to calibrate all the other
-channels in Volt</p>
+averaged measured reference voltage is used to calibrate all other
+channels of the given ADC unit in Volt</p>
 </li>
 </ul>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_limitations">2.3. Limitations</h3>
+<h3 id="_the_conversion_cycle_time">2.3. The conversion cycle time</h3>
 <div class="paragraph">
-<p>Some configuration items of the driver are hard-coded and not modelled as
-compile-time #define&#8217;s. Depending on the application, these settings and
-thus the implementation of the driver can become subject to modifications.
-A prominent example is the conversion timing. The related settings are
-chosen for a rather slow sampling rate but better accuracy; a rate of a
-few Kilohertz is targeted. Higher rates may require another timing
-configuration and much higher rates could even require structural code
-changes, like DMA support.</p>
+<p>The next important setting is the duration of the conversion cycle, see
+macro <code>ADC_T_CYCLE_IN_US</code>. The settings for the timing of a single
+conversion are hard-coded in the driver but the period at which the
+conversion of all enabled channels is repeated is user configured. As an
+example, our sample sets this value to 1000 in order to achieve a sampling
+frequency of 1 kHz. Sampling and conversion of the few enabled channels
+roughly takes 10 us per cycle; it&#8217;s quite normal for an ADC application
+that the cycle time has a long idle phase.</p>
+</div>
+<div class="paragraph">
+<p>Some more settings are documented in both, the header and the
+implementation file of the ADC driver. Please refer directly to these
+files.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_static_check_of_configuration">2.4. Static check of configuration</h3>
+<h3 id="_limitations">2.4. Limitations</h3>
+<div class="paragraph">
+<p>Some configuration items of the driver are hard-coded and not modelled as
+compile-time #define&#8217;s. Depending on the application, these settings and
+thus the implementation of the driver may become subject to your
+modifications. A prominent example is the conversion timing. The related
+settings are chosen for a rather slow sampling rate but better accuracy; a
+rate of a few Kilohertz is targeted. Higher rates may require another
+timing configuration and much higher rates could even require structural
+code changes, like DMA support.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_static_check_of_configuration">2.5. Static check of configuration</h3>
 <div class="paragraph">
 <p>The configuration settings depend on one another. There are several
 constraints like: A very short cycle time is impossible if the number of
@@ -612,7 +640,7 @@ there are barely run-time errors recognized and reported by the code. A
 bad configuration will simply not compile.</p>
 </div>
 <div class="sect3">
-<h4 id="_adc_as_operating_system_clock">2.4.1. ADC as operating system clock</h4>
+<h4 id="_adc_as_operating_system_clock">2.5.1. ADC as operating system clock</h4>
 <div class="paragraph">
 <p>To avoid sampling errors at higher signal frequencies it is generally a
 must to have a hardware timer to regularly trigger all conversions. If the
@@ -642,7 +670,38 @@ it mentions the unit of time designations.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_book_e_versus_vle">3. Book E versus VLE</h2>
+<h2 id="_the_test_and_calibration_data_of_the_mcu">3. The test and calibration data of the MCU</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Some elements of the ADC functionality depend on the test and calibration
+data of the MCU. This data is specific to an individual device and is
+programmed into it as part of the production process. The operation of the
+ADC requires reading this data from a hidden area of the flash ROM.</p>
+</div>
+<div class="paragraph">
+<p>Reading the test and calibration data is complex insofar as it cannot be
+done on the fly by some dependent code&#8201;&#8212;&#8201;like our ADC driver&#8201;&#8212;&#8201;, which
+needs to know it. The hardware permits exactly one read access per
+power-up cycle. Consequently, an application that depends on the test and
+calibration data, needs to have a global instance, which reads the data
+once at system startup time and which provides the information later on
+demand to whom it may concern.</p>
+</div>
+<div class="paragraph">
+<p>Module <code>mcuTestAndCalData</code>, which is provided by this sample, implements
+this concept. It is kept independent from the ADC driver. The
+self-contained module can be easily reused in other contexts, where access
+to the test and calibration data is an issue.</p>
+</div>
+<div class="paragraph">
+<p>Technical constraints make it impossible to access the test and
+calibration data from C code. The core function is written in assembler
+but it has a C API for convenient usage.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_book_e_versus_vle">4. Book E versus VLE</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The implementation of the function to read the MCU&#8217;s test and calibration
@@ -655,12 +714,12 @@ made for Book E, but VLE will follow soon.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tools">4. Tools</h2>
+<h2 id="_tools">5. Tools</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_environment">4.1. Environment</h3>
+<h3 id="_environment">5.1. Environment</h3>
 <div class="sect3">
-<h4 id="_command_line_based_build">4.1.1. Command line based build</h4>
+<h4 id="_command_line_based_build">5.1.1. Command line based build</h4>
 <div class="paragraph">
 <p>The makefiles and related scripts require a few settings of the
 environment in the host machine. In particular, the location of the GNU
@@ -687,7 +746,7 @@ script for their native shell.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_eclipse_for_building_flashing_and_debugging">4.1.2. Eclipse for building, flashing and debugging</h4>
+<h4 id="_eclipse_for_building_flashing_and_debugging">5.1.2. Eclipse for building, flashing and debugging</h4>
 <div class="paragraph">
 <p>Flashing and debugging is always done using the NXP CodeWarrior Eclipse
 IDE, which is available for free download. If you are going to run the
@@ -722,7 +781,7 @@ tools.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_compiler_and_makefile">4.2. Compiler and makefile</h3>
+<h3 id="_compiler_and_makefile">5.2. Compiler and makefile</h3>
 <div class="paragraph">
 <p>Compilation and linkage are makefile controlled. The compiler is GCC
 (MinGW-powerpc-eabivle-4.9.4). The makefile is made generic and can be
@@ -768,7 +827,7 @@ designed to run on different host systems but has been tested with Windows
 </div>
 </div>
 <div class="sect2">
-<h3 id="_flashing_and_debugging">4.3. Flashing and debugging</h3>
+<h3 id="_flashing_and_debugging">5.3. Flashing and debugging</h3>
 <div class="paragraph">
 <p>The sample code can be flashed and debugged with the CodeWarrior IDE.</p>
 </div>
@@ -805,7 +864,7 @@ icon "bug", then click "Debug Configurations&#8230;&#8203;/CodeWarrior/Debug ADC
 </div>
 </div>
 <div class="sect1">
-<h2 id="_code_architecture">5. Code architecture</h2>
+<h2 id="_code_architecture">6. Code architecture</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This sample builds on the basic sample "startup" located in a sibling
@@ -816,30 +875,223 @@ software architecture are identical to "startup". Please refer to
 for details.</p>
 </div>
 <div class="sect2">
-<h3 id="_api">5.1. API</h3>
+<h3 id="_api">6.1. API</h3>
 <div class="paragraph">
 <p>The ADC driver offers an API for using it.
   <sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup>
-  This section outlines, which functions are available and how to use them.
-Detailed information is found as
-<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c">source code</a> comments.</p>
+  This section outlines, which functions are available and how to use
+them. Detailed information is found as
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c">source
+code</a> comments.</p>
 </div>
 <div class="sect3">
-<h4 id="_driver_initialization">5.1.1. Driver initialization</h4>
+<h4 id="_read_the_mcu_s_test_and_calibration_data">6.1.1. Read the MCU&#8217;s test and calibration data</h4>
 <div class="paragraph">
-<p>TODOC Coherent reading of single results, several results with respect to
-conversion cycle, configuration at compile-time</p>
+<p>If the internal chip temperature sensors are configured for use then the
+driver depends on the availability of the test and calibration data and
+the initialization of module <code>mcuTestAndCalData</code> needs to be done prior to
+the initialization of the ADC driver:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "tac_mcuTestAndCalibrationData.h"
+void tac_initTestAndCalibrationDataAry(void)</pre>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_mutual_exclusion_of_tasks_by_priority_ceiling_protocol">5.1.2. Mutual exclusion of tasks by priority ceiling protocol</h4>
 <div class="paragraph">
-<p>TODOC ihw_, PCP not if RTOS connected (highest prio)</p>
+<p>After this call, the global array</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>const uint16_t *tac_mcuTestAndCalibrationDataAry[]</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>provides direct access to the test and calibration data to any code
+instance, which depends on it. The contents of the table are described in
+the MCU reference manual, section 23.1.8, p. 591, table 23-24. Note, table
+23-24 is formatted in 32 Bit entries, whereas our array uses 16 Bit words.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_diagnosis_age">5.1.3. Diagnosis: Age</h4>
-
+<h4 id="_adc_driver_initialization">6.1.2. ADC driver initialization</h4>
+<div class="paragraph">
+<p>Before use of any other API function and before conversions can start the
+initialization routine needs to be called. The invocation is done at
+system startup time, normally before External Interrupt processing is
+enabled, but this is not a must.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "adc_eTimerClockedAdc.h"
+void adc_initDriver( unsigned int priorityOfIRQ
+                   , void (*cbEndOfConversion)(void)
+                   )</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Data fetching is done by interrupt after the end of a conversion cycle.
+The priority of the ISR can be controlled through <code>priorityOfIRQ</code>. The ISR
+itself is internal to the driver.</p>
+</div>
+<div class="paragraph">
+<p>The callback into the client code is optional. If enabled, it is invoked
+from the same data-fetch ISR after retrieval of all conversion results. It
+can be applied to evaluate or propagate the new results.</p>
+</div>
+<div class="paragraph">
+<p>Note, if channel 15 of at least one ADC is enabled, i.e. if the internal
+chip temperature is measured, then <code>tac_initTestAndCalibrationDataAry()</code>
+needs to be called prior to <code>adc_initDriver()</code>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_getting_conversion_results">6.1.3. Getting conversion results</h4>
+<div class="paragraph">
+<p>After each conversion cycle, the results are stored in an API buffer. From
+here and using the notification callback, they can be processed
+synchronously with the conversion cycles. If not using the callback, they
+can be fetched at any time from the buffer. In this case coherency of
+reading several results becomes an issue.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "adc_eTimerClockedAdc.h"
+uint16_t adc_getChannelRawValue(adc_idxEnabledChannel_t idxChn)</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Get the raw conversion result of a single channel, i.e. the counter value
+read for the ADC. The voltage range [0V .. supplied reference voltage] is
+represented by counts from 0 till 2<sup>16</sup>.</p>
+</div>
+<div class="paragraph">
+<p>The channel index relates to the set of enabled channels and the
+enumeration <code>adc_idxEnabledChannel_t</code> is provided, which shapes the
+association between index and physical channel</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "adc_eTimerClockedAdc.h"
+float adc_getChannelVoltage(adc_idxEnabledChannel_t idxChn)</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The conversion result of a channel can be fetched as voltage, too. The
+re-scaling from count to Volt is either done assuming the nominal,
+configured reference voltage or based on the comparison of a continuously
+acquired measurement result of an internal band-gap reference voltage
+source with the known voltage of that source. Which technique is applied
+is decided by configuration at compile time.</p>
+</div>
+<div class="paragraph">
+<p>The measured voltage can be fetched from the API buffer together with the
+age (see below):</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "adc_eTimerClockedAdc.h"
+float adc_getChannelVoltageAndAge( unsigned short *pAge
+                                 , adc_idxEnabledChannel_t idxChn
+                                 )</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This call ensures that channel result and age information origin from the
+same conversion cycle.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_diagnosis_age_of_conversion_results">6.1.4. Diagnosis: Age of conversion results</h4>
+<div class="paragraph">
+<p>The ADC can report different run-time problems. These are not made
+available at the API, since they will likely never occur once a
+configuration is proven to work. However, they are respected by the driver
+and the conversion results in the API buffer are not renewed if the
+conversion cycle or a channel result reports a problem. This situation is
+reported to the client code as age of the available results. The unit of
+the age is the duration of a single conversion cycle, 1 ms in our sample.
+As long as no problem is recognized the value will always be reported as
+zero.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#include "adc_eTimerClockedAdc.h"
+unsigned short adc_getChannelAge(void)</pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_coherent_reading_of_several_channel_results">6.1.5. Coherent reading of several channel results</h4>
+<div class="paragraph">
+<p>The API buffer is updated for all channels at once at the end of a
+conversion cycle. It&#8217;ll generally be the case that the chosen priority of the
+ADC ISR will be higher than that of the application tasks, insofar is the
+update of all channel buffers an atomic operation to the application code.</p>
+</div>
+<div class="paragraph">
+<p>Reading of channel results from the API buffer is however done channel by
+channel and the buffer update can happen after the application read only a
+subset of all channels.</p>
+</div>
+<div class="paragraph">
+<p>Several possibilities exist if the application depends on getting all
+channel results from one and the same conversion cycle:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The notification callback can be used to fetch (and process) the data
+synchronously with its acquisition. Coherent reading of all channels is
+granted if only the execution time of the callback is shorter than the
+difference between conversion cycle time and conversion time. Our sample
+demonstrates this possibility by clocking the RTOS from the notification
+callback</p>
+</li>
+<li>
+<p>The application reads all channels in a critical section. The methods
+from the startup code can be used, see
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup#api" class="bare">https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup#api</a></p>
+</li>
+<li>
+<p>If our RTOS is used then its priority ceiling protocol API can be
+applied to mutually exclude the application code and the ADC ISR</p>
+</li>
+<li>
+<p>If the concern only is reading the value of a single channel coherently
+with its age information then the dedicated method
+<code>adc_getChannelVoltageAndAge</code> can be used</p>
+</li>
+<li>
+<p>The reading of a single channel value has no issues. Both, raw value and
+voltage, are implemented with basic data types, having atomic load and
+store instructions. The functions <code>adc_getChannelRawValue()</code> and
+<code>adc_getChannelVoltage()</code> can be called from any context at any time and
+will return the last recently acquired conversion result</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_internal_chip_temperature">6.1.6. Internal chip temperature</h4>
+<div class="paragraph">
+<p>Simply by enabling channel 15 for one or both ADC units, the API for
+computation and retrieval of the internal chip temperatures is generated in
+the compiled code. (Otherwise this code is excluded from compilation.) The
+temperature values are acquired like all analog channels in the each
+conversion cycle and can be fetched at any time and from any context using
+these API functions:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#incude "adc_eTimerClockedAdc.h"
+float adc_getTsens0(void);
+float adc_getTsens1(void);</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The values are calibrated in degrees Celsius.</p>
+</div>
 </div>
 </div>
 </div>
@@ -848,12 +1100,12 @@ conversion cycle, configuration at compile-time</p>
 <div id="footnotes">
 <hr>
 <div class="footnote" id="_footnote_1">
-<a href="#_footnoteref_1">1</a>. This API is an extension to the <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc">API offered by the startup code</a>, which is required, too, for implementing critical sections if coherent reading of more than one channel result is a requirement.
+<a href="#_footnoteref_1">1</a>. If coherent reading of more than one channel result from one conversion cycle is a requirement then the <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc">API offered by the startup code</a> is required, too, for implementing critical sections.
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-01-22 22:24:40 W. Europe Standard Time
+Last updated 2018-01-24 22:07:33 W. Europe Standard Time
 </div>
 </div>
 </body>

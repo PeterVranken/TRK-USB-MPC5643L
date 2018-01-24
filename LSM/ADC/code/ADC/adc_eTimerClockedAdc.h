@@ -35,8 +35,23 @@
  */
 
 /** Driver configuration: Set each of these values to 1 if the analog channel should be
-    sampled and converted. Otherwise set it to 0. */
-/// @todo Doc special meaning of chns 10 and 15
+    sampled and converted. Otherwise set it to 0.\n
+      The channels 9 of each ADC must not be enabled, see MCU reference manual, section 8,
+    for details.\n
+      The channels 10 and 15 of each ADC unit have a side effect if they are enabled.\n
+      A band-gap reference voltage source is connected to channel 10 of both ADCs. If this
+    channel is enabled for ADC i then the measured and smoothed voltage of the band-gap
+    source is used to calibrate the voltage result of all channels of ADC i. Calibration
+    means, that the ratio of the nominal voltage of the band-gap source and the smoothed
+    reading of channel 10 is used as scaling factor for all channels of ADC i.\n
+      If channel 10 is disabled for ADC i then the ratio of nominal reference voltage to
+    maximum count of the ADC is used as scaling factor for all channels of ADC i. Which
+    mode performs better mainly depends on the quality of the connected, external reference
+    voltage.\n
+      A chip-internal temperature sensor is connected to channel 15 of both ADCs. If this
+    channel is enabled for ADC i then the computation of the temperature from the readings
+    of the ADC is compiled and an API is provided, which permits the application code to
+    get the chip temperature TSENS_i in degrees Celsius. */
 #define ADC_USE_ADC_0_CHANNEL_00     0   /// Enable ADC_0, channel 0
 #define ADC_USE_ADC_0_CHANNEL_01     1   /// Enable ADC_0, channel 1
 #define ADC_USE_ADC_0_CHANNEL_02     0   /// Enable ADC_0, channel 2
@@ -264,12 +279,12 @@ float adc_getChannelVoltage(adc_idxEnabledChannel_t idxChn);
 float adc_getChannelVoltageAndAge(unsigned short *pAge, adc_idxEnabledChannel_t idxChn);
 
 #if ADC_USE_ADC_0_CHANNEL_15 == 1
-/** * Get the current chip temperature TSENS_0. */
+/** Get the current chip temperature TSENS_0. */
 float adc_getTsens0(void);
 #endif
 
 #if ADC_USE_ADC_1_CHANNEL_15 == 1
-/** * Get the current chip temperature TSENS_1. */
+/** Get the current chip temperature TSENS_1. */
 float adc_getTsens1(void);
 #endif
 
