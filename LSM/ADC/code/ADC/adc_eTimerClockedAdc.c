@@ -52,6 +52,9 @@
  * compile time using preprocessor conditions and the _Static_assert keyword. Therefore,
  * there are barely run-time errors recognized and reported by the code. A bad
  * configuration will simply not compile.
+ *   @remark
+ * More documentation about this ADC driver for MPC5643L can be found at
+ * https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/ADC.
  *
  * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
