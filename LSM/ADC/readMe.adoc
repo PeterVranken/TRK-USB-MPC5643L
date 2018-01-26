@@ -7,8 +7,8 @@
 
 == About this sample
 
-This sample implements a reusable analog input driver for the NXP MPC5643L. The
-sample started as a copy of sample "RTOS". 
+This sample implements a reusable analog input driver for the NXP
+MPC5643L. The sample started as a copy of sample "RTOS".
 
 The startup code in folder `code\startup` is the same as for the other
 samples, the sample makes use of the infrastructure it offers.
@@ -186,14 +186,6 @@ Technical constraints make it impossible to access the test and
 calibration data from C code. The core function is written in assembler
 but it has a C API for convenient usage.
 
-== Book E versus VLE
-
-The implementation of the function to read the MCU's test and calibration
-data is done in assembler and depends on the instruction set. It has been
-made for Book E, but VLE will follow soon.
-
-The rest of the sample does not depend on the chosen instruction set.
-
 == Tools
 
 === Environment
@@ -305,6 +297,18 @@ compiled for the Book E instruction set. All build settings and the
 software architecture are identical to "startup". Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
 for details.
+
+=== Book E versus VLE
+
+The implementation of the actual sample does not depend on the chosen
+instruction set. However, the startup code and the project settings have
+been branched from another Book E sample. To use this sample with VLE, you
+would
+https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/How-to-clone-a-Sample[clone
+a VLE sample] but take `mai_main.c` and the source code folders `ADC`,
+`mcuTestAndCalData` `RTOS` and `serial` from this sample `ADC` -- they
+will properly compile in the VLE environment, too.
+
 
 === API
 

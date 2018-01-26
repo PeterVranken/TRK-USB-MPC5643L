@@ -447,17 +447,17 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </ul>
 </li>
 <li><a href="#_the_test_and_calibration_data_of_the_mcu">3. The test and calibration data of the MCU</a></li>
-<li><a href="#_book_e_versus_vle">4. Book E versus VLE</a></li>
-<li><a href="#_tools">5. Tools</a>
+<li><a href="#_tools">4. Tools</a>
 <ul class="sectlevel2">
-<li><a href="#_environment">5.1. Environment</a></li>
-<li><a href="#_compiler_and_makefile">5.2. Compiler and makefile</a></li>
-<li><a href="#_flashing_and_debugging">5.3. Flashing and debugging</a></li>
+<li><a href="#_environment">4.1. Environment</a></li>
+<li><a href="#_compiler_and_makefile">4.2. Compiler and makefile</a></li>
+<li><a href="#_flashing_and_debugging">4.3. Flashing and debugging</a></li>
 </ul>
 </li>
-<li><a href="#_code_architecture">6. Code architecture</a>
+<li><a href="#_code_architecture">5. Code architecture</a>
 <ul class="sectlevel2">
-<li><a href="#_api">6.1. API</a></li>
+<li><a href="#_book_e_versus_vle">5.1. Book E versus VLE</a></li>
+<li><a href="#_api">5.2. API</a></li>
 </ul>
 </li>
 </ul>
@@ -468,8 +468,8 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="_about_this_sample">1. About this sample</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This sample implements a reusable analog input driver for the NXP MPC5643L. The
-sample started as a copy of sample "RTOS".</p>
+<p>This sample implements a reusable analog input driver for the NXP
+MPC5643L. The sample started as a copy of sample "RTOS".</p>
 </div>
 <div class="paragraph">
 <p>The startup code in folder <code>code\startup</code> is the same as for the other
@@ -701,25 +701,12 @@ but it has a C API for convenient usage.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_book_e_versus_vle">4. Book E versus VLE</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The implementation of the function to read the MCU&#8217;s test and calibration
-data is done in assembler and depends on the instruction set. It has been
-made for Book E, but VLE will follow soon.</p>
-</div>
-<div class="paragraph">
-<p>The rest of the sample does not depend on the chosen instruction set.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_tools">5. Tools</h2>
+<h2 id="_tools">4. Tools</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_environment">5.1. Environment</h3>
+<h3 id="_environment">4.1. Environment</h3>
 <div class="sect3">
-<h4 id="_command_line_based_build">5.1.1. Command line based build</h4>
+<h4 id="_command_line_based_build">4.1.1. Command line based build</h4>
 <div class="paragraph">
 <p>The makefiles and related scripts require a few settings of the
 environment in the host machine. In particular, the location of the GNU
@@ -746,7 +733,7 @@ script for their native shell.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_eclipse_for_building_flashing_and_debugging">5.1.2. Eclipse for building, flashing and debugging</h4>
+<h4 id="_eclipse_for_building_flashing_and_debugging">4.1.2. Eclipse for building, flashing and debugging</h4>
 <div class="paragraph">
 <p>Flashing and debugging is always done using the NXP CodeWarrior Eclipse
 IDE, which is available for free download. If you are going to run the
@@ -781,7 +768,7 @@ tools.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_compiler_and_makefile">5.2. Compiler and makefile</h3>
+<h3 id="_compiler_and_makefile">4.2. Compiler and makefile</h3>
 <div class="paragraph">
 <p>Compilation and linkage are makefile controlled. The compiler is GCC
 (MinGW-powerpc-eabivle-4.9.4). The makefile is made generic and can be
@@ -827,7 +814,7 @@ designed to run on different host systems but has been tested with Windows
 </div>
 </div>
 <div class="sect2">
-<h3 id="_flashing_and_debugging">5.3. Flashing and debugging</h3>
+<h3 id="_flashing_and_debugging">4.3. Flashing and debugging</h3>
 <div class="paragraph">
 <p>The sample code can be flashed and debugged with the CodeWarrior IDE.</p>
 </div>
@@ -864,7 +851,7 @@ icon "bug", then click "Debug Configurations&#8230;&#8203;/CodeWarrior/Debug ADC
 </div>
 </div>
 <div class="sect1">
-<h2 id="_code_architecture">6. Code architecture</h2>
+<h2 id="_code_architecture">5. Code architecture</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This sample builds on the basic sample "startup" located in a sibling
@@ -875,7 +862,20 @@ software architecture are identical to "startup". Please refer to
 for details.</p>
 </div>
 <div class="sect2">
-<h3 id="_api">6.1. API</h3>
+<h3 id="_book_e_versus_vle">5.1. Book E versus VLE</h3>
+<div class="paragraph">
+<p>The implementation of the actual sample does not depend on the chosen
+instruction set. However, the startup code and the project settings have
+been branched from another Book E sample. To use this sample with VLE, you
+would
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/How-to-clone-a-Sample">clone
+a VLE sample</a> but take <code>mai_main.c</code> and the source code folders <code>ADC</code>,
+<code>mcuTestAndCalData</code> <code>RTOS</code> and <code>serial</code> from this sample <code>ADC</code>&#8201;&#8212;&#8201;they
+will properly compile in the VLE environment, too.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_api">5.2. API</h3>
 <div class="paragraph">
 <p>The ADC driver offers an API for using it.
   <sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup>
@@ -885,7 +885,7 @@ them. Detailed information is found as
 code</a> comments.</p>
 </div>
 <div class="sect3">
-<h4 id="_read_the_mcu_s_test_and_calibration_data">6.1.1. Read the MCU&#8217;s test and calibration data</h4>
+<h4 id="_read_the_mcu_s_test_and_calibration_data">5.2.1. Read the MCU&#8217;s test and calibration data</h4>
 <div class="paragraph">
 <p>If the internal chip temperature sensors are configured for use then the
 driver depends on the availability of the test and calibration data and
@@ -914,7 +914,7 @@ the MCU reference manual, section 23.1.8, p. 591, table 23-24. Note, table
 </div>
 </div>
 <div class="sect3">
-<h4 id="_adc_driver_initialization">6.1.2. ADC driver initialization</h4>
+<h4 id="_adc_driver_initialization">5.2.2. ADC driver initialization</h4>
 <div class="paragraph">
 <p>Before use of any other API function and before conversions can start the
 initialization routine needs to be called. The invocation is done at
@@ -946,7 +946,7 @@ needs to be called prior to <code>adc_initDriver()</code>.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_getting_conversion_results">6.1.3. Getting conversion results</h4>
+<h4 id="_getting_conversion_results">5.2.3. Getting conversion results</h4>
 <div class="paragraph">
 <p>After each conversion cycle, the results are stored in an API buffer. From
 here and using the notification callback, they can be processed
@@ -1002,7 +1002,7 @@ same conversion cycle.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_diagnosis_age_of_conversion_results">6.1.4. Diagnosis: Age of conversion results</h4>
+<h4 id="_diagnosis_age_of_conversion_results">5.2.4. Diagnosis: Age of conversion results</h4>
 <div class="paragraph">
 <p>The ADC can report different run-time problems. These are not made
 available at the API, since they will likely never occur once a
@@ -1022,7 +1022,7 @@ unsigned short adc_getChannelAge(void)</pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_coherent_reading_of_several_channel_results">6.1.5. Coherent reading of several channel results</h4>
+<h4 id="_coherent_reading_of_several_channel_results">5.2.5. Coherent reading of several channel results</h4>
 <div class="paragraph">
 <p>The API buffer is updated for all channels at once at the end of a
 conversion cycle. It&#8217;ll generally be the case that the chosen priority of the
@@ -1073,7 +1073,7 @@ will return the last recently acquired conversion result</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_internal_chip_temperature">6.1.6. Internal chip temperature</h4>
+<h4 id="_internal_chip_temperature">5.2.6. Internal chip temperature</h4>
 <div class="paragraph">
 <p>Simply by enabling channel 15 for one or both ADC units, the API for
 computation and retrieval of the internal chip temperatures is generated in
@@ -1105,7 +1105,7 @@ float adc_getTsens1(void);</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-01-24 22:07:33 W. Europe Standard Time
+Last updated 2018-01-26 22:31:19 W. Europe Standard Time
 </div>
 </div>
 </body>

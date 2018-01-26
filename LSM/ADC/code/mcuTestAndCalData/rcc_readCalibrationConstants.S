@@ -24,10 +24,6 @@
  * Local functions
  */
 
-#ifdef __VLE__
-# error This file is intended for compilation for Book E instruction set only
-#endif
-
 /*
  * Include files
  */
@@ -66,6 +62,7 @@
  * to the destination address in r3.
  *   @param pDest
  * r3 holds the target address of the operation. The MCU calibration data is placed there.
+ * It needs to be 16 Bit aligned.
  *   @param noUInt16Words
  * r4 holds the non-zero number of 16 Bit words to copy. (The test and calibration data is
  * organized in words of this size.)
@@ -77,13 +74,39 @@
     .type   copyData, @function
     .align 3
 copyData:
+
+#ifdef __VLE__
+    /* Switch the flash ROM to show the MCU test or calibration data. The data is a 4k
+       page, which is shown at every multiple of 4k. */
+    e_lis   r5, SCTR@ha
+    se_li   r6, 4           /* Test flash enable is the only used bit in SCTR, no
+                               read-modify-write required to set it. */
+    e_stw   r6, SCTR@l(r5)  /* From now on, we don't see an instruction ROM any more. */
+
+    /* Copy the data to the target RAM address. */
+    mtctr   r4              /* Load count register with the number of words to copy. */
+    se_li   r6, 0           /* Load source address pointer. */
+cd_loopCopyByte:
+    se_lhz  r7, 0(r6)
+    se_sth  r7, 0(r3)
+    e_la    r6, 2(r6)       /* Advance source pointer. */
+    e_la    r3, 2(r3)       /* Advance destination pointer. */
+    e_bdnz  cd_loopCopyByte /* Branch on counter register not zero */
+    
+    /* Restore the normal flash operation. r5 still holds the register pointer. */
+    se_li   r6, 0           /* Bit TFE back to zero. */
+    e_stw   r6, SCTR@l(r5)  /* From now on, we see the instruction ROM forever. */
+
+    se_blr
+#else
     /* Switch the flash ROM to show the MCU test or calibration data. The data is a 4k
        page, which is shown at every multiple of 4k. */
     lis     r5, SCTR@ha
-    li      r6, 4           /* Test flash enable is only used bit in SCTR, not
+    li      r6, 4           /* Test flash enable is the only used bit in SCTR, no
                                read-modify-write required to set it. */
     stw     r6, SCTR@l(r5)  /* From now on, we don't see an instruction ROM any more. */
 
+    /* Copy the data to the target RAM address. */
     mtctr   r4              /* Load count register with the number of words to copy. */
     li      r6, 0           /* Load source address pointer. */
 cd_loopCopyByte:
@@ -98,9 +121,10 @@ cd_loopCopyByte:
     stw     r6, SCTR@l(r5)  /* From now on, we see the instruction ROM forever. */
 
     blr
-    
+#endif    
+
     /* We put a label at the end of the routine in order to know its size and to be able to
-       copy the entire routine to RAM. Using an 8 Byte alignment for start and end help
+       copy the entire routine to RAM. Using an 8 Byte alignment for start and end helps
        meeting the EABI constraint for stack sizes. */
     .align 3
 endOfCopyData:
@@ -114,8 +138,8 @@ endOfCopyData:
  *   @func
  * Copy the MCU's individual test and calibration data into RAM.
  *   @param pDest
- * r3 holds the target address of the operation. It needs to be a valid RAM area. The MCU
- * calibration data is placed there.
+ * r3 holds the target address of the operation. It needs to be a valid, 16 Bit aligned RAM
+ * address. The MCU calibration data is placed there.
  *   @param noUInt16Words
  * r4 holds the number of 16 Bit words to copy. (The test and calibration data is organized
  * in words of this size.)
@@ -132,6 +156,40 @@ endOfCopyData:
 #define OFFSET_CODE         8
 
 rcc_readTestData:
+
+#ifdef __VLE__
+    e_cmplwi cr0, r4, 0     /* Skip operation if user says zero words. */
+    se_ble  rtd_nop
+    
+    e_stwu  sp, -SIZE_OF_STACKFRAME(sp)
+    mflr    r0
+    e_stw   r0, (SIZE_OF_STACKFRAME+4)(sp)
+    
+    /* Copy the code of ROM copy routine into the stack frame. */
+    e_li    r5, (endOfCopyData-copyData)>>2
+    mtctr   r5              /* Load count register with number of words to copy. */
+    e_lis   r5, copyData@ha
+    e_la    r5, copyData@l(r5)  /* Load r5 with source address of code. */
+    e_la    r6, OFFSET_CODE(sp) /* Load r6 with destination address of code. */
+    mtlr    r6                  /* Later we are going to branch there. */
+rtd_loopCopyWord:
+    se_lwz  r7, 0(r5)
+    se_stw  r7, 0(r6)
+    e_la    r5, 4(r5)       /* Advance source pointer. */
+    e_la    r6, 4(r6)       /* Advance destination pointer. */
+    e_bdnz  rtd_loopCopyWord   /* Branch on counter register not zero */
+    
+    /* Call the mem-copy routine in RAM. */
+    se_blrl
+    
+    /* Destroy stack frame and return. */
+    e_lwz   r0, (SIZE_OF_STACKFRAME+4)(sp)
+    mtlr    r0
+    e_la    sp, SIZE_OF_STACKFRAME(sp)
+rtd_nop:
+    se_blr
+
+#else
     cmplwi  cr0, r4, 0      /* Skip operation if user says zero words. */
     ble     rtd_nop
     
@@ -162,6 +220,7 @@ rtd_loopCopyWord:
     la      sp, SIZE_OF_STACKFRAME(sp)
 rtd_nop:
     blr
+#endif
 
 #undef SIZE_OF_STACKFRAME
     .size   rcc_readTestData, .-rcc_readTestData
