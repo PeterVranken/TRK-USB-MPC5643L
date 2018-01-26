@@ -377,7 +377,8 @@ static void help()
     "Type:\r\n"
     "help: Get this help text\r\n"
     "show c, show w: Show details of software license\r\n"
-    "green, red: Switch LED color. The color may be followed by the desired period time in ms\r and the duty cycle in percent\n"
+    "green, red: Switch LED color. The color may be followed by the desired period time"
+      " in ms and the duty cycle in percent\r\n"
     "time: Print current time\r\n"
     "timing: Do some output and measure execution time\r\n"
     "version: Print software version designation\r\n";
