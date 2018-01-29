@@ -87,7 +87,7 @@
     context, that makes use of the API functions of this module.
       @remark Because of the larger UART buffer applied for serial output, this priority
     should normally be chosen higher than #INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT. */
-#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     6
+#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     ((INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT)+1)
 
 /** The size of the ring buffer for serial output can be chosen as a power of two of bytes.
       @remark Note, the permitted range of values depends on the reservation of space made
@@ -562,7 +562,7 @@ static void dmaTransferCompleteInterrupt(void)
 
 
 /**
- * Interrupt handler for UART RX event. A received character is read from the UART hadrware
+ * Interrupt handler for UART RX event. A received character is read from the UART hardware
  * and put into our ring buffer if there's space left. Otherwise the character is counted
  * as lost without further remedial action.
  */

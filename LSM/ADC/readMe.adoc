@@ -1,5 +1,5 @@
 = Sample "ADC" - A reusable analog input driver for MPC5643L
-:Author:    Peter Vranken 
+:Author:    Peter Vranken
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
 :xrefstyle: short
@@ -167,7 +167,7 @@ it mentions the unit of time designations.
 Some elements of the ADC functionality depend on the test and calibration
 data of the MCU. This data is specific to an individual device and is
 programmed into it as part of the production process. The operation of the
-ADC requires reading this data from a hidden area of the flash ROM. 
+ADC requires reading this data from a hidden area of the flash ROM.
 
 Reading the test and calibration data is complex insofar as it cannot be
 done on the fly by some dependent code -- like our ADC driver -- , which
@@ -195,7 +195,7 @@ but it has a C API for convenient usage.
 The makefiles and related scripts require a few settings of the
 environment in the host machine. In particular, the location of the GNU
 compiler installation needs to be known and the PATH variable needs to
-contain the paths to the required tools. 
+contain the paths to the required tools.
 
 For Windows users there is a shortcut to PowerShell in the root of this
 project (not sample), which opens the shell with the prepared environment.
@@ -247,14 +247,14 @@ Compilation and linkage are makefile controlled. The compiler is GCC
 reused for other projects, not only for a tiny "Hello World" with a few
 source files. It supports a number of options (targets); get an overview
 by typing:
- 
+
     cd <projectRoot>/LSM/ADC
     mingw32-make help
 
 The main makefile `GNUmakefile` has been configured for the build of
 sample "ADC". Type:
 
-    mingw32-make -s build 
+    mingw32-make -s build
     mingw32-make -s build CONFIG=PRODUCTION
 
 to produce the flashable files `bin\ppc\DEBUG\TRK-USB-MPC5643L-ADC.elf`
@@ -276,7 +276,7 @@ window, type:
 
     cd <rootFolderOfSample>/makefile/debugger
     source flashDEBUG.tcl
-    
+
 or
 
     source flashPRODUCTION.tcl
@@ -335,8 +335,8 @@ the initialization of the ADC driver:
 
 After this call, the global array
 
-    const uint16_t *tac_mcuTestAndCalibrationDataAry[]
-    
+    const uint16_t tac_mcuTestAndCalibrationDataAry[]
+
 provides direct access to the test and calibration data to any code
 instance, which depends on it. The contents of the table are described in
 the MCU reference manual, section 23.1.8, p. 591, table 23-24. Note, table

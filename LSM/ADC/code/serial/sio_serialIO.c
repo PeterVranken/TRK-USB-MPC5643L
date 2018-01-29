@@ -562,7 +562,7 @@ static void dmaTransferCompleteInterrupt(void)
 
 
 /**
- * Interrupt handler for UART RX event. A received character is read from the UART hadrware
+ * Interrupt handler for UART RX event. A received character is read from the UART hardware
  * and put into our ring buffer if there's space left. Otherwise the character is counted
  * as lost without further remedial action.
  */
