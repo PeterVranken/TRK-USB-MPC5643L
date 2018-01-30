@@ -227,6 +227,47 @@
 #endif
 
 
+/** The bit mask for ADC_0 registers CEOCFR0 nad CIMR0 based on the enabled channels. */
+#define ADC_ADC_0_CHANNEL_BIT_MASK                      \
+    (+ (ADC_USE_ADC_0_CHANNEL_00 == 1? (0x1u <<  0): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_01 == 1? (0x1u <<  1): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_02 == 1? (0x1u <<  2): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_03 == 1? (0x1u <<  3): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_04 == 1? (0x1u <<  4): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_05 == 1? (0x1u <<  5): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_06 == 1? (0x1u <<  6): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_07 == 1? (0x1u <<  7): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_08 == 1? (0x1u <<  8): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_09 == 1? (0x1u <<  9): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_10 == 1? (0x1u << 10): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_11 == 1? (0x1u << 11): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_12 == 1? (0x1u << 12): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_13 == 1? (0x1u << 13): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_14 == 1? (0x1u << 14): 0) \
+     + (ADC_USE_ADC_0_CHANNEL_15 == 1? (0x1u << 15): 0) \
+    )
+
+/** The bit mask for ADC_1 registers CEOCFR0 nad CIMR0 based on the enabled channels. */
+#define ADC_ADC_1_CHANNEL_BIT_MASK                      \
+    (+ (ADC_USE_ADC_1_CHANNEL_00 == 1? (0x1u <<  0): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_01 == 1? (0x1u <<  1): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_02 == 1? (0x1u <<  2): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_03 == 1? (0x1u <<  3): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_04 == 1? (0x1u <<  4): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_05 == 1? (0x1u <<  5): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_06 == 1? (0x1u <<  6): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_07 == 1? (0x1u <<  7): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_08 == 1? (0x1u <<  8): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_09 == 1? (0x1u <<  9): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_10 == 1? (0x1u << 10): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_11 == 1? (0x1u << 11): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_12 == 1? (0x1u << 12): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_13 == 1? (0x1u << 13): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_14 == 1? (0x1u << 14): 0) \
+     + (ADC_USE_ADC_1_CHANNEL_15 == 1? (0x1u << 15): 0) \
+    )
+
+
 /* At least one channel needs to be enabled. Otherwise this driver is useless and should
    not be used at all. */
 #if ADC_ADC_0_NO_ACTIVE_CHNS == 0  &&  ADC_ADC_1_NO_ACTIVE_CHNS == 0
@@ -250,13 +291,13 @@
 /*
  * Local type definitions
  */
- 
- 
+
+
 /*
  * Local prototypes
  */
- 
- 
+
+
 /*
  * Data definitions
  */

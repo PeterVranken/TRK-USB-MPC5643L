@@ -33,16 +33,16 @@
  * conversion as any other channel, however this has specific side effects:\n
  *   - If and only if the temperature signals TSENS_0 and TSENS_1, channels 15, ADC_0 and
  *     ADC_1, respectively, are element of the set of converted channels then there are
- *     APIs to read the temperature signals in degree Celsius\n
+ *     APIs to read the temperature signals in degree centigrade\n
  *   - If the reference voltage VREG_1.2V, channels 10, ADC_0 and ADC_1, respectively, are
  *     element of the set of converted channels then the averaged measured reference
  *     voltage is used to calibrate all the other channels in Volt\n
  *   @remark
- * Some configuration items of the driver are hard-coded and not modelled as compile-time
+ * Some configuration items of the driver are hard-coded and not modeled as compile-time
  * #define's. Depending on the application, these settings and thus the implementation of
  * the driver can become subject to modifications. A prominent example is the conversion
  * timing. The related settings are chosen for a rather slow sampling rate but better
- * accuracy; a rate of a few Kilohertz is targeted. Higher rates may require another
+ * accuracy; a rate of a few kilohertz is targeted. Higher rates may require another
  * timing configuration and much higher rates could even require structural code changes,
  * like DMA support.
  *   @remark
@@ -74,8 +74,10 @@
 /* Module interface
  *   adc_initDriver
  *   adc_startConversions
+ *   adc_getChannelAge
  *   adc_getChannelRawValue
  *   adc_getChannelVoltage
+ *   adc_getChannelVoltageAndAge
  *   adc_getTsens0
  *   adc_getTsens1
  * Local functions
@@ -83,7 +85,7 @@
  *   initCTU
  *   compileAdcCommandList
  *   initADC
- *   isrCtuAllConversionsDone
+ *   isrAdcAllConversionsDone
  */
 
 /*
@@ -114,8 +116,8 @@
     be selected. Either state ETIMER_0 or ETIMER_1. */
 #define ETIMER  (ETIMER_1)
 
-/* The channel of the eTimer module is fixed to 2; the CTU is not connected to the outputs
-   of the other counters in a timer module. Do not change this macro. */
+/** The channel of the eTimer module is fixed to 2; the CTU is not connected to the outputs
+    of the other counters in a timer module. Do not change this macro. */
 #define TIMER_CHN   (2)
 
 /** For development and debug purpose, the output of eTimer_1, which can be used to trigger
@@ -124,7 +126,7 @@
       @remark This setting has no effect in PRODUCTION compilation. In production
     compilation the pin is always disabled.
       @remark If module eTimer_0 is used (see #ETIMER) then no pin is available, which can
-    reasonbly be used with board TRK-USB-MPC5643L and this macro needs to be configured 0. */
+    reasonably be used with board TRK-USB-MPC5643L and this macro needs to be configured 0. */
 #define ENABLE_OUTPUT_OF_ETIMER_CHN2    1
 
 /** For development and debug purpose, the trigger output of the CTU can be routed to a MCU
@@ -134,9 +136,17 @@
     compilation the pin is always disabled. */
 #define ENABLE_OUTPUT_OF_CTU_TRIGGER    1
 
-/* The peripheral clock rate as configured in the startup code. Unit is Hz and value is an
-   unsigned long literal. Do not change. */
+/** The peripheral clock rate as configured in the startup code. Unit is Hz and value is an
+    unsigned long literal. Do not change. */
 #define PERIPHERAL_CLOCK_RATE   (120000000ul)
+
+/** The value of the reference range bit in the ADC registers MCR and MSR. The value depends
+   on the configured reference voltage. Here for ADC_0. Do not change the definition. */
+#define ADC_0_BIT_REF_RANGE ((ADC_ADC_0_REF_VOLTAGE >= (3.6f + 4.5f)/2.0f)? 0x80000u: 0x0u)
+
+/** The value of the reference range bit in the ADC registers MCR and MSR. The value depends
+    on the configured reference voltage. Here for ADC_1. Do not change the definition. */
+#define ADC_1_BIT_REF_RANGE ((ADC_ADC_1_REF_VOLTAGE >= (3.6f + 4.5f)/2.0f)? 0x80000u: 0x0u)
 
 
 /*
@@ -165,7 +175,7 @@ static unsigned int _noFailedConversions = 0;
     zero. */
 static unsigned short _ageOfConversionResults = USHRT_MAX;
 
-/** The conversion results of boths ADCs. ADC_0 comes first, followed by the results of
+/** The conversion results of both ADCs. ADC_0 comes first, followed by the results of
     ADC_1. */
 static uint16_t _conversionResAry[ADC_NO_ACTIVE_CHNS] = {[0 ... ADC_NO_ACTIVE_CHNS-1] = 0};
 
@@ -191,7 +201,7 @@ static unsigned int _TSENSOR_SEL = 0;
 
 #if ADC_USE_ADC_0_CHANNEL_15 == 1
 /** The averaged two TSENS_0 readings. The initial values are chosen such that the
-    computation starts with a value of about 30 degrees Celsius (the actual value is
+    computation starts with a value of about 30 degrees centigrade (the actual value is
     significantly device dependent). */
 static float _TSENS_0[2] = {[0] = 33500.0f, [1] = 30000.0f};
 #endif
@@ -296,7 +306,7 @@ static void initETimer()
 
     /* Control register CTRL1:
          CNTMODE, 0xe000: 1 means count rising edges
-         PRISRC, 0x1f00, count source: 0x3bbb means peripheral clock devided by 2^0xbbb
+         PRISRC, 0x1f00, count source: 0x3bbb means peripheral clock divided by 2^0xbbb
          SECSRC, 0x0014, secondary source: not applied */
     COUNTER.CTRL1.B.CNTMODE = 1;
     COUNTER.CTRL1.B.PRISRC = 0x18 + DIV_AS_PWR_OF_2; /* Clock by 8=2^3 */
@@ -312,7 +322,7 @@ static void initETimer()
     COUNTER.CTRL2.B.OUTMODE = 3; /* Toggle output on comp1 or comp2, whatever comes first. */
 
     COUNTER.CTRL3.B.STPEN = 0; /* Output is still valid when stopped. */
-    COUNTER.CTRL3.B.ROC = 0; /* We don't use the captering mechanism and don't reload the
+    COUNTER.CTRL3.B.ROC = 0; /* We don't use the capturing mechanism and don't reload the
                                 compare registers. */
     COUNTER.CTRL3.B.DBGEN = 1; /* Halt counter in debug mode. */
 
@@ -491,7 +501,7 @@ static void compileAdcCommandList()
  * application. See adc_startConversions().
  *   @remark
  * The computation of the duration of the sequence of conversions requires the knowledge
- * of the duration of a single conversion. This knowldge is hardcoded in this function but
+ * of the duration of a single conversion. This knowledge is hard-coded in this function but
  * it depends on the configuration of the ADC in initADC(). Other timing settings of the
  * ADC will require maintenance of this function
  */
@@ -511,48 +521,36 @@ static void initCTU(void)
          0x0001: 0 for triggered mode
          0x00c0: Prescaler: We use the undevided peripheral clock rate of 120MHz
          0x0100: Enable toggle mode for external trigger output */
-    CTU.TGSCR.R = 0x0100;
+    CTU.TGSCR.R = 0x0000;
 
-    /* Compare registers. The first one initiates the sequence of ADC conversions. A second
-       one is used after execution of all of these conversions in order to signal
-       conversion complete. The delay between these two depends on the number of
-       conversions. It must not be too little (ISR occurs while last conversion is not yet
-       ready) and not too long (ISR needs to have all data fetched prior to start over with
-       the next cycle). A rough estimation as implemented here is fine as long as we don't
-       have a very high sampling rate, there's far enough marging to stay on the safe side.
-       For ADC_T_CYCLE_IN_US being close to the raw conversion time the code here and the
-       concept behind will likely fail.\n
-         The timing settings of the ADC (see initADC()) yield a conversion time of about 2us
-       per channel, rather less. */
+    /* The first compare register is applied to initiate the sequence of ADC conversions
+       immediately after the master reload. */
+    /// @todo The CTU triggers now at counter value 0, used to be 1. Not yet tested if this means that we loose one master reload cycle, i.e. 1ms until we start.
+    CTU.TCR[0].R = 0x0000;
 
-    /* First compare register: Start the sequence of conversions immediately. */
-    CTU.TCR[0].R = 0x0001;
-
-    /* Here, we give an upper bounds of the complete ADC operation of one cycle,
-       including a margin. Note, this is an estimation only but the true time is constant
-       (no timing variability from cycle to cycle) and rather below; our margin can be
-       small.
+    /* Here, we give an upper bounds of the complete ADC operation of one cycle, including
+       a margin. Note, this is an estimation only but the true time is constant (no timing
+       variability from cycle to cycle) and rather below; our margin can be small. For
+       ADC_T_CYCLE_IN_US being close to the raw conversion time the code here and the
+       concept behind will likely fail.
          Note, the computation is based on an hard-coded upper bounds for the single
-       conversion. This code requires maintenance when the ADC timing is changed in
-       initADC(). */
-    #define T_CONV_CYCLE_REGVAL(type)                                                       \
-                (type)(0.5 + (2e-6*ADC_NO_CONVERSIONS_PER_CYCLE /* approx conversion time */\
-                              + 2e-6  /* margin */                                          \
-                             )                                                              \
-                             * (float)PERIPHERAL_CLOCK_RATE                                 \
+       conversion. The timing settings of the ADC (see initADC()) yield a conversion time
+       of about 2us per channel, rather less. This code requires maintenance when the ADC
+       timing is changed in initADC(). */
+    #define T_CONV_CYCLE_REGVAL(type)                                                        \
+                (type)(0.5 + (2e-6*ADC_NO_CONVERSIONS_PER_CYCLE /* approx conversion time */)\
+                             * (float)PERIPHERAL_CLOCK_RATE                                  \
                       )
     _Static_assert( T_CONV_CYCLE_REGVAL(int64_t) > 0  &&  T_CONV_CYCLE_REGVAL(int64_t) < 0xffff
                   , "Internal error, conversion time out of range"
                   );
     _Static_assert( T_CONV_CYCLE_REGVAL(int64_t)
                     + (int64_t)(5e-6 * (float)PERIPHERAL_CLOCK_RATE) /* data fetch in ISR */
+                    + (int64_t)(2e-6 * (float)PERIPHERAL_CLOCK_RATE) /* 2us margin */
                     < (int64_t)(ADC_T_CYCLE_IN_US*1e-6 * (float)PERIPHERAL_CLOCK_RATE)
                   , "ADC_T_CYCLE_IN_US is chosen too little for the configured number of ADC"
                     " channels"
                   );
-
-    /* Second compare register for raising conversion complete IRQ when all ADC is done. */
-    CTU.TCR[1].R = T_CONV_CYCLE_REGVAL(uint16_t);
 
     /* Counter: We let it count fom zero to the implementation maximum. It doesn't matter,
        if the conversion cycle is shorter than counting till the end. */
@@ -560,18 +558,14 @@ static void initCTU(void)
     CTU.TGSCRR.R = 0x0000;
 
     /* Enable triggers: The trigger from the first compare register starts the ADC command
-       sequence. The second trigger starts nothing but is only used as interrupt source.
-         However, if the external trigger output of the CTU is enabled for debugging then
-       both triggers additionally set this output. Since we configure the toggle mode the
-       pulse width of the periodic signal is identical with the complete conversion time. */
+       sequence. */
     CTU.THCR1.B.T0_E = 1;    /* Enable trigger 0 */
     CTU.THCR1.B.T0_ADCE = 1; /* and let it start the ADC command sequence. */
-    CTU.THCR1.B.T1_E = 1;    /* Enable trigger 1 */
 #if ENABLE_OUTPUT_OF_CTU_TRIGGER == 1  &&  defined(DEBUG)
-    CTU.THCR1.B.T0_ETE = 1;  /* Set external trigger output to 1 on start of conversion */
-    CTU.THCR1.B.T1_ETE = 1;  /* Reset external trigger output to 0 on end-of-conversion IRQ */
+    CTU.THCR1.B.T0_ETE = 1;  /* Shortly set external trigger output to 1 on start of
+                                conversion */
 
-    /* The use of the external ouput requires pin configuration. */
+    /* The use of the external output requires pin configuration. */
     SIU.PCR[46].R = 0x0A04; /* Port C[14] configured as external trigger output of the CTU. */
 #endif
 
@@ -581,9 +575,8 @@ static void initCTU(void)
     compileAdcCommandList();
 
     /* COTR: The length of the impulses in the external trigger output in clock ticks
-       impacts their visibility on the scope. Irrelevant for us since we use the toggle
-       mode. */
-    CTU.COTR.R = 0; 
+       impacts their visibility on the scope. */
+    CTU.COTR.R = 240; /* 2us at 120 MHz */
 
     /* Clear all error and interrupt flag bits, if any. */
     CTU.CTUIFR.R = 0x0fff;
@@ -624,13 +617,12 @@ static void initADC(unsigned int idxAdc)
        connected to the 3.3V supply. We cannot choose for the 5V reference.
          Note, while documented in the reference manual of the MCU (section 8.3.2.1, p.143)
        is the bit not defined in the MCU header file and nor shown by the debugger. We
-       can't access it by name. The reset value 0 is what we need and we don't insist on
-       the access. */
-    //pADC->MCR.B.REF_RANGE_EXP = (idxAdc == 0? ADC_ADC_0_REF_VOLTAGE: ADC_ADC_1_REF_VOLTAGE)
-    //                            <= (3.6 + 4.5)/2.0
-    //                            ? 0
-    //                            : 1;
-
+       can't access it by name. */
+    if((idxAdc == 0? ADC_ADC_0_REF_VOLTAGE: ADC_ADC_1_REF_VOLTAGE) >= (3.6f + 4.5f)/2.0f)
+        pADC->MCR.R |= 0x80000u;
+    else
+        pADC->MCR.R &= ~0x80000u;
+    
     /* Enable the cross trigger unit (CTU) for timing control. */
     pADC->MCR.B.CTUEN = 1;
 
@@ -676,6 +668,32 @@ static void initADC(unsigned int idxAdc)
     /* Selection of channels, pADC->NCMR0.R: Out of scope, the channel selection is
        commanded by the CTU and there configured. */
 
+    /* The end of conversion interrupt is configured. We generally enable the end-of-CTU
+       interrupts but limit this to the very channel in the very ADC, which is the last
+       conversion of the cycle.
+         Note, this will work only under the presumption, that both ADCs operate perfectly
+       synchronously and end in the same clock tick; if the last conversion is a dual
+       conversion then we need to arbitrarily choose one of both ADCs as interrupt source. */
+#if ADC_ADC_0_NO_ACTIVE_CHNS >= ADC_ADC_1_NO_ACTIVE_CHNS
+    const unsigned int idxAdcWithEOCTUIrq = 0
+                     , idxLastChn = adc_adc0_idxEnabledChannelAry[ADC_ADC_0_NO_ACTIVE_CHNS-1];
+#else
+    const unsigned int idxAdcWithEOCTUIrq = 1
+                     , idxLastChn = adc_adc1_idxEnabledChannelAry[ADC_ADC_1_NO_ACTIVE_CHNS-1];
+#endif
+    if(idxAdc == idxAdcWithEOCTUIrq)
+    {
+        /* Enable channel interrupts only for last channel in conversion cycle. */
+        pADC->CIMR0.R = 0x1u << idxLastChn;
+        
+        /* Reset all possibly pending interrupt bits. */
+        pADC->CEOCFR0.R = 0x0000fffful;
+        
+        /* Generally enable the end of CTU conversion interrupts and disable all others. */
+        pADC->IMR.R = 0x00000010ul;
+        
+    } /* End if(Function is called for ADC with longer list of conversions to do) */
+
     /* Leave power down mode, goto operation. */
     pADC->MCR.B.PWDN = 0;
     while(pADC->MSR.B.ADCSTATUS != 0)
@@ -684,28 +702,57 @@ static void initADC(unsigned int idxAdc)
 } /* End of initADC */
 
 
-
-/// @todo doc
-static void isrCtuAllConversionsDone(void)
+/**
+ * The end-of-conversion interrupt handler. This interrupt is notified by the ADC unit,
+ * which has more conversions to do. The first conversions of a cycle, as long as both
+ * units still have to convert enabled channels, are commanded by the CTU in dual mode. If
+ * one unit has more conversion then these are appended in single mode. If the last
+ * conversion is done in dual mode than unit ADC_0 notifies the interrupt. In either case
+ * is this the EOCTU interrupt of the last converted channel in the cycle.\n
+ *   The ISR checks the status of the active ADC units (register MSR). The results are
+ * marked good only if both ADCs are idle and signal the completion of all channels. In
+ * this case all enabled channel conversion results are fetched from the registers CDRn.
+ * These registers contain further validity information dedicated to the channel. The API
+ * data is updated with the new conversion result only if this validity information is as
+ * expected. Otherwise the overall validity of the conversion cycle is set to bad.\n
+ *   Since we maintain only a single validity information for the entire conversion cycle
+ * it may happen that this indicates bad although single channels have been found good and
+ * have been updated in the API. However, it'll not happen that any channel is found bad
+ * while the cycle related validity says good. The summarized validity information is
+ * justified by the very low likelihood of ever seeing a bad result (once the configuration
+ * is proven to work well).
+ *   @remark 
+ * See https://community.nxp.com/message/978486 for a discussion of possible interrupt
+ * sources for the given purpose.
+ */
+static void isrAdcAllConversionsDone(void)
 {
-    /* Check status of the ADCs. We expect the bit CTUSTART to be set but most other bits
-       unset, indicating the idle/ready state.
+#if ADC_ADC_0_NO_ACTIVE_CHNS >= ADC_ADC_1_NO_ACTIVE_CHNS
+    volatile ADC_tag * const pADC = &ADC_0;
+#else
+    volatile ADC_tag * const pADC = &ADC_1;
+#endif
+
+    /* Check status of the ADCs. We expect the bit CTUSTART to be set and the reference
+       voltage range bit depending on the configured reference voltage, but most other bits
+       reset, indicating the idle/ready state.
          Note, we maintain a single success status for all ADCs and all channels together,
        although we have ADC specific and even channel specific information. We could
        provide success information on a per channel base. Not doing so is justified by the
-       very low likelyhood of ever seeing a problem. In this very rare case we are still on
+       very low likelihood of ever seeing a problem. In this very rare case we are still on
        the safe side - we don't use a bad result but only loose some maybe still alright
        results. */
-       
     bool success =
 #if ADC_ADC_0_NO_ACTIVE_CHNS > 0
-        (((ADC_0.MSR.R) ^ 0x10000u) & 0x019d0027u) == 0
+        (((ADC_0.MSR.R) ^ (0x10000u | ADC_0_BIT_REF_RANGE)) & 0x019d0027u) == 0
+        &&  ADC_0.CEOCFR0.R == ADC_ADC_0_CHANNEL_BIT_MASK
 #endif
 #if ADC_ADC_0_NO_ACTIVE_CHNS > 0  &&  ADC_ADC_1_NO_ACTIVE_CHNS > 0
         &&
 #endif
 #if ADC_ADC_1_NO_ACTIVE_CHNS > 0
-        (((ADC_1.MSR.R) ^ 0x10000u) & 0x019d0027u) == 0
+        (((ADC_1.MSR.R) ^ (0x10000u | ADC_0_BIT_REF_RANGE)) & 0x019d0027u) == 0
+        &&  ADC_1.CEOCFR0.R == ADC_ADC_1_CHANNEL_BIT_MASK
 #endif
         ;
 
@@ -734,7 +781,7 @@ static void isrCtuAllConversionsDone(void)
                the channels of the given ADC.
                  Nominal voltage: The signal name says 1.2 V but we have measured 1.24 V at
                two real devices and literature mostly says around 1.25 V for a bandgap
-               reference. Moreover, most purchaseable reference voltage products have a
+               reference. Moreover, most purchasable reference voltage products have a
                nominal voltage of 1.24 V. This value is what we use. */
 # if ADC_USE_ADC_0_CHANNEL_10 == 1  ||  ADC_USE_ADC_1_CHANNEL_10 == 1
             _Static_assert( ADC_FILTER_COEF_VREG_1_2V >= 0.0f
@@ -804,18 +851,31 @@ static void isrCtuAllConversionsDone(void)
     if(_cbEndOfConversion != NULL)
         (*_cbEndOfConversion)();
 
-    /* Clear the interrupt flag to be ready for the next conversion cycle. */
-    assert(CTU_0.CTUIFR.B.T1_I == 1);
-    CTU_0.CTUIFR.R = 0x4;
+    /* Clear the channel related EOC interrupt flag to be ready for the next conversion
+       cycle. The interrupt is enabled for only one channel (the last one in the cycle) but
+       we clear all other channels, too, to stay able to do the validity test on next entry
+       into this ISR again. */
+#if defined(DEBUG) &&  ADC_ADC_0_NO_ACTIVE_CHNS >= ADC_ADC_1_NO_ACTIVE_CHNS
+    ADC_1.CEOCFR0.R = 0x0000fffful;
+#else
+    ADC_0.CEOCFR0.R = 0x0000fffful;
+#endif
+    pADC->CEOCFR0.R = 0x0000fffful;
+    
+    /* Clear the general interrupt flag in register ISR. We except to serve an end-of-CTU
+       interrupt. This assertion would e.g. fire if the reference voltage is not found as
+       expected. */
+    assert(pADC->ISR.R == 0x00000010ul);
+    pADC->ISR.R = 0x00000010ul;
 
-} /* End of isrCtuAllConversionsDone */
+} /* End of isrAdcAllConversionsDone */
 
 
 
 /**
  * Initialization of ADC driver. This function needs to be called before use of any of the
  * other functions offered by this driver.\n
- *   Note, most settings of the driver are either hardcoded (e.g. conversion timing) or
+ *   Note, most settings of the driver are either hard-coded (e.g. conversion timing) or
  * made by compile-time configuration switches (preprocessor macros). Particularly, the set
  * of channels to convert are made in the latter way. It is not possible to select specific
  * ADC channels at run-time.\n
@@ -825,7 +885,7 @@ static void isrCtuAllConversionsDone(void)
  * otherwise the ADC readings will stay arbitrary with the few exceptions of converting
  * internal signals.\n
  *   Note, SIUL pin configuration is done by this function for the one or two output
- * signals, which can be routet to MCU pins for development support and debugging purpose
+ * signals, which can be routed to MCU pins for development support and debugging purpose
  * (and in DEBUG compilation only). See #ENABLE_OUTPUT_OF_ETIMER_CHN2 and
  * #ENABLE_OUTPUT_OF_CTU_TRIGGER for more.
  *   @param priorityOfIRQ
@@ -869,11 +929,17 @@ void adc_initDriver(unsigned int priorityOfIRQ, void (*cbEndOfConversion)(void))
     initADC(/* idxAdc */ 1);
 #endif
 
-    /* The CTU is programmed to raise an interrupt on the last ADC command completed.
-       Install service routine. */
+    /* The ADC width the most enabled conversions per cycle is programmed to raise an
+       interrupt on completion of the last ADC command from the CTU. Install service
+       routine. */
+#if ADC_ADC_0_NO_ACTIVE_CHNS >= ADC_ADC_1_NO_ACTIVE_CHNS
+    const unsigned int vectorNumAdcEOC = 62; /* ADC_0 */
+#else
+    const unsigned int vectorNumAdcEOC = 82; /* ADC_1 */
+#endif
     assert(priorityOfIRQ > 0  &&  priorityOfIRQ <= 15);
-    ihw_installINTCInterruptHandler( isrCtuAllConversionsDone
-                                   , /* vectorNum */ 195 /* Trigger 1 */
+    ihw_installINTCInterruptHandler( isrAdcAllConversionsDone
+                                   , vectorNumAdcEOC
                                    , /* psrPriority */ priorityOfIRQ
                                    , /* isPreemptable */ true
                                    );
@@ -915,9 +981,6 @@ void adc_startConversions()
     CTU.CTUIFR.R = 0x0fff;
     CTU.CTUEFR.R = 0x1fff;
 
-    /* Enable interrupt on trigger 1 (end of conversions). */
-    CTU.CTUIR.B.T1_I = 1;
-
     /* Start the timer channel we are working with. */
     ETIMER.ENBL.R |= (1<<TIMER_CHN);
 
@@ -945,7 +1008,7 @@ void adc_startConversions()
  * driver initialization and before the first conversion result is available.
  *   @remark
  * Coherent reading of ADC channel result(s) and the age of the conversion result is
- * subject to the design of the client code. If coherency is an issue then it needs to
+ * subject to the design of the client code. If coherence is an issue then it needs to
  * implement a critical section, which contains the retrieval of all channel results and
  * their (common) age or it can use the end-of-conversion notification callback to read the
  * required results race condition free in sync with the conversion cycle.
@@ -959,12 +1022,12 @@ unsigned short adc_getChannelAge()
 
 
 /**
- * Get the last recent uncalibrated conversion result for a single channel. (See
+ * Get the last recent non calibrated conversion result for a single channel. (See
  * adc_getChannelVoltage() and adc_getChannelVoltageAbdAge() for getting calibrated
  * results.)
  *   @return
  * Get the conversion result in as ADC counts as read from the ADC register. The scaling is
- * lienar, zero means zero and 0x10000 means input voltage is same as reference voltage
+ * linear, zero means zero and 0x10000 means input voltage is same as reference voltage
  * supplied to the MCU. (3.3 V in case of the TRK-UBS-MPC5643L.)
  *   @param idxChn
  * The index of the channel to be read. Note, this index doesn't relate to the sixteen ADC
@@ -1001,7 +1064,7 @@ uint16_t adc_getChannelRawValue(adc_idxEnabledChannel_t idxChn)
  * #ADC_ADC_0_REF_VOLTAGE or #ADC_ADC_1_REF_VOLTAGE or on the filtered readings of the
  * internal reference voltage source VREG_1.2V. Which one applies depends on
  * #ADC_USE_ADC_0_CHANNEL_10 and #ADC_USE_ADC_1_CHANNEL_10.\n
- *   See adc_getChannelRawValue() for getting uncalibrated raw ADC counts as conversion
+ *   See adc_getChannelRawValue() for getting non calibrated raw ADC counts as conversion
  * result.
  *   @param idxChn
  * The index of the channel to be read. Note, this index doesn't relate to the sixteen ADC
@@ -1066,7 +1129,7 @@ float adc_getChannelVoltage(adc_idxEnabledChannel_t idxChn)
  * #ADC_ADC_0_REF_VOLTAGE or #ADC_ADC_1_REF_VOLTAGE or on the filtered readings of the
  * internal reference voltage source VREG_1.2V. Which one applies depends on
  * #ADC_USE_ADC_0_CHANNEL_10 and #ADC_USE_ADC_1_CHANNEL_10.\n
- *   See adc_getChannelRawValue() for getting uncalibrated raw ADC counts as conversion
+ *   See adc_getChannelRawValue() for getting non calibrated raw ADC counts as conversion
  * result.
  *   @param pAge
  * The "age" of the result can be read coherently with the result itself. The unit of the
@@ -1087,7 +1150,7 @@ float adc_getChannelVoltage(adc_idxEnabledChannel_t idxChn)
  * conversion cycle.
  *   Note that the validity information * \a pAge is identical for all channel results of
  * one and the same conversion cycle. Therefore and because this function requires a
- * critical section for each invokation, it is more performant to use
+ * critical section for each invocation, it is more performant to use
  * adc_getChannelVoltage() repeatedly and adc_getChannelAge() once if the client code
  * implements a critical section to read more than one channel coherently.
  *   @remark
@@ -1148,7 +1211,7 @@ float adc_getChannelVoltageAndAge(unsigned short *pAge, adc_idxEnabledChannel_t 
 /**
  * Get the current chip temperature TSENS_0.
  *   @return
- * Get the temperature in degrees Celsius.
+ * Get the temperature in degrees centigrade.
  */
 float adc_getTsens0(void)
 {
@@ -1166,7 +1229,7 @@ float adc_getTsens0(void)
 /**
  * Get the current chip temperature TSENS_1.
  *   @return
- * Get the temperature in degrees Celsius.
+ * Get the temperature in degrees centigrade.
  */
 float adc_getTsens1(void)
 {
