@@ -203,13 +203,14 @@ static unsigned int _TSENSOR_SEL = 0;
 /** The averaged two TSENS_0 readings. The initial values are chosen such that the
     computation starts with a value of about 30 degrees centigrade (the actual value is
     significantly device dependent). */
-static float _TSENS_0[2] = {[0] = 33500.0f, [1] = 30000.0f};
+static float _TSENS_0[2] = {[0] = 32500.0f, [1] = 31000.0f};
 #endif
 
 #if ADC_USE_ADC_1_CHANNEL_15 == 1
 /** The averaged two TSENS_1 readings. The initial values are chosen such that the
-    computation starts with a value of about 30 degrees Celsius. */
-static float _TSENS_1[2] = {[0] = 33500.0f, [1] = 30000.0f};
+    computation starts with a value of about 30 degrees centigrade (the actual value is
+    significantly device dependent). */
+static float _TSENS_1[2] = {[0] = 32500.0f, [1] = 31000.0f};
 #endif
 
 /* Some constants from the device individual test and calibration data, required later for
@@ -525,7 +526,6 @@ static void initCTU(void)
 
     /* The first compare register is applied to initiate the sequence of ADC conversions
        immediately after the master reload. */
-    /// @todo The CTU triggers now at counter value 0, used to be 1. Not yet tested if this means that we loose one master reload cycle, i.e. 1ms until we start.
     CTU.TCR[0].R = 0x0000;
 
     /* Here, we give an upper bounds of the complete ADC operation of one cycle, including

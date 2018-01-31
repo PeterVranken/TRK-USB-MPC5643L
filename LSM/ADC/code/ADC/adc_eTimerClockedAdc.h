@@ -51,7 +51,8 @@
       A chip-internal temperature sensor is connected to channel 15 of both ADCs. If this
     channel is enabled for ADC i then the computation of the temperature from the readings
     of the ADC is compiled and an API is provided, which permits the application code to
-    get the chip temperature TSENS_i in degrees Celsius. */
+    get the chip temperature TSENS_i in degrees centigrade.\n
+      Note, the shared channels 11 .. 14 must not be enabled at both ADC units. */
 #define ADC_USE_ADC_0_CHANNEL_00     0   /// Enable ADC_0, channel 0
 #define ADC_USE_ADC_0_CHANNEL_01     1   /// Enable ADC_0, channel 1
 #define ADC_USE_ADC_0_CHANNEL_02     0   /// Enable ADC_0, channel 2
