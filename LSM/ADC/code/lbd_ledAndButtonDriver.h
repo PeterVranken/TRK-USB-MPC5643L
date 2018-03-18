@@ -159,7 +159,7 @@ static inline bool lbd_getButton(lbd_button_t button)
     return buttonState;
     
 #undef MAX_CNT
-} /* End of lbd_setLED */
+} /* End of lbd_getButton */
 
 
 /*

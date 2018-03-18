@@ -4,7 +4,7 @@
  * the INTC. Used for MPC5643L in Lockstep Mode (LSM). The code has been designed for use
  * with GCC for PowerPC EABI.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -121,7 +121,7 @@ int_INTCInterruptHandlerAry:
 
 
 /**
- *   @func sup_INTCInterruptHandler
+ *   @func int_INTCInterruptHandler
  * This is the interrupt handler for the MCU trap #4, External Interrupts. This trap
  * relates to interrupts controlled by the INTC. The INTC provides the vector to the
  * appropriate service function and handles the preemption or mutual exclusion of

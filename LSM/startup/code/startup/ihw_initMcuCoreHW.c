@@ -389,10 +389,10 @@ static void initINTCInterruptController()
 
     /* Normally, this function should always be called at the very first beginning, when
        all interrupts are still globally disabled at the CPU. However, we make it safe
-       against deviating code constructs we locally disable all interrupts. */
+       against deviating code constructs if we locally disable all interrupts. */
     uint32_t msr;
     asm volatile ( /* AssemblerTemplate */
-                   "mfmsr %0\n"
+                   "mfmsr %0\n\t"
                    "wrteei 0\n"
                  : /* OutputOperands */ "=r" (msr)
                  : /* InputOperands */
@@ -405,7 +405,7 @@ static void initINTCInterruptController()
     INTC.BCR.R = 0;
 
     /* The address of our vector table is stored in field VTBA_PRC0. Only the most
-       significant 21 Bit will matter, the reset will at run-time be preplaced by the index
+       significant 21 Bit will matter, the reset will at run-time be replaced by the index
        of the pending interrupt. */
     INTC.IACKR_PRC0.R = (uint32_t)&int_INTCInterruptHandlerAry[0];
 
@@ -415,6 +415,7 @@ static void initINTCInterruptController()
     /* Restore the machine status register including the enable external interrupt bit.
        For the normal, intended use case this won't have an effect. */
     asm volatile ( /* AssemblerTemplate */
+                   "mbar \n\t"
                    "mtmsr %0\n"
                  : /* OutputOperands */
                  : /* InputOperands */ "r" (msr)
@@ -469,7 +470,7 @@ void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
        need to disable them shortly to avoid inconsistent states (vector and priority). */
     uint32_t msr;
     asm volatile ( /* AssemblerTemplate */
-                   "mfmsr %0\n"
+                   "mfmsr %0\n\t"
                    "wrteei 0\n"
                  : /* OutputOperands */ "=r" (msr)
                  : /* InputOperands */
@@ -492,6 +493,7 @@ void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
     INTC.PSR[vectorNum].B.PRI = psrPriority;
 
     asm volatile ( /* AssemblerTemplate */
+                   "mbar \n\t"
                    "mtmsr %0\n"
                  : /* OutputOperands */
                  : /* InputOperands */ "r" (msr)

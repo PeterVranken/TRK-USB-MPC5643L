@@ -120,7 +120,7 @@ int_INTCInterruptHandlerAry:
 
 
 /**
- *   @func sup_INTCInterruptHandler
+ *   @func int_INTCInterruptHandler
  * This is the interrupt handler for the MCU trap #4, External Interrupts. This trap
  * relates to interrupts controlled by the INTC. The INTC provides the vector to the
  * appropriate service function and handles the preemption or mutual exclusion of

@@ -8,7 +8,7 @@
  *   After all needed tasks are registered the application will start the RTOS' kernel
  * by calling the API rtos_initKernel(), task scheduling begins. Alternatively, the RTOS'
  * scheduler function rtos_onOsTimerTick() can be called from an externally defined clock
- * source (effectively any regular interrupt service routine).
+ * source (effectively any regular interrupt service routine).\n
  *   A task is mainly characterized by a task function and a priority; the C code function
  * is invoked when the task is activated. The function is unconditionally executed until it
  * normally ends - this designates the end of the task.\n
@@ -32,7 +32,7 @@
  * task then it'll preempt the running task and it'll become the running task itself.\n
  *   If no task is ready at all then the scheduler continues the original code thread,
  * which is the code thread starting in function main() and which first registers the tasks
- * and then starts the kernel. (Everything from this code thread, which is placed behind
+ * and then starts the kernel. (Everything in this code thread, which is placed behind
  * the call of API rtos_initKernel() is called the "idle task".)\n
  *   The implemented scheduling scheme leads to a strictly hierarchical execution order of
  * tasks. It's simple, less than what most RTOSs offer but still powerful enough for the
@@ -44,10 +44,10 @@
  *   Any I/O interrupts can be combined with the tasks. Different to most RTOS we don't
  * impose a priority ordering between tasks and interrupts. A conventional design would put
  * interrupt service routines (ISR) at higher priorities than the highest task priority but
- * this is not a must. The RTOS doesn't have an API for interrupt handling; continue to use
- * the API from the infrastructure provided by the startup code to install your interrupt
- * handlers. This works fine with the RTOS. Please refer to
- * ihw_installINTCInterruptHandler().\n
+ * this is not a must.\n
+ *   The RTOS doesn't have an own API for interrupt handling; continue to use the API from
+ * the infrastructure provided by the startup code to install your interrupt handlers. This
+ * works fine with the RTOS. Please refer to ihw_installINTCInterruptHandler().\n
  *   Effectively, there's no difference between tasks and ISRs. All what has been said for
  * tasks with respect to priority, states and preemption holds for ISRs and the combination
  * of tasks and ISRs, too.\n
@@ -56,7 +56,7 @@
  * much of an RTOS kernel in hardware. The RTOS is just a wrapper around these hardware
  * capabilities. The reference manual of the INTC partly reads like an excerpt from the
  * OSEK/VDX specification, it effectively implements the basic task conformance classes BCC1
- * and partly BCC2 from the standard. Since we barely add software support, our operating
+ * and mostly BCC2 from the standard. Since we barely add software support, our operating
  * system is by principle restricted to these conformance classes.\n
  *   Basic conformance class means that a task cannot suspend intentionally and ahead of
  * its normal termination. Once started, it needs to be entirely executed. Due to the

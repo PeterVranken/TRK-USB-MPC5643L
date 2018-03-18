@@ -315,7 +315,7 @@ static void showW()
 
     fiprintf(stdout, gplShowW);
 
-} /* End of showW() */
+} /* End of showW */
 
 
 
@@ -345,7 +345,7 @@ static void showC()
 
     puts(gplShowC);
 
-} /* End of showC() */
+} /* End of showC */
 
 
 
@@ -362,7 +362,7 @@ static void version()
 
     puts(version);
     
-} /* End of version() */
+} /* End of version */
 
 
 /**
@@ -385,7 +385,7 @@ static void help()
 
     fputs(help, stderr);
 
-} /* End of help() */
+} /* End of help */
 
 
 

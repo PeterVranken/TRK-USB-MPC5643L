@@ -306,7 +306,7 @@ been branched from another Book E sample. To use this sample with VLE, you
 would
 https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/How-to-clone-a-Sample[clone
 a VLE sample] but take `mai_main.c` and the source code folders `ADC`,
-`mcuTestAndCalData` `RTOS` and `serial` from this sample `ADC` -- they
+`mcuTestAndCalData`, `RTOS` and `serial` from this sample `ADC` -- they
 will properly compile in the VLE environment, too.
 
 
@@ -378,8 +378,8 @@ reading several results becomes an issue.
     uint16_t adc_getChannelRawValue(adc_idxEnabledChannel_t idxChn)
 
 Get the raw conversion result of a single channel, i.e. the counter value
-read for the ADC. The voltage range [0V .. supplied reference voltage] is
-represented by counts from 0 till 2^16^.
+read for the ADC. The voltage range [0V .. supplied reference voltage) is
+represented by counts [0 .. 2^16^).
 
 The channel index relates to the set of enabled channels and the
 enumeration `adc_idxEnabledChannel_t` is provided, which shapes the
@@ -416,7 +416,8 @@ conversion cycle or a channel result reports a problem. This situation is
 reported to the client code as age of the available results. The unit of
 the age is the duration of a single conversion cycle, 1 ms in our sample.
 As long as no problem is recognized the value will always be reported as
-zero.
+zero. Otherwise `age` reports how long ago the API buffers had been filled
+with successfully acquired values.
 
     #include "adc_eTimerClockedAdc.h"
     unsigned short adc_getChannelAge(void)
@@ -458,9 +459,9 @@ will return the last recently acquired conversion result
 ==== Internal chip temperature
 
 Simply by enabling channel 15 for one or both ADC units, the API for
-computation and retrieval of the internal chip temperatures is generated in
-the compiled code. (Otherwise this code is excluded from compilation.) The
-temperature values are acquired like all analog channels in the each
+computation and retrieval of the internal chip temperatures is generated
+in the compiled code. (Otherwise this code is excluded from compilation.)
+The temperature values are acquired like all analog channels in each
 conversion cycle and can be fetched at any time and from any context using
 these API functions:
 
