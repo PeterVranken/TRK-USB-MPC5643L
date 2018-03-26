@@ -167,7 +167,19 @@ static inline uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToT
     if(suspendUpToThisPriority > priorityLevelSoFar)
         INTC.CPR_PRC0.R = suspendUpToThisPriority;
 
-    asm volatile ( "wrteei 1\n" ::: );
+    /* We put a memory barrier before we reenable the interrupt handling. The write to the
+       CPR register is surely done prior to next interrupt.
+         Note, the next interrupt can still be a last one of priority less than or equal to
+       suspendUpToThisPriority. This happens occasional when the interrupt asserts, while
+       we are here inside the critical section. Incrementing CPR does not un-assert an
+       already asserted interrupt. The isync instruction ensures that this last interrupt
+       has completed prior to the execution of the first code inside the critical section.
+       See https://community.nxp.com/message/993795 for more. */
+    asm volatile ( "mbar\n\t"
+                   "wrteei 1\n\t"
+                   "isync\n"
+                   :::
+                 );
                  
     return priorityLevelSoFar;
     
@@ -198,8 +210,12 @@ static inline uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToT
 static inline void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)
 {
     /* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority
-       in the INTC should be done under global interrupt lock. */
-    asm volatile ( "wrteei 0\n" ::: );
+       in the INTC should be done under global interrupt lock. A memory barrier ensures
+       that all memory operations inside the now left crtical section are completed. */
+    asm volatile ( "mbar\n\t"
+                   "wrteei 0\n"
+                   :::
+                 );
     INTC.CPR_PRC0.R = resumeDownToThisPriority;
     asm volatile ( "wrteei 1\n" ::: );
 
