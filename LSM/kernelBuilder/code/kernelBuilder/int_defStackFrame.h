@@ -37,7 +37,7 @@
                                interrupt handler. */
 #define O_SRR0     8        /* This experiment doesn't save context in interrupt */
 #define O_SRR1    12        /* This experiment doesn't save context in interrupt */
-                 
+
 #define O_RET     16        /* Return value of sys call handler (temporary storage) has
                                size 12 Byte. Caution, this structure is shared with the C
                                code. */
@@ -54,7 +54,7 @@
 #define O_I_LR    32        /* volatile, saved on ISR entry */
 #define O_I_CTR   36        /* volatile, saved on ISR entry */
 #define O_I_XER   40        /* volatile, saved on ISR entry */
-                            
+
 #define O_I_R00   44        /* volatile, saved on ISR entry */
                             /* r2: Same, constant value for all contexts. Not saved */
 #define O_I_R03   48        /* volatile, saved on ISR entry */
@@ -87,9 +87,9 @@
 #define O_I_R29   152       /* volatile, saved on context switch */
 #define O_I_R30   156       /* volatile, saved on context switch */
 #define O_I_R31   160       /* volatile, saved on context switch */
-                            
+
 #define O_I_CPR   164       /* Current interrupt priority in suspended context */
-                            
+
 #define S_I_StFr  168       /* No content bytes rounded to next multiple of eight */
 
 
@@ -97,25 +97,25 @@
    the words are addressed by O_SC_xxx(sp).
      Here for the stack frame of the IVOR #8 system call handler. */
 #define O_SC_R14   28       /* volatile, saved on context switch */
-#define O_SC_R15   32      /* volatile, saved on context switch */
-#define O_SC_R16   36      /* volatile, saved on context switch */
-#define O_SC_R17   40      /* volatile, saved on context switch */
-#define O_SC_R18   44      /* volatile, saved on context switch */
-#define O_SC_R19   48      /* volatile, saved on context switch */
-#define O_SC_R20   52      /* volatile, saved on context switch */
-#define O_SC_R21   56      /* volatile, saved on context switch */
-#define O_SC_R22   60      /* volatile, saved on context switch */
-#define O_SC_R23   64      /* volatile, saved on context switch */
-#define O_SC_R24   68      /* volatile, saved on context switch */
-#define O_SC_R25   72      /* volatile, saved on context switch */
-#define O_SC_R26   76      /* volatile, saved on context switch */
-#define O_SC_R27   80      /* volatile, saved on context switch */
-#define O_SC_R28   84      /* volatile, saved on context switch */
-#define O_SC_R29   88      /* volatile, saved on context switch */
-#define O_SC_R30   92      /* volatile, saved on context switch */
-#define O_SC_R31   96      /* volatile, saved on context switch */
+#define O_SC_R15   32       /* volatile, saved on context switch */
+#define O_SC_R16   36       /* volatile, saved on context switch */
+#define O_SC_R17   40       /* volatile, saved on context switch */
+#define O_SC_R18   44       /* volatile, saved on context switch */
+#define O_SC_R19   48       /* volatile, saved on context switch */
+#define O_SC_R20   52       /* volatile, saved on context switch */
+#define O_SC_R21   56       /* volatile, saved on context switch */
+#define O_SC_R22   60       /* volatile, saved on context switch */
+#define O_SC_R23   64       /* volatile, saved on context switch */
+#define O_SC_R24   68       /* volatile, saved on context switch */
+#define O_SC_R25   72       /* volatile, saved on context switch */
+#define O_SC_R26   76       /* volatile, saved on context switch */
+#define O_SC_R27   80       /* volatile, saved on context switch */
+#define O_SC_R28   84       /* volatile, saved on context switch */
+#define O_SC_R29   88       /* volatile, saved on context switch */
+#define O_SC_R30   92       /* volatile, saved on context switch */
+#define O_SC_R31   96       /* volatile, saved on context switch */
 
-#define S_SC_StFr  104     /* No content bytes rounded to next multiple of eight */
+#define S_SC_StFr  104      /* No content bytes rounded to next multiple of eight */
 
 
 /*

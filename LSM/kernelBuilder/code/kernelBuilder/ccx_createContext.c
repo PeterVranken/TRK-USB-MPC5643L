@@ -34,8 +34,6 @@
 /* Module interface
  *   ccx_sc_createContext
  * Local functions
- *   guard
- *   privilegedGuard
  */
 
 /*
@@ -78,44 +76,6 @@
 /*
  * Function implementation
  */
-
-#if 0
-/**
- * This is a never returning function, which is installed as parent in call order of the
- * function, which is entered as new execution context (see ccx_sc_createContext()). It
- * implements an endless loop and protects the system of a crash if the entry function of
- * the new context should ever be left.
- */
-static _Noreturn void guard()
-{
-    for(;;)
-        ;
-} /* End of guard */
-
-
-
-
-
-/**
- * This is a never returning function, which is installed as parent in call order of the
- * function, which is entered as new execution context (see ccx_sc_createContext()). It
- * implements an endless loop and protects the system of a crash if the entry function of
- * the new context should ever be left.\n
- *   This function is used as guard for execution contexts running in privileged mode. The
- * difference to the normal user mode guard is that it can suspend all interrupts. The
- * entire system is effectively halted.
- */
-static _Noreturn void privilegedGuard()
-{
-    /* Suspend all interrupts to effectively halt the system .*/
-    ihw_suspendAllInterrupts();
-    for(;;)
-        ;
-} /* End of privilegedGuard */
-#endif
-
-
-
 
 /**
  * This is the implementation of a system call that creates a new execution context. It may
@@ -199,17 +159,16 @@ uint32_t ccx_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
     * --sp = 0xffffffff;
 
     /* The next word is reserved space for stored link register contents once the context is
-       running. The initial activation of the context is implemented like the return from a
-       suspend command. This means that the context including the "return" address is taken
-       from the stack together with the other registers. We will put our context start address
-       not here but at the right location in the context. */
+       running. The entry function of the new context will store LR here. */
     * --sp = 0xffffffff;
 
-    /* sp now has the value it'll have on entry into the code execution. Down here, the
-       stack frame is prepared in the stack that contains the CPU context as it should be
-       on entry into the context. To facilitate maintenance of the code we implement the C
-       operations to fill the stack frame similar to the assembly code for context save and
-       restore. */
+    /* sp now has the value it'll have on entry into the entry function of the new context.
+       This is the initial back chain word of the new context, which should be 0.
+         Down here, the stack frame is prepared in the stack that contains the CPU context as
+       it should be on entry into the context. To facilitate maintenance of the code we
+       implement the C operations to fill the stack frame similar to the assembly code for
+       context save and restore. */
+    *sp = 0;
     uint32_t * const spOnContextEntry = sp;
 
 #define IDX(OFFSET)                                                                         \
@@ -246,8 +205,8 @@ uint32_t ccx_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
     /* The machine status is set once for the context and always restored after any future
        system call or interrupt. Here, we decide once forever whether the context is
        executed in user or priviledged mode. */
-    sp[IDX(O_SRR1)] = 0x02029000ul    /* MSR: External, critical and machine check
-                                         interrupts enabled, SPE are set, ... */
+    sp[IDX(O_SRR1)] = 0x00029000ul    /* MSR: External, critical and machine check
+                                         interrupts enabled, SPE is not set, ... */
                       | (privilegedMode? 0x00000000: 0x00004000ul); /* ... PR depends */
 
     sp[IDX(O_RET_RC)] = 0;      /* Tmp. value to return from system call, doesn't care */

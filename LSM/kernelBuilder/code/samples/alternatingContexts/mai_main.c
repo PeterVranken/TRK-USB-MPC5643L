@@ -101,8 +101,8 @@ void main()
        the interrupt handlers. */
     ihw_resumeAllInterrupts();
 
-    iprintf( "TRK-USB-MPC5643LAtGitHub - kernelBuilder  Copyright (C) 2017-2018"
-             " Peter Vranken\r\n"
+    iprintf( "TRK-USB-MPC5643LAtGitHub - kernelBuilder (alternatingContexts)\r\n"
+             "Copyright (C) 2017-2018 Peter Vranken\r\n"
              "This program comes with ABSOLUTELY NO WARRANTY.\r\n"
              "This is free software, and you are welcome to redistribute it\r\n"
              "under certain conditions; see LGPL.\r\n"

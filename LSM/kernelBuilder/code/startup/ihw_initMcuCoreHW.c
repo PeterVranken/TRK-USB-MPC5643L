@@ -445,42 +445,43 @@ static void initINTCInterruptController()
  * The priority at which the interrupt is served. 0..15. 0 is useless, it would never be
  * served, 1 is the lowest real priority and 15 the highest. Preemption of a handler (if
  * enabled), which serves an interrupt of priority n will be possible only by another
- * interrupt of priority n+1 or higher.
- *   @param
+ * interrupt of priority n+1 or higher.\n
+ *   Note, kernel interrupts need to use priority 1. This is double-checked by assertion.
+ *   @param isPreemptable
  * For each interrupt it can be sayed, whether it is preemptable by other interrupts of
  * higher priority or not. If this is \a false then the interrupt handler will always be
  * entered with the status bit EE reset in the machine status register MSR.\n
  *   Note, a handler, which has been declared non-premptable is allowed to set the EE bit
  * itself. It can thus first do some operations without any race-conditions with other
  * interrupts and then continue without further locking normal interrupt processing.
+ *   @param isKernelInterrupt
+ * Two types of interrupts are supported. The ordinary behave as usual, they preempt the
+ * running context and return to the statement where they had preempted. A kernel relevant
+ * interrupt is one, which can decide on return whether to behave like an oridnary one or
+ * whether the return to another, currently suspended execution context. Pass \a true if \a
+ * interruptHandler denotes a kernel relevant interrupt.\n
+ *   Note, the function signature of the handler \a interruptHandler depends on whether it
+ * is an ordinary or a kernel relevant interrupt.
  *   @remark
  * The function can be used at any time. It is possible to exchange a handler at run-time,
  * while interrrupts are being processed. However, the normal use case will rather be to
  * call this function for all required interrupts and only then call the other function
- * initINTCInterruptController().
+ * ihw_resumeAllInterrupts().\n
  *   This function must not be called for an interrupt number n from the context of that
  * interrupt n.
- *   @remark
- * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file
- * IntcInterrupts_p0.c, l. 204ff.
  */
-/// @todo Update doc after adding the choice for two types of interrupts
 void ihw_installINTCInterruptHandler( int_externalInterruptHandler_t interruptHandler
                                     , unsigned short vectorNum
                                     , unsigned char psrPriority
                                     , bool isPreemptable
-                                    , bool isOsInterrupt
+                                    , bool isKernelInterrupt
                                     )
 {
     /* Test the binary build-up of the interface with the assembly code. The assembler does
        not double-check the data types and code maintenance is not safely possible without
        these compile time tests. */
-    _Static_assert( sizeof(int_externalInterruptHandler_t) == 4
-                    &&  offsetof(int_externalInterruptHandler_t, simpleIsr) == 0
-                    &&  offsetof(int_externalInterruptHandler_t, osIsr) == 0
-                  , "Interface between C and assembler code inconsistently defined"
-                  );
-
+    INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS
+    
     /* We permit to use this function at any time, i.e. even while interrupts may occur. We
        need to disable them shortly to avoid inconsistent states (vector and priority). */
     uint32_t msr;
@@ -493,35 +494,43 @@ void ihw_installINTCInterruptHandler( int_externalInterruptHandler_t interruptHa
                  );
 
     /* Set the function pointer in the ISR Handler table. We use the two least significant
-       bits of the address to store the information about preemption and OS relevance. This
-       convention is known and considered by the assembler code that implements the common
-       part of all INTC interrupts. */
+       bits of the address to store the information about preemption and kernel relevance.
+       This convention is known and considered by the assembler code that implements the
+       common part of all INTC interrupts. */
     assert(((uintptr_t)interruptHandler.simpleIsr & 0x00000003) == 0);
-    if(isOsInterrupt)
+    if(isKernelInterrupt)
     {
-        /* An OS ISR, which can preempt a context then return to and resume another one. */
-        int_externalOsInterruptHandler_t isr =
-            (int_externalOsInterruptHandler_t)((uintptr_t)interruptHandler.osIsr | 0x00000001);
+        /* A kernel ISR, which can preempt a context then return to and resume another one. */
+        int_ivor4KernelIsr_t isr =
+            (int_ivor4KernelIsr_t)((uintptr_t)interruptHandler.kernelIsr | 0x00000001);
         if(isPreemptable)
-            isr = (int_externalOsInterruptHandler_t)((uintptr_t)isr | 0x00000002);
+            isr = (int_ivor4KernelIsr_t)((uintptr_t)isr | 0x00000002);
         
-        int_INTCInterruptHandlerAry[vectorNum] =(int_externalInterruptHandler_t){.osIsr = isr};
+        int_INTCInterruptHandlerAry[vectorNum] =
+                                        (int_externalInterruptHandler_t){.kernelIsr = isr};
+        
+        /* Set the PSR Priority
+             The priority ceiling protocol of the INTC doesn't work for kernel interrupts
+           and can't be applied to serialilize their servicing. Therefore, we demand that
+           all kernel interrupts run on priority 1. */
+        assert(psrPriority == 1);
+        INTC.PSR[vectorNum].B.PRI = 1;
     }
     else
     {
         /* A simple ISR, which can preempt a context but only return to and resume the same
            context. */
-        int_externalSimpleInterruptHandler_t isr = interruptHandler.simpleIsr;
+        int_ivor4SimpleIsr_t isr = interruptHandler.simpleIsr;
         if(isPreemptable)
-            isr = (int_externalSimpleInterruptHandler_t)((uintptr_t)isr | 0x00000002);
+            isr = (int_ivor4SimpleIsr_t)((uintptr_t)isr | 0x00000002);
         
         int_INTCInterruptHandlerAry[vectorNum] =
                                         (int_externalInterruptHandler_t){.simpleIsr = isr};
 
-    } /* End if(Is it an OS relevant ISR or not?) */
-    
-    /* Set the PSR Priority */
-    INTC.PSR[vectorNum].B.PRI = psrPriority;
+        /* Set the PSR Priority */
+        INTC.PSR[vectorNum].B.PRI = psrPriority;
+
+    } /* End if(Is it a kernel relevant ISR or not?) */
 
     asm volatile ( /* AssemblerTemplate */
                    "mbar \n\t"

@@ -247,7 +247,7 @@ productionCodeOptimization := -Os
 asmFlags = $(targetFlags)                                                                   \
            -Wall                                                                            \
            -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                  \
-           $(foreach path,$(srcDirList) $(incDirList),-I$(path))                            \
+           $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path)) \
            $(cDefines) $(foreach def,$(defineList),-D$(def))                                \
            -Wa,-g -Wa,-gdwarf-2
 
@@ -274,7 +274,7 @@ cFlags = $(targetFlags) -mno-string                                             
          -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
          -Werror=pointer-to-int-cast -Werror=return-local-addr                              \
          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                    \
-         $(foreach path,$(srcDirList) $(incDirList),-I$(path))                              \
+         $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path))   \
          $(cDefines) $(foreach def,$(defineList),-D$(def))
 ifeq ($(SAVE_TMP),1)
     # Debugging the build: Put preprocessed C file and assembler listing in the output

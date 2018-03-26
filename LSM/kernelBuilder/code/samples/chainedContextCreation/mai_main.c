@@ -1,10 +1,11 @@
 /**
  * @file mai_main.c
  *   The main entry point of the C code. The startup code of the MCU is identical to sample
- * "startup"; refer to that sample for details.\n
- *   TODOC ...
+ * "startup"; refer to that sample for details. Then we initialize serial and LED output
+ * and branch into the test routine in module
+ * samples/chainedContextCreation/xsw_contextSwitch.c.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -47,7 +48,6 @@
 #include "sio_serialIO.h"
 #include "xsw_contextSwitch.h"
 #include "int_interruptHandler.h"
-#include "del_delay.h"
 #include "sc_systemCalls.h"
 #include "mai_main.h"
 
@@ -106,8 +106,8 @@ void main()
        the interrupt handlers. */
     ihw_resumeAllInterrupts();
 
-    iprintf( "TRK-USB-MPC5643LAtGitHub - kernelBuilder  Copyright (C) 2017-2018"
-             " Peter Vranken\r\n"
+    iprintf( "TRK-USB-MPC5643LAtGitHub - kernelBuilder (chainedContextCreation)\r\n"
+             "Copyright (C) 2017-2018 Peter Vranken\r\n"
              "This program comes with ABSOLUTELY NO WARRANTY.\r\n"
              "This is free software, and you are welcome to redistribute it\r\n"
              "under certain conditions; see LGPL.\r\n"

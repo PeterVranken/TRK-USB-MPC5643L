@@ -1,10 +1,10 @@
 /**
  * @file xsw_contextSwitch.c
  * Sample code for using the IVOR #4 and #8 handlers in int_interruptHandler.S to implement
- * a simple scheduler, which toggles between N execution contexts.\n
+ * a simple scheduler, which toggles in a cyclic manner between N execution contexts.\n
  *   The sample demonstrates only cooperative context switches, implemented by a system
  * call.\n
- *   The sample demonstrates the use of system calls. TODOC\n
+ *   The sample demonstrates the use of system calls.\n
  *   A terminal program should be connected (115.2 kBd, 8 Bit, 1 stop, no parity); the
  * contexts print a status message every about 1000 cycles of operation.
  *
@@ -45,7 +45,6 @@
 
 #include "typ_types.h"
 #include "lbd_ledAndButtonDriver.h"
-#include "del_delay.h"
 #include "ihw_initMcuCoreHW.h"
 #include "int_defStackFrame.h"
 #include "sc_systemCalls.h"
@@ -62,13 +61,13 @@
 /** The first context is the normal context and the stack is the main stack defined in the
     linker command file. All other contexts require their own stack. The size needs to be at
     minimum N times the size of the ISR stack frame, where N is the number of interrupt
-    priorities in use. In this sample we set N=6 (2 in serial and 3 here in this module,
+    priorities in use. In this sample we set N=3 (2 in serial, none here in this module,
     one as reserve for code extensions) and the stack frame size is S_I_StFr=168 Byte. So
-    for safe interrupt handling we need a minimum of 840 Byte. This does not yet include
+    for safe interrupt handling we need a minimum of 504 Byte. This does not yet include
     the stack consumption of the implementation of the contexts.\n
       Note, the number of uint32 words in the stack needs to be even, otherwise the
     implementation of the 8 Byte alignment for the initial stack pointer value is wrong. */
-#define STACK_SIZE_IN_BYTE (6*S_I_StFr + 400)
+#define STACK_SIZE_IN_BYTE (((3*S_I_StFr + 400)+7) & ~7)
 
 
 
@@ -154,8 +153,12 @@ static void returnAfterMicroseconds(unsigned long tiInUs)
 
 
 
-/* Trivial routine that flashes the LED a number of times to give simple feedback. The
-   routine is blocking. */
+/**
+ * Trivial routine that flashes the LED a number of times to give simple feedback. The
+ * routine is blocking.
+ *   @param noFlashes
+ * The number of short flashes to produce.
+ */
 static void blink(uint16_t noFlashes)
 {
 #define TI_FLASH_MS 200
@@ -178,9 +181,9 @@ static void blink(uint16_t noFlashes)
 
 
 /**
- * Implementation of system call to switch from the one to another execution context by index.
- * Using only this system call but not running a timer interrupt to do context switching
- * yields a non-preemptive, cooperative scheduler.
+ * Implementation of system call to switch from the one to another execution context by
+ * index. Using only this system call but not running a timer interrupt to do context
+ * switching yields a non-preemptive, cooperative scheduler.
  *   @return
  * \a true: This system call normally demands a context switch. However, if \a
  * idxOfResumedContext should denote the currently running context then it returns \a false
@@ -235,7 +238,7 @@ bool cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
 
 /**
  * This function implements the behavior of the concurrent execution contexts. We use a
- * single function, all context behaves identical, in this simple demo.
+ * single function, all context behaves identical in this simple demo.
  *   @param idxThis
  * The passed system call argument initialData is used to tell the function from which
  * context it has been called.
@@ -259,6 +262,12 @@ static void _Noreturn executionContext(uint32_t idxThis)
                , idxThis+1
                );
         _idxActiveContext = idxThis+1;
+        
+        /* Prefill stack memory to make stack usage observeable. */
+        memset(&_stackAry[idxThis][0], 0xa5, STACK_SIZE_IN_BYTE);
+        
+        /* Create context and branch into it. We return from this (system) function call
+           only after a complete cycle of chained context switches. */
         sc_createNewContext( /* executionEntryPoint */  &executionContext
                            , /* stackPointer */         (uint8_t*)&_stackAry[idxThis][0]
                                                         + STACK_SIZE_IN_BYTE
@@ -296,6 +305,9 @@ static void _Noreturn executionContext(uint32_t idxThis)
 
             iprintf("Context %lu suspends and resumes %u\r\n", idxThis, idxNextContext);
         }
+        
+        /* Switch to the next context in the chain. We return from this (system) function
+           call only after a complete cycle of chained context switches. */
         idxResumedBy = sc_switchContext( /* idxOfResumedContext */ idxNextContext
                                        , /* signalToResumedContext */ idxThis
                                        );
@@ -319,12 +331,8 @@ static void isrPit2(void)
 
 
 /**
- * Start the interrupt which clocks the system time. Timer 2 is used as interrupt source
- * with a period time of about 2 ms or a frequency of 490.1961 Hz respectively.\n
- *   This is the default implementation of the routine, which can be overloaded by the
- * application code if another interrupt or other interrupt settings should be used.
+ * Start the interrupt PIT2, which produces stress.
  */
-
 static void enableIRQPit2(void)
 {
     /* Disable all PIT timers during configuration. */

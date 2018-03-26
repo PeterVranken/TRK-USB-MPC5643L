@@ -76,7 +76,7 @@
     the stack consumption of the implementation of the context.\n
       Note, the number of uint32 words in the stack needs to be even, otherwise the
     implementation of the 8 Byte alignment for the initial stack pointer value is wrong. */
-#define TASK_STACK_SIZE_IN_BYTE (6*S_I_StFr + 400)
+#define STACK_SIZE_IN_BYTE (((6*S_I_StFr + 400)+7) & ~7)
 
 /** The number of offered semaphore variables. */
 #define NO_SEMAPHORES   10
@@ -110,7 +110,7 @@ static bool _context1IsActive = true;
 
 /** Stack space for the second execution context. Note the alignment of 8 Byte, which is
     required to fulfill EABI constraints. */
-static _Alignas(uint64_t) uint32_t _stack2ndCtxt[(TASK_STACK_SIZE_IN_BYTE+sizeof(uint32_t)-1)
+static _Alignas(uint64_t) uint32_t _stack2ndCtxt[(STACK_SIZE_IN_BYTE+sizeof(uint32_t)-1)
                                                  / sizeof(uint32_t)
                                                 ];
 
@@ -126,6 +126,15 @@ volatile unsigned long xsw_cntIsrPit2 = 0;
     there are no race conditions, all interrupt and system call handlers are serialized. */
 unsigned long xsw_noContextSwitches = 0;
  
+/** Count bad interrupt servicing due to problem with the INTC priority ceiling protocol. If an ISR is preempted by another
+    kernel interrupt, which does a context switch than the hardware will assert the
+    preempted interrupt in the new context again. When resuming, the preempted one will
+    find the hardware event already serviced - this condition is counted.\n
+      The earlier revisions of kernelBuilder, which attempted to implement the PCP for
+    kernel interrupts of different priority, show counts for PIT0, which is running at
+    lower priority and which is preempted regardless of the priority ceiling in the INTC. */
+static unsigned long _noErrPit0Tif = 0
+                   , _noErrPit1Tif = 0;
 
 /*
  * Function implementation
@@ -462,6 +471,8 @@ static _Noreturn void secondContext(uint32_t taskParam)
 static bool isrSystemTimerTick1(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Acknowledge the timer interrupt in the causing HW device. */
+    if(PIT.TFLG0.B.TIF != 0x1)
+        ++ _noErrPit0Tif;
     PIT.TFLG0.B.TIF = 0x1;
 
     /* Switch task every few Milliseconds. */
@@ -516,7 +527,7 @@ static void enableIRQTimerTick1(void)
     /* Install the interrupt handler for cyclic timer PIT 0. It drives the OS scheduler for
        cyclic task activation. */
     ihw_installINTCInterruptHandler( (int_externalInterruptHandler_t)
-                                                {.osIsr = &isrSystemTimerTick1}
+                                                {.kernelIsr = &isrSystemTimerTick1}
                                    , /* vectorNum */ 59 /* Timer PIT 0 */
                                    , /* psrPriority */ 1
                                    , /* isPreemptable */ true
@@ -546,15 +557,17 @@ static void enableIRQTimerTick1(void)
  * isrSystemTimerTick but the interrupt has another rate and another priority. It is meant
  * a test that all kernel relevant interrupts are serialized and do not harmfully interfere
  * with one another.\n
- *   This function is nearly a copy of isrSystemTimerTick1. It proves that irrelated ISRs
+ *   This function is nearly a copy of isrSystemTimerTick1. It proves that unrelated ISRs
  * can independently take decisions for context switches. The tick rates of both interrupts
  * are chosen mutually prime such that all possible phase relations will occur.
  */
 static bool isrSystemTimerTick2(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
-    assert(INTC.CPR_PRC0.R == 4);
+    assert(INTC.CPR_PRC0.R == 1);
 
     /* Acknowledge the timer interrupt in the causing HW device. */
+    if(PIT.TFLG1.B.TIF != 0x1)
+        ++ _noErrPit1Tif;
     PIT.TFLG1.B.TIF = 0x1;
 
     /* Switch task every few Milliseconds. */
@@ -606,9 +619,9 @@ static void enableIRQTimerTick2(void)
     /* Install the interrupt handler for cyclic timer PIT 0. It drives the OS scheduler for
        cyclic task activation. */
     ihw_installINTCInterruptHandler( (int_externalInterruptHandler_t)
-                                                {.osIsr = &isrSystemTimerTick2}
+                                                {.kernelIsr = &isrSystemTimerTick2}
                                    , /* vectorNum */ 60 /* PITimer Channel 1 */
-                                   , /* psrPriority */ 3
+                                   , /* psrPriority */ 1
                                    , /* isPreemptable */ true
                                    , /* isOsInterrupt */ true
                                    );
@@ -704,8 +717,10 @@ void xsw_loop()
     /* As a compile time option, the second context defined here in this module can be
        replaced by a function implemented in assembly code, which does nothing apparently
        but which is designed to check the correct save/restore of the CPU context. Most of
-       the registers are set to test patterns and double-checked later. */
+       the registers are set to test patterns and double-checked later. 
+         Prefill stack memory to make stack usage observeable. */
     fputs("Prepare second context\r\n", stdout);
+    memset(&_stack2ndCtxt[0], 0xa5, sizeof(_stack2ndCtxt));
     sc_createNewContext(
 #if 1
                          /* executionEntryPoint */  &secondContext

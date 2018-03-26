@@ -83,33 +83,34 @@ typedef struct int_contextSaveDesc_t
     type.
       @remark Handlers of this kind are installed by the application code using function
     ihw_installINTCInterruptHandler(). */
-typedef void (*int_externalSimpleInterruptHandler_t)(void);
+typedef void (*int_ivor4SimpleIsr_t)(void);
 
 /** The return value of an interrupt handler, which interacts with the scheduler and which
-    can demand a context switch by means of this return value. */
+    can demand a context switch by means of its Boolean function return value. */
 typedef struct int_cmdContextSwitch_t
 {
-    /** The return value of a system call. This field needs to be set by the interrupt
-        handler only if the interrupt returns to a system call. This can be the immediate,
-        context switch free return from an system call interrupt or the resume of a
-        context, which had formerly be suspended by a system call. */
+    /** The return value of a system call. This field needs to be set by the interrupt or
+        system call handler only if the interrupt returns to a system call. This can be the
+        immediate, context switch free return from an system call interrupt or the resume
+        of a context, which had formerly been suspended by a system call. */
     uint32_t retValSysCall;
 
-/// @todo not Null is wrong. We demand by return code of ISR
-    /** A context switch is demanded if \a pSuspendedContextSaveDesc is not NULL. Now, the
-        pointer references the location in memory where the context save information of the
-        suspended context is saved for later resume of the context. Otherwise the value
-        doesn't care. */
+    /** A context switch is demanded if the service handler for either a kernel relevant
+        External Interrupt or for a system call returns \a true. Now, the pointer
+        references the location in memory where the context save information of the
+        suspended context has to be saved for later resume of the context. Otherwise the
+        value doesn't care. */
     int_contextSaveDesc_t *pSuspendedContextSaveDesc;
 
-    /** If \a pSuspendedContextSaveDesc is not NULL then this pointer references the
-        location in memory where the context save information of the resumed context is
-        found. */
+    /** A context switch is demanded if the service handler for either a kernel relevant
+        External Interrupt or for a system call returns \a true. Now, this pointer
+        references the location in memory where the context save information of the resumed
+        context is found. */
     const int_contextSaveDesc_t *pResumedContextSaveDesc;
 
 } int_cmdContextSwitch_t;
 
-/// @todo Documentation does no longer fit after change of prototypes
+
 
 /** The asynchronous External Interrupt, which interacts with the scheduler and which
     decides whether or not a context switch results from its execution needs to be
@@ -120,31 +121,33 @@ typedef struct int_cmdContextSwitch_t
     true).
       @remark Handlers of this kind are installed for External Interrupts by the
     application or scheduler code using function ihw_installINTCInterruptHandler(). */
-typedef bool (*int_externalOsInterruptHandler_t)(int_cmdContextSwitch_t *pCmdContextSwitch);
+typedef bool (*int_ivor4KernelIsr_t)(int_cmdContextSwitch_t *pCmdContextSwitch);
 
-/** The API to install an ISR for External Interrupts accepts both types of handlers, with
-    and without the option to switch the context on return. Here's a union to combine both
-    function pointer types. */
+
+/** The API ihw_installINTCInterruptHandler() to install an ISR for External Interrupts
+    accepts both types of handlers, with and without the option to switch the context on
+    return. Here's a union to combine both function pointer types. */
+/// @todo Consider using anonymous unions as type. This is likely more user friendly and intuitive. The only location where this is used should be the register function in module IHW
 typedef union int_externalInterruptHandler_t
 {
     /** Use this field to store a simple ISR, which can't interact with the operating
         system. */
-    int_externalSimpleInterruptHandler_t simpleIsr;
+    int_ivor4SimpleIsr_t simpleIsr;
 
     /** Use this field to store an ISR, which can interact with the operating system and
         which can demand context switches at return. */
-    int_externalOsInterruptHandler_t osIsr;
+    int_ivor4KernelIsr_t kernelIsr;
 
 } int_externalInterruptHandler_t;
 
 
 /** Each system call needs to be implemented by a function of this type.
-      @remark Note, such system call functions are usually directly implemented and a
-    function pointer type is likely not required. It is offered only for safe code
-    maintenance. A scheduler implementation is encouraged to apply this typedef for
-    double-checking the implementation type of all its system calls. The compiler can't
-    implicitely do this because the calling counterpart code is in the type-check free
-    assembly environment. */
+      @remark
+    The C signature is formally not correct. The assembly code only
+    supports function arguments in CPU registers, which limits the total number to eight.
+    The ... stands for 0..7 arguments of up to 32 Bit. If a system call function has more
+    arguments or if it are 64 Bit arguments then the assembly code will not propagate all
+    arguments properly to the system call function and the behavior will be undefined! */
 typedef bool (*int_systemCallFct_t)( int_cmdContextSwitch_t *pCmdContextSwitch
                                    , ...
                                    );

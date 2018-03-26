@@ -65,6 +65,18 @@
 # The name of the project is used for several build products.
 project := TRK-USB-MPC5643L-kernelBuilder
 
+# KernelBuilder can only be compiled
+# together with an application, which is kept in a dedicated folder subtree, usually inside folder
+# code/samples/. The application is selected by makefile argument. Here, we ensure that the
+# application has been specified by the user.
+ifneq ($(filter-out h help targets usage,$(MAKECMDGOALS)),)
+    ifeq ($(APP),)
+        $(error No sample application has been specified on the makefile's command line. \
+                You need to set variable APP. Type mingw32-make help to get more \
+                information)
+    endif
+endif
+
 # The directory, from where to run the compiled target when yielding target run. Defaults
 # to the directory, where the compiled target is located.
 #targetRunDir :=

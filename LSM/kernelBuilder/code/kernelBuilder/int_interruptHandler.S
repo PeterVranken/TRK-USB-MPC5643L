@@ -68,8 +68,16 @@
 
 /** The highest interrupt priority, which is system wide used for those interrupts, which
     are kernel relevant (i.e. which can do system calls and/or can provoke context
-    switches). */
-#define INT_MAX_KERNEL_IRQ_PRIO     4
+    switches).
+      @remark The initial intention of allowing kernel interrupts at different priorities
+    didn't work out. The priority ceiling mechanism of the INTC as proposed by NXP e.g. in
+    the MCU reference manual doesn't work in the context of a context switching kernel. It
+    cannot avoid that different interrupts preempt each other. (It can only ensure that this
+    doesn't occur at code locations, where data coherency would be harmed.) See
+    https://community.nxp.com/message/993795 for more.\n
+      Caution, for this reason the definition must never be changed; all kernel interrupts
+    have the INTC priority one. */
+#define INT_MAX_KERNEL_IRQ_PRIO     1
 
 
 /*
@@ -194,7 +202,6 @@ int_INTCInterruptHandler:
     mflr    r0                  /* Save LR before reusing it for call of ISR */
     stw     r0, O_I_LR(sp)
     stw     r3, O_I_R03(sp)     /* Store r3 and r4 prior to modification */
-    stw     r4, O_I_R04(sp)
 
     /* Save SRR0 and SRR1. This needs to be done before enabling EE in order to enable
        nested interupts. */
@@ -210,76 +217,53 @@ int_INTCInterruptHandler:
                                            processor */
     lwz     r3, 0x0(r3)         /* Read ISR address from ISR Vector Table using pointer  */
 
-    /* Relevant MSR bits. These bits are now modified in the MSR for execution of the
-       application interrupt handler.
-         0x02000000: SPE
-         0x00020000: CE
-         0x00008000: EE
-         0x00004000: PR
-         0x00001000: ME */
-    mfmsr   r0          /* Read the MSR for manipulation as appropriate for the user code. */
-
     /* For preemptable interrupt handlers set the EE bit in the MSR. The property
        preemptability of a handler is encoded as bit 1 (0x2) of the vector in the table. */
-    rlwinm. r4, r3, 31, 31, 31   /* Move bit 1 of r3 to r4 and set CR0 */
-    beq     cr0, int_eeh_endIfPreemptable /* Branch on 0, bit was not set, no premptability */
+    rlwinm  r0, r3, 31, 31, 31  /* Move bit 1 of r3 to r0 and set CR1 */
+    cmplwi  cr1, r0, 0
 
-int_eeh_isPreemptable:
-    /* Enable processor recognition of External Interrupts. */
-    ori     r0, r0, 0x8000      /* Set MSR[EE]=1 */
-
-int_eeh_endIfPreemptable:
-    /* The handler code requires the full instruction set but the SPE bit is reset on entry
-       in an interrupt. Unconditionally set it prior to branching into the user code. */
-    oris    r0, r0, 0x0200
-
-    /* For kernel relevant interrupts, but regardless of the "preemptiveness" of the ISR,
-       we will now raise the interrupt level in the INTC so that it'll only delegate those
-       interrupt requests to the CPU, which have a higher priority than all other kernel
-       relevant interrupts. Even kernel relevant ISRs, which have been declared
-       non-preemptive can safely decide somewhere in the middle of their implementation to
-       re-enable interrupt handling.
-         An assertion ensures that the level is never lowered, which could make the
-       priority queue in the INTC overrun. A system crash would be nearly unavoidable.
-         The assertion can fire if an ISR, which has been declared kernel relevant,
-       has given an out-of-range priority.
-         Kernel relevant ISR's have bit 0 set in the address. */
-    rlwinm. r4, r3, 0, 31, 31   /* Move bit 0 of r3 to r4 and set CR0 */
+    /* Kernel relevant ISR's have bit 0 set in the address. */
+    rlwinm. r0, r3, 0, 31, 31   /* Move bit 0 of r3 to r0 and set CR0 */
 
     /* Clear the flag bits to get the proper address back. Do this without modifying CR. */
     rlwinm  r3, r3, 0, 0, 29    /* Keep bits 2..31 in r3 */
     mtlr    r3                  /* Put true ISR address in LR */
 
-    /// @todo We should not compile the PCP if #INT_MAX_KERNEL_IRQ_PRIO==1. Here and below
-    // and the stack frame doesn't require storage space for CPR
-    beq     cr0, int_eeh_endRaiseINTCCurPrio    /* Branch on r4=0 */
-
-    /* Note: Do not change cr0 in the next lines, we need the same decision once again when
+    /* Note: Do not change cr0 and cr1 in the next lines, we need the decisions later, when
        actually branching. */
-    lis     r3, INTC_CPR_PRC0@ha
+
 #ifdef DEBUG
-    lwz     r4, INTC_CPR_PRC0@l(r3)             /* Read current INTC prio */
-    cmplwi  cr7, r4, INT_MAX_KERNEL_IRQ_PRIO    /* Compare with highest kernel prio */
-    bgt-    cr7, int_eeh_errorPrioLowered       /* Error if current > highest kernel prio */
+    beq     cr0, int_eeh_endCheckINTCCurPrio    /* Branch on r4=0 */
+
+    /* An assertion ensures that the priority of this kernel interrupt has the only
+       permitted value 1. */
+    lis     r3, INTC_CPR_PRC0@ha
+    lwz     r0, INTC_CPR_PRC0@l(r3)             /* Read current INTC prio */
+    cmplwi  cr7, r0, INT_MAX_KERNEL_IRQ_PRIO    /* Compare with highest kernel prio */
+    bgt-    cr7, int_eeh_errorBadKernelIrqPrio  /* Error if current > highest kernel prio */
+int_eeh_endCheckINTCCurPrio:
 #endif
-    li      r4, INT_MAX_KERNEL_IRQ_PRIO         /* Store highest permitted kernel prio */
-    stw     r4, INTC_CPR_PRC0@l(r3)             /* in INTC's current prio register */
 
-    /* We apply a memory barrier to ensure that the INTC priority register has really
-       been changed before we enable nested, preempting interrupts. */
-    msync
+    /* Relevant MSR bits. These bits are now modified in the MSR for execution of the
+       application interrupt handler.
+         Note, we must not set the MSR[SPE] bit. The 64 Bit SPE instructions are generally
+       unwanted. Once we start using them, we need to save our CPU contexts on interrupts
+       as full 64 Bit, although only occasionally used by the compiler. (Not setting SPE
+       requires not using -mspe on the compiler command line.)
+         0x02000000: SPE
+         0x00020000: CE
+         0x00008000: EE
+         0x00004000: PR
+         0x00001000: ME */
 
-int_eeh_endRaiseINTCCurPrio:
-    mtmsr   r0
-    
-    /* For preemptable ISRs we will see preemptions even by kernel relevant interrupts
-       (raising CPR doesn't un-assert pending interrupts from immediately before). We add
-       an isync to be sure that these interrupts are all handled before we execute the code
-       inside the critical section. */
-    isync
+    /* Now reenable servicing of External Interrupts of priority above kernel prio 1. */
+    beq     cr1, int_eeh_endIfPreemptable
+    wrteei  1
+int_eeh_endIfPreemptable:
 
     /* If we get here, and in case of an preemptable ISR, the handling of External
-       Interrupts is re-enabled and we can become preempted. */
+       Interrupts is re-enabled and we can become preempted by kernel irrelevant
+       interrupts. */
 
     /* To minimize the interrupt lock time we save the rest of context required by EABI
        only after we have released the handling of further External Interrupts (of higher
@@ -292,18 +276,19 @@ int_eeh_endRaiseINTCCurPrio:
     stw     r7, O_I_R07(sp)     /* Store r7 */
     stw     r6, O_I_R06(sp)     /* Store r6 */
     stw     r5, O_I_R05(sp)     /* Store r5 */
+    stw     r4, O_I_R04(sp)     /* Store r4 */
     mfctr   r0                  /* Store CTR */
     stw     r0, O_I_CTR(sp)
     mfxer   r0                  /* Store XER */
     stw     r0, O_I_XER(sp)
 
     /* Decide whether the servive handler in the application code can yield a context
-       switch (OS relevant handler) or not (simple handler). The calling signature is
+       switch (kernel relevant handler) or not (simple handler). The calling signature is
        different. */
     beq     cr0, int_eeh_callSimpleIsr  /* Branch if bit 0 was not set in ISR address */
 
 int_eeh_callOsIsr:
-    /* Branch to OS interrupt handler address from vector table. This is the signature of
+    /* Branch to kernel interrupt handler address from vector table. This is the signature of
        such a handler:
          bool osInterruptHandler(int_cmdContextSwitch_t *pCmdContextSwitch);
          The returned data has a size of 12 Byte and is placed in the stack. We pass the
@@ -333,10 +318,9 @@ int_eeh_callOsIsr:
     wrteei  0
     // Elder NXP samples place a memory barrier here before doing the interrupt acknowledge
     // in the INTC, newer NXP sample toggle the order of wrteei and msync. We believe that
-    // no memory barrier is required here. Successful processing of the re-enabled
-    // interrupts does not depend on the completion of the stores before and the order of
-    // EE=0 and write to INTC is guaranteed by the instruction synchronizing character of
-    // wrteei
+    // no memory barrier is required here. Successful processing of the code below does not
+    // depend on the completion of the stores before and the order of EE=0 and write to
+    // INTC is guaranteed by the instruction synchronizing character of wrteei
     /// @todo Intensive testing with commented msync
     msync
 
@@ -350,65 +334,23 @@ int_eeh_callOsIsr:
     stw     r0, INTC_EOIR_PRC0@l(r3)    /* Write 0 to INTC_EOIR */
   
     /* The new current priority in CPR is read and saved in the left context. The priority
-       ceiling protocol implemented in the INTC permits the handling of interrupts, which
-       asserted before the CPR has been raised. If this happened the priority is not empty
-       after popping but CPR will show the same value INT_MAX_KERNEL_IRQ_PRIO as before. On
-       later return to the left context we need to restore that value. */
+       ceiling protocol implemented in the INTC and applied by the system call handler
+       permits the handling of interrupts, which asserted before the CPR has been raised.
+       If this happened the current priority register will show the same value
+       INT_MAX_KERNEL_IRQ_PRIO as before. On later return to the left context we need to
+       restore that value. */
     lwz     r14, INTC_CPR_PRC0@l(r3)    /* INTC_EOIR_PRC0@ha == INTC_CPR_PRC0@ha */
     stw     r14, O_I_CPR(sp)
 
-    /* We need to clear the priority stack entirely before we switch the context. The lock
-       of kernel relevant interrupts must not persist in the new context. This would lock
-       the entire system. The pre-emptions after raising the INTC's current priority can in
-       the worst case happen recursively until the maximum interrupt priority of kernel
-       relevant ISRs is reached. Therefore we need to pop from the priority stack that
-       number of times to be sure. */
-#if INT_MAX_KERNEL_IRQ_PRIO > 1
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 2
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 3
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 4
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 5
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 6
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 7
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 8
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 9
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 10
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 11
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 12
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 13
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
-#if INT_MAX_KERNEL_IRQ_PRIO > 14
-    stw     r0, INTC_EOIR_PRC0@l(r3)    /* Pop possible element from prio stack */
-#endif
+    /* Before we switch the context, we need to undo a PCP lock possibly done by a system
+       call. The lock of kernel relevant interrupts must not persist in the new context.
+       This would lock the entire system. */
+    stw     r0, INTC_CPR_PRC0@l(r3)    /* INTC_EOIR_PRC0@ha == INTC_CPR_PRC0@ha */
 
     /* Switching context and resuming the targeted context is the same as for system
        calls. We need to inform that code that the suspended context was an asynchronous
        ISR. This is encoded by -1 in r14 as system call index. */
+    /// @todo Can we use r11 or r12 for this purpose and avoid one register to be saved in case normal-return-without-context-switch?
     li      r14, -1
     b       int_sch_doContextSwitch
 
@@ -442,10 +384,9 @@ int_eeh_endCallSimpleIsr:
     wrteei  0
     // Elder NXP samples place a memory barrier here before doing the interrupt acknowledge
     // in the INTC, newer NXP sample toggle the order of wrteei and msync. We believe that
-    // no memory barrier is required here. Successful processing of the re-enabled
-    // interrupts does not depend on the completion of the stores before and the order of
-    // EE=0 and write to INTC is guaranteed by the instruction synchronizing character of
-    // wrteei
+    // no memory barrier is required here. Successful processing of the code down here does
+    // not depend on the completion of the loads before and the order of EE=0 and write to
+    // INTC is guaranteed by the instruction synchronizing character of wrteei
     /// @todo Intensive testing with commented msync
     msync
 
@@ -486,7 +427,7 @@ int_eeh_endCallSimpleIsr:
        specified as highest priority of all such ISRs. This can happen if a kernel
        relevant ISR is installed with a priority above #INT_MAX_KERNEL_IRQ_PRIO, which is
        strictly forbidden. */
-int_eeh_errorPrioLowered:
+int_eeh_errorBadKernelIrqPrio:
     wrteei  0
     b       .
 
@@ -563,7 +504,7 @@ int_sch_idxFctInRange:
     lis     r3, INTC_CPR_PRC0@ha
 #ifdef DEBUG
     lwz     r0, INTC_CPR_PRC0@l(r3)             /* Read current INTC prio */
-    cmplwi  cr0, r0, 0                          /* System call not allowed from ISR */
+    cmplwi  cr0, r0, 0                          /* Sys call not allowed from ISR or sys call */
     bne     cr0, int_sch_errorPrioLowered       /* Error if current > 0 */
 #endif
     li      r0, INT_MAX_KERNEL_IRQ_PRIO         /* Store highest permitted kernel prio */
@@ -579,16 +520,15 @@ int_sch_idxFctInRange:
          0x00008000: EE
          0x00004000: PR
          0x00001000: ME
-         The handler code requires the full instruction set but the SPE bit is reset on
-       entry into an interrupt. Set it again prior to branching into the user code.
+         Note, we must not set the MSR[SPE] bit. The 64 Bit SPE instructions are generally
+       unwanted. Once we start using them, we need to save our CPU contexts on interrupts
+       as full 64 Bit, although only occasionally used by the compiler. (Not setting SPE
+       requires not using -mspe on the compiler command line.)
          The CE and ME (critical and machine check) have not be cleared/altered on entry
        into the handler. There's no reason to lock these higher prior interrupts. At
        minimum there's an empty trap handler, which reports the problem to the SW
        developer. */
-    mfmsr   r0          /* Read the MSR for manipulation as appropriate for the user code. */
-    oris    r0, r0, 0x0200 /* Set SPE */
-    ori     r0, r0, 0x8000 /* Set EE */
-    mtmsr   r0
+    wrteei 1
 
     /* We will see preemptions even by kernel relevant interrupts (raising CPR doesn't
        un-assert pending interrupts from immediately before). We add an isync to be sure
@@ -619,10 +559,10 @@ int_sch_idxFctInRange:
     wrteei  0
     // Elder NXP samples place a memory barrier here before interacting with the INTC,
     // newer NXP sample toggle the order of wrteei and msync. We believe that no memory
-    // barrier is required here. Successful processing of the re-enabled interrupts does
-    // not depend on the completion of the loads and stores before and the order of EE=0
-    // and writes to INTC and SSRi is guaranteed by the instruction synchronizing character
-    // of wrteei
+    // barrier is required here. Successful processing of the code down here does not
+    // depend on the completion of the loads and stores before and the order of EE=0 and
+    // writes to INTC and SSRi is guaranteed by the instruction synchronizing character of
+    // wrteei
     /// @todo Intensive testing with commented msync
     msync
 
@@ -632,7 +572,7 @@ int_sch_idxFctInRange:
 #ifdef DEBUG
     lwz     r0, INTC_CPR_PRC0@l(r4)             /* Read current INTC prio */
     cmplwi  cr0, r0, INT_MAX_KERNEL_IRQ_PRIO
-    bne     cr0, int_sch_errorPrioAltered       /* Error if current != OS level */
+    bne     cr0, int_sch_errorPrioAltered       /* Error if current != kernel level */
 #endif
     li      r0, 0                               /* Restore prio to zero */
     stw     r0, INTC_CPR_PRC0@l(r4)
@@ -679,8 +619,8 @@ int_sch_switchContext:
        as work register. */
     stmw    r15, O_SC_R15(sp)   /* Write registers 15-31 */
 
-    /* This label is shared with the IVOR #4 handler. If an OS interrupt demands a context
-       switch then we jump here. Preconditions:
+    /* This label is shared with the IVOR #4 handler. If an kernel interrupt demands a
+       context switch then we jump here. Preconditions:
        - The left context is saved
        - External Interrupt handling is disabled
        - the INTC is satisfied (interrupt acknowledged, priority stack cleared)
@@ -780,9 +720,8 @@ int_sch_endCntIsrToIsr:
 #endif
 
     /* Pre-emptable ISRs require to restore the current priority in the INTC. This step is
-       required only in the rare situation when a kernel relevant interrupt had pre-empted
-       another kernel relevant ISR or a system call but it doesn't harm in all other
-       cases. */ 
+       required only in the rare situation when a kernel relevant interrupt had preempted
+       a system call but it doesn't harm in all other cases. */ 
     lwz     r0, O_I_CPR(sp)
     lis     r3, INTC_CPR_PRC0@ha
     stw     r0, INTC_CPR_PRC0@l(r3)
@@ -817,14 +756,12 @@ int_sch_endCntIsrToIsr:
        without interference of interrupts had failed. On exit from the system call the
        current priority had been unexpectedly altered. */
 int_sch_errorPrioAltered:
-    wrteei  0
     b       .
 
     /* Error trap: The current interrupt priority on entry into a system was found to be
        positive, while 0 is expected. This can happen if a system call is done from an ISR
        context, which is strictly forbidden. */
 int_sch_errorPrioLowered:
-    wrteei  0
     b       .
 
     .size   int_systemCallHandler, .-int_systemCallHandler

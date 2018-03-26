@@ -330,7 +330,6 @@ tcx_endlessLoop:
     
     /* Do a system call. We use a quite useless one which always returns without demanding
        a context switch. */
-    /// @todo Take/provide one, which makes this module autonomous
     li      r3, SC_IDX_SYS_CALL_TEST_AND_DECREMENT  /* idxSysCall */
     li      r4, 1       /* idxSemaphore. Don't use 0, which is in use for LED access control */
     bl      int_systemCall

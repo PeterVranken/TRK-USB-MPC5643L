@@ -74,7 +74,7 @@ Whenever the ISR/system call handler decides on return to do a context
 switch and if it commands to resume a context that had been suspended by a
 context-switching system call, then the handler can provide a uint32_t
 value, which is returned to the resumed context as function result of the
-context switch, which had made it suspended. Consequently, from the
+system call, which had made it suspended. Consequently, from the
 perspective of the system calling context a system call always looks like
 an ordinary function call -- it is invoked and on return a function result
 is got. The only observable difference to a normal function call is the
