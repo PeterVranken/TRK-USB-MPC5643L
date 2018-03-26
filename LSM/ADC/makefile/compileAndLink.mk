@@ -218,7 +218,7 @@ VPATH := $(srcDirList) $(targetDir)
 # 64k each (RAM and ROM) become too small to hold all "small" data objects. Prior to
 # disabling the mode you should first try to reduce the size limit to 4 or 2 Byte.
 useSoftwareEmulation := 0
-targetFlags := -mcpu=e200z4 -mbig-endian -mno-vle -mspe -misel=yes                          \
+targetFlags := -mcpu=e200z4 -mbig-endian -mno-vle -misel=yes                                \
                -meabi -msdata=default -G8                                                   \
                -mregnames
 ifeq ($(useSoftwareEmulation),1)
