@@ -62,12 +62,16 @@
  * Local type definitions
  */
  
- 
 /*
  * Local prototypes
  */
  
+/** Prototype of assembler function, which branches into the new context and which can make
+    it on exit return to a predetermined other function to notify the
+    end-of-execution-context to whom it may concern. */
+extern void ccx_startContext(uint32_t contextParam);
  
+
 /*
  * Data definitions
  */
@@ -93,35 +97,21 @@
  * references to the descriptors of the suspended and resumed contexts into the same data
  * structure.\n
  *   This system requests a context switch if and only if \a runImmediately is \a true.
- *   @param executionEntryPoint
- * The code execution of the new context starts at this address. To the C interface the
- * address is modelled as a function, that takes a single argument and that must never
- * return. (There is no parent function to return to, the code would crash if a return is
- * attempted.)\n
- *   The argument of the function gets the return value from the system call function or
- * kernel interrupt, which will awake the context. If \a runImmediately is \a true then
- * this is the awaking system call and the value is directly stated as \a initialData.
- *   @param stackPointer
- * The initial value of the stack pointer. The client code will allocate sufficient stack
- * memory. This pointer will usually point at the first address beyond the allocated
- * memory chunk; our stacks grow downward to lower addresses.\n
- *   Note, each pre-emption of a context by an asynchronous External Interrupt requires
- * about 200 Bytes of stack space. If your application makes use of all interrupt
- * priorities then you need to have 15*200 Byte as a minimum of stack space for safe
- * operation, not yet counted the stack consumption of your application itself.\n
- *   Note, this lower bounds even holds if you apply the implementation of the priority
- * ceiling protocol from the startup code to mutually exclude sets of interrupts from
- * pre-empting one another, see https://community.nxp.com/message/993795 for details.\n
- *   The passed address needs to be 8 Byte aligned; this is double-checked by assertion.
- *   @param privilegedMode
- * The newly created context can be run either in user mode or in privileged mode.\n
- *   Node, the user mode should be preferred but can generally be used only if the whole
- * system design supports this. All system level functions (in particular the I/O drivers)
- * need to have an API, which is based on system calls. Even the most simple functions
- * ihw_suspendAllInterrupts() and ihw_resumeAllInterrupts() are not permitted in user mode.
+ *   @param pNewContextDesc
+ * The specification of the new execution context to be created.
+ *   @param onExitGuard
+ * The address of a function, which is invoked if the new execution context ends, i.e. when
+ * the function (*pNewContextDesc->executionEntryPoint)() is left. The return value of
+ * (*pNewContextDesc->executionEntryPoint)() is function argument of (*onExitGuard)().
  *   @param runImmediately
  * If \a true the new context is not only created in suspended state but the calling
  * context is suspended in favor of the new one.
+ *   @param initialData
+ *   If the new context is immediately started then this value is passed to the entry
+ * function (*pNewContextDesc->executionEntryPoint)() of that context as only argument.\n
+ *   This argument doesn't care if \a runImmediately is false. If \a runImmediately is
+ * false then the argument of the entry function into the new context will be provided by
+ * the system call that awakes the new context the very first time.
  *   @param pNewContextSaveDesc
  * The caller provides the location of the context save descriptor for the newly created
  * context. This context save descriptor can then be used by a scheduler to command resume
@@ -131,54 +121,73 @@
  * context.\n
  *   This argument doesn't care if \a runImmediately is false. This, the invoking context is
  * not disrupted and there's no need to save it.
- *   @param initialData
- *   If the new context is immediately started then this value is passed to the entry
- * function \a executionEntryPoint of that context as only argument.\n
- *   This argument doesn't care if \a runImmediately is false. If \a runImmediately is
- * false then the argument of the entry function into the new context will be provided by
- * the system call that awakes the new context the very first time.
  *   @note
- * This is the implementation of a system call. Never invoke this function directly.
+ * This is the implementation of a system call. It must only be called from an interrupt
+ * context. Never invoke this function directly.
  */
 uint32_t ccx_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
-                             , void (*executionEntryPoint)(uint32_t)
-                             , uint32_t *stackPointer
-                             , bool privilegedMode
+                             , const ccx_contextDesc_t *pNewContextDesc
+                             , void (*onExitGuard)(uint32_t)
                              , bool runImmediately
+                             , uint32_t initialData
                              , int_contextSaveDesc_t *pNewContextSaveDesc
                              , int_contextSaveDesc_t *pThisContextSaveDesc
-                             , uint32_t initialData
                              )
 {
-    /* The alignment matters. EABI requires 8 Byte alignment. */
-    assert(((uint32_t)stackPointer & 0x7) == 0);
+#define IDX(OFFSET)                                                                         \
+        ({ _Static_assert(((OFFSET) & 0x3) == 0, "Bad stack word offset");                  \
+           (OFFSET)/sizeof(uint32_t);                                                       \
+        })
 
-    uint32_t *sp = stackPointer;
+    /* The alignment matters. EABI requires 8 Byte alignment. */
+    assert(((uint32_t)pNewContextDesc->stackPointer & 0x7) == 0);
+
+    uint32_t *sp = (uint32_t*)pNewContextDesc->stackPointer;
 
     /* The topmost word is not used. We require it for the eight byte alignment rule. */
     * --sp = 0xffffffff;
 
-    /* The next word is reserved space for stored link register contents once the context is
-       running. The entry function of the new context will store LR here. */
+    /* The next word in the stack frame of the hypothetic parent function of our assembler
+       written start function is reserved for the storage of the LR for its children
+       functions. The value is filled below. */
+    -- sp;
+    
+    /* The next word is were the parent function of our assembler written start function
+       would have stored its stack pointer value on function entry. We don't have such a
+       parent and write a dummy value. */
     * --sp = 0xffffffff;
+    
+    /* Now we see the stack pointer value as it were on entry in our assembler written
+       start function. The value is needed for proper build up of its stacjk frame, see
+       below. */
+    uint32_t * const spOnEntryIntoStartContext = sp;
+    
+    /* The stack frame of our assembler written context start function is not created by
+       that function itself but prepared here. This gives us the chance to provide it with
+       the needed information. */
+    _Static_assert((S_StCtxt_StFr & 0x7) == 0, "Bad stack frame size");
+    sp -= IDX(S_StCtxt_StFr);
+    *sp = (uint32_t)spOnEntryIntoStartContext;
+    
+    /* The word above the stack frame is were the prologue of any EABI function would place
+       the return address. We put the address of the guard function in order to jump there
+       if the entry function of the new context is left. */
+    sp[IDX(4+S_StCtxt_StFr)] = (uint32_t)onExitGuard;
 
-    /* sp now has the value it'll have on entry into the entry function of the new context.
-       This is the initial back chain word of the new context, which should be 0.
-         Down here, the stack frame is prepared in the stack that contains the CPU context as
-       it should be on entry into the context. To facilitate maintenance of the code we
-       implement the C operations to fill the stack frame similar to the assembly code for
-       context save and restore. */
-    *sp = 0;
-    uint32_t * const spOnContextEntry = sp;
+    /* The stack frame of our assembler written context start function contains the address
+       of the entry function of the new context. This value is read and used for a branch
+       by our start function. */
+    sp[IDX(O_StCtxt_CTXT_ENTRY)] = (uint32_t)pNewContextDesc->executionEntryPoint;
 
-#define IDX(OFFSET)                                                                         \
-        ({ _Static_assert((OFFSET & 0x3) == 0, "Bad stack word offset");                    \
-           OFFSET/sizeof(uint32_t);                                                         \
-        })
+    /* Down here, the stack frame is prepared in the stack that contains the CPU context as
+       it should be on entry into the start function. To facilitate maintenance of the code
+       we implement the C operations to fill the stack frame similar to the assembly code
+       for context save and restore. */
+    uint32_t * const spOnEntryIntoExecutionEntryPoint = sp;
 
     _Static_assert((S_SC_StFr & 0x7) == 0, "Bad stack frame size");
     sp -= IDX(S_SC_StFr);
-    *sp = (uint32_t)spOnContextEntry;
+    *sp = (uint32_t)spOnEntryIntoExecutionEntryPoint;
     
     sp[IDX(O_SC_R14)] = 0;
     sp[IDX(O_SC_R15)] = 0;
@@ -200,14 +209,17 @@ uint32_t ccx_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
     sp[IDX(O_SC_R31)] = 0;
     
     /* Address to return to at end of interrupt */
-    sp[IDX(O_SRR0)] = (uint32_t)executionEntryPoint;
+    sp[IDX(O_SRR0)] = (uint32_t)ccx_startContext;
     
     /* The machine status is set once for the context and always restored after any future
        system call or interrupt. Here, we decide once forever whether the context is
        executed in user or priviledged mode. */
     sp[IDX(O_SRR1)] = 0x00029000ul    /* MSR: External, critical and machine check
                                          interrupts enabled, SPE is not set, ... */
-                      | (privilegedMode? 0x00000000: 0x00004000ul); /* ... PR depends */
+                      | (pNewContextDesc->privilegedMode  /* ... PR depends */
+                         ? 0x00000000
+                         : 0x00004000ul
+                        );
 
     sp[IDX(O_RET_RC)] = 0;      /* Tmp. value to return from system call, doesn't care */
     sp[IDX(O_RET_pSCSD)] = 0;   /* Tmp. pointer to context save data of suspended context,
@@ -219,7 +231,7 @@ uint32_t ccx_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
     /* The newly created context is still suspended. We save the information, which is
        required for later resume in the aimed context save descriptor.\n
          Note, it depends on the integrating client code, which system call number the
-       operation get. The entry has to be made by the calling code. We can only double
+       operation gets. The entry has to be made by the calling code. We can only double
        check that it is not a negative number, which is reserved to interrupts and which
        would make the code crash. (Actually, the number doesn't really matter if it is only
        not negative.) */

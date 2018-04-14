@@ -60,6 +60,7 @@
 #include "int_defStackFrame.h"
 #include "tcx_testContext.h"
 #include "sc_systemCalls.h"
+#include "ccx_createContext.h"
 #include "xsw_contextSwitch.h"
 
 
@@ -179,8 +180,13 @@ static void returnAfterMicroseconds(unsigned long tiInUs)
 
 
 
-/* Trivial routine that flashes the LED a number of times to give simple feedback. The
-   routine is blocking. */
+/**
+ * Trivial routine that flashes the LED a number of times to give simple feedback. The
+ * routine is blocking. The timing is independent of the system load, it is coupled to a real
+ * time clock.
+ *   @param noFlashes
+ * The number of times the LED is lit.
+ */
 static void blink(uint16_t noFlashes)
 {
 #define TI_FLASH_MS 200
@@ -376,7 +382,7 @@ static float subRoutineOf2ndCtx(float a, float b)
 
 
 /* The other context we want to switch to. Will later be another task in the RTOS. */
-static _Noreturn void secondContext(uint32_t taskParam)
+static _Noreturn uint32_t secondContext(uint32_t taskParam)
 {
     uint32_t u = taskParam;
 
@@ -718,22 +724,25 @@ void xsw_loop()
        replaced by a function implemented in assembly code, which does nothing apparently
        but which is designed to check the correct save/restore of the CPU context. Most of
        the registers are set to test patterns and double-checked later. 
-         Prefill stack memory to make stack usage observeable. */
+         Prefill stack memory to make stack usage observable. */
     fputs("Prepare second context\r\n", stdout);
     memset(&_stack2ndCtxt[0], 0xa5, sizeof(_stack2ndCtxt));
-    sc_createNewContext(
+    const ccx_contextDesc_t newContextDesc =
+    {
 #if 1
-                         /* executionEntryPoint */  &secondContext
+        .executionEntryPoint = &secondContext,
 #else
-                                                    &tcx_testContext
+        .executionEntryPoint = &tcx_testContext,
 #endif
-                       , /* stackPointer */         (uint8_t*)&_stack2ndCtxt[0]
-                                                    + sizeof(_stack2ndCtxt)
-                       , /* privilegedMode */       true
+        .stackPointer = (uint8_t*)&_stack2ndCtxt[0] + sizeof(_stack2ndCtxt),
+        .privilegedMode = true,
+    };
+    sc_createNewContext( &newContextDesc
+                       , /* onExitGuard */          (void (*)(uint32_t))0x00000010
                        , /* runImmediately */       false
+                       , /* initialData */          NULL
                        , /* pNewContextSaveDesc */  &_contextSaveDesc2
                        , /* pThisContextSaveDesc */ &_contextSaveDesc1
-                       , /* initialData */          NULL
                        );
 
     iprintf("New context, initial stack pointer: %p\r\n", _contextSaveDesc2.pStack);
@@ -754,7 +763,7 @@ void xsw_loop()
     fputs("\r\n", stdout);
 
     fputs("Install timer interrupts\r\n", stdout);
-    enableIRQTimerTick1();   /* Timer for context switches */
+    enableIRQTimerTick1();  /* Timer for context switches */
     enableIRQTimerTick2();  /* 2nd Timer for context switches */
     enableIRQPit2();        /* Simple IRQ of high priority for stress test */
 

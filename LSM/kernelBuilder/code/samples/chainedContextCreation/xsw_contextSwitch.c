@@ -48,6 +48,7 @@
 #include "ihw_initMcuCoreHW.h"
 #include "int_defStackFrame.h"
 #include "sc_systemCalls.h"
+#include "ccx_createContext.h"
 #include "xsw_contextSwitch.h"
 
 
@@ -155,9 +156,10 @@ static void returnAfterMicroseconds(unsigned long tiInUs)
 
 /**
  * Trivial routine that flashes the LED a number of times to give simple feedback. The
- * routine is blocking.
+ * routine is blocking. The timing is independent of the system load, it is coupled to a real
+ * time clock.
  *   @param noFlashes
- * The number of short flashes to produce.
+ * The number of times the LED is lit.
  */
 static void blink(uint16_t noFlashes)
 {
@@ -243,7 +245,7 @@ bool cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
  * The passed system call argument initialData is used to tell the function from which
  * context it has been called.
  */
-static void _Noreturn executionContext(uint32_t idxThis)
+static _Noreturn uint32_t executionContext(uint32_t idxThis)
 {
     /* The first thing to do is to create the next context. It would be more straight
        forward to this in the main function in a loop, which creates all of them and prior
@@ -268,14 +270,18 @@ static void _Noreturn executionContext(uint32_t idxThis)
         
         /* Create context and branch into it. We return from this (system) function call
            only after a complete cycle of chained context switches. */
-        sc_createNewContext( /* executionEntryPoint */  &executionContext
-                           , /* stackPointer */         (uint8_t*)&_stackAry[idxThis][0]
-                                                        + STACK_SIZE_IN_BYTE
-                           , /* privilegedMode */       true
+        const ccx_contextDesc_t newContextDesc =
+        {
+            .executionEntryPoint = &executionContext,
+            .stackPointer = (uint8_t*)&_stackAry[idxThis][0] + STACK_SIZE_IN_BYTE,
+            .privilegedMode = true,
+        };
+        sc_createNewContext( &newContextDesc
+                           , /* onExitGuard */          (void (*)(uint32_t))0x00000010
                            , /* runImmediately */       true
+                           , /* initialData */          idxThis+1
                            , /* pNewContextSaveDesc */  &_contextSaveDescAry[idxThis+1]
                            , /* pThisContextSaveDesc */ &_contextSaveDescAry[idxThis]
-                           , /* initialData */          idxThis+1
                            );
     }
 

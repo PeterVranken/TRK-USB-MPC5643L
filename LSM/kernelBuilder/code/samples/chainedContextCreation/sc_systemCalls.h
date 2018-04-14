@@ -56,22 +56,20 @@
     #SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT.\n
       Find a detailed function description at function ccx_sc_createContext(), which
     implements the system call. */
-#define /* void */ sc_createNewContext( /* void (*) (uint32_t) */    executionEntryPoint    \
-                                      , /* uint32_t* */              stackPointer           \
-                                      , /* bool */                   privilegedMode         \
-                                      , /* bool */                   runImmediately         \
-                                      , /* int_contextSaveDesc_t* */ pNewContextSaveDesc    \
-                                      , /* int_contextSaveDesc_t* */ pThisContextSaveDesc   \
-                                      , /* uint32_t */               initialData            \
+#define /* void */ sc_createNewContext( /* const ccx_contextDesc_t* */ pNewContextDesc      \
+                                      , /* void (*)(uint32_t) */       onExitGuard          \
+                                      , /* bool */                     runImmediately       \
+                                      , /* uint32_t */                 initialData          \
+                                      , /* int_contextSaveDesc_t* */   pNewContextSaveDesc  \
+                                      , /* int_contextSaveDesc_t* */   pThisContextSaveDesc \
                                       )                                                     \
                     int_systemCall( SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT                      \
-                                  , executionEntryPoint                                     \
-                                  , stackPointer                                            \
-                                  , privilegedMode                                          \
+                                  , pNewContextDesc                                         \
+                                  , onExitGuard                                             \
                                   , runImmediately                                          \
+                                  , initialData                                             \
                                   , pNewContextSaveDesc                                     \
                                   , pThisContextSaveDesc                                    \
-                                  , initialData                                             \
                                   )
 
 /** System call: Immediate, cooperative context switch.\n

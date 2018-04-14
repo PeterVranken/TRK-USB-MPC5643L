@@ -117,6 +117,12 @@
 
 #define S_SC_StFr  104      /* No content bytes rounded to next multiple of eight */
 
+/* Define the offsets of words saved in the stack frame. After creation of the stack frame,
+   the words are addressed by O_I_xxx(sp).
+     Here for the assembler written context start function ccx_startContext. */
+#define O_StCtxt_CTXT_ENTRY 8   /* Adress of entry function into new context */
+#define S_StCtxt_StFr  16       /* No content bytes rounded to next multiple of eight */
+
 
 /*
  * Global type definitions

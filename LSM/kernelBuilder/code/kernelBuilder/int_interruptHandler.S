@@ -343,8 +343,8 @@ int_eeh_callOsIsr:
     stw     r14, O_I_CPR(sp)
 
     /* Before we switch the context, we need to undo a PCP lock possibly done by a system
-       call. The lock of kernel relevant interrupts must not persist in the new context.
-       This would lock the entire system. */
+       call or user task code. The lock of kernel relevant interrupts must not persist in
+       the new context. This would lock the entire system. */
     stw     r0, INTC_CPR_PRC0@l(r3)    /* INTC_EOIR_PRC0@ha == INTC_CPR_PRC0@ha */
 
     /* Switching context and resuming the targeted context is the same as for system
