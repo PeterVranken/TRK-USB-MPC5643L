@@ -109,7 +109,7 @@
     by console output and to the debugger. Alternatively and by setting this macro to 1,
     the software execution can be halted on recognition of the first error. The no longer
     blinking LEDs would indicate the problem. */
-#define HALT_ON_PSP_TEST_FAILURE    1
+#define HALT_ON_PCP_TEST_FAILURE    1
 
 /** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
     for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
@@ -338,7 +338,7 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
     }
     ihw_leaveCriticalSection(msr);
 
-    /* Check consistency of got data. +1: The last entry is meant for the idle task. */
+    /* Check consistency of got data. */
     unsigned int u;
     for(u=0; u<noExecutionContexts; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
@@ -367,7 +367,7 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
     }
     ihw_resumeAllInterrupts();
 
-    /* Check consistency of got data. +1: The last entry is meant for the idle task. */
+    /* Check consistency of got data. */
     for(u=0; u<noExecutionContexts; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
 #ifdef DEBUG
@@ -420,7 +420,7 @@ static void testPCP(unsigned int idTask)
            which has the highest priority in the sub-set. Omitting the critical section
            code invalidates the code if the task priorities are redefined in the heading
            part of the file and we need to put an assertion to double check this. */
-        _Static_assert( prioTask1ms >= prioTaskIdle  &&  prioTask1ms >= prioTask1ms
+        _Static_assert( prioTask1ms >= prioTaskIdle  &&  prioTask1ms >= idTaskCpuLoad
                       , "Task priorities do not meet the requirements of function testPCP"
                       );
         ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTask1ms;
@@ -455,7 +455,7 @@ static void testPCP(unsigned int idTask)
            
             /* On desire, the application is halted. This makes the error observable
                without connected terminal. */
-#if HALT_ON_PSP_TEST_FAILURE == 1
+#if HALT_ON_PCP_TEST_FAILURE == 1
 # ifdef DEBUG
             assert(false);
 # else
