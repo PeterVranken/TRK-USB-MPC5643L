@@ -417,10 +417,11 @@ static void testPCP(unsigned int idTask)
     else if(idTask == idTask1ms)
     {
         /* Here, we want to prove that the resource doesn't need to be acquired by a task,
-           which has the highest priority in the sub-set. Omitting the critical section
-           code invalidates the code if the task priorities are redefined in the heading
-           part of the file and we need to put an assertion to double check this. */
-        _Static_assert( prioTask1ms >= prioTaskIdle  &&  prioTask1ms >= idTaskCpuLoad
+           which has the highest priority in the sub-set.
+             Omitting the critical section code invalidates the code if the task priorities
+           are redefined in the heading part of the file and we need to put an assertion to
+           double check this. */
+        _Static_assert( prioTask1ms >= prioTaskIdle  &&  prioTask1ms >= prioTaskCpuLoad
                       , "Task priorities do not meet the requirements of function testPCP"
                       );
         ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTask1ms;
