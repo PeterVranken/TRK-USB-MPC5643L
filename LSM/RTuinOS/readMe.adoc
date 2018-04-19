@@ -1,4 +1,4 @@
-= Sample "RTuinOS" - A concept prove of kernelBuilder
+= Sample "RTuinOS" - A proof of concept of kernelBuilder
 :Author:    Peter Vranken 
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
