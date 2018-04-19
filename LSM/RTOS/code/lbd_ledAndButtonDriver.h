@@ -5,7 +5,7 @@
  * Definition of global interface of module lbd_ledAndButtonDriver.c
  * Simple hardware driver for the LEDs and buttons on the eval board TRK-USB-MPC5643L.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -23,6 +23,9 @@
 /* Module interface
  *   lbd_initLEDAndButtonDriver
  *   lbd_setLED
+ *   lbd_getButtonSw2
+ *   lbd_getButtonSw3
+ *   lbd_getButton
  */
 /*
  * Include files
@@ -47,6 +50,15 @@
 #  define _STDC_VERSION_C99
 # endif
 #endif
+
+/** The debounce time of the read process of the button states in ticks, where one tick is
+    the time between two invokations of interface function lbd_getButton.
+      The range is 2 .. 100. */
+#define LBD_DEBOUNCE_TIME_BUTTONS   4
+
+/* The debounce time of the read process of the button states is determined by this
+   counter maximum. */
+#define LBD_MAX_CNT_BTN_DEBOUNCE    ((LBD_DEBOUNCE_TIME_BUTTONS)/2)
 
 
 /*
@@ -126,6 +138,80 @@ static inline void lbd_setLED(lbd_led_t led, bool isOn)
 
 
 /**
+ * Get the current status of button SW2.
+ *   @return
+ * \a true if button SW2 is currently pressed, \a false otherwise. This is the debounced
+ * read value from the GPIO.
+ *   @param button
+ * The enumeration value to identify a button.
+ *   @remark
+ * The function is implemented as static inline. This implies that any using code location
+ * will get its own, irrelated debounce counter. One logical client of a button should not
+ * have more than one code location to read its current value, otherwise its debouncing
+ * won't function as intended.
+ */
+static inline bool lbd_getButtonSw2(void)
+{
+    _Static_assert( LBD_MAX_CNT_BTN_DEBOUNCE >= 1  && LBD_MAX_CNT_BTN_DEBOUNCE <= 50
+                  , "Debounce time configuration out of range"
+                  );
+
+    static int cntDebounce_ = 0;
+    static bool buttonState_ = false;
+    cntDebounce_ += SIU.GPDI[lbd_bt_button_SW2].B.PDI? -1: 1;
+    if(cntDebounce_ >= LBD_MAX_CNT_BTN_DEBOUNCE)
+    {
+        cntDebounce_ = LBD_MAX_CNT_BTN_DEBOUNCE;
+        buttonState_ = true;
+    }
+    else if(cntDebounce_ <= -LBD_MAX_CNT_BTN_DEBOUNCE)
+    {
+        cntDebounce_ = -LBD_MAX_CNT_BTN_DEBOUNCE;
+        buttonState_ = false;
+    }
+    return buttonState_;
+    
+} /* End of lbd_getButtonSw2 */
+
+
+
+
+/**
+ * Get the current status of button SW3.
+ *   @return
+ * \a true if button SW3 is currently pressed, \a false otherwise. This is the debounced
+ * read value from the GPIO.
+ *   @param button
+ * The enumeration value to identify a button.
+ *   @remark
+ * The function is implemented as static inline. This implies that any using code location
+ * will get its own, irrelated debounce counter. One logical client of a button should not
+ * have more than one code location to read its current value, otherwise its debouncing
+ * won't function as intended.
+ */
+static inline bool lbd_getButtonSw3(void)
+{
+    static int cntDebounce_ = 0;
+    static bool buttonState_ = false;
+    cntDebounce_ += SIU.GPDI[lbd_bt_button_SW3].B.PDI? -1: 1;
+    if(cntDebounce_ >= LBD_MAX_CNT_BTN_DEBOUNCE)
+    {
+        cntDebounce_ = LBD_MAX_CNT_BTN_DEBOUNCE;
+        buttonState_ = true;
+    }
+    else if(cntDebounce_ <= -LBD_MAX_CNT_BTN_DEBOUNCE)
+    {
+        cntDebounce_ = -LBD_MAX_CNT_BTN_DEBOUNCE;
+        buttonState_ = false;
+    }
+    return buttonState_;
+    
+} /* End of lbd_getButtonSw3 */
+
+
+
+
+/**
  * Get the current status of a button.
  *   @return
  * \a true if button is currently pressed, \a false otherwise. This is the debounced read
@@ -140,25 +226,14 @@ static inline void lbd_setLED(lbd_led_t led, bool isOn)
  */
 static inline bool lbd_getButton(lbd_button_t button)
 {
-#define MAX_CNT 10
-
-    static int cntDebounce = 0;
-    static bool buttonState = false;
-    cntDebounce += SIU.GPDI[button].B.PDI? -1: 1;
-    if(cntDebounce > MAX_CNT)
+    if(button == lbd_bt_button_SW2)
+        return lbd_getButtonSw2();
+    else
     {
-        cntDebounce = MAX_CNT;
-        buttonState = true;
+        assert(button == lbd_bt_button_SW3);
+        return lbd_getButtonSw3();
     }
-    else if(cntDebounce < -MAX_CNT)
-    {
-        cntDebounce = -MAX_CNT;
-        buttonState = false;
-    }
-    return buttonState;
-    
-#undef MAX_CNT
-} /* End of lbd_setLED */
+} /* End of lbd_getButton */
 
 
 /*
