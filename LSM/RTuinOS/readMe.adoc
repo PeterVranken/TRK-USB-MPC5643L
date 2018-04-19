@@ -51,8 +51,7 @@ RTuinOS as such is not in the focus of this project. It is an Arduino
 project and you can refer to it's
 https://sourceforge.net/projects/rtuinos/[original location]. The
 documentation is distributed as
-https://sourceforge.net/projects/rtuinos/files/RTuinOS-1.0-UserGuide.pdf/download[PDF
-manual].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTuinOS/doc/manual/RTuinOS-1.0-UserGuide.pdf[PDF manual].
 
 The manual has not been edited with respect to the differences due to the
 e200z4 and board migration. To a small extend, the source code
