@@ -156,7 +156,7 @@ kernelBuilder itself is an infra-structure only, it is not a
 self-contained, flashable executable, you always need to compile it
 together with some client code.
 
-The sample demonstrate preemptive and cooperative scheduling.
+The samples demonstrate preemptive and cooperative scheduling.
 
 To see how the sample works you need to open a terminal software on your
 host machine. You can find a terminal as part of the CodeWarrior Eclipse
@@ -165,9 +165,10 @@ IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal".
 Open the serial port, which is offered by the TRK-USB-MPC5643L. (On
 Windows, open the Computer Management and go to the Device Manager to find
 out.) The Baud rate has been selected as 115200 Bd in file
-`code\mai_main.c`, 8 Bit, no parity, 1 start and stop Bit. The terminal
-should print the messages, which are regularly sent by the sample code
-running on the evaluation board.
+`code\mai_main.c`, 8 Bit, no parity, 1 start and stop Bit. The sequence
+\r\n is used as end of line character. The terminal should print the
+messages, which are regularly sent by the sample code running on the
+evaluation board.
 
 === Book E versus VLE
 

@@ -157,7 +157,7 @@ typedef bool (*int_systemCallFct_t)( int_cmdContextSwitch_t *pCmdContextSwitch
     not double-check the data types and code maintenance is not safely possible without
     these compile time tests.\n
       @todo You need to put an instance of this macro somewhere in your compiled C code. It
-    is a pure compile time test and does not conume any CPU time. */
+    is a pure compile time test and does not consume any CPU time. */
 #define INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS                                        \
     _Static_assert( sizeof(int_cmdContextSwitch_t) == 12                                    \
                     &&  offsetof(int_cmdContextSwitch_t, retValSysCall) == 0                \
