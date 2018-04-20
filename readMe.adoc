@@ -72,15 +72,26 @@ adds a serial communication interface with a terminal program running on
 the host computer, that can be used with formatted output through the C
 library functions `printf` and Co.
 
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/ADC["ADC"]
+adds the reusable implementation of an analog input driver. Furthermore it
+provides a reusable module for reading the test and calibration data page
+of the MPC5643L.
+
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS["RTOS"]
 is the very lean implementation of a reusable real time operating system
 offering the functionality similar to an OSEK/VDX kernel of conformance
 class BCC1 or BCC2.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/ADC["ADC"]
-adds the reusable implementation of an analog input driver. Furthermore it
-provides a reusable module for reading the test and calibration data page
-of the MPC5643L.
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder["kernelBuilder"]
+is an assembler written software platform that provides a C API for
+interrupt processing, system calls and context switches: Design your own
+RTOS in plain C, without (inline) assembler and in a race condition free
+coding paradigm.
+
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTuinOS["RTuinOS"]
+is the proof of concept of kernelBuilder: RTuinOS, the event based Real
+Time Operating System (RTOS) for Arduino, could be ported to the e200z4
+core with a surprising little amount of changes.
 
 All samples are self-contained. There are some common elements, which are
 same in some or all samples, like startup code and makefile. It would be
