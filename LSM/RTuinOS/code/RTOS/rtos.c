@@ -592,8 +592,7 @@ static bool isrSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
         return true;
     }
 
-    /* This is an ISR in the SW vector model. The routine will return to the calling IVOR
-       handler, restore the volatile registers and continue the interrupted code. */
+    /* No task switch is wanted in this tick. Continue the same, preempted context. */
     return false;
 
 } /* End of ISR to increment the system time by one tick. */

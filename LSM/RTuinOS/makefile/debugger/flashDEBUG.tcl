@@ -69,7 +69,7 @@ if {$APP != ""} {
     puts "RTuinOS has been flashed with application $APP in DEBUG compilation"
     
 } else {
-    puts "Error: Please set TCL variable tc prior to running this script."
-    puts "tc should contain the name of an RTuinOS application, which has been compiled"
+    puts "Error: Please set TCL variable APP prior to running this script."
+    puts "APP should contain the name of an RTuinOS application, which has been compiled"
     puts "with RTuinOS. RTuinOS on its own is not a self-contained, flashable application"
 }
