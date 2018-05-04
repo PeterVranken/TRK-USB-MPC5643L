@@ -55,20 +55,26 @@ context had been preempted and left (i.e. suspended) by an External
 Interrupt ISR then the same context can later become the target for a
 context switch and this way it'll be resumed. In the same way can a system
 call suspend a context and this context is later target of an IVOR #4 ISR,
-which decides on return for a context switch to that context. In total, six paths
-are possible for kernel relevant ISRs and system calls:
+which decides on return for a context switch to that context. Furthermore,
+both IVORs can be commanded to create a new context and to continue with
+it. In total, eight paths are possible for kernel relevant ISRs and system
+calls:
 
 * The ISR can continue the preempted code, like an ordinary ISR
 * The ISR can suspend the preempted context and resume a context, which
   had been suspended earlier by an ISR
 * The ISR can suspend the preempted context and resume a context, which
   had been suspended earlier by a system call
+* The ISR can suspend the preempted context and create and enter a new
+  context
 * The system call can return to the calling context, like an ordinary
   function call
 * The system call can suspend the calling context and resume a context, which
   had been suspended earlier by an ISR
 * The system call can suspend the calling context and resume a context, which
   had been suspended earlier by a system call
+* The system call can suspend the calling context and create and enter a
+  new context
 
 Whenever the ISR/system call handler decides on return to do a context
 switch and if it commands to resume a context that had been suspended by a
@@ -86,7 +92,13 @@ functionality is offered through a C API. The handlers and the described
 mechanisms are implemented in assembler code but the client code can be
 implemented in proper C code. A complete, cooperative or preemptive
 operating system kernel can be build on this platform without any
-additional assembler code.
+additional assembler code. No inline assembler spoils your kernel
+implementation and makes it highly compiler dependent.
+
+Furthermore, all context synchronization is done in the assembler code and
+the kernel implementation in C is a race condition free development
+environment. Once you've understood the C API of kernelBuilder, writing
+your own RTOS gets really simple.
 
 ISRs -- ordinary and kernel relevant -- are dynamically defined by the
 client code using the known mechanisms from the common startup code. A
@@ -116,23 +128,31 @@ context from the startup code, passed on to C function `main`. To make use
 of the context switching capabilities of the IVOR handlers, we need at
 minimum one other context:
 
-Sample kernelBuilder has the implementation of a system call for context
-creation. This system call is expected to be put into the client-compiled
-table of system calls, additionally to those it will define itself. This
-system call can then be used by the client code. It takes ´the pointer to
-a C function `_Noreturn (*)(uint32_t)` as principal argument. The entry
-into this C function are the very first instructions of the new context.
-From the perspective of the client code programmer, this function will
-simply be called. Further arguments of the system call decide whether to
-immediately start the new context or not. The more typical case will be
-not to do so and control returns to the calling context, which now owns
-the new context is suspended state for later resume by an ISR or system
-call. Typical design: The kernel initialization routine does do the system
-call a number of times to create the requested number of tasks beforehand.
-Or it offers a system call for dynamic task creation at run-time; then it
-could be useful to offer immediate start of that task.
+kernelBuilder offers the service to create a new context. Creating a
+context in suspended state is an ordinary function call,
+`ccx_createContext()`. It takes the pointer to a C function `uint32_t
+(*)(uint32_t)` and some stack space as principal arguments. The entry into
+this C function will become the very first instructions of the new context
+once it is resumed on return from asystem call or kernel interrupt.
 
-The implementation of a operating system kernel will have to deal with
+Typical RTOS design: The kernel initialization routine calls function
+`ccx_createContext()` a number of times to create the requested number of
+tasks beforehand. From the system timer interrupt, when the particular due
+times are reached, these contexts are resumed.
+
+Creation of a context can be done on-the-fly, too. On return from a system
+call or kernel interrupt, the handler can specify a C function to enter as
+a new context.
+
+On return from a system call or kernel interrupt, and if it comes to a
+context switch, the handler can not only decide to suspend the left
+context but it can let it terminate, too. The difference is that
+termination reinitializes the stack of the terminating context. The use
+tase is stack sharing; several contexts can share one stack and if one of
+the contexts terminates then the others using the same stack can be safely
+resumed.
+
+The implementation of an operating system kernel will have to deal with
 task creation and deletion. Our kernelBuilder doesn't do. It has no
 concept of memory allocation, new and free, pools of objects, etc.
 Therefore you will not find any support of context deletion. For the IVOR
@@ -140,7 +160,10 @@ handlers this is simply irrelevant; a no longer required context will just
 never be commanded again as target for resume. Whether the client code
 uses a free method to release the memory connected to a no longer used
 context or whether it returns it into an object pool for re-use is out of
-scope and fully in the design-sphere of the client code.
+scope and fully in the design-sphere of the client code.footnote:
+  [Even context termination is not connected to pooling and memory
+allocation. It just means to leave the stack of a no longer used context
+in a well defined state to maintain it useable for other contexts.]
 
 kernelBuilder consists of the source code folder `code\startup` (known
 from the other samples, only the standard IVOR #4 handler has been
@@ -311,6 +334,17 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/c
 code] comments.
 
 ==== TODOC New API by kernelBuilder
+
+For now: Please consult file
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.h[int_interruptHandler.h]
+in the first place. It is the header file that specifies the API between
+kernelBuilder and client code. You really need to read and understand this
+file entirely before you can succesfully start writing your kernel.
+
+Furthermore, have a look at the implementation of the
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/samples[kernelBilder
+samples].
+
 
 ==== Registering an ISR
 
