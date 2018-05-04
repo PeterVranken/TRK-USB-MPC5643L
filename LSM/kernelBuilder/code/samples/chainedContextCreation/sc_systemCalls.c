@@ -29,7 +29,6 @@
 
 #include "typ_types.h"
 #include "int_interruptHandler.h"
-#include "ccx_createContext.h"
 #include "xsw_contextSwitch.h"
 
 #include "sc_systemCalls.h"
@@ -65,8 +64,8 @@
       Note, we place the table into the IVOR ROM, which enables a single instruction load
     of the function pointer. */
 const SECTION(.rodata.ivor) int_systemCallFct_t int_systemCallHandlerAry[SC_NO_SYSTEM_CALLS] =
-    { [SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT] = (int_systemCallFct_t)ccx_sc_createContext
-    , [SC_IDX_SYS_CALL_SWITCH_CONTEXT] = (int_systemCallFct_t)cxs_sc_switchContext
+    { [SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT] = (int_systemCallFct_t)xsw_sc_createContext
+    , [SC_IDX_SYS_CALL_SWITCH_CONTEXT] = (int_systemCallFct_t)xsw_sc_switchContext
     };
 
 

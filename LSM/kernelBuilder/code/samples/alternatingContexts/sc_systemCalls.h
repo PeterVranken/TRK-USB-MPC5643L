@@ -48,10 +48,9 @@
 #define SC_IDX_SYS_CALL_TEST_AND_DECREMENT  0
 #define SC_IDX_SYS_CALL_INCREMENT           1
 #define SC_IDX_SYS_CALL_SWITCH_CONTEXT      2
-#define SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT  3
 
 /** The number of system calls. */
-#define SC_NO_SYSTEM_CALLS                  4
+#define SC_NO_SYSTEM_CALLS                  3
 
 /** System call: Semaphore operation test and decrement.\n
       This macro invokes the system call trap with system call index
@@ -76,28 +75,6 @@
     implements the system call. */
 #define /* uint32_t */ sc_switchContext(/* uint32_t */ signalToResumedContext) \
                     int_systemCall(SC_IDX_SYS_CALL_SWITCH_CONTEXT, signalToResumedContext)
-
-/** System call: Create a new execution context and possibly start it.\n
-      This macro invokes the system call trap with system call index
-    #SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT.\n
-      Find a detailed function description at function ccx_sc_createContext(), which
-    implements the system call. */
-#define /* void */ sc_createNewContext( /* const ccx_contextDesc_t* */ pNewContextDesc      \
-                                      , /* void (*)(uint32_t) */       onExitGuard          \
-                                      , /* bool */                     runImmediately       \
-                                      , /* uint32_t */                 initialData          \
-                                      , /* int_contextSaveDesc_t* */   pNewContextSaveDesc  \
-                                      , /* int_contextSaveDesc_t* */   pThisContextSaveDesc \
-                                      )                                                     \
-                    int_systemCall( SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT                      \
-                                  , pNewContextDesc                                         \
-                                  , onExitGuard                                             \
-                                  , runImmediately                                          \
-                                  , initialData                                             \
-                                  , pNewContextSaveDesc                                     \
-                                  , pThisContextSaveDesc                                    \
-                                  )
-
 
 
 /*

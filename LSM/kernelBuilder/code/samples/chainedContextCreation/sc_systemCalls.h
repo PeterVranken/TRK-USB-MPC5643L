@@ -56,21 +56,20 @@
     #SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT.\n
       Find a detailed function description at function ccx_sc_createContext(), which
     implements the system call. */
-#define /* void */ sc_createNewContext( /* const ccx_contextDesc_t* */ pNewContextDesc      \
-                                      , /* void (*)(uint32_t) */       onExitGuard          \
+#define /* void */ sc_createNewContext( /* const xsw_contextDesc_t* */ pNewContextDesc      \
                                       , /* bool */                     runImmediately       \
                                       , /* uint32_t */                 initialData          \
                                       , /* int_contextSaveDesc_t* */   pNewContextSaveDesc  \
                                       , /* int_contextSaveDesc_t* */   pThisContextSaveDesc \
                                       )                                                     \
-                    int_systemCall( SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT                      \
-                                  , pNewContextDesc                                         \
-                                  , onExitGuard                                             \
-                                  , runImmediately                                          \
-                                  , initialData                                             \
-                                  , pNewContextSaveDesc                                     \
-                                  , pThisContextSaveDesc                                    \
-                                  )
+                    (void)(int_systemCall( SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT               \
+                                         , pNewContextDesc                                  \
+                                         , runImmediately                                   \
+                                         , initialData                                      \
+                                         , pNewContextSaveDesc                              \
+                                         , pThisContextSaveDesc                             \
+                                         )                                                  \
+                          )
 
 /** System call: Immediate, cooperative context switch.\n
       This macro invokes the system call trap with system call index

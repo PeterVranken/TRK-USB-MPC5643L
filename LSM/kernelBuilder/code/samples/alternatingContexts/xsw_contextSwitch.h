@@ -63,16 +63,18 @@
 void xsw_loop();
 
 /** System call implementation for toggling the two contexts. */
-bool cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
-                         , uint32_t signalToResumedContext
-                         );
+uint32_t cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
+                             , uint32_t signalToResumedContext
+                             );
 
 /** This is the demo implementation of a semaphore as a system call. Decrement the count of
     the semaphore if still possible. */
-bool xsw_sc_testAndDecrement(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned int idxSem);
+uint32_t xsw_sc_testAndDecrement( int_cmdContextSwitch_t *pCmdContextSwitch
+                                , unsigned int idxSem
+                                );
 
 /** This is the demo implementation of a semaphore as a system call. Increment the count of
     the semaphore. */
-bool xsw_sc_increment(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned int idxSem);
+uint32_t xsw_sc_increment(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned int idxSem);
 
 #endif  /* XSW_CONTEXTSWITCH_INCLUDED */

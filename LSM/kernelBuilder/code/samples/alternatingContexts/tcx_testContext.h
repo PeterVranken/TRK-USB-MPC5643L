@@ -60,6 +60,6 @@ volatile extern uint32_t tcx_cntTestLoops;
  */
 
 /* Enter test funtion. It'll never return. */
-_Noreturn void tcx_testContext(uint32_t taskParam ATTRIB_UNUSED);
+_Noreturn uint32_t tcx_testContext(uint32_t taskParam ATTRIB_UNUSED);
 
 #endif  /* TCX_TESTCONTEXT_INCLUDED */

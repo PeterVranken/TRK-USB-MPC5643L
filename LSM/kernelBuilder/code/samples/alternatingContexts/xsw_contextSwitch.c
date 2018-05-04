@@ -68,6 +68,9 @@
  * Defines
  */
  
+/** Configuration of kernelBuilder: This sample doesn't make use of stack sharing but can
+    be compiled in both configurations, with or without stack sharing support. */
+
 /** The first context is the normal context and the stack is the main stack defined in the
     linker command file. The second context requires its own stack. The size needs to be at
     minimum N times the size of the ISR stack frame, where N is the number of interrupt
@@ -213,7 +216,7 @@ static void blink(uint16_t noFlashes)
  * Using only this system call but not running the timer interrupts would yield a
  * non-preemptive, cooperative scheduler.
  *   @return
- * \a true: This system call always demands a context switch.
+ * \a int_rcIsr_switchContext: This system call always demands a context switch.
  *   @param pCmdContextSwitch
  * Interface with the assembly code that implements the IVOR #8 handler.\n
  *   If the system call returns to a context, which had suspended in a system call (this
@@ -234,12 +237,12 @@ static void blink(uint16_t noFlashes)
  *   @remark
  * Never call this function directly; it is invoked from the common IVOR #8 handler.
  */
-bool cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
-                         , uint32_t signalToResumedContext
-                         )
+uint32_t cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
+                             , uint32_t signalToResumedContext
+                             )
 {
     /* The result of the system call is stored in the passed data structure. */
-    pCmdContextSwitch->retValSysCall = signalToResumedContext;
+    pCmdContextSwitch->signalToResumedContext = signalToResumedContext;
 
     ++ xsw_noContextSwitches;
 
@@ -257,7 +260,7 @@ bool cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
     _context1IsActive = !_context1IsActive;
 
     /* This system call will always provoke a context switch. Simply return true. */
-    return true;
+    return int_rcIsr_switchContext;
 
 } /* End of cxs_sc_switchContext */
 
@@ -268,12 +271,13 @@ bool cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
  * competing contexts. A counting variable that behaves as a semaphore is tested and
  * decremented if and only if the value is found to be positive. The operation is the
  * counterpart to xsw_sc_increment().\n
- *   This simple function is synchonizing as it is implemented as a system call executed in
- * the race condition free scheduler context.
+ *   This simple function is synchronizing as it is implemented as a system call executed
+ * in the race condition free scheduler context.
  *   @return
- * The function returns \a false if it returns to the calling context and \a true if it
- * demands the switch to another context.\n
- *   This system call never switches to another context. It always returns \a false.
+ * The function returns \a int_rcIsr_doNotSwitchContext if it returns to the calling context
+ * and \a int_rcIsr_switchContext if it demands the switch to another context.\n
+ *   This system call never switches to another context. It always returns \a
+ * int_rcIsr_doNotSwitchContext.
  *   @param pCmdContextSwitch
  * Interface with the assembler code that implements the IVOR #8 handler.\n
  *   If the system call returns to a context, which had suspended in a system call (this
@@ -290,7 +294,9 @@ bool cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
  *   @remark
  * Never call this function directly; it is invoked from the common IVOR #8 handler only.
  */
-bool xsw_sc_testAndDecrement(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned int idxSem)
+uint32_t xsw_sc_testAndDecrement( int_cmdContextSwitch_t *pCmdContextSwitch
+                                , unsigned int idxSem
+                                )
 {
     /* Check consistency between C data types and assembly code. */
     INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS
@@ -307,12 +313,12 @@ bool xsw_sc_testAndDecrement(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned
         ret = (uint32_t)-1;
 
     /* The result of the system call is stored in the passed data structure. */
-    pCmdContextSwitch->retValSysCall = ret;
+    pCmdContextSwitch->signalToResumedContext = ret;
     /* pCmdContextSwitch->pSuspendedContextSaveDesc doesn't care */
     /* pCmdContextSwitch->pResumedContextSaveDesc doesn't care */
 
-    /* This system call will never provoke a context switch. Simply return false. */
-    return false;
+    /* This system call will never provoke a context switch. */
+    return int_rcIsr_doNotSwitchContext;
 
 } /* End of xsw_sc_testAndDecrement */
 
@@ -325,9 +331,10 @@ bool xsw_sc_testAndDecrement(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned
  *   This simple function is synchonizing as it is implemented as a system call executed in
  * the race condition free scheduler context.
  *   @return
- * The function returns \a false if it returns to the calling context and \a true if it
- * demands the switch to another context.\n
- *   This system call never switches to another context. It always returns \a false.
+ * The function returns \a int_rcIsr_doNotSwitchContext if it returns to the calling context
+ * and \a int_rcIsr_switchContext if it demands the switch to another context.\n
+ *   This system call never switches to another context. It always returns \a
+ * int_rcIsr_doNotSwitchContext.
  *   @param pCmdContextSwitch
  * Interface with the assembler code that implements the IVOR #8 handler.\n
  *   If the system call returns to a context, which had suspended in a system call (this
@@ -343,7 +350,7 @@ bool xsw_sc_testAndDecrement(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned
  *   @remark
  * Never call this function directly; it is invoked from the common IVOR #8 handler only.
  */
-bool xsw_sc_increment(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned int idxSem)
+uint32_t xsw_sc_increment(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned int idxSem)
 {
     uint32_t ret;
     if(idxSem < NO_SEMAPHORES)
@@ -352,12 +359,12 @@ bool xsw_sc_increment(int_cmdContextSwitch_t *pCmdContextSwitch, unsigned int id
         ret = (uint32_t)-1;
 
     /* The result of the system call is stored in the passed data structure. */
-    pCmdContextSwitch->retValSysCall = ret;
+    pCmdContextSwitch->signalToResumedContext = ret;
     /* pCmdContextSwitch->pSuspendedContextSaveDesc doesn't care */
     /* pCmdContextSwitch->pResumedContextSaveDesc doesn't care */
 
-    /* This system call will never provoke a context switch. Simply return false. */
-    return false;
+    /* This system call will never provoke a context switch. */
+    return int_rcIsr_doNotSwitchContext;
 
 } /* End of xsw_sc_increment */
 
@@ -463,7 +470,10 @@ static _Noreturn uint32_t secondContext(uint32_t taskParam)
  *   Incrementing the system timer is an important system event. The routine will always
  * include an inspection of all suspended tasks, whether they could become due again.\n
  *   The unit of the time is defined only by the it triggering source and doesn't matter at
- * all for the kernel. The time even don't need to be regular.\n
+ * all for the kernel. The time even don't need to be regular.
+ *   @return
+ * The function returns \a int_rcIsr_doNotSwitchContext if it returns to the calling context
+ * and \a int_rcIsr_switchContext if it demands the switch to another context.
  *   @remark
  * The function needs to be called by an interrupt and can easily end with a context change,
  * i.e. the interrupt will return to another task as the one it had interrupted.
@@ -474,7 +484,7 @@ static _Noreturn uint32_t secondContext(uint32_t taskParam)
  *   @see bool onTimerTick(void)
  *   @see #rtos_enterCriticalSection
  */
-static bool isrSystemTimerTick1(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrSystemTimerTick1(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Acknowledge the timer interrupt in the causing HW device. */
     if(PIT.TFLG0.B.TIF != 0x1)
@@ -495,7 +505,7 @@ static bool isrSystemTimerTick1(int_cmdContextSwitch_t *pCmdContextSwitch)
         /* The return value set here may be lost; we don't really know if the currently
            suspended context had been suspended by system call or by timer ISR. In the
            latter case setting the value has no effect. */
-        pCmdContextSwitch->retValSysCall = UINT32_MAX;
+        pCmdContextSwitch->signalToResumedContext = UINT32_MAX;
 
         /* Toggle active and inactive contexts on each call. */
         if(_context1IsActive)
@@ -510,10 +520,10 @@ static bool isrSystemTimerTick1(int_cmdContextSwitch_t *pCmdContextSwitch)
         }
         _context1IsActive = !_context1IsActive;
 
-        return true;
+        return int_rcIsr_switchContext;
     }
     else
-        return false;
+        return int_rcIsr_doNotSwitchContext;
 
 } /* End of 1st ISR to increment the system time by one tick. */
 
@@ -566,8 +576,11 @@ static void enableIRQTimerTick1(void)
  *   This function is nearly a copy of isrSystemTimerTick1. It proves that unrelated ISRs
  * can independently take decisions for context switches. The tick rates of both interrupts
  * are chosen mutually prime such that all possible phase relations will occur.
+ *   @return
+ * The function returns \a int_rcIsr_doNotSwitchContext if it returns to the calling context
+ * and \a int_rcIsr_switchContext if it demands the switch to another context.
  */
-static bool isrSystemTimerTick2(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrSystemTimerTick2(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     assert(INTC.CPR_PRC0.R == 1);
 
@@ -590,7 +603,7 @@ static bool isrSystemTimerTick2(int_cmdContextSwitch_t *pCmdContextSwitch)
         /* The return value set here may be lost; we don't really know if the currently
            suspended context had been suspended by system call or by timer ISR. In the
            latter case setting the value has no effect. */
-        pCmdContextSwitch->retValSysCall = UINT32_MAX;
+        pCmdContextSwitch->signalToResumedContext = UINT32_MAX;
 
         /* Toggle active and inactive contexts on each call. */
         if(_context1IsActive)
@@ -605,10 +618,10 @@ static bool isrSystemTimerTick2(int_cmdContextSwitch_t *pCmdContextSwitch)
         }
         _context1IsActive = !_context1IsActive;
 
-        return true;
+        return int_rcIsr_switchContext;
     }
     else
-        return false;
+        return int_rcIsr_doNotSwitchContext;
 
 } /* End of 2nd ISR to increment the system time by one tick. */
 
@@ -670,7 +683,6 @@ static void isrPit2(void)
  *   This is the default implementation of the routine, which can be overloaded by the
  * application code if another interrupt or other interrupt settings should be used.
  */
-
 static void enableIRQPit2(void)
 {
     /* Disable all PIT timers during configuration. */
@@ -716,6 +728,10 @@ void xsw_loop()
 
     /* First context is running on entry and the stored values must not matter. */
     fputs("Prepare first context\r\n", stdout);
+#if INT_USE_SHARED_STACKS == 1
+    _contextSaveDesc1.ppStack = &_contextSaveDesc1.pStack;
+    _contextSaveDesc1.pStackOnEntry = NULL;
+#endif
     _contextSaveDesc1.pStack = NULL;
     _contextSaveDesc1.idxSysCall = -1;
     _context1IsActive = true;
@@ -727,23 +743,15 @@ void xsw_loop()
          Prefill stack memory to make stack usage observable. */
     fputs("Prepare second context\r\n", stdout);
     memset(&_stack2ndCtxt[0], 0xa5, sizeof(_stack2ndCtxt));
-    const ccx_contextDesc_t newContextDesc =
-    {
+    ccx_createContext( &_contextSaveDesc2
 #if 1
-        .executionEntryPoint = &secondContext,
+                     , /* fctEntryIntoNewContext */ &secondContext
 #else
-        .executionEntryPoint = &tcx_testContext,
+                     , /* fctEntryIntoNewContext */ &tcx_testContext
 #endif
-        .stackPointer = (uint8_t*)&_stack2ndCtxt[0] + sizeof(_stack2ndCtxt),
-        .privilegedMode = true,
-    };
-    sc_createNewContext( &newContextDesc
-                       , /* onExitGuard */          (void (*)(uint32_t))0x00000010
-                       , /* runImmediately */       false
-                       , /* initialData */          NULL
-                       , /* pNewContextSaveDesc */  &_contextSaveDesc2
-                       , /* pThisContextSaveDesc */ &_contextSaveDesc1
-                       );
+                     , /* stackPointer */ (uint8_t*)&_stack2ndCtxt[0] + sizeof(_stack2ndCtxt)
+                     , /* privilegedMode */ true
+                     );
 
     iprintf("New context, initial stack pointer: %p\r\n", _contextSaveDesc2.pStack);
     u = sizeOfAry(_stack2ndCtxt);

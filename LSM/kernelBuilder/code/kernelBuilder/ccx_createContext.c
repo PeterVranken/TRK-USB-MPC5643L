@@ -1,20 +1,15 @@
 /**
  * @file ccx_createContext.c
- * This is the implementation of a system call, which will be useful in most environment
- * that apply kernelBuilder: A new execution context is created. A scheduler implementation
- * can use this system call to let the application code create a new task.\n
- *   The system call will prepare the new execution context and offers to either return to
- * the caller or to do a context switch to the new context and immediately run it.\n
- *   If a scheduler implementation wants to make use of this system call it just have to
- * put it somewhere in the table of system calls owned by the scheduler.\n
+ * Support functions for using kernelBuilder: A new execution context is created. A
+ * scheduler implementation can use the offered functions to create new tasks.\n
  *   Note, there's no concept of context deletion. The entire framework doesn't deal with
  * memory allocation. For example, context creation leaves it entirely to the client code
  * to ensure the availability of RAM space for the stack. It only initializes that memory
  * such that a runnable context emerges. Accordingly, there's nothing to do for context
  * deletion; from the perspective of kernelBuilder deletion of a context just means that
- * that context is never again specified for resume. Whether the client code puts the
- * data structure into a pool for later reuse or whether it uses heap operations to release
- * the memory behind for other purposes is out of scope of kernelBuilder.
+ * that context is never again specified for resume. Whether the client code puts the data
+ * structure into a pool for later reuse or whether it uses heap operations to release the
+ * memory behind for other purposes is out of scope of kernelBuilder.
  *
  * Copyright (C) 2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -32,7 +27,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   ccx_sc_createContext
+ *   ccx_createContext
+ *   ccx_createContextShareStack
  * Local functions
  */
 
@@ -50,6 +46,7 @@
 #include "int_defStackFrame.h"
 #include "int_interruptHandler.h"
 #include "sc_systemCalls.h"
+#include "ccx_startContext.h"
 #include "ccx_createContext.h"
 
 
@@ -66,10 +63,6 @@
  * Local prototypes
  */
  
-/** Prototype of assembler function, which branches into the new context and which can make
-    it on exit return to a predetermined other function to notify the
-    end-of-execution-context to whom it may concern. */
-extern void ccx_startContext(uint32_t contextParam);
  
 
 /*
@@ -82,181 +75,211 @@ extern void ccx_startContext(uint32_t contextParam);
  */
 
 /**
- * This is the implementation of a system call that creates a new execution context. It may
- * start it, too. A scheduler implementation can use this system call to create a new task
- * or to re-initialize an existing task with a new task function (support of task pooling
- * to avoid dynamic memory allocation).
- *   @return
- * \a true, if \a runImmediately is \a true, else \a false.
- *   @param pCmdContextSwitch
- * Interface with the assembly code that implements the IVOR #8 handler.\n
- *   If the system call returns to a context, which had suspended in a system call (this
- * one or another one) then it can put the value to be returned to that context in \a
- * *pCmdContextSwitch.\n
- *   If the function returns \a true to request a context switch then it'll write
- * references to the descriptors of the suspended and resumed contexts into the same data
- * structure.\n
- *   This system requests a context switch if and only if \a runImmediately is \a true.
- *   @param pNewContextDesc
- * The specification of the new execution context to be created.
- *   @param onExitGuard
- * The address of a function, which is invoked if the new execution context ends, i.e. when
- * the function (*pNewContextDesc->executionEntryPoint)() is left. The return value of
- * (*pNewContextDesc->executionEntryPoint)() is function argument of (*onExitGuard)().
- *   @param runImmediately
- * If \a true the new context is not only created in suspended state but the calling
- * context is suspended in favor of the new one.
- *   @param initialData
- *   If the new context is immediately started then this value is passed to the entry
- * function (*pNewContextDesc->executionEntryPoint)() of that context as only argument.\n
- *   This argument doesn't care if \a runImmediately is false. If \a runImmediately is
- * false then the argument of the entry function into the new context will be provided by
- * the system call that awakes the new context the very first time.
- *   @param pNewContextSaveDesc
+ * Create a new execution context. A scheduler implementation can use this function to
+ * create a new task or to re-initialize an existing task with a new task function (support
+ * of task pooling to avoid dynamic memory allocation).
+ *   @param pContextSaveDesc
  * The caller provides the location of the context save descriptor for the newly created
  * context. This context save descriptor can then be used by a scheduler to command resume
  * and suspend of the new context.
- *   @param pThisContextSaveDesc
- * The caller provides the location of the context save descriptor for the calling
- * context.\n
- *   This argument doesn't care if \a runImmediately is false. This, the invoking context is
- * not disrupted and there's no need to save it.
- *   @note
- * This is the implementation of a system call. It must only be called from an interrupt
- * context. Never invoke this function directly.
+ *   @param fctEntryIntoNewContext
+ * A C function, which is the entry point into the new execution context.\n
+ *   \a fctEntryIntoNewContext may be NULL to specify that a context is created for
+ * starting on-the-fly: For these contexts the entry function is specified at run-time,
+ * when starting the context.
+ *   @param stackPointer
+ * The initial value of the stack pointer. The client code will allocate sufficient stack
+ * memory. This pointer will usually point at the first address beyond the allocated memory
+ * chunk; our stacks grow downward to lower addresses.\n
+ *   Note, each preemption of a context by an asynchronous External Interrupt requires
+ * about 170 Byte of stack space. Another about 100 Byte need to be reserved for the system
+ * call interrupt. If your application makes use of all interrupt priorities then you need
+ * to have 15*170+100 Byte as a minimum of stack space for safe operation, not yet counted
+ * the stack consumption of your application itself.\n
+ *   Note, this lower bounds even holds if you apply the implementation of the priority
+ * ceiling protocol from the startup code to mutually exclude sets of interrupts from
+ * preempting one another, see https://community.nxp.com/message/993795 for details.\n
+ *   The passed address needs to be 8 Byte aligned; this is double-checked by assertion.
+ *   @param privilegedMode
+ * The newly created context can be run either in user mode or in privileged mode.\n
+ *   This argument doesn't care if \a fctEntryIntoNewContext is NULL: For contexts, which
+ * are started on-the-fly, the mode is specified at run-time, when starting the context.\n
+ *   Note, the user mode should be preferred but can generally be used only if the whole
+ * system design supports this. All system level functions (in particular the I/O drivers)
+ * need to have an API, which is based on system calls. Even the most simple functions
+ * which access I/O registers or protected CPU registers, like ihw_suspendAllInterrupts()
+ * and ihw_resumeAllInterrupts(), are not permitted in user mode.
  */
-uint32_t ccx_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
-                             , const ccx_contextDesc_t *pNewContextDesc
-                             , void (*onExitGuard)(uint32_t)
-                             , bool runImmediately
-                             , uint32_t initialData
-                             , int_contextSaveDesc_t *pNewContextSaveDesc
-                             , int_contextSaveDesc_t *pThisContextSaveDesc
-                             )
+void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
+                      , int_fctEntryIntoNewContext_t fctEntryIntoNewContext
+                      , void *stackPointer
+                      , bool privilegedMode
+                      )
 {
+    /* The alignment matters. EABI requires 8 Byte alignment. */
+    assert(((uint32_t)stackPointer & 0x7) == 0);
+
+    uint32_t *sp = (uint32_t*)stackPointer;
+
+    if(fctEntryIntoNewContext != NULL)
+    {
 #define IDX(OFFSET)                                                                         \
         ({ _Static_assert(((OFFSET) & 0x3) == 0, "Bad stack word offset");                  \
            (OFFSET)/sizeof(uint32_t);                                                       \
         })
 
-    /* The alignment matters. EABI requires 8 Byte alignment. */
-    assert(((uint32_t)pNewContextDesc->stackPointer & 0x7) == 0);
+        /* The topmost word is not used. We require it for the eight byte alignment rule. */
+        * --sp = 0xffffffff;
 
-    uint32_t *sp = (uint32_t*)pNewContextDesc->stackPointer;
+        /* The next word in the stack frame of the hypothetic parent function of our
+           assembler written start function is reserved for the storage of the LR for its
+           children functions. The value is filled below. */
+        -- sp;
 
-    /* The topmost word is not used. We require it for the eight byte alignment rule. */
-    * --sp = 0xffffffff;
+        /* The next word is were the parent function of our assembler written start
+           function would have stored its stack pointer value on function entry. We don't
+           have such a parent and write a dummy value. */
+        * --sp = 0xffffffff;
 
-    /* The next word in the stack frame of the hypothetic parent function of our assembler
-       written start function is reserved for the storage of the LR for its children
-       functions. The value is filled below. */
-    -- sp;
-    
-    /* The next word is were the parent function of our assembler written start function
-       would have stored its stack pointer value on function entry. We don't have such a
-       parent and write a dummy value. */
-    * --sp = 0xffffffff;
-    
-    /* Now we see the stack pointer value as it were on entry in our assembler written
-       start function. The value is needed for proper build up of its stacjk frame, see
-       below. */
-    uint32_t * const spOnEntryIntoStartContext = sp;
-    
-    /* The stack frame of our assembler written context start function is not created by
-       that function itself but prepared here. This gives us the chance to provide it with
-       the needed information. */
-    _Static_assert((S_StCtxt_StFr & 0x7) == 0, "Bad stack frame size");
-    sp -= IDX(S_StCtxt_StFr);
-    *sp = (uint32_t)spOnEntryIntoStartContext;
-    
-    /* The word above the stack frame is were the prologue of any EABI function would place
-       the return address. We put the address of the guard function in order to jump there
-       if the entry function of the new context is left. */
-    sp[IDX(4+S_StCtxt_StFr)] = (uint32_t)onExitGuard;
+        /* Now we see the stack pointer value as it were on entry in our assembler written
+           start function. The value is needed for proper build up of its stack frame, see
+           below. */
+        uint32_t * const spOnEntryIntoStartContext = sp;
 
-    /* The stack frame of our assembler written context start function contains the address
-       of the entry function of the new context. This value is read and used for a branch
-       by our start function. */
-    sp[IDX(O_StCtxt_CTXT_ENTRY)] = (uint32_t)pNewContextDesc->executionEntryPoint;
+        /* The stack frame of our assembler written context start function is not created
+           by that function itself but prepared here. This gives us the chance to provide
+           it with the needed information. */
+        _Static_assert((S_StCtxt_StFr & 0x7) == 0, "Bad stack frame size");
+        sp -= IDX(S_StCtxt_StFr);
+        *sp = (uint32_t)spOnEntryIntoStartContext;
 
-    /* Down here, the stack frame is prepared in the stack that contains the CPU context as
-       it should be on entry into the start function. To facilitate maintenance of the code
-       we implement the C operations to fill the stack frame similar to the assembly code
-       for context save and restore. */
-    uint32_t * const spOnEntryIntoExecutionEntryPoint = sp;
+        /* The word above the stack frame is were the prologue of any EABI function would
+           place the return address. We put the address of the guard function in order to
+           jump there if the entry function of the new context is left. */
+        sp[IDX(4+S_StCtxt_StFr)] = (uint32_t)&int_fctOnContextEnd;
 
-    _Static_assert((S_SC_StFr & 0x7) == 0, "Bad stack frame size");
-    sp -= IDX(S_SC_StFr);
-    *sp = (uint32_t)spOnEntryIntoExecutionEntryPoint;
-    
-    sp[IDX(O_SC_R14)] = 0;
-    sp[IDX(O_SC_R15)] = 0;
-    sp[IDX(O_SC_R16)] = 0;
-    sp[IDX(O_SC_R17)] = 0;
-    sp[IDX(O_SC_R18)] = 0;
-    sp[IDX(O_SC_R19)] = 0;
-    sp[IDX(O_SC_R20)] = 0;
-    sp[IDX(O_SC_R21)] = 0;
-    sp[IDX(O_SC_R22)] = 0;
-    sp[IDX(O_SC_R23)] = 0;
-    sp[IDX(O_SC_R24)] = 0;
-    sp[IDX(O_SC_R25)] = 0;
-    sp[IDX(O_SC_R26)] = 0;
-    sp[IDX(O_SC_R27)] = 0;
-    sp[IDX(O_SC_R28)] = 0;
-    sp[IDX(O_SC_R29)] = 0;
-    sp[IDX(O_SC_R30)] = 0;
-    sp[IDX(O_SC_R31)] = 0;
-    
-    /* Address to return to at end of interrupt */
-    sp[IDX(O_SRR0)] = (uint32_t)ccx_startContext;
-    
-    /* The machine status is set once for the context and always restored after any future
-       system call or interrupt. Here, we decide once forever whether the context is
-       executed in user or priviledged mode. */
-    sp[IDX(O_SRR1)] = 0x00029000ul    /* MSR: External, critical and machine check
-                                         interrupts enabled, SPE is not set, ... */
-                      | (pNewContextDesc->privilegedMode  /* ... PR depends */
-                         ? 0x00000000
-                         : 0x00004000ul
-                        );
+        /* The stack frame of our assembler written context start function contains the
+           address of the entry function of the new context. This value is read and used
+           for a branch by our start function. */
+        sp[IDX(O_StCtxt_CTXT_ENTRY)] = (uint32_t)fctEntryIntoNewContext;
 
-    sp[IDX(O_RET_RC)] = 0;      /* Tmp. value to return from system call, doesn't care */
-    sp[IDX(O_RET_pSCSD)] = 0;   /* Tmp. pointer to context save data of suspended context,
-                                   doesn't care */
-    sp[IDX(O_RET_pRCSD)] = 0;   /* Tmp. pointer to context save data of resumed context,
-                                   doesn't care */
+        /* Down here, the stack frame is prepared in the stack that contains the CPU
+           context as it should be on entry into the start function. To facilitate
+           maintenance of the code we implement the C operations to fill the stack frame
+           similar to the assembly code for context save and restore. */
+        uint32_t * const spOnEntryIntoExecutionEntryPoint = sp;
+
+        _Static_assert((S_SC_StFr & 0x7) == 0, "Bad stack frame size");
+        sp -= IDX(S_SC_StFr);
+        *sp = (uint32_t)spOnEntryIntoExecutionEntryPoint;
+
+        /* We initialize the non volatile registers to zero. This is not really necessary
+           and even inconsistent with the on-the-fly start of contexts from on return from
+           a kernel interrrupt. The justification is that the on-the-fly start is an
+           operation, which needs to be speed optimized while the operation here is a
+           static, one time initialization, where execution speed doesn't matter.
+             @todo Condsider removing this code block. */
+        sp[IDX(O_SC_R14)] = 0;
+        sp[IDX(O_SC_R15)] = 0;
+        sp[IDX(O_SC_R16)] = 0;
+        sp[IDX(O_SC_R17)] = 0;
+        sp[IDX(O_SC_R18)] = 0;
+        sp[IDX(O_SC_R19)] = 0;
+        sp[IDX(O_SC_R20)] = 0;
+        sp[IDX(O_SC_R21)] = 0;
+        sp[IDX(O_SC_R22)] = 0;
+        sp[IDX(O_SC_R23)] = 0;
+        sp[IDX(O_SC_R24)] = 0;
+        sp[IDX(O_SC_R25)] = 0;
+        sp[IDX(O_SC_R26)] = 0;
+        sp[IDX(O_SC_R27)] = 0;
+        sp[IDX(O_SC_R28)] = 0;
+        sp[IDX(O_SC_R29)] = 0;
+        sp[IDX(O_SC_R30)] = 0;
+        sp[IDX(O_SC_R31)] = 0;
+
+        /* Address to return to at the end of the kernel interrupt, which will start this
+           context the first time. */
+        sp[IDX(O_SRR0)] = (uint32_t)ccx_startContext;
+
+        /* The machine status is set once for the context and always restored after any future
+           system call or interrupt. Here, we decide once forever whether the context is
+           executed in user or priviledged mode. */
+        sp[IDX(O_SRR1)] = 0x00029000ul    /* MSR: External, critical and machine check
+                                             interrupts enabled, SPE is not set, ... */
+                          | (privilegedMode? 0x00000000: 0x00004000ul);  /* ... PR depends */
+
+        /* The next four settings can be omitted if execution speed should matter. */
+        sp[IDX(O_RET_RC)] = 0;      /* Tmp. value to return from system call, doesn't care */
+        sp[IDX(O_RET_pSCSD)] = 0;   /* Tmp. pointer to context save data of suspended context,
+                                       doesn't care */
+        sp[IDX(O_RET_pRCSD)] = 0;   /* Tmp. pointer to context save data of resumed context,
+                                       doesn't care */
+        sp[IDX(O_RET_pFct)] = 0;    /* Tmp. pointer to on-the-fly started ctxt, doesn't care */
 #undef IDX
+    } /* End if(Created suspended or started-on-the-fly context?) */
     
     /* The newly created context is still suspended. We save the information, which is
-       required for later resume in the aimed context save descriptor.\n
-         Note, it depends on the integrating client code, which system call number the
-       operation gets. The entry has to be made by the calling code. We can only double
-       check that it is not a negative number, which is reserved to interrupts and which
-       would make the code crash. (Actually, the number doesn't really matter if it is only
-       not negative.) */
-    pNewContextSaveDesc->pStack = sp;
-    pNewContextSaveDesc->idxSysCall = SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT;
-    assert(pNewContextSaveDesc->idxSysCall >= 0
-           &&  pNewContextSaveDesc->idxSysCall < (signed int)int_noSystemCalls
-          );
+       required for later resume in the aimed context save descriptor. This is mainly the
+       stack pointer value and the kind of continued context: Suspended by External
+       Interrupt or by system call. */
+    pContextSaveDesc->pStack = sp;
+#if INT_USE_SHARED_STACKS == 1
+    pContextSaveDesc->ppStack = &pContextSaveDesc->pStack;
+    
+    /* If we set pStackOnEntry then we can uses the termination functionality for this
+       context and later reuse the same context sace descriptor for on-the-fly started new
+       contexts. */
+    pContextSaveDesc->pStackOnEntry = stackPointer;
+#endif
+    
+    /* We use the system call suspended kind of context, which is a bit more efficient. (On
+       cost of giving less control on the initial CPU register values.) This is expressed
+       by a non negative system call index. The actual number is meaningless. */
+    pContextSaveDesc->idxSysCall = 0;
 
-    if(runImmediately)
-    {
-        /* Provide our function argument to the C function, which defines the entry into
-           the new context. */
-        pCmdContextSwitch->retValSysCall = initialData;
-        pCmdContextSwitch->pSuspendedContextSaveDesc = pThisContextSaveDesc;
-        pCmdContextSwitch->pResumedContextSaveDesc = pNewContextSaveDesc;
-        return true;
-    }
-    else
-    {
-        /* This system call has no result for the invoking function. We simply return
-           there. */
-        return false;
-    }
-} /* End of ccx_sc_createContext */
+} /* End of ccx_createContext */
 
 
 
+#if INT_USE_SHARED_STACKS == 1
+/**
+ * Create a new execution context for on-the-fly start and which shares the stack with
+ * another context. A scheduler implementation can use this function to create a new
+ * on-the-fly task (usually a single shot task).\n
+ *   Use this function instead of ccx_createContext() if you create a context, which should
+ * share the stack with another, already created context.\n
+ *   Note, a context, which is created with this function can only be started on the fly,
+ * using flag \a int_rcIsr_createEnteredContext (see enum \a int_retCodeKernelIsr_t) on
+ * return from a kernel interrupt.
+ *   @param pNewContextSaveDesc
+ * The caller provides the location of the context save descriptor for the newly created
+ * context. This context save descriptor can then be used by a scheduler to command resume
+ * and suspend of the new context. The rules for safe stack sharing need of course to be
+ * obeyed.
+ *   @param pPeerContextSaveDesc
+ * The context save descripto of the other context, which the new one will share the stack
+ * with, is provided by reference. This context
+ *   - needs to be already created
+ *   - can have been created with either ccx_createContext() or ccx_createContextShareStack()
+ */
+void ccx_createContextShareStack( int_contextSaveDesc_t *pNewContextSaveDesc
+                                , const int_contextSaveDesc_t *pPeerContextSaveDesc
+                                )
+{
+    /* The new stack references the same stack pointer save variable as the other one. Both
+       contexts save the stack pointer on suspend and on termination at the same memory
+       location. */
+    pNewContextSaveDesc->ppStack = pPeerContextSaveDesc->ppStack;
+    
+    /* The storage of the stack pointer value is not used. We reference the according
+       variable from our peer, we share the stack with. */
+    pNewContextSaveDesc->pStack = NULL;
+    
+    /* The remaing fields don't care. They will be written on start and maybe later on
+       suspend of this context. */
+    pNewContextSaveDesc->pStackOnEntry = NULL;
+    pNewContextSaveDesc->idxSysCall = 0;
+
+} /* End of ccx_createContextShareStack */
+#endif

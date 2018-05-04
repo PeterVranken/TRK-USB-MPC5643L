@@ -51,8 +51,8 @@
     with ccx_sc_createContext(). */
 typedef struct ccx_contextDesc_t
 {
-    /** A C functions, which is the entry point into the new execution context. */
-    uint32_t (*executionEntryPoint)(uint32_t);
+    /** A C function, which is the entry point into the new execution context. */
+    int_fctEntryIntoNewContext_t executionEntryPoint;
     
     /** The initial value of the stack pointer. The client code will allocate sufficient stack
         memory. This pointer will usually point at the first address beyond the allocated
@@ -90,14 +90,18 @@ typedef struct ccx_contextDesc_t
  * Global prototypes
  */
 
-/** Implementation of system call to create a new execution context. */
-uint32_t ccx_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
-                             , const ccx_contextDesc_t *pNewContextDesc
-                             , void (*onExitGuard)(uint32_t)
-                             , bool runImmediately
-                             , uint32_t initialData
-                             , int_contextSaveDesc_t *pNewContextSaveDesc
-                             , int_contextSaveDesc_t *pThisContextSaveDesc
-                             );
+/** Create a (still suspended) new context for later resume. */
+void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
+                      , int_fctEntryIntoNewContext_t fctEntryIntoNewContext
+                      , void *stackPointer
+                      , bool privilegedMode
+                      );
+
+#if INT_USE_SHARED_STACKS == 1
+/** Create a new execution context, which shares the stack with another context. */
+void ccx_createContextShareStack( int_contextSaveDesc_t *pNewContextSaveDesc
+                                , const int_contextSaveDesc_t *pPeerContextSaveDesc
+                                );
+#endif
 
 #endif  /* CCX_CREATECONTEXT_INCLUDED */

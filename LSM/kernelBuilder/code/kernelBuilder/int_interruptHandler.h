@@ -28,6 +28,7 @@
 #include <stdbool.h>
 
 #include "typ_types.h"
+#include "int_interruptHandler.config.h"
 
 
 /*
@@ -45,9 +46,120 @@
 #endif
 
 
+/** This macro supports safe implementation of client code of the IVOR handlers. It
+    tests the binary build-up of the interface with the assembly code. The assembler does
+    not double-check the data types and code maintenance is not safely possible without
+    these compile time tests.\n
+      @todo You need to put an instance of this macro somewhere in your compiled C code. It
+    is a pure compile time test and does not consume any CPU time. */
+#if INT_USE_SHARED_STACKS == 1
+#define INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS                                        \
+    _Static_assert( sizeof(int_cmdContextSwitch_t) == 16                                    \
+                    &&  offsetof(int_cmdContextSwitch_t, signalToResumedContext) == 0       \
+                    &&  offsetof(int_cmdContextSwitch_t, pSuspendedContextSaveDesc) == 4    \
+                    &&  offsetof(int_cmdContextSwitch_t, pResumedContextSaveDesc) == 8      \
+                    &&  offsetof(int_cmdContextSwitch_t, fctEntryIntoNewContext) == 12      \
+                    &&  sizeof(int_contextSaveDesc_t) == 16                                 \
+                    &&  offsetof(int_contextSaveDesc_t, ppStack) == 4                       \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->ppStack) == sizeof(uint32_t) \
+                    &&  offsetof(int_contextSaveDesc_t, idxSysCall) == 0                    \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->idxSysCall)                  \
+                        == sizeof(uint32_t)                                                 \
+                    &&  offsetof(int_contextSaveDesc_t, pStackOnEntry) == 12                \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStackOnEntry)               \
+                        == sizeof(uint32_t)                                                 \
+                    &&  offsetof(int_contextSaveDesc_t, pStack) == 8                        \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStack) == sizeof(uint32_t)  \
+                  , "Interface between C and assembler code inconsistently defined"         \
+                  );
+#else
+#define INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS                                        \
+    _Static_assert( sizeof(int_cmdContextSwitch_t) == 16                                    \
+                    &&  offsetof(int_cmdContextSwitch_t, signalToResumedContext) == 0       \
+                    &&  offsetof(int_cmdContextSwitch_t, pSuspendedContextSaveDesc) == 4    \
+                    &&  offsetof(int_cmdContextSwitch_t, pResumedContextSaveDesc) == 8      \
+                    &&  offsetof(int_cmdContextSwitch_t, fctEntryIntoNewContext) == 12      \
+                    &&  sizeof(int_contextSaveDesc_t) == 8                                  \
+                    &&  offsetof(int_contextSaveDesc_t, pStack) == 4                        \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStack) == sizeof(uint32_t)  \
+                    &&  offsetof(int_contextSaveDesc_t, idxSysCall) == 0                    \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->idxSysCall)                  \
+                        == sizeof(uint32_t)                                                 \
+                  , "Interface between C and assembler code inconsistently defined"         \
+                  );
+#endif
+
+
 /*
  * Global type definitions
  */
+
+/** A new context is started by entering a C function. It receives a single 32 Bit value as
+    function argument and may return a 32 Bit value on exit.\n
+      The function argument is the value of \a signalToResumedContext (see struct \a
+    int_cmdContextSwitch_t), when commanding the switch to a new context the very first
+    time.\n
+      The function return value is passed as only function argument to the on-exit-guard
+    function int_fctOnContextEnd(). */
+typedef uint32_t (*int_fctEntryIntoNewContext_t)(uint32_t);
+
+
+/** The bits of the return value of kernel interrupts. By return value the interrupt
+    handler controls, whether or not to switch to another context. Whether to newly create
+    the aimed context or to terminate the left context.\n
+      An interrupt handler can return a combination of the enumerated values. (Combination:
+    sum or binary OR.) The receiving assembly code mainly looks at zero or not, no context
+    switch or context switch, respectively.\n
+      \a int_rcIsr_doNotSwitchContext, i.e. zero, must not be combined with any of the
+    other bits.\n
+      \a int_rcIsr_switchContext, which already makes the value non zero, can be combined
+    with any possible combination out of \a int_rcIsr_terminateLeftContext and \a
+    int_rcIsr_createEnteredContext.\n
+      If \a int_rcIsr_terminateLeftContext is part of the returned value then the assembly
+    code will not store the current stack pointer value in the context save area of the
+    left context but the very value it had had at the time of on-the-fly creation of this
+    context. The assumption is that this is the final suspension of the context and that
+    it'll never be resumed again. By restoring the stack pointer it is ensured that other
+    contexts, which share the stack with the terminating context can safely be resumed
+    again. They see the stack pointer value they expect. Therefore, the use of this flag is
+    restricted to applications, which make use of stack sharing (see
+    #INT_USE_SHARED_STACKS).\n
+      Note, the context save information of a context, which flag \a
+    int_rcIsr_terminateLeftContext had been applied to, must never be use again.\n
+      Note, as a rule of thumb, the flag \a int_rcIsr_terminateLeftContext can safely be
+    applied to contexts only, which had been created earlier by using of the other flag \a
+    int_rcIsr_createEnteredContext.
+      If \a int_rcIsr_createEnteredContext is part of the returned value then the assembly
+    code will not simply resume the entered context from its context save information.
+    Instead it starts a new context. The C function is entered, which is specified as field \a 
+    fctEntryIntoNewContext of object \a int_cmdContextSwitch_t, which is returned by the
+    interrupt handler, too. The initial stack pointer value is taken from the context save
+    descriptor of the entered task and this can involve stack sharing with other (currently
+    suspended or not yet created) contexts. If stack sharing is enabled then the initial
+    stack pointer value is stored in the context save descriptor to enable and prepare a
+    later use of flag \a int_rcIsr_terminateLeftContext. */
+typedef enum int_retCodeKernelIsr_t
+{
+    /** The ISR returns without context switch. The preempted context (External Interrupt)
+        or calling context (system call) is continued after return from the ISR. */
+    int_rcIsr_doNotSwitchContext = 0u,
+    
+    /** The ISR demands a context switch on return. The aimed context is an already created
+        but currently resume context. */
+    int_rcIsr_switchContext = 0x2u,
+    
+    /** The ISR demands a context switch on return. The aimed context is a new, on the fly
+        created context. */
+    int_rcIsr_createEnteredContext = 0x80000000u,
+    
+#if INT_USE_SHARED_STACKS == 1
+    /** The ISR demands a context switch on return. The suspended context is terminated.
+        (The aimed context is either a suspended or a new, on the fly created context. This
+        is controlled by \a int_rcIsr_switchContext or \a int_rcIsr_createNewContext.) */
+    int_rcIsr_terminateLeftContext = 0x1u,
+#endif
+} int_retCodeKernelIsr_t;
+
 
 /** The assembly code to switch a CPU execution context interfaces with the C code that
     implements an actual scheduler with this data structure. It contains the information
@@ -59,11 +171,6 @@
     condition at compile time. */
 typedef struct int_contextSaveDesc_t
 {
-    /** The value of the stack pointer at suspension of the context.\n
-          This field is written by the assembly code at suspension of a context. It must
-        not be touched by the scheduler code. */
-    uint32_t * volatile pStack;
-
     /** A context switch is possible from two types of interrupts. Both require different
         handling and therefore the kind of interrupt needs to be saved at suspension time
         for later context resume.\n
@@ -75,25 +182,46 @@ typedef struct int_contextSaveDesc_t
         not be touched by the scheduler code. */
     volatile int32_t idxSysCall;
 
+#if INT_USE_SHARED_STACKS == 1
+    /** The value of the stack pointer at suspension of the context is stored in or
+        retrieved from the memory location this pointer points to. Normally, it points to
+        the other field \a pStack of the same object but if several contexts share a stack
+        then all of them let their \a ppStack point to one and the same \a pStack.\n
+          This field is written by the assembly code at suspension of a context. It must
+        not be touched by the scheduler code. */
+    void * volatile * ppStack;
+#endif
+
+    /** The value of the stack pointer at suspension of the context.\n
+          This field is written by the assembly code at suspension of a context. It must
+        not be touched by the scheduler code (besides context initialization). */
+    void * volatile pStack;
+
+#if INT_USE_SHARED_STACKS == 1
+    /** With stack sharing, we need to restore the initial stack pointer value on context
+        termination so that another context which continues uing the same stack will see
+        its last value again on resume. This variable is written once on context creation
+        and read once when terminating that context again. */
+    void * volatile pStackOnEntry;
+#endif
 } int_contextSaveDesc_t;
 
-
-/** The asynchronous interrupt, which does not interact with the scheduler and which cannot
-    provoke or command a context switch needs to be implemented by a function of this
-    type.
-      @remark Handlers of this kind are installed by the application code using function
-    ihw_installINTCInterruptHandler(). */
-typedef void (*int_ivor4SimpleIsr_t)(void);
 
 /** The return value of an interrupt handler, which interacts with the scheduler and which
     can demand a context switch by means of its Boolean function return value. */
 typedef struct int_cmdContextSwitch_t
 {
-    /** The return value of a system call. This field needs to be set by the interrupt or
-        system call handler only if the interrupt returns to a system call. This can be the
-        immediate, context switch free return from an system call interrupt or the resume
-        of a context, which had formerly been suspended by a system call. */
-    uint32_t retValSysCall;
+    /** A value can be signalled to the continued context if it is in the state to receive
+        such a signal:\n
+          If the context to switch to is a new conext, which is started or resumed the very
+        first time then the signalled value is the value of the function argument of the
+        context entry function.\n
+          If the resumed context had suspended in a system call then the signalled value is
+        the return code from that system call. The same holds if we return without context
+        switch to a context, which had done a system call.\n
+          If the resumed context had been preempted by an External Interrupt then it is
+        continued where it had been preempted and \a signalToResumedContext is ignored. */
+    uint32_t signalToResumedContext;
 
     /** A context switch is demanded if the service handler for either a kernel relevant
         External Interrupt or for a system call returns \a true. Now, the pointer
@@ -108,8 +236,26 @@ typedef struct int_cmdContextSwitch_t
         context is found. */
     const int_contextSaveDesc_t *pResumedContextSaveDesc;
 
+    /** If the switch to an on the fly created, new context is demanded then the entry
+        point into that function is this C function pointer.\n
+          The least significant bits of a function pointer are always zero. We use them in
+        this interface to encode additional information about the function to execute.
+        Merging this information into the C function pointer is supported by helper
+        function int_getContextEntryFunctionSpec(), see there for details.\n
+          Note, you should never assign a function pointer not using
+        int_getContextEntryFunctionSpec()! */
+    int_fctEntryIntoNewContext_t fctEntryIntoNewContext;
+
 } int_cmdContextSwitch_t;
 
+
+
+/** The asynchronous interrupt, which does not interact with the scheduler and which cannot
+    provoke or command a context switch needs to be implemented by a function of this
+    type.
+      @remark Handlers of this kind are installed by the application code using function
+    ihw_installINTCInterruptHandler(). */
+typedef void (*int_ivor4SimpleIsr_t)(void);
 
 
 /** The asynchronous External Interrupt, which interacts with the scheduler and which
@@ -121,12 +267,13 @@ typedef struct int_cmdContextSwitch_t
     true).
       @remark Handlers of this kind are installed for External Interrupts by the
     application or scheduler code using function ihw_installINTCInterruptHandler(). */
-typedef bool (*int_ivor4KernelIsr_t)(int_cmdContextSwitch_t *pCmdContextSwitch);
+typedef uint32_t (*int_ivor4KernelIsr_t)(int_cmdContextSwitch_t *pCmdContextSwitch);
 
 
 /** The API ihw_installINTCInterruptHandler() to install an ISR for External Interrupts
     accepts both types of handlers, with and without the option to switch the context on
-    return. Here's a union to combine both function pointer types. */
+    return. Here's a union to combine both function pointer types for the prototype of that
+    function. */
 /// @todo Consider using anonymous unions as type. This is likely more user friendly and intuitive. The only location where this is used should be the register function in module IHW
 typedef union int_externalInterruptHandler_t
 {
@@ -143,33 +290,15 @@ typedef union int_externalInterruptHandler_t
 
 /** Each system call needs to be implemented by a function of this type.
       @remark
-    The C signature is formally not correct. The assembly code only
-    supports function arguments in CPU registers, which limits the total number to eight.
-    The ... stands for 0..7 arguments of up to 32 Bit. If a system call function has more
-    arguments or if it are 64 Bit arguments then the assembly code will not propagate all
-    arguments properly to the system call function and the behavior will be undefined! */
-typedef bool (*int_systemCallFct_t)( int_cmdContextSwitch_t *pCmdContextSwitch
-                                   , ...
-                                   );
-
-/** This macro supports safe implementation of client code of the IVOR handlers. It
-    tests the binary build-up of the interface with the assembly code. The assembler does
-    not double-check the data types and code maintenance is not safely possible without
-    these compile time tests.\n
-      @todo You need to put an instance of this macro somewhere in your compiled C code. It
-    is a pure compile time test and does not consume any CPU time. */
-#define INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS                                        \
-    _Static_assert( sizeof(int_cmdContextSwitch_t) == 12                                    \
-                    &&  offsetof(int_cmdContextSwitch_t, retValSysCall) == 0                \
-                    &&  offsetof(int_cmdContextSwitch_t, pSuspendedContextSaveDesc) == 4    \
-                    &&  offsetof(int_cmdContextSwitch_t, pResumedContextSaveDesc) == 8      \
-                    &&  sizeof(int_contextSaveDesc_t) == 8                                  \
-                    &&  offsetof(int_contextSaveDesc_t, pStack) == 0                        \
-                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStack) == sizeof(uint32_t)  \
-                    &&  offsetof(int_contextSaveDesc_t, idxSysCall) == 4                    \
-                  , "Interface between C and assembler code inconsistently defined"         \
-                  );
-
+    The C signature is formally not correct. The assembly code only supports function
+    arguments in CPU registers, which limits the total number to eight. The ... stands for
+    0..7 arguments of up to 32 Bit. If a system call function has more arguments or if it
+    are 64 Bit arguments then the assembly code will not propagate all arguments properly
+    to the system call function and the behavior will be undefined! */
+typedef int_retCodeKernelIsr_t (*int_systemCallFct_t)
+                                    ( int_cmdContextSwitch_t *pCmdContextSwitch
+                                    , ...
+                                    );
 
 /*
  * Global data declarations
@@ -198,21 +327,78 @@ extern const uint32_t int_noSystemCalls;
 
 
 /*
+ * Global static inline functions
+ */
+
+/**
+ * The on-the-fly start of a new context on return from a kernel interrupt requires to
+ * state the address of the context entry function and the Boolean information, whether to
+ * run the context in user or supervisor (priviledged) mode. The first information is a C
+ * function pointer but the latter is encoded as bit 0 of this pointer, which requires a
+ * binary or on the function pointer. Here is a helper function, which supports this
+ * operation and which can make the application code more meaningful.
+ *   @return
+ * Get the modified function pointer as it is expected by the assembly code to start a new
+ * context on the fly.
+ *   @param fctEntryIntoNewContext
+ * A C function, which is the entry point into the on the fly started execution context.
+ *   @param privilegedMode
+ * The started context can be run either in user mode or in privileged mode. Pass \a true
+ * for the latter.\n
+ *   Note, the user mode should be preferred but can generally be used only if the whole
+ * system design supports this. All system level functions (in particular the I/O drivers)
+ * need to have an API, which is based on system calls. Even the most simple functions
+ * which access I/O registers or protected CPU registers, like ihw_suspendAllInterrupts()
+ * and ihw_resumeAllInterrupts(), are not permitted in user mode.
+ */
+static inline int_fctEntryIntoNewContext_t 
+        int_getContextEntryFunctionSpec( int_fctEntryIntoNewContext_t fctEntryIntoNewContext
+                                       , bool privilegedMode
+                                       )
+{
+    return (int_fctEntryIntoNewContext_t)((uint32_t)fctEntryIntoNewContext
+                                          | (privilegedMode? 0x1: 0x0)
+                                         );
+
+} /* End of int_getContextEntryFunctionSpec */
+
+
+
+/*
  * Global prototypes
  */
 
-/** System call; entry point into operating system function for user code.
-      @return
-    The return value depends on the system call.
-      @param idxSysCall
-    Each system call is identified by an index. The index is a non negative integer.\n
-      The further function arguments depend on the system call.
-      @remark
-    The C signature for system calls is formally not correct. The assembly code only
-    supports function arguments in CPU registers, which limits the total number to eight.
-    The ... stands for 0..7 arguments of up to 32 Bit. If a system call function has more
-    arguments or if it are 64 Bit arguments then the assembly code will not propagate all
-    arguments properly to the system call function and the behavior will be undefined! */
+/**
+ * This is the common guard function of the context entry functions: When a function, which
+ * had been been specified as context entry function is left with return then program flow
+ * goes into this guard function.
+ *   @param retValOfContext
+ * The guard function receives the return value of the left context entry function as
+ * parameter.
+ *   @remark
+ * Note, the guard function has no calling parent function. Any attempt to return from this
+ * function will surely lead to a crash. The normal use case is to do a system call in the
+ * guard function's implementation, which notifies the situation about the terminating
+ * context to the scheduler. On return, the system call implementation will surely not use
+ * the option \a int_rcIsr_doNotSwitchContext and control will never return to the guard.
+ */
+_Noreturn void int_fctOnContextEnd(uint32_t retValOfContext);
+
+
+/**
+ * System call; entry point into operating system function for user code.
+ *   @return
+ * The return value depends on the system call.
+ *   @param idxSysCall
+ * Each system call is identified by an index. The index is a non negative integer.\n
+ *   The further function arguments depend on the system call.
+ *   @remark
+ * The C signature for system calls is formally not correct. The assembly code only
+ * supports function arguments in CPU registers, which limits the total number to eight.
+ * The ... stands for 0..7 arguments of up to 32 Bit. If a system call function has more
+ * arguments or if it are 64 Bit arguments then the assembly code will not propagate all
+ * arguments properly to the system call function and the behavior will be undefined!
+ */
 uint32_t int_systemCall(int32_t idxSysCall, ...);
 
 

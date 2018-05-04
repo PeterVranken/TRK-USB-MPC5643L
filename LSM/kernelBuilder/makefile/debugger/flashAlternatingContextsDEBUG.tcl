@@ -53,7 +53,7 @@ cmdwin::fl::protect all off
 
 # Specify target file, auto detect format, range settings on followed by the flash range,
 # offset settings off.
-cmdwin::fl::image -f ..\\..\\bin\\ppc\\DEBUG\\alternatingContexts\\TRK-USB-MPC5643L-kernelBuilder.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
+cmdwin::fl::image -f ..\\..\\bin\\ppc\\alternatingContexts\\DEBUG\\TRK-USB-MPC5643L-kernelBuilder.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
  
 # Now erase the flash...
 cmdwin::fl::erase image

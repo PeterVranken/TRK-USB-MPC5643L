@@ -68,7 +68,6 @@ const SECTION(.rodata.ivor) int_systemCallFct_t int_systemCallHandlerAry[SC_NO_S
     { [SC_IDX_SYS_CALL_TEST_AND_DECREMENT] = (int_systemCallFct_t)xsw_sc_testAndDecrement
     , [SC_IDX_SYS_CALL_INCREMENT] = (int_systemCallFct_t)xsw_sc_increment
     , [SC_IDX_SYS_CALL_SWITCH_CONTEXT] = (int_systemCallFct_t)cxs_sc_switchContext
-    , [SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT] = (int_systemCallFct_t)ccx_sc_createContext
     };
 
 
