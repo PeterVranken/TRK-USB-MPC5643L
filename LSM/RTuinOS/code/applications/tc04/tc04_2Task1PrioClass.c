@@ -89,7 +89,7 @@ static void _Noreturn task01_class00(uint32_t resumeCondition)
     assert(resumeCondition == RTOS_EVT_ABSOLUTE_TIMER);
     unsigned long ti0, ti1;
     
-    iprintf("task01_class00: Activated by 0x%08lx", resumeCondition);
+    iprintf("task01_class00: Activated by 0x%08lx\r\n", resumeCondition);
 
     for(;;)
     {

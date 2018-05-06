@@ -99,7 +99,7 @@ static unsigned int _idxDisplayedAdcChn = adc_adc0_idxChn10;
  * Moreover, and if the resumed context is a system call, it can provide the return value of
  * that system call.
  */
-static bool onEndOfConversion(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t onEndOfConversion(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Sending an event and taking the decision, whether this event makes another task
        active, is a service, which is offered by the kernel implementation. We simply call

@@ -67,17 +67,15 @@
     resume another task of higher priority.
       @remark This is the implementation of a system call. Never call this function
     directly. */
-bool rtos_sc_sendEvent(int_cmdContextSwitch_t *pCmdContextSwitch, uint32_t eventVec);
+uint32_t rtos_sc_sendEvent(int_cmdContextSwitch_t *pCmdContextSwitch, uint32_t eventVec);
 
 /** Suspend task until a combination of events appears or a timeout elapses.
       @remark This is the implementation of a system call. Never call this function
     directly. */
-bool rtos_sc_waitForEvent( int_cmdContextSwitch_t *pCmdContextSwitch
-                         , uint32_t eventMask
-                         , bool all
-                         , unsigned int timeout
-                         );
-
-
+uint32_t rtos_sc_waitForEvent( int_cmdContextSwitch_t *pCmdContextSwitch
+                             , uint32_t eventMask
+                             , bool all
+                             , unsigned int timeout
+                             );
 
 #endif  /* RTOS_SYSTEMCALLS_INCLUDED */

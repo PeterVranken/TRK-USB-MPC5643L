@@ -42,6 +42,7 @@
  * Include files
  */
 
+#include "int_interruptHandler.config.h"
 #include "int_defStackFrame.h"
 
 
@@ -80,6 +81,10 @@
 #define INT_MAX_KERNEL_IRQ_PRIO     1
 
 
+#ifndef INT_USE_SHARED_STACKS
+# error Bad configuration, INT_USE_SHARED_STACKS is undefined
+#endif
+
 /*
  * External function declarations
  */
@@ -97,19 +102,23 @@ int_fileName:
 
 #if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
     .section .sdata
-    .global int_cntRetFromIsr, int_cntIsrToSc, int_cntIsrToIsr
-    .global int_cntRetFromSc, int_cntScToSc, int_cntScToIsr
+    .global int_cntRetFromIsr, int_cntIsrToSc, int_cntIsrToIsr, int_cntIsrToNewCtxt
+    .global int_cntRetFromSc, int_cntScToSc, int_cntScToIsr, int_cntScToNewCtxt
 int_cntRetFromIsr:
     .dc.l   0
 int_cntIsrToSc:
     .dc.l   0
 int_cntIsrToIsr:
     .dc.l   0
+int_cntIsrToNewCtxt:
+    .dc.l   0
 int_cntRetFromSc:
     .dc.l   0
 int_cntScToSc:
     .dc.l   0
 int_cntScToIsr:
+    .dc.l   0
+int_cntScToNewCtxt:
     .dc.l   0
 #endif
 
@@ -290,8 +299,8 @@ int_eeh_endIfPreemptable:
 int_eeh_callOsIsr:
     /* Branch to kernel interrupt handler address from vector table. This is the signature of
        such a handler:
-         bool osInterruptHandler(int_cmdContextSwitch_t *pCmdContextSwitch);
-         The returned data has a size of 12 Byte and is placed in the stack. We pass the
+         int_retCodeKernelIsr_t osInterruptHandler(int_cmdContextSwitch_t *pCmdContextSwitch);
+         The returned data has a size of 16 Byte and is placed in the stack. We pass the
        pointer to the C code. */
     la      r3, O_RET(sp)
     blrl                        /* Branch to handler, but return here */
@@ -303,11 +312,15 @@ int_eeh_callOsIsr:
          - return from asynchronous, External Interrupt
          - return from system call */
 
-    /* The C function return code in r3 is a Boolean saying whether or not to switch the
-       context. */
-    cmplwi  cr0, r3, 0
-    beq     int_eeh_endCallSimpleIsr  /* Return as from simple ISR */
-
+    /* The C function return code in r3 is bit set saying whether (!= 0) or not (== 0) to
+       switch the context, whether to terminate the left context (LSB==1) and whether to
+       create the context we switch to (MSB==1). */
+    cmpwi   cr1, r3, 0
+    beq     cr1, int_eeh_endCallSimpleIsr  /* Return as from simple ISR */
+#if INT_USE_SHARED_STACKS == 1
+    rlwinm. r3, r3, 0, 31, 31   /* Filter bit 0 (terminate) and set CR0 */
+#endif
+    
     /* If we get here we need to switch to another execution context. This means that we
        have to save all non-volatile registers, too. We do this in the stack frame of the
        left context. We save GPR 13 in order to become later able to restore all registers
@@ -352,7 +365,11 @@ int_eeh_callOsIsr:
        ISR. This is encoded by -1 in r14 as system call index. */
     /// @todo Can we use r11 or r12 for this purpose and avoid one register to be saved in case normal-return-without-context-switch?
     li      r14, -1
-    b       int_sch_doContextSwitch
+    
+    /* The handler may have demanded to resume an existing or to create a new context.
+         The equal bit of cr0 holds the information "terminate left context". */
+    bgt     cr1, int_sch_doContextSwitch
+    b       int_sch_startNewContext
 
 int_eeh_callSimpleIsr:
     /* Branch to ISR handler address from SW vector table */
@@ -547,8 +564,8 @@ int_sch_idxFctInRange:
 
     /* Branch to system call handler address from vector table. This is the signature of
        such a handler:
-         bool sysCallHandler(int_cmdContextSwitch_t *pCmdContextSwitch, ...);
-         The returned data has a size of 12 Byte and is placed in the stack. We pass the
+         int_retCodeKernelIsr_t sysCallHandler(int_cmdContextSwitch_t *pCmdContextSwitch, ...);
+         The returned data has a size of 16 Byte and is placed in the stack. We pass the
        pointer to the C code. */
     mtlr    r3                  /* Put handler address in LR */
     la      r3, O_RET(sp)
@@ -583,35 +600,14 @@ int_sch_idxFctInRange:
          - return from interrupt
          - return from system call */
 
-    /* The C function return code in r3 is a Boolean saying whether or not to switch the
-       context. */
-    cmplwi  cr0, r3, 0
-    bne     int_sch_switchContext
-
-    /* If we get here then we simply return from system call. */
-#if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
-    lwz     r3, int_cntRetFromSc@sda21(%r0)
-    addi    r3, r3, 1
-    stw     r3, int_cntRetFromSc@sda21(%r0)
+    /* The C function return code in r3 is bit set saying whether (!= 0) or not (== 0) to
+       switch the context, whether to terminate the left context (LSB==1) and whether to
+       create the context we switch to (MSB==1). */
+    cmpwi   cr1, r3, 0
+    beq     cr1, int_sch_endSystemCall
+#if INT_USE_SHARED_STACKS == 1
+    rlwinm. r3, r3, 0, 31, 31   /* Filter bit 0 (terminate) and set CR0 */
 #endif
-
-    /* Load system call result into r3 and restore non-volatile r14. */
-    lwz     r3, O_RET_RC(sp)
-    lwz     r14, O_SC_R14(sp)
-
-    /* Restore SRR0 and SRR1 to their value on interrupt entry. */
-    lwz     r0, O_SRR0(sp)      /* Prepare PC to go to */
-    mtsrr0  r0
-    lwz     r0, O_SRR1(sp)      /* Prepare value of MSR after return */
-    mtsrr1  r0
-
-    /* Discard stack frame */
-    la      sp, S_SC_StFr(sp)
-
-    /* End of software interrupt */
-    rfi
-
-int_sch_switchContext:
 
     /* If we get here we need to switch from the system calling context to another
        execution context. This means that we have to save all non-volatile registers. We do
@@ -619,11 +615,16 @@ int_sch_switchContext:
        as work register. */
     stmw    r15, O_SC_R15(sp)   /* Write registers 15-31 */
 
-    /* This label is shared with the IVOR #4 handler. If an kernel interrupt demands a
+    /* The handler may have demanded to create a new context. */
+    blt     cr1, int_sch_startNewContext
+    
+    /*  If we get here then we do a context switch to a previously suspended context.
+          This label is shared with the IVOR #4 handler. If a kernel interrupt demands a
        context switch then we jump here. Preconditions:
        - The left context is saved
        - External Interrupt handling is disabled
        - the INTC is satisfied (interrupt acknowledged, priority stack cleared)
+       - The equal bit of cr0 holds the information "terminate left context"
        - r14 contains the system call index (or -1 if the left context is an IVOR #4) */
 int_sch_doContextSwitch:
 
@@ -644,18 +645,40 @@ int_sch_doContextSwitch:
     mr      r15, r14
 #endif
     lwz     r3, O_RET_pSCSD(sp) /* Load pointer to context save data of suspending ctxt. */
-    stw     sp, 0(r3)           /* Store sp so far in descriptor of left context */
-    stw     r14, 4(r3)          /* Store system call index at offset 4 in the struct */
-    lwz     r3, O_RET_RC(sp) /* Load result of sys call now ending in the resumed ctxt. */
+#if INT_USE_SHARED_STACKS == 1
+    beq     cr0, int_sch_swCtxt_saveCtxt
+
+    /* Context termination: Don't store current sp in save variable but the initial value
+       it had at context creation time. This leaves the stack ready to use for other
+       contexts, which share the stack. */
+    lwz     r14, 12(r3)         /* Load initial value of context's stack pointer */
+    lwz     r3, 4(r3)           /* Load address of stack pointer save variable */
+    stw     r14, 0(r3)          /* and make stack reusable for the other sharing contexts */
+    b       int_sch_swCtxt_endSaveCtxt
+    
+int_sch_swCtxt_saveCtxt:
+    stw     r14, 0(r3)          /* Store system call index at offset 0 in the struct */
+    lwz     r3, 4(r3)           /* Load address of stack pointer save variable. */
+    stw     sp, 0(r3)           /* Store current sp of left context */
+int_sch_swCtxt_endSaveCtxt:
+#else
+    stw     r14, 0(r3)          /* Store system call index at offset 0 in the struct */
+    stw     sp, 4(r3)           /* Store current sp of left context at 4 in the struct */
+#endif
+    
+    lwz     r3, O_RET_RC(sp) /* Load result of sys call now ending in the resumed context. */
     lwz     r14, O_RET_pRCSD(sp)/* Load pointer to context save data of resumed context */
-    lwz     sp, 0(r14)          /* Load sp from descriptor of resumed context */
+    lwz     sp, 4(r14)          /* Load sp (or address of) from descriptor of resumed ctxt */
+#if INT_USE_SHARED_STACKS == 1
+    lwz     sp, 0(sp)           /* Load stack pointer from its save variable. */
+#endif
 
     /* The next decision is whether to return in the resumed context from a system call or
        from an asynchronous External Interrupt. This information had been stored in the
        context save data. */
-    lwz     r14, 4(r14)
+    lwz     r14, 0(r14)
     cmpwi   cr0, r14, 0         /* Negative means ISR, >=0 means system call index */
-    blt     int_sch_retFromIvor4
+    blt     cr0, int_sch_retFromIvor4
 
     /* If we get here the context switch ends with the return from a system call. We
        only restore the non-volatile registers. From the perspective of the calling code
@@ -703,7 +726,7 @@ int_sch_retFromIvor4:
        result value got from the system call handler but need to restore all registers. */
 
 #if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
-    cmpwi   cr0, r15, 0         /* Test flag: return from ISR of system call */
+    cmpwi   cr0, r15, 0         /* Test flag: return from ISR or system call */
     blt     cr0, int_sch_cntIsrToIsr    /* -1: we return from ISR */
 
     lwz     r15, int_cntScToIsr@sda21(%r0)
@@ -752,6 +775,114 @@ int_sch_endCntIsrToIsr:
     /* End of interrupt */
     rfi
 
+
+    /* If we get here, we create a new context on the fly and switch to it.
+         This label is shared with the IVOR #4 handler. If a kernel interrupt demands to
+       create a new context then we jump here, too. Preconditions:
+       - The context switch is done
+       - External Interrupt handling is disabled
+       - the INTC is satisfied (interrupt acknowledged, priority stack cleared)
+       - The equal bit of cr0 holds the information "terminate left context"
+       - r14 contains the system call index (or -1 if the left context is an IVOR #4) */
+int_sch_startNewContext:
+    lwz     r3, O_RET_pSCSD(sp) /* Load pointer to context save data of suspending ctxt. */
+#if INT_USE_SHARED_STACKS == 1
+    beq     cr0, int_sch_newCtxt_saveCtxt
+    
+    /* Context termination: Don't store current sp in save variable but the initial value
+       it had at context creation time. This leaves the stack ready to use for other
+       contexts, which share the stack. */
+    lwz     r15, 12(r3)         /* Load initial value of context's stack pointer */
+    lwz     r3, 4(r3)           /* Load address of stack pointer save variable. */
+    stw     r15, 0(r3)          /* and make stack reusable for sharing contexts */
+    b       int_sch_newCtxt_endSaveCtxt
+    
+int_sch_newCtxt_saveCtxt:
+    stw     r14, 0(r3)          /* Store system call index at offset 0 in the struct */
+    lwz     r3, 4(r3)           /* Load address of stack pointer save variable. */
+    stw     sp, 0(r3)           /* Store current sp of left context */
+int_sch_newCtxt_endSaveCtxt:
+#else
+    stw     r14, 0(r3)          /* Store system call index at offset 4 in the struct */
+    stw     sp, 4(r3)           /* Store current sp of left context at 0 in the struct */
+#endif
+    
+#if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
+    cmpwi   cr0, r14, 0         /* Test flag: return from ISR or system call */
+    blt     cr0, int_sch_cntIsrToNewCtxt     /* -1: we return from ISR */
+
+    lwz     r14, int_cntScToNewCtxt@sda21(%r0)
+    addi    r14, r14, 1
+    stw     r14, int_cntScToNewCtxt@sda21(%r0)
+    b       int_sch_endCntIsrToNewCtxt
+
+int_sch_cntIsrToNewCtxt:
+    lwz     r14, int_cntIsrToNewCtxt@sda21(%r0)
+    addi    r14, r14, 1
+    stw     r14, int_cntIsrToNewCtxt@sda21(%r0)
+
+int_sch_endCntIsrToNewCtxt:
+#endif
+
+    lwz     r3, O_RET_pFct(sp)  /* Load entry function of new context, got from ISR */
+    rlwinm. r3, r3, 31, 0, 31   /* Move bit 0 (priviledged mode) into CR0, negative */
+    rlwinm  r3, r3, 1, 0, 30    /* Restore r3 and discard bit priviledged mode */
+    mtsrr0  r3
+    lwz     r3, O_RET_RC(sp)    /* Load signal from ISR, is function arg of new context */
+    lwz     r14, O_RET_pRCSD(sp)/* Load pointer to context save data of new context */
+    lwz     sp, 4(r14)          /* Load address of stack pointer save variable */
+#if INT_USE_SHARED_STACKS == 1
+    lwz     sp, 0(sp)           /* Load stack pointer from its save variable */
+    stw     sp, 12(r14)         /* Save initial stack pointer for later context termination */
+#endif
+
+    /* Stack pointer has been exchanged (but can still be the same if both save area
+       descriptors reference the same stack pointer save variable), srr0 is prepared for
+       entry function call, r3 holds function argument. We just need to prepare the stack
+       and some registers. */
+    stwu    sp, -8(sp)          /* Leave room for link, consider 8 Byte alignment */
+    lis     r14, 0x00029000@h   /* MSR: External, critical and machine check */
+    blt     cr0, int_sch_privilegedMode
+
+    ori     r14, r14, 0x0002d000@l  /* MSR: Plus user mode */
+    b       int_sch_endPrivilegedMode
+int_sch_privilegedMode:
+    ori     r14, r14, 0x00029000@l  /* MSR: Plus supervisor mode */
+int_sch_endPrivilegedMode:
+
+    mtsrr1  r14
+    lis     r14, int_fctOnContextEnd@ha     /* Load function, where we jump to on context */
+    la      r14, int_fctOnContextEnd@l(r14) /* termination into LR */
+    mtlr    r14
+
+    /* End of interrupt */
+    rfi
+
+
+int_sch_endSystemCall:
+    /* If we get here then we simply return from system call. */
+#if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
+    lwz     r3, int_cntRetFromSc@sda21(%r0)
+    addi    r3, r3, 1
+    stw     r3, int_cntRetFromSc@sda21(%r0)
+#endif
+
+    /* Load system call result into r3 and restore non-volatile r14. */
+    lwz     r3, O_RET_RC(sp)
+    lwz     r14, O_SC_R14(sp)
+
+    /* Restore SRR0 and SRR1 to their value on interrupt entry. */
+    lwz     r0, O_SRR0(sp)      /* Prepare PC to go to */
+    mtsrr0  r0
+    lwz     r0, O_SRR1(sp)      /* Prepare value of MSR after return */
+    mtsrr1  r0
+
+    /* Discard stack frame */
+    la      sp, S_SC_StFr(sp)
+
+    /* End of software interrupt */
+    rfi
+
     /* Error trap: The priority ceiling applied to protect the execution of system calls
        without interference of interrupts had failed. On exit from the system call the
        current priority had been unexpectedly altered. */
@@ -767,6 +898,25 @@ int_sch_errorPrioLowered:
     .size   int_systemCallHandler, .-int_systemCallHandler
 /* End of int_systemCallHandler */
 
+
+/** 
+ *   @func int_fctOnContextEnd
+ * Default implementation of guard function, which is invoked when a context entry function
+ * is left with return. The default function is meant an assertion, it's just spinning
+ * forever.\n
+ *   The function is declared weak so that the application code can overload it.
+ */
+    .section .text
+    .globl  int_fctOnContextEnd
+    .weak   int_fctOnContextEnd
+    .type   int_fctOnContextEnd, @function
+    .align  2
+int_fctOnContextEnd:
+    wrteei  0
+    b       .
+
+    .size   int_fctOnContextEnd, .-int_fctOnContextEnd
+/* End of int_fctOnContextEnd */
 
 
 /**

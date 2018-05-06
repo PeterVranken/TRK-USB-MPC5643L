@@ -143,7 +143,7 @@ static _Noreturn void task01_class00(uint32_t initCondition)
            , tiCycle
            , u;
     
-    iprintf("task01_class00: Activated by 0x%lux\r\n", initCondition);
+    iprintf("task01_class00: Activated by 0x%lx\r\n", initCondition);
 
     for(u=0; u<3; ++u)
         mai_blink(2);

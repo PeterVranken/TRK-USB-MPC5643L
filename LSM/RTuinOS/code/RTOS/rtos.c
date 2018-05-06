@@ -70,6 +70,7 @@
 #include "int_interruptHandler.h"
 #include "sc_systemCalls.h"
 #include "del_delay.h"
+#include "ccx_createContext.h"
 #include "rtos_systemCalls.h"
 #include "rtos.h"
 
@@ -568,7 +569,7 @@ static bool onTimerTick(void)
  *   @see bool onTimerTick(void)
  */
 #if TEST_USE_IRREGULAR_SYS_CLOCK != 1
-static bool isrSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /// @todo Try using eTimer_2, TC5IR, on level #227: We should use the lowest possible
     // interrupt prio for the RTOS tick in order to give any other real time event
@@ -584,22 +585,23 @@ static bool isrSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
         /* Yes, another task becomes active with this timer tick. Command the calling
            system call handler on return to switch to the other task. The vector of
            received events is the value returned to the activated task. */
-        pCmdContextSwitch->retValSysCall = _pActiveTask->postedEventVec;
+        pCmdContextSwitch->signalToResumedContext = _pActiveTask->postedEventVec;
         _pActiveTask->postedEventVec = 0;
         pCmdContextSwitch->pSuspendedContextSaveDesc = &_pSuspendedTask->contextSaveDesc;
         pCmdContextSwitch->pResumedContextSaveDesc = &_pActiveTask->contextSaveDesc;
 
-        return true;
+        return int_rcIsr_switchContext;
     }
-
-    /* No task switch is wanted in this tick. Continue the same, preempted context. */
-    return false;
-
+    else
+    {
+        /* No task switch is wanted in this tick. Continue the same, preempted context. */
+        return int_rcIsr_doNotSwitchContext;
+    }
 } /* End of ISR to increment the system time by one tick. */
 
 #else /* if TEST_USE_IRREGULAR_SYS_CLOCK == 1 */
 
-static bool onSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t onSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Check for all suspended tasks if this change in time is an event for them. */
     if(onTimerTick())
@@ -607,35 +609,35 @@ static bool onSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
         /* Yes, another task becomes active with this timer tick. Command the calling
            system call handler on return to switch to the other task. The vector of
            received events is the value returned to the activated task. */
-        pCmdContextSwitch->retValSysCall = _pActiveTask->postedEventVec;
+        pCmdContextSwitch->signalToResumedContext = _pActiveTask->postedEventVec;
         _pActiveTask->postedEventVec = 0;
         pCmdContextSwitch->pSuspendedContextSaveDesc = &_pSuspendedTask->contextSaveDesc;
         pCmdContextSwitch->pResumedContextSaveDesc = &_pActiveTask->contextSaveDesc;
 
-        return true;
+        return int_rcIsr_switchContext;
     }
-
-    /* This is an ISR in the SW vector model. The routine will return to the calling IVOR
-       handler, restore the volatile registers and continue the interrupted code. */
-    return false;
-
+    else
+    {
+        /* No task switch is wanted in this tick. Continue the same, preempted context. */
+        return int_rcIsr_doNotSwitchContext;
+    }
 } /* End of onSystemTimerTick. */
 
-static bool isrSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrSystemTimerTick(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Acknowledge the timer interrupt in the causing HW device. */
     assert(PIT.TFLG3.B.TIF == 0x1);
     PIT.TFLG3.B.TIF = 0x1;
     return onSystemTimerTick(pCmdContextSwitch);
 }
-static bool isrSystemTimerTick_testPid1(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrSystemTimerTick_testPid1(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Acknowledge the timer interrupt in the causing HW device. */
     assert(PIT.TFLG1.B.TIF == 0x1);
     PIT.TFLG1.B.TIF = 0x1;
     return onSystemTimerTick(pCmdContextSwitch);
 }
-static bool isrSystemTimerTick_testPid2(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrSystemTimerTick_testPid2(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Acknowledge the timer interrupt in the causing HW device. */
     assert(PIT.TFLG2.B.TIF == 0x1);
@@ -940,12 +942,12 @@ static bool sendEvent(uint32_t postedEventVec)
  *   @see
  * #rtos_waitForEvent()
  *   @remark
- * This is the implementtaion of system call index #SC_IDX_SYS_CALL_SEND_EVENT. The
+ * This is the implementation of system call index #SC_IDX_SYS_CALL_SEND_EVENT. The
  * function must never be called from task code but it may be invoked from kernel relevant
  * ISRs, which may interact with the scheduler by sending events and by provoking a context
  * switch in this way, as a consequence of the sent events.
  */
-bool rtos_sc_sendEvent(int_cmdContextSwitch_t *pCmdContextSwitch, uint32_t eventVec)
+uint32_t rtos_sc_sendEvent(int_cmdContextSwitch_t *pCmdContextSwitch, uint32_t eventVec)
 {
     /* Check for all suspended tasks if the posted events will resume them.
          The actual implementation of the function's logic is placed into a sub-routine in
@@ -956,18 +958,19 @@ bool rtos_sc_sendEvent(int_cmdContextSwitch_t *pCmdContextSwitch, uint32_t event
         /* Yes, another task becomes active with this timer tick. Command the calling
            system call handler on return to switch to the other task. The vector of
            received events is the value returned to the activated task. */
-        pCmdContextSwitch->retValSysCall = _pActiveTask->postedEventVec;
+        pCmdContextSwitch->signalToResumedContext = _pActiveTask->postedEventVec;
         _pActiveTask->postedEventVec = 0;
         pCmdContextSwitch->pSuspendedContextSaveDesc = &_pSuspendedTask->contextSaveDesc;
         pCmdContextSwitch->pResumedContextSaveDesc = &_pActiveTask->contextSaveDesc;
 
-        return true;
+        return int_rcIsr_switchContext;
     }
-
-    /* No other task has been resumed by the posted events and we return to the same
-       calling task. There is no function result. */
-    return false;
-
+    else
+    {
+        /* No other task has been resumed by the posted events and we return to the same
+           calling task. There is no function result. */
+        return int_rcIsr_doNotSwitchContext;
+    }
 } /* End of rtos_sc_sendEvent */
 
 
@@ -997,7 +1000,7 @@ bool rtos_sc_sendEvent(int_cmdContextSwitch_t *pCmdContextSwitch, uint32_t event
  * If the function requests a context switch then the ISR provides the context save areas
  * of suspended and resumed task through * \a pCmdContextSwitch.
  */
-static bool isrUser00(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrUser00(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Acknowledge the timer interrupt in the causing HW device. */
     RTOS_ISR_USER_00_ACKNOWLEDGE_IRQ
@@ -1038,7 +1041,7 @@ static bool isrUser00(int_cmdContextSwitch_t *pCmdContextSwitch)
  * If the function requests a context switch then the ISR provides the context save areas
  * of suspended and resumed task through * \a pCmdContextSwitch.
  */
-static bool isrUser01(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrUser01(int_cmdContextSwitch_t *pCmdContextSwitch)
 {
     /* Acknowledge the timer interrupt in the causing HW device. */
     RTOS_ISR_USER_01_ACKNOWLEDGE_IRQ
@@ -1370,11 +1373,11 @@ static void waitForEvent(uint32_t eventMask, bool all, unsigned int timeout)
  * directly. It is called only through the system call interrupt handler. You API to this
  * function is macro #rtos_waitForEvent().
  */
-bool rtos_sc_waitForEvent( int_cmdContextSwitch_t *pCmdContextSwitch
-                         , uint32_t eventMask
-                         , bool all
-                         , unsigned int timeout
-                         )
+uint32_t rtos_sc_waitForEvent( int_cmdContextSwitch_t *pCmdContextSwitch
+                             , uint32_t eventMask
+                             , bool all
+                             , unsigned int timeout
+                             )
 {
 #if RTOS_USE_SEMAPHORE == RTOS_FEATURE_ON  ||  RTOS_USE_MUTEX == RTOS_FEATURE_ON
     if(waitForEvent(eventMask, all, timeout))
@@ -1385,25 +1388,74 @@ bool rtos_sc_waitForEvent( int_cmdContextSwitch_t *pCmdContextSwitch
         /* Yes, another task becomes active with this timer tick. Command the calling
            system call handler on return to switch to the other task. The vector of
            received events is the value returned to the activated task. */
-        pCmdContextSwitch->retValSysCall = _pActiveTask->postedEventVec;
+        pCmdContextSwitch->signalToResumedContext = _pActiveTask->postedEventVec;
         _pActiveTask->postedEventVec = 0;
         pCmdContextSwitch->pSuspendedContextSaveDesc = &_pSuspendedTask->contextSaveDesc;
         pCmdContextSwitch->pResumedContextSaveDesc = &_pActiveTask->contextSaveDesc;
 
-        return true;
+        return int_rcIsr_switchContext;
     }
+#if RTOS_USE_SEMAPHORE == RTOS_FEATURE_ON  ||  RTOS_USE_MUTEX == RTOS_FEATURE_ON
+    else
+    {
+        /* We return to the same calling task. All or at least a satisfying sub-set of the
+           requested mutexes and semaphores has been acquired and there's no need to
+           suspend the active task. The acquired objects are returned as system call
+           result. */
+        pCmdContextSwitch->signalToResumedContext = _pActiveTask->postedEventVec;
+        _pActiveTask->postedEventVec = 0;
 
-    /* We return to the same calling task. All or at least a satisfying sub-set of the
-       requested mutexes and semaphores has been acquired and there's no need to suspend
-       the active task. The acquired objects are returned as system call result. */
-    pCmdContextSwitch->retValSysCall = _pActiveTask->postedEventVec;
-    _pActiveTask->postedEventVec = 0;
-
-    return false;
-
+        return int_rcIsr_doNotSwitchContext;
+    }
+#endif
 } /* End of rtos_sc_waitForEvent */
 
 
+
+
+
+/**
+ * This is the common guard function of the context entry functions: When a function, which
+ * had been specified as context entry function is left with return then program flow
+ * goes into this guard function.\n
+ *   In RTuinOS it used to cause a reset if a forbidden leave of a task function is
+ * attempted. The implementation of the guard emulates this behavior.
+ *   @param retValOfContext
+ * The guard function receives the return value of the left context entry function as
+ * parameter.\n
+ *   An RTuinOS task function doesn't return anything and the guard will receive a
+ * meaningless, arbitrary value as function argument. Never use \a retValOfContext.
+ *   @remark
+ * Note, the guard function has no calling parent function. Any attempt to return from
+ * this function will surely lead to a crash. The normal use case is to have a system call
+ * implemented here, which notifies the situation about the terminating context to the
+ * scheduler. On return, the system call implementation will surely not use the option \a
+ * int_rcIsr_doNotSwitchContext and control will never return back to the guard.
+ *   @remark
+ * This is an RTuinOS specific, overloaded function implementation. The default
+ * implementation is owned by package \a kernelBuilder, see file int_interruptHandler.S.
+ */
+_Noreturn void int_fctOnContextEnd(uint32_t retValOfContext ATTRIB_UNUSED)
+{
+#ifdef DEBUG
+    iprintf( "int_fctOnContextEnd: Caught attempt to return from an RTuinOS task function,"
+             " which is not allowed. System will try to reset\r\n"
+           );
+           
+    /* Leave time to flush serial buffers, even at low Baud rate. */
+    del_delayMicroseconds(/* tiCpuInUs */ 1000000);
+    
+    /* In DEBUG compilation it's most beneficial to be informated by assertion about the
+       forbidden situation. */
+    assert(false);
+#endif    
+
+    /* Emulation of original RTuinOS behavior: Reset the system.
+         Note, for an MPC5643L MCU the startup code needs to be prepared for a warm start.
+       The required mode transitions differ from cold start. */
+    ((void (*)(void))(0x00000010))();
+
+} /* End of int_fctOnContextEnd */
 
 
 
@@ -1765,16 +1817,14 @@ _Noreturn void rtos_initRTOS(void)
            task is initialized as if it had suspended by system call waitForEvent.
              @todo privilegedMode: RTuinOS is not prepared to run tasks in user mode. The
            infrastructure is missing; in particular the critical sections are implemented
-           such that they require supervisor instructions. */
+           such that they require privileged instructions. */
         prepareTaskStack(pT->pStackArea, pT->stackSize);
-        sc_createNewContext( /* executionEntryPoint */ pT->taskFunction
-                           , /* stackPointer */ (uint8_t*)pT->pStackArea + pT->stackSize
-                           , /* privilegedMode */ true
-                           , /* runImmediately */ false
-                           , /* pNewContextSaveDesc */ &pT->contextSaveDesc
-                           , /* pThisContextSaveDesc */ NULL
-                           , /* initialData */ 0
-                           );
+        ccx_createContext( /* pNewContextSaveDesc */ &pT->contextSaveDesc
+                         , /* fctEntryIntoNewContext */
+                           (int_fctEntryIntoNewContext_t)pT->taskFunction
+                         , /* stackPointer */ (uint8_t*)pT->pStackArea + pT->stackSize
+                         , /* privilegedMode */ true
+                         );
 #ifdef DEBUG
 # if RTOS_NO_TASKS <= 3
         {
@@ -1854,8 +1904,18 @@ _Noreturn void rtos_initRTOS(void)
     extern uint32_t ld_memStackStart[0], ld_memStackSize[0];
 
     pT = _pIdleTask;
+    
+    /* The context save descriptor of the idle task needs to be initialized, too. It is
+       used when we leave the idle context.
+         Note, stack sharing is not applied by RTuinOS and INT_USE_SHARED_STACKS should be
+       configured zero. However, the initialization of ppStack keeps the code runnable even
+       with stack sharing support compiled. */
     pT->contextSaveDesc.pStack = NULL;      /* Used only later at de-activation. */
-    pT->contextSaveDesc.idxSysCall = -1;    /* Used only later at de-activation. */
+    pT->contextSaveDesc.idxSysCall = 0 ;    /* Used only later at de-activation. */
+#if INT_USE_SHARED_STACKS != 0
+    pT->contextSaveDesc.ppStack = &pT->contextSaveDesc.pStack;
+#endif
+
     pT->timeDueAt = 0;              /* Not used at all. */
 #if RTOS_ROUND_ROBIN_MODE_SUPPORTED == RTOS_FEATURE_ON
     pT->cntRoundRobin = 0;          /* Not used at all. */

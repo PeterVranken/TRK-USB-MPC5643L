@@ -45,12 +45,11 @@
 /** The enumeration of system call indexes.\n
       Caution, this enumeration needs to be always in sync with the table of function
     pointers! */
-#define SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT  0
-#define SC_IDX_SYS_CALL_WAIT_FOR_EVENT      1
-#define SC_IDX_SYS_CALL_SEND_EVENT          2
+#define SC_IDX_SYS_CALL_WAIT_FOR_EVENT      0
+#define SC_IDX_SYS_CALL_SEND_EVENT          1
 
 /** The number of system calls. */
-#define SC_NO_SYSTEM_CALLS                  3
+#define SC_NO_SYSTEM_CALLS                  2
 
 /** System call: Create a new execution context and possibly start it.\n
       This macro invokes the system call trap with system call index

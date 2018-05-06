@@ -701,7 +701,7 @@ static void initADC(unsigned int idxAdc)
 
 /// @todo doc
 #if ADC_ENABLE_INTERRUPT_AS_KERNEL_RELEVANT != 0
-static bool isrCtuAllConversionsDone(int_cmdContextSwitch_t *pCmdContextSwitch)
+static uint32_t isrCtuAllConversionsDone(int_cmdContextSwitch_t *pCmdContextSwitch)
 #else
 static void isrCtuAllConversionsDone(void)
 #endif

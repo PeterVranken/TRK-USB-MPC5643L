@@ -65,8 +65,7 @@
       Note, we place the table into the IVOR ROM, which enables a single instruction load
     of the function pointer. */
 const SECTION(.rodata.ivor) int_systemCallFct_t int_systemCallHandlerAry[SC_NO_SYSTEM_CALLS] =
-    { [SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT] = (int_systemCallFct_t)ccx_sc_createContext
-    , [SC_IDX_SYS_CALL_WAIT_FOR_EVENT] = (int_systemCallFct_t)rtos_sc_waitForEvent
+    { [SC_IDX_SYS_CALL_WAIT_FOR_EVENT] = (int_systemCallFct_t)rtos_sc_waitForEvent
     , [SC_IDX_SYS_CALL_SEND_EVENT] = (int_systemCallFct_t)rtos_sc_sendEvent
     };
 
