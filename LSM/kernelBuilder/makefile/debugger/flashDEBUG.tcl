@@ -19,7 +19,7 @@
 # Note, this script requires that the working directory is the directory where this script
 # is located. Use the TCL commands pwd and dir in the debugger shell to find out.
 
-if {$APP != ""} {
+if {[info exists APP]  &&  $APP != ""} {
     puts "kernelBuilder application $APP is flashed"
 
     # In any case, disconnect an existing debug connection.
@@ -72,5 +72,6 @@ if {$APP != ""} {
     puts "Error: Please set TCL variable APP prior to running this script."
     puts "APP should contain the name of an application, which has been compiled
     puts "with kernelBuilder. kernelBuilder on its own is not a self-contained,"
-    puts "flashable application"
+    puts "flashable application."
+    puts "  See the source code of this script for examples"
 }
