@@ -726,7 +726,7 @@ int_sch_retFromIvor4:
        result value got from the system call handler but need to restore all registers. */
 
 #if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
-    cmpwi   cr0, r15, 0         /* Test flag: return from ISR of system call */
+    cmpwi   cr0, r15, 0         /* Test flag: return from ISR or system call */
     blt     cr0, int_sch_cntIsrToIsr    /* -1: we return from ISR */
 
     lwz     r15, int_cntScToIsr@sda21(%r0)
@@ -808,7 +808,7 @@ int_sch_newCtxt_endSaveCtxt:
 #endif
     
 #if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
-    cmpwi   cr0, r14, 0         /* Test flag: return from ISR of system call */
+    cmpwi   cr0, r14, 0         /* Test flag: return from ISR or system call */
     blt     cr0, int_sch_cntIsrToNewCtxt     /* -1: we return from ISR */
 
     lwz     r14, int_cntScToNewCtxt@sda21(%r0)

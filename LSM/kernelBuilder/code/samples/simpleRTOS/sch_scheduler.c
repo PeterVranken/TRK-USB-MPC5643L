@@ -1,6 +1,6 @@
 /**
  * @file sch_scheduler.c
- * This module, how a real time scheduler can be build on the kernelBuilder API. The
+ * This module shows, how a real time scheduler can be build on the kernelBuilder API. The
  * implementation is a demonstration of the capabilities and not meant a code sample for
  * good design of an RTOS kernel. Instead of shaping reusable structures the implementation
  * is intentionally as lean as possible; it uses hardcoded decisions rather than
@@ -378,8 +378,7 @@ static uint32_t activateTask( int_cmdContextSwitch_t *pCmdContextSwitch
                  On leave of this function, we will evidently switch to another task. The
                context switch code will not save the current stack pointer but restore the
                value it had had at context creation. This enables the other task (or same
-               task later in case of re-activation re-activation) to safely
-               reuse the same stack. */
+               task later in case of re-activation) to safely reuse the same stack. */
             rcIsr_cmd |= int_rcIsr_terminateLeftContext;
             
             /* The complete scheduler implementation is race condition free and we can
@@ -781,7 +780,7 @@ _Noreturn void sch_initAndStartScheduler()
 
     #undef SP
 
-    /* The Context save descriptor of the idle task needs to be initialized, too. It is
+    /* The context save descriptor of the idle task needs to be initialized, too. It is
        used once at the beginning, when we leave the idle context. */
     _contextSaveDescAry[idTaskIdle].ppStack = &_contextSaveDescAry[idTaskIdle].pStack;
     
