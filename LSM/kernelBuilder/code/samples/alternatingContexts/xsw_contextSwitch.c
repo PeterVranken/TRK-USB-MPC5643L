@@ -734,6 +734,8 @@ void xsw_loop()
 #endif
     _contextSaveDesc1.pStack = NULL;
     _contextSaveDesc1.idxSysCall = -1;
+    _contextSaveDesc1.fctEntryIntoContext = NULL; /* Actually not used */
+    _contextSaveDesc1.privilegedMode = true;         /* Actually not used */
     _context1IsActive = true;
 
     /* As a compile time option, the second context defined here in this module can be
@@ -744,12 +746,12 @@ void xsw_loop()
     fputs("Prepare second context\r\n", stdout);
     memset(&_stack2ndCtxt[0], 0xa5, sizeof(_stack2ndCtxt));
     ccx_createContext( &_contextSaveDesc2
-#if 1
-                     , /* fctEntryIntoNewContext */ &secondContext
-#else
-                     , /* fctEntryIntoNewContext */ &tcx_testContext
-#endif
                      , /* stackPointer */ (uint8_t*)&_stack2ndCtxt[0] + sizeof(_stack2ndCtxt)
+#if 1
+                     , /* fctEntryIntoContext */ &secondContext
+#else
+                     , /* fctEntryIntoContext */ &tcx_testContext
+#endif
                      , /* privilegedMode */ true
                      );
 

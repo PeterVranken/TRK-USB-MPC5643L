@@ -390,17 +390,14 @@ static uint32_t activateTask( int_cmdContextSwitch_t *pCmdContextSwitch
            reinitialized just like the task itself. */
         if(_taskStateAry[idTaskToActivate].isNew)
         {
-            assert(idTaskToActivate == idTaskB  ||  idTaskToActivate == idTaskC);
-
-            /* Set the one time task entry function. Note, the execution mode
-               (user/privileged) is encoded inside the pointer value, which requires a
-               helper function. */
-            pCmdContextSwitch->fctEntryIntoNewContext =
-                                        int_getContextEntryFunctionSpec
-                                                    ( /* fctEntryIntoNewContext */
-                                                      idTaskToActivate == idTaskB? taskB: taskC
-                                                    , /* privilegedMode */ true
-                                                    );
+            assert((idTaskToActivate == idTaskB
+                    && _contextSaveDescAry[idTaskToActivate].fctEntryIntoContext
+                       == taskB
+                    ||  idTaskToActivate == idTaskC
+                        && _contextSaveDescAry[idTaskToActivate].fctEntryIntoContext
+                        == taskC
+                   ) &&  _contextSaveDescAry[idTaskToActivate].privilegedMode
+                  );
 
             /* The aimed context is newly created on return from interrupt. */
             rcIsr_cmd |= int_rcIsr_createEnteredContext;
@@ -738,8 +735,8 @@ _Noreturn void sch_initAndStartScheduler()
 
     idTask = idTaskA;
     ccx_createContext( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
-                     , /* fctEntryIntoNewContext */ taskA
                      , /* stackPointer */ SP(_stackTaskA)
+                     , /* fctEntryIntoContext */ taskA
                      , /* privilegedMode */ true
                      );
 
@@ -748,8 +745,8 @@ _Noreturn void sch_initAndStartScheduler()
        sharing single-shot tasks. */
     idTask = idTaskE;
     ccx_createContext( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
-                     , /* fctEntryIntoNewContext */ taskE
                      , /* stackPointer */ SP(_stackTaskBCE)
+                     , /* fctEntryIntoContext */ taskE
                      , /* privilegedMode */ true
                      );
     
@@ -757,6 +754,8 @@ _Noreturn void sch_initAndStartScheduler()
     idTask = idTaskB;
     ccx_createContextShareStack( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
                                , /* pPeerContextSaveDesc */ &_contextSaveDescAry[idTaskE]
+                               , /* fctEntryIntoContext */ taskB
+                               , /* privilegedMode */ true
                                );
 
     /* Task C, started on the fly, shares the stack with B. No entry function is specified
@@ -764,6 +763,8 @@ _Noreturn void sch_initAndStartScheduler()
     idTask = idTaskC;
     ccx_createContextShareStack( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
                                , /* pPeerContextSaveDesc */ &_contextSaveDescAry[idTaskB]
+                               , /* fctEntryIntoContext */ taskC
+                               , /* privilegedMode */ true
                                );
 
     /* Task D: Note the -1: Since B and C share the stack we have one element less than
@@ -773,8 +774,8 @@ _Noreturn void sch_initAndStartScheduler()
        Task D is the only task, we can run in user mode. Let's try it. */
     idTask = idTaskD;
     ccx_createContext( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
-                     , /* fctEntryIntoNewContext */ taskD
                      , /* stackPointer */ SP(_stackTaskD)
+                     , /* fctEntryIntoContext */ taskD
                      , /* privilegedMode */ false
                      );
 

@@ -264,7 +264,9 @@ uint32_t xsw_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
            initial value is considered. */
         pNewContextSaveDesc->pStack = pNewContextDesc->stackPointer;
         pNewContextSaveDesc->idxSysCall = SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT;
-
+        pNewContextSaveDesc->fctEntryIntoContext = pNewContextDesc->executionEntryPoint;
+        pNewContextSaveDesc->privilegedMode = pNewContextDesc->privilegedMode;
+        
         /* The sample doesn't make use of stack sharing. However, the code can be
            compiled and run even if this option is on if we do the according initialization
            of the additional fields of the context save descriptor. */
@@ -276,10 +278,6 @@ uint32_t xsw_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
         pCmdContextSwitch->signalToResumedContext = initialData;
         pCmdContextSwitch->pSuspendedContextSaveDesc = pThisContextSaveDesc;
         pCmdContextSwitch->pResumedContextSaveDesc = pNewContextSaveDesc;
-        pCmdContextSwitch->fctEntryIntoNewContext = 
-                        int_getContextEntryFunctionSpec( pNewContextDesc->executionEntryPoint
-                                                       , pNewContextDesc->privilegedMode
-                                                       );
 
         /* Create and continue with the new context. The system calling context is
            suspended according to the information in *pThisContextSaveDesc. */
@@ -288,8 +286,8 @@ uint32_t xsw_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
     else
     {
         ccx_createContext( /* pNewContextSaveDesc */ pNewContextSaveDesc
-                         , /* fctEntryIntoNewContext */ pNewContextDesc->executionEntryPoint
                          , pNewContextDesc->stackPointer
+                         , /* fctEntryIntoContext */ pNewContextDesc->executionEntryPoint
                          , /* privilegedMode */ true
                          );
     
@@ -386,7 +384,7 @@ static _Noreturn uint32_t executionContext(uint32_t idxThis)
         
         /* Create context and branch into it. We return from this (system) function call
            only after a complete cycle of chained context switches. */
-        const ccx_contextDesc_t newContextDesc =
+        const xsw_contextDesc_t newContextDesc =
         {
             .executionEntryPoint = &executionContext,
             .stackPointer = (uint8_t*)&_stackAry[idxThis][0] + STACK_SIZE_IN_BYTE,

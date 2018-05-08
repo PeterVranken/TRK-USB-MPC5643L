@@ -54,37 +54,47 @@
     is a pure compile time test and does not consume any CPU time. */
 #if INT_USE_SHARED_STACKS == 1
 #define INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS                                        \
-    _Static_assert( sizeof(int_cmdContextSwitch_t) == 16                                    \
+    _Static_assert( sizeof(int_cmdContextSwitch_t) == 12                                    \
                     &&  offsetof(int_cmdContextSwitch_t, signalToResumedContext) == 0       \
                     &&  offsetof(int_cmdContextSwitch_t, pSuspendedContextSaveDesc) == 4    \
                     &&  offsetof(int_cmdContextSwitch_t, pResumedContextSaveDesc) == 8      \
-                    &&  offsetof(int_cmdContextSwitch_t, fctEntryIntoNewContext) == 12      \
-                    &&  sizeof(int_contextSaveDesc_t) == 16                                 \
-                    &&  offsetof(int_contextSaveDesc_t, ppStack) == 4                       \
-                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->ppStack) == sizeof(uint32_t) \
+                    &&  sizeof(int_contextSaveDesc_t) == 24                                 \
                     &&  offsetof(int_contextSaveDesc_t, idxSysCall) == 0                    \
                     &&  sizeof(((int_contextSaveDesc_t*)NULL)->idxSysCall)                  \
                         == sizeof(uint32_t)                                                 \
+                    &&  offsetof(int_contextSaveDesc_t, ppStack) == 4                       \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->ppStack) == sizeof(uint32_t) \
+                    &&  offsetof(int_contextSaveDesc_t, pStack) == 8                        \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStack) == sizeof(uint32_t)  \
                     &&  offsetof(int_contextSaveDesc_t, pStackOnEntry) == 12                \
                     &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStackOnEntry)               \
                         == sizeof(uint32_t)                                                 \
-                    &&  offsetof(int_contextSaveDesc_t, pStack) == 8                        \
-                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStack) == sizeof(uint32_t)  \
+                    &&  offsetof(int_contextSaveDesc_t, fctEntryIntoContext) == 16       \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->fctEntryIntoContext)      \
+                        == sizeof(uint32_t)                                                 \
+                    &&  offsetof(int_contextSaveDesc_t, privilegedMode) == 20               \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->privilegedMode)              \
+                        == sizeof(uint8_t)                                                  \
                   , "Interface between C and assembler code inconsistently defined"         \
                   );
 #else
 #define INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS                                        \
-    _Static_assert( sizeof(int_cmdContextSwitch_t) == 16                                    \
+    _Static_assert( sizeof(int_cmdContextSwitch_t) == 12                                    \
                     &&  offsetof(int_cmdContextSwitch_t, signalToResumedContext) == 0       \
                     &&  offsetof(int_cmdContextSwitch_t, pSuspendedContextSaveDesc) == 4    \
                     &&  offsetof(int_cmdContextSwitch_t, pResumedContextSaveDesc) == 8      \
-                    &&  offsetof(int_cmdContextSwitch_t, fctEntryIntoNewContext) == 12      \
-                    &&  sizeof(int_contextSaveDesc_t) == 8                                  \
-                    &&  offsetof(int_contextSaveDesc_t, pStack) == 4                        \
-                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStack) == sizeof(uint32_t)  \
+                    &&  sizeof(int_contextSaveDesc_t) == 16                                 \
                     &&  offsetof(int_contextSaveDesc_t, idxSysCall) == 0                    \
                     &&  sizeof(((int_contextSaveDesc_t*)NULL)->idxSysCall)                  \
                         == sizeof(uint32_t)                                                 \
+                    &&  offsetof(int_contextSaveDesc_t, pStack) == 4                        \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStack) == sizeof(uint32_t)  \
+                    &&  offsetof(int_contextSaveDesc_t, fctEntryIntoContext) == 8        \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->fctEntryIntoContext)      \
+                        == sizeof(uint32_t)                                                 \
+                    &&  offsetof(int_contextSaveDesc_t, privilegedMode) == 12               \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->privilegedMode)              \
+                        == sizeof(uint8_t)                                                  \
                   , "Interface between C and assembler code inconsistently defined"         \
                   );
 #endif
@@ -101,7 +111,7 @@
     time.\n
       The function return value is passed as only function argument to the on-exit-guard
     function int_fctOnContextEnd(). */
-typedef uint32_t (*int_fctEntryIntoNewContext_t)(uint32_t);
+typedef uint32_t (*int_fctEntryIntoContext_t)(uint32_t);
 
 
 /** The bits of the return value of kernel interrupts. By return value the interrupt
@@ -128,16 +138,15 @@ typedef uint32_t (*int_fctEntryIntoNewContext_t)(uint32_t);
     int_rcIsr_terminateLeftContext had been applied to, must never be use again.\n
       Note, as a rule of thumb, the flag \a int_rcIsr_terminateLeftContext can safely be
     applied to contexts only, which had been created earlier by using of the other flag \a
-    int_rcIsr_createEnteredContext.
+    int_rcIsr_createEnteredContext.\n
       If \a int_rcIsr_createEnteredContext is part of the returned value then the assembly
     code will not simply resume the entered context from its context save information.
-    Instead it starts a new context. The C function is entered, which is specified as field \a 
-    fctEntryIntoNewContext of object \a int_cmdContextSwitch_t, which is returned by the
-    interrupt handler, too. The initial stack pointer value is taken from the context save
-    descriptor of the entered task and this can involve stack sharing with other (currently
-    suspended or not yet created) contexts. If stack sharing is enabled then the initial
-    stack pointer value is stored in the context save descriptor to enable and prepare a
-    later use of flag \a int_rcIsr_terminateLeftContext. */
+    Instead it starts a new context. The C function is entered, which is specified as field
+    \a fctEntryIntoContext in the context save descriptor of the entered task. The initial
+    stack pointer value is taken from the same object and this can involve stack sharing
+    with other (currently suspended or not yet created) contexts. If stack sharing is
+    enabled then the initial stack pointer value is stored in the context save descriptor
+    to enable and prepare a later use of flag \a int_rcIsr_terminateLeftContext. */
 typedef enum int_retCodeKernelIsr_t
 {
     /** The ISR returns without context switch. The preempted context (External Interrupt)
@@ -204,6 +213,22 @@ typedef struct int_contextSaveDesc_t
         and read once when terminating that context again. */
     void * volatile pStackOnEntry;
 #endif
+
+    /** If the switch to an on the fly created, new context is demanded on exit from an
+        interrupt handler then the entry point into that function is this C function
+        pointer. */
+    int_fctEntryIntoContext_t fctEntryIntoContext;
+
+    /** The on-the-fly started context can be run either in user mode or in privileged
+        mode. Assign \a true to this field for the latter.\n
+          Note, the user mode should be preferred but can generally be used only if the
+        whole system design supports this. All system level functions (in particular the
+        I/O drivers) need to have an API, which is based on system calls. Even the most
+        simple functions which access I/O registers or protected CPU registers, like
+        ihw_suspendAllInterrupts() and ihw_resumeAllInterrupts(), are not permitted in user
+        mode. */
+    bool privilegedMode;
+
 } int_contextSaveDesc_t;
 
 
@@ -235,16 +260,6 @@ typedef struct int_cmdContextSwitch_t
         references the location in memory where the context save information of the resumed
         context is found. */
     const int_contextSaveDesc_t *pResumedContextSaveDesc;
-
-    /** If the switch to an on the fly created, new context is demanded then the entry
-        point into that function is this C function pointer.\n
-          The least significant bits of a function pointer are always zero. We use them in
-        this interface to encode additional information about the function to execute.
-        Merging this information into the C function pointer is supported by helper
-        function int_getContextEntryFunctionSpec(), see there for details.\n
-          Note, you should never assign a function pointer not using
-        int_getContextEntryFunctionSpec()! */
-    int_fctEntryIntoNewContext_t fctEntryIntoNewContext;
 
 } int_cmdContextSwitch_t;
 
@@ -329,39 +344,6 @@ extern const uint32_t int_noSystemCalls;
 /*
  * Global static inline functions
  */
-
-/**
- * The on-the-fly start of a new context on return from a kernel interrupt requires to
- * state the address of the context entry function and the Boolean information, whether to
- * run the context in user or supervisor (priviledged) mode. The first information is a C
- * function pointer but the latter is encoded as bit 0 of this pointer, which requires a
- * binary or on the function pointer. Here is a helper function, which supports this
- * operation and which can make the application code more meaningful.
- *   @return
- * Get the modified function pointer as it is expected by the assembly code to start a new
- * context on the fly.
- *   @param fctEntryIntoNewContext
- * A C function, which is the entry point into the on the fly started execution context.
- *   @param privilegedMode
- * The started context can be run either in user mode or in privileged mode. Pass \a true
- * for the latter.\n
- *   Note, the user mode should be preferred but can generally be used only if the whole
- * system design supports this. All system level functions (in particular the I/O drivers)
- * need to have an API, which is based on system calls. Even the most simple functions
- * which access I/O registers or protected CPU registers, like ihw_suspendAllInterrupts()
- * and ihw_resumeAllInterrupts(), are not permitted in user mode.
- */
-static inline int_fctEntryIntoNewContext_t 
-        int_getContextEntryFunctionSpec( int_fctEntryIntoNewContext_t fctEntryIntoNewContext
-                                       , bool privilegedMode
-                                       )
-{
-    return (int_fctEntryIntoNewContext_t)((uint32_t)fctEntryIntoNewContext
-                                          | (privilegedMode? 0x1: 0x0)
-                                         );
-
-} /* End of int_getContextEntryFunctionSpec */
-
 
 
 /*
