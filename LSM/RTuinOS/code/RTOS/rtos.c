@@ -1820,9 +1820,8 @@ _Noreturn void rtos_initRTOS(void)
            such that they require privileged instructions. */
         prepareTaskStack(pT->pStackArea, pT->stackSize);
         ccx_createContext( /* pNewContextSaveDesc */ &pT->contextSaveDesc
-                         , /* fctEntryIntoNewContext */
-                           (int_fctEntryIntoNewContext_t)pT->taskFunction
                          , /* stackPointer */ (uint8_t*)pT->pStackArea + pT->stackSize
+                         , /* fctEntryIntoContext */(int_fctEntryIntoContext_t)pT->taskFunction
                          , /* privilegedMode */ true
                          );
 #ifdef DEBUG

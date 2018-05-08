@@ -30,6 +30,7 @@
 /* Module interface
  *   int_INTCInterruptHandler
  *   int_systemCallHandler
+ *   int_fctOnContextEnd (weak default implementation)
  *   int_systemCall
  * Local functions
  */
@@ -824,12 +825,20 @@ int_sch_cntIsrToNewCtxt:
 int_sch_endCntIsrToNewCtxt:
 #endif
 
-    lwz     r3, O_RET_pFct(sp)  /* Load entry function of new context, got from ISR */
-    rlwinm. r3, r3, 31, 0, 31   /* Move bit 0 (priviledged mode) into CR0, negative */
-    rlwinm  r3, r3, 1, 0, 30    /* Restore r3 and discard bit priviledged mode */
-    mtsrr0  r3
-    lwz     r3, O_RET_RC(sp)    /* Load signal from ISR, is function arg of new context */
     lwz     r14, O_RET_pRCSD(sp)/* Load pointer to context save data of new context */
+#if INT_USE_SHARED_STACKS == 1
+    lwz     r3, 16(14)          /* Load entry function of new context into R3 */
+#else
+    lwz     r3, 8(14)           /* Load entry function of new context into R3 */
+#endif
+    mtsrr0  r3                  /* Store entry function of new context for rfi in SRR0 */
+#if INT_USE_SHARED_STACKS == 1
+    lbz     r3, 20(14)          /* Load field priviledgedMode */
+#else
+    lbz     r3, 12(14)          /* Load field priviledgedMode */
+#endif
+    cmplwi  cr0, r3, 0          /* Load Bit priviledgedMode into CR0, positive */
+    lwz     r3, O_RET_RC(sp)    /* Load signal from ISR, is function arg of new context */
     lwz     sp, 4(r14)          /* Load address of stack pointer save variable */
 #if INT_USE_SHARED_STACKS == 1
     lwz     sp, 0(sp)           /* Load stack pointer from its save variable */
@@ -842,7 +851,7 @@ int_sch_endCntIsrToNewCtxt:
        and some registers. */
     stwu    sp, -8(sp)          /* Leave room for link, consider 8 Byte alignment */
     lis     r14, 0x00029000@h   /* MSR: External, critical and machine check */
-    blt     cr0, int_sch_privilegedMode
+    bgt     cr0, int_sch_privilegedMode
 
     ori     r14, r14, 0x0002d000@l  /* MSR: Plus user mode */
     b       int_sch_endPrivilegedMode
