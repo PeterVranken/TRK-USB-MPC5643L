@@ -2,10 +2,13 @@
 :Author:    Peter Vranken 
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
+:toclevels: 3
 :xrefstyle: short
 :numbered:
 
 == About this sample
+
+=== Overview
 
 This sample offers a pair of IVOR #4 (External Interrupt) and IVOR #8
 (System Call) handlers, which are designed to support the build of a
@@ -35,7 +38,7 @@ both program paths alternatingly and pseudo-parallel.
 The second IVOR handler implements the concept of system calls. These are
 software interrupt, which preempt a context at the particular location, at
 which the code contains the system call instruction. The difference to an
-ordinary branch is that the same CPU mechanisms are used as for
+ordinary branch instruction is that the same CPU mechanisms are used as for
 asynchronous interrupts; in particular the CPU returns from user mode back
 to supervisor mode and it disables the servicing of External Interrupts.
 The latter ensures that system calls and External Interrupts can be
@@ -43,11 +46,15 @@ serialized, that coherency of access to data they both share can be safely
 implemented.
 
 System call handlers in this package are always implemented like the
-kernel relevant ISRs. On return they can decide to either return to the
-calling context or they can demand a context switch. In the former case,
-the complete system call behaves like a synchronous function call, however
-executed in supervisor mode while the calling context is executed in user
-mode.
+kernel relevant ISRs and the function signature is the similar. On return
+they can decide to either return to the calling context or they can demand
+a context switch. In the former case, the complete system call behaves
+like a conventional, synchronous function call. However it is executed in
+supervisor mode, while the calling context is executed in user mode.
+
+In the latter case, the calling context is suspended. The typical use case
+is, that the calling context needs to wait for completion of something
+done by one or more other contexts.
 
 The two IVOR implementations work together. The share the same C data
 structure definitions for execution contexts and context switches. If a
@@ -56,25 +63,27 @@ Interrupt ISR then the same context can later become the target for a
 context switch and this way it'll be resumed. In the same way can a system
 call suspend a context and this context is later target of an IVOR #4 ISR,
 which decides on return for a context switch to that context. Furthermore,
-both IVORs can be commanded to create a new context and to continue with
-it. In total, eight paths are possible for kernel relevant ISRs and system
+both IVORs can be commanded to create a new context on the fly and to
+continue with that.
+
+In total, eight paths are possible for kernel relevant ISRs and system
 calls:
 
 * The ISR can continue the preempted code, like an ordinary ISR
-* The ISR can suspend the preempted context and resume a context, which
-  had been suspended earlier by an ISR
-* The ISR can suspend the preempted context and resume a context, which
-  had been suspended earlier by a system call
 * The ISR can suspend the preempted context and create and enter a new
   context
+* The ISR can suspend the preempted context and resume a context, which
+  had been suspended earlier by an ISR
+* The ISR can suspend the preempted context and resume a context, which
+  had been suspended earlier by a system call
 * The system call can return to the calling context, like an ordinary
   function call
-* The system call can suspend the calling context and resume a context, which
-  had been suspended earlier by an ISR
-* The system call can suspend the calling context and resume a context, which
-  had been suspended earlier by a system call
 * The system call can suspend the calling context and create and enter a
   new context
+* The system call can suspend the calling context and resume a context,
+  which had been suspended earlier by an ISR
+* The system call can suspend the calling context and resume a context,
+  which had been suspended earlier by a system call
 
 Whenever the ISR/system call handler decides on return to do a context
 switch and if it commands to resume a context that had been suspended by a
@@ -91,14 +100,16 @@ The added value of this TRK-USB-MPC5643L sample is that all of this
 functionality is offered through a C API. The handlers and the described
 mechanisms are implemented in assembler code but the client code can be
 implemented in proper C code. A complete, cooperative or preemptive
-operating system kernel can be build on this platform without any
+operating system kernel can be built on this platform without any
 additional assembler code. No inline assembler spoils your kernel
-implementation and makes it highly compiler dependent.
+implementation or makes it compiler dependent.
 
 Furthermore, all context synchronization is done in the assembler code and
 the kernel implementation in C is a race condition free development
 environment. Once you've understood the C API of kernelBuilder, writing
 your own RTOS gets really simple.
+
+=== Registration of ISRs and system calls
 
 ISRs -- ordinary and kernel relevant -- are dynamically defined by the
 client code using the known mechanisms from the common startup code. A
@@ -110,15 +121,17 @@ permits commanding the context switch on return.
 
 System call handlers are collected in a static, constant table of those.
 Dynamic adding at run-time is not possible here; the set of system calls
-is considered a finalized design decision for the aimed scheduler. The
-table is declared extern to the assembler code and the client code is in
-charge to compile it.footnote:
-  [The assembler implementation of the IVOR #8 handler invokes a
-particular system call by index into this table, it doesn't need to known
-anything about the table contents. The normal design decision for the
-client code will be to provide a preprocessor macro or an inline function
-for each system call, which wraps the `init_systemCall(idxSysCall)` with a
-meaningful name.]
+is considered a finalized design decision for the aimed
+scheduler/kernel/RTOS. The table is declared extern to the assembler code
+and the client code is in charge to compile it.footnote:[
+  The assembler implementation of the IVOR #8 handler invokes a particular
+system call by index into this table, it doesn't need to known anything
+about the table contents. The normal design decision for the client code
+will be to provide a preprocessor macro or an inline function for each
+system call, which wraps the genric call `init_systemCall(idxSysCall)`
+with a meaningful name.]
+
+=== Creation and deletion of execution contexts
 
 We saw how to switch between different execution contexts. But where do
 they initially come from? And where do they go if no longer needed?
@@ -133,16 +146,25 @@ context in suspended state is an ordinary function call,
 `ccx_createContext()`. It takes the pointer to a C function `uint32_t
 (*)(uint32_t)` and some stack space as principal arguments. The entry into
 this C function will become the very first instructions of the new context
-once it is resumed on return from asystem call or kernel interrupt.
+once it is resumed on return from a system call or kernel interrupt.
 
-Typical RTOS design: The kernel initialization routine calls function
+TIP: Typical RTOS design: The kernel initialization routine calls function
 `ccx_createContext()` a number of times to create the requested number of
 tasks beforehand. From the system timer interrupt, when the particular due
 times are reached, these contexts are resumed.
 
-Creation of a context can be done on-the-fly, too. On return from a system
+Creation of a context can be done on the fly, too. On return from a system
 call or kernel interrupt, the handler can specify a C function to enter as
-a new context.
+a new context.footnote:[
+TODOC: The term on-the-fly relates to "Force start with entry into entry
+function" rather than "resume at where we had suspended". "on-the-fly"
+dates from an earlier design of the API, where the ISR/handler indeed
+specified the entry function on return. In the current design, the entry
+function (and other properties) are specified using the same kind of
+object as the suspended start and the same preparatory function is used to
+create this object. Effectively, the suspended context creation for later
+resume is no longer an essential element -- however still useful for
+typical constructs.]
 
 On return from a system call or kernel interrupt, and if it comes to a
 context switch, the handler can not only decide to suspend the left
@@ -160,8 +182,8 @@ handlers this is simply irrelevant; a no longer required context will just
 never be commanded again as target for resume. Whether the client code
 uses a free method to release the memory connected to a no longer used
 context or whether it returns it into an object pool for re-use is out of
-scope and fully in the design-sphere of the client code.footnote:
-  [Even context termination is not connected to pooling and memory
+scope and fully in the design-sphere of the client code.footnote:[
+  Even context termination is not connected to pooling and memory
 allocation. It just means to leave the stack of a no longer used context
 in a well defined state to maintain it useable for other contexts.]
 
