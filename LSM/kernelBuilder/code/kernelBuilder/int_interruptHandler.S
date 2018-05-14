@@ -1,6 +1,6 @@
 /**
  * @file int_interruptHandler.S
- * Book E assembler implementation of interrupt handlers for external interrupts handled by
+ * Book E assembler implementation of interrupt handlers for External Interrupts handled by
  * the INTC and for software interrupts. This module can be used as building block for an
  * operating system kernel for an e200z4 core equiped with an INTC interrupt controller.
  * The assembly code in this module implements the required context switches and offers a C
@@ -271,7 +271,7 @@ int_eeh_endCheckINTCCurPrio:
     wrteei  1
 int_eeh_endIfPreemptable:
 
-    /* If we get here, and in case of an preemptable ISR, the handling of External
+    /* If we get here, and in case of a preemptable ISR, the handling of External
        Interrupts is re-enabled and we can become preempted by kernel irrelevant
        interrupts. */
 

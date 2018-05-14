@@ -11,9 +11,9 @@ This sample is a proof of concept for package
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder[kernelBuilder].
 RTuinOS, the event controlled real time operating system for Arduino, has
 been migrated for the e200z4 core and all original RTuinOS samples run on
-the TRK-USB-MPC5643L evaluation board. RTuinOS make use of kernel
-interrupts, which cause task switches and system calls for suspending
-tasks or for resuming them by sending events.
+the TRK-USB-MPC5643L evaluation board. RTuinOS makes use of kernel
+interrupts, which can cause task switches, and of system calls for
+suspending tasks or for sending events to resume others.
 
 RTuinOS consists of the source code folder `code\RTOS` (kernelBuilder is
 contained). To make it run on the evaluation board the known folder
@@ -47,18 +47,65 @@ evaluation board.
 
 === RTuinOS
 
-RTuinOS as such is not in the focus of this project. It is an Arduino
-project and you can refer to it's
+RTuinOS as such is not in the focus of this project. It's an Arduino
+project and you can refer to its
 https://sourceforge.net/projects/rtuinos/[original location]. The
 documentation is distributed as
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTuinOS/doc/manual/RTuinOS-1.0-UserGuide.pdf[PDF manual].
 
-The manual has not been edited with respect to the differences due to the
-e200z4 and board migration. To a small extend, the source code
-documentation of the sample applications highlights the made changes but
-most of the documentation has not been reworked so that you will still
-find remarks about Arduino specifics. It is not planned to edit the manual
-or rework the code documentation in the future.
+The manual has not been edited with respect to differences due to e200z4
+and board migration. To a small extend, the source code documentation of
+the sample applications highlights the made changes but most of the
+documentation has not been reworked so that you will still find remarks
+about Arduino specifics. It is not planned to edit the manual or to rework
+the code documentation in the future.
+
+Effectively, the implementation of RTuinOS became simpler. The original
+Arduino implementation contains a lot of preprocessor code to make the
+type of some principal data objects configurable. This aimed at using as
+short types as possible to be as close to the native processor type (8
+Bit) as possible. For the 32 Bit e200z4 core this is useless and we have
+removed all of this configuration stuff.
+
+The principle of how to let interrupts interfere with the kernel has not
+been changed but the interface with the client code has changed a bit.
+Acknowledging an interrupt at the source can not longer be done in a
+generic way and in the e200z4 port the client code needs to provide
+according code. See configuration macro RTOS_ISR_USER_00_ACKNOWLEDGE_IRQ
+for details.
+
+An alternative, more general, more transparent interface to install
+interrupts that interfere with the kernel has been added. The
+functionality is basically the same: A kernel interrupt can send an event
+to the tasks. Instead of doing this behind the curtain, the explicit, new
+API `rtos_sc_sendEvent()` is offered for interrupt handlers. Explicit
+sending of events from an ISR permits sending any set of events
+(broadcasted, mutex or semaphore) to the tasks instead of a single
+broadcasted event as it used to be in the Arduino implementation.
+
+The new way to deal with interrupts is demonstrated in sample application
+tc14. The ADC driver known from the other TRK-USB-MPC5643L sample
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/ADC[ADC]
+has been integrated and slightly modified; a few lines of code changes
+make its on-conversion-callback become an RTuinOS kernel interrupt, which
+can control task activations synchronously with the ADC conversion cycle.
+(The ADC cycle has been chosen asynchronous with the RTOS system clock for
+didactic reasons.)
+
+The new interface to interrupts requires a new callback from the startup
+procedure of RTuinOS: The client code must enable the interrupt source
+only after initialization of the RTuinOS kernel (the first released
+interrupt could otherwise send an event, which couldn't be safely
+processed yet) but the original Arduino/RTuinOS initialization callback,
+`setup()`, is invoked prior (and preparatory) to the kernel
+initialization.
+
+TODOC:
+
+* New callbacks `void setupAfterKernelInit(void)` and `void
+setupAfterSystemTimerInit(void)`
+* New default implementation of new and old callbacks
+
 
 === Book E versus VLE
 
@@ -128,14 +175,16 @@ reused for other projects, not only for a tiny "Hello World" with a few
 source files. It supports a number of options (targets); get an overview
 by typing:
  
-    cd <projectRoot>/LSM/kernelBuilder
+    cd <projectRoot>/LSM/RTuinOS
     mingw32-make help
 
 The main makefile `GNUmakefile` has been configured for the build of
 sample "RTuinOS" but the kernel can't be linked to a runnable binary
 without an application. You need to specify the name of an RTuinOS
-application on the command line of make. Set variable APP to do so. Type
-("tc01" is just an example):
+application on the command line of make. Set variable APP to do so.
+Possible application names can be found as the name of the folders inside
+`<projectRoot>/LSM/RTuinOS/code/applications'. Type ("tc01" is just an
+example):
 
     mingw32-make -s build APP=tc01
     mingw32-make -s build APP=tc01 CONFIG=PRODUCTION
@@ -149,11 +198,13 @@ To get more information, type:
 
     mingw32-make help
 
-NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
-port will fail with obscure, misleading error messages. It's safe to use
-the `make.exe` from the compiler installation archive. The makefile is
-designed to run on different host systems but has been tested with Windows
-7 only.
+NOTE: The makefile requires the MinGW port of the make processor. The
+Cygwin port will fail with obscure, misleading error messages. It's safe
+to use the `make.exe` from the compiler installation archive but
+explicitly typing `mingw32-make` will avoid any problem.
+
+The makefile is designed to run on different host systems but has been
+tested with Windows 7 only.
 
 === Flashing and debugging
 
@@ -172,8 +223,8 @@ or
     set APP tc01
     source flashPRODUCTION.tcl
 
-(Setting TCL variable APP doesn't need to repeated prior to every repeated
-flashing.)
+(Setting TCL variable APP doesn't need to be repeated prior to every
+repeated flashing.)
 
 The debugger is started by a click on the black triangle next to the blue
 icon "bug", then click "Debug Configurations.../CodeWarrior/RTuinOS tc01
