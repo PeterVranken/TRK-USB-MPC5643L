@@ -45,7 +45,13 @@ sequence \r\n is used as end of line character. The terminal should print
 the messages, which are regularly sent by the sample code running on the
 evaluation board.
 
-=== RTuinOS
+=== Book E versus VLE
+
+The implementation of RTuinOS is not specific to one of the instruction
+sets. However, as of writing, its foundation kernelBuilder is not yet
+available in VLE assembler and the project setup is done for Book E.
+
+== RTuinOS
 
 RTuinOS as such is not in the focus of this project. It's an Arduino
 project and you can refer to its
@@ -67,12 +73,16 @@ short types as possible to be as close to the native processor type (8
 Bit) as possible. For the 32 Bit e200z4 core this is useless and we have
 removed all of this configuration stuff.
 
+=== Modified interface for kernel interrupts
+
 The principle of how to let interrupts interfere with the kernel has not
 been changed but the interface with the client code has changed a bit.
 Acknowledging an interrupt at the source can not longer be done in a
 generic way and in the e200z4 port the client code needs to provide
 according code. See configuration macro RTOS_ISR_USER_00_ACKNOWLEDGE_IRQ
 for details.
+
+=== Additional, new interface for kernel interrupts
 
 An alternative, more general, more transparent interface to install
 interrupts that interfere with the kernel has been added. The
@@ -98,20 +108,57 @@ only after initialization of the RTuinOS kernel (the first released
 interrupt could otherwise send an event, which couldn't be safely
 processed yet) but the original Arduino/RTuinOS initialization callback,
 `setup()`, is invoked prior (and preparatory) to the kernel
-initialization.
+initialization. Although induced by the new interrupt interface the new
+callbacks are in no way specific to or restricted to this use case.
 
-TODOC:
+=== Additional, new initialization callbacks from kernel into client code
 
-* New callbacks `void setupAfterKernelInit(void)` and `void
-setupAfterSystemTimerInit(void)`
-* New default implementation of new and old callbacks
+The two major callbacks, `void startup(void)` and `void loop(void)` are
+already known from Arduino and RTuinOS for Arduino. The only change in the
+e200z4 port is the default implementation for callback `loop()`. If the
+client code doesn't provide an implementation then the default
+implementation is used, which does nothing. Note, there's no default
+implementation for `startup()`; not having any task initialization code is
+not considered a supported use case.
 
+Two new callbacks, `void setupAfterKernelInit(void)` and `void
+setupAfterSystemTimerInit(void)`, are offered in the e200z4 port.
 
-=== Book E versus VLE
+`void setupAfterKernelInit(void)` is called after kernel initialization.
+All tasks are created but they are still in suspended state. The operating
+system clock has not yet been started. The callbacks `void
+rtos_enableIRQUser00(void)` and `void rtos_enableIRQUser01(void)` from the
+elder kernel interrupt interface, which contain the client code to enable
+the application interrupts, have not been called yet. Consequently, there
+are still no race conditions; no kernel interrupt is possible, which could
+make a task ready can appear during execution of this callback. However,
+the kernel is already in the state to process such interrupts and
+therefore this callback is the optimal code location for releasing the
+kernel interrupts, which are implemented with the new kernel interrupt
+interface. Such interrupts may appear still during or immediately after
+return from this callback and they will be properly handled.
 
-The implementation of RTuinOS is not specific to one of the instruction
-sets. However, as of writing, its foundation kernelBuilder is not yet
-available in VLE assembler and the project setup is done for Book E.
+Note, this implies that task code can be executed before you return from
+this function. The statement made about a race condition free environment
+doesn't hold any longer once your callback code has released the first
+kernel interrupt!
+
+`void setupAfterSystemTimerInit(void)` is called later, after having
+started the operating system clock and after invocation of the callbacks
+`void rtos_enableIRQUser00(void)` and `void rtos_enableIRQUser01(void)`.
+All interrupts are running and task scheduling takes place. The call of
+this function occurs prior to the first call of `loop()` and the context
+is exactly the same as for the calls of `loop()`. The call of
+`setupAfterSystemTimerInit` is virtually the same as the very first call
+of `loop()` used to be. The use case for this callback is the
+initialization of the operations done later in `loop()`. Furthermore,
+there's no obligation to return from this function if the idle task should
+be organized other than in an infinite loop. Not returning from this
+callback means to omit `loop()` entirely.
+
+The use of both new callbacks, `void setupAfterKernelInit(void)` and `void
+setupAfterSystemTimerInit(void)`, is optional. There is a default
+implementation for each of them, which does nothing otherwise.
 
 == Tools
 
