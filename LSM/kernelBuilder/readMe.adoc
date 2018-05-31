@@ -217,11 +217,17 @@ evaluation board.
 
 === Book E versus VLE
 
-kernelBuilder is written in Book E assembler. Currently, no VLE
-implementation is available. It'll follow later.
+kernelBuilder is written in both, Book E and VLE assembler. The build
+scripts and the Eclipse configuration support both instruction sets.
 
-The implementation of the sample client code is not specific to one of the
-instruction sets. Evidently, the project setup is done for Book E.
+The makefile takes an additional switch on the command line, state
+`INSTR=BOOK_E` (default) or `INSTR=VLE` to build the software in the
+wanted instruction set.
+
+In the Eclipse project, all build and debug configurations have been
+duplicated, once for each instruction set. The TCL scripts, which can be used
+in CodeWarrior's debugger shell window to flash the software, have got
+another argument to select the instruction set, too.
 
 == Tools
 
@@ -290,19 +296,22 @@ by typing:
 
 The main makefile `GNUmakefile` has been configured for the build of
 sample "kernelBuilder". By default the sample client code is
-`alternatingContexts`. Type: 
+`alternatingContexts` and the instruction set is Book E. Type: 
 
     mingw32-make -s build 
     mingw32-make -s build CONFIG=PRODUCTION
 
 to produce the flashable files
-`bin\ppc\alternatingContexts\DEBUG\TRK-USB-MPC5643L-kernelBuilder.elf` 
+`bin\ppc-BookE\alternatingContexts\DEBUG\TRK-USB-MPC5643L-kernelBuilder.elf` 
 and
-`bin\ppc\alternatingContexts\PRODUCTION\TRK-USB-MPC5643L-kernelBuilder.elf`.
+`bin\ppc-BookE\alternatingContexts\PRODUCTION\TRK-USB-MPC5643L-kernelBuilder.elf`.
 
-To select the compilation of kernelBuilder with the other sample client
-code add APP=code/samples/chainedContextCreation to the command line of
-mingw32-make.
+To select the compilation of kernelBuilder with other sample client code
+add for example `APP=code/samples/chainedContextCreation/` to the command
+line of mingw32-make.
+
+To select the compilation for the other instruction set add `INSTR=VLE` to
+the command line of mingw32-make.
 
 NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
 port will fail with obscure, misleading error messages. It's safe to use
@@ -316,7 +325,7 @@ The sample code can be flashed and debugged with the CodeWarrior IDE.
 
 To flash the `*.elf` file, open the CodeWarrior IDE, go to the menu, click
 "Window/Show View/Other/Debug/Debugger Shell". In the debugger shell
-window, type:
+window, type for example:
 
     cd <rootFolderOfSample>/makefile/debugger
     source flashAlternatingContextsDEBUG.tcl
@@ -325,23 +334,39 @@ or
 
     source flashAlternatingContextsPRODUCTION.tcl
 
-(Or the according scripts for the other sample client code.)
+(Or the according scripts for the other samples.) As of writing, the named
+flash scripts have been prepared for the Book E compilation artifacts
+only. The VLE binaries can be flashed only with the generic flash scripts,
+which take the name of the sample application and the instruction set as
+arguments. These are the scripts `flashDEBUG.tcl` and
+`flashPRODUCTION.tcl`. The arguments are APP and INSTR and they are
+implemented as global TCL variables, which have to be set prior to the run
+of the script. Type for example:
+
+    cd <rootFolderOfSample>/makefile/debugger
+    set APP simpleRTOS
+    set INSTR VLE
+    source flashDEBUG.tcl
+
+Open the TCL script in a text editor to get more details.
 
 The debugger is started by a click on the black triangle next to the blue
 icon "bug", then click "Debug Configurations.../CodeWarrior/kernelBuilder
-(alternatingContexts, DEBUG)". Confirm and start the debugger with a last click on button
-"Debug".
+(alternatingContexts, Book E, DEBUG)". Confirm and start the debugger with
+a last click on button "Debug".
 
-(Or select the according debug configuration for the other sample client.)
+(Or select the according debug configuration for another sample
+application or the other instruction set.)
 
 You can find more details on using the CodeWarrior IDE at
 https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 
 == Code architecture
 
-This sample builds on the basic sample "startup" located in a sibling folder. 
-"kernelBuilder" is compiled for the Book E instruction set. All build settings
-and the software architecture are identical to "startup". Please refer to
+This sample builds on the basic sample "startup" (and on startup-VLE,
+evidently) located in a sibling folder. "kernelBuilder" can be compiled
+for both, Book E and VLE instruction set. All build settings and the
+software architecture are identical to "startup". Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
 for details.
 
