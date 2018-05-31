@@ -30,7 +30,7 @@ if {[info exists APP]  &&  $APP!=""  &&  [info exists INSTR]  &&  ($INSTR=="BOOK
 
     # Set launch configuration.
     if {$INSTR=="BOOK_E"} {
-        fl::target -lc "kernelBuilder ($APP, DEBUG)"
+        fl::target -lc "kernelBuilder ($APP, Book E, DEBUG)"
     } else {
         fl::target -lc "kernelBuilder ($APP, VLE, DEBUG)"
     }
@@ -57,7 +57,7 @@ if {[info exists APP]  &&  $APP!=""  &&  [info exists INSTR]  &&  ($INSTR=="BOOK
     # Specify target file, auto detect format, range settings on followed by the flash
     # range, offset settings off.
     if {$INSTR=="BOOK_E"} {
-        cmdwin::fl::image -f ..\\..\\bin\\ppc\\$APP\\DEBUG\\TRK-USB-MPC5643L-kernelBuilder.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
+        cmdwin::fl::image -f ..\\..\\bin\\ppc-BookE\\$APP\\DEBUG\\TRK-USB-MPC5643L-kernelBuilder.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
     } else {
         cmdwin::fl::image -f ..\\..\\bin\\ppc-VLE\\$APP\\DEBUG\\TRK-USB-MPC5643L-kernelBuilder.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
     }

@@ -365,14 +365,14 @@ $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath) $(projectResourceFile)
 	$(info File created)
 
 # Let the linker create the flashable binary file.
-lFlags = -Wl,-Tmakefile/linkerControlFile$(if $(call eq,$(INSTR),VLE),_VLE,).ld             \
+lFlags = -Wl,-Tmakefile/linkerControlFile$(if $(call eq,$(INSTR),BOOK_E),.BookE,.VLE).ld    \
          -nostartfiles -Wl,--gc-sections $(targetFlags)                                     \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
          -Wl,--warn-common,--warn-once -Wl,-g                                               \
          --sysroot=$(dir $(gcc))../powerpc-eabivle/newlib
 
 $(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt                               \
-                           makefile/linkerControlFile$(if $(call eq,$(INSTR),VLE),_VLE,).ld
+                makefile/linkerControlFile$(if $(call eq,$(INSTR),BOOK_E),.BookE,.VLE).ld
 	$(info Linking $(if $(call eq,$(INSTR),VLE),VLE,BOOK E) project. Mapfile is $(targetDir)$(target).map)
 	$(gcc) $(lFlags) -o $@ @$< -lm
 

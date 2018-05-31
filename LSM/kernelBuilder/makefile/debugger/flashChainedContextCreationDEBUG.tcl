@@ -35,7 +35,7 @@
 fl::disconnect
  
 # Set launch configuration.
-fl::target -lc "kernelBuilder (chainedContextCreation, DEBUG)"
+fl::target -lc "kernelBuilder (chainedContextCreation, Book E, DEBUG)"
  
 # Set the target RAM buffer for downloading image data.
 fl::target -b 0x40000000 0x20000
@@ -53,7 +53,7 @@ cmdwin::fl::protect all off
 
 # Specify target file, auto detect format, range settings on followed by the flash range,
 # offset settings off.
-cmdwin::fl::image -f ..\\..\\bin\\ppc\\chainedContextCreation\\DEBUG\\TRK-USB-MPC5643L-kernelBuilder.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
+cmdwin::fl::image -f ..\\..\\bin\\ppc-BookE\\chainedContextCreation\\DEBUG\\TRK-USB-MPC5643L-kernelBuilder.elf -t "Auto Detect" -re on -r 0x0 0xfffff -oe off
  
 # Now erase the flash...
 cmdwin::fl::erase image
