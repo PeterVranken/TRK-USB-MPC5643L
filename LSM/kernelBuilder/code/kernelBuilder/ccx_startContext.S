@@ -43,10 +43,6 @@
  * Local functions
  */
 
-#ifdef __VLE__
-# error This file is intended for compilation for Book E instruction set only
-#endif
-
 /*
  * Include files
  */
@@ -99,6 +95,24 @@ ccx_startContext:
        to prepare the initial stack contents can determine all data needed by the function
        - particularly the address of the context entry function and the guard function. */
 
+#ifdef __VLE__
+
+    /* Load address of context entry function and branch there with link to execute it. */
+    e_lwz   r0, O_CTXT_ENTRY(sp)
+    mtlr    r0
+    se_blrl
+    
+    /* On return from the context entry function, we can branch to the guard function by a
+       normal EABI function epilogue; the stack had been prepared by the C code
+       accordingly. If the context entry function returns a value in r3 then it becomes the
+       function argument of the guard function. */
+    e_lwz   r0, (SIZE_OF_STACKFRAME+4)(sp)
+    mtlr    r0
+    e_la    sp, SIZE_OF_STACKFRAME(sp)
+    se_blr
+    
+#else /* Book E implementation */
+
     /* Load address of context entry function and branch there with link to execute it. */
     lwz     r0, O_CTXT_ENTRY(sp)
     mtlr    r0
@@ -113,7 +127,10 @@ ccx_startContext:
     la      sp, SIZE_OF_STACKFRAME(sp)
     blr
 
+#endif /* VLE */
+
 #undef SIZE_OF_STACKFRAME
 #undef O_CTXT_ENTRY
     .size   ccx_startContext, .-ccx_startContext
 /* End of ccx_startContext */
+

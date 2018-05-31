@@ -1,9 +1,9 @@
 /**
  * @file sup_startup.S
- * Book E assembler implementation of startup code for MPC5643L in Lockstep Mode (LSM). The
+ * VLE assembler implementation of startup code for MPC5643L in Lockstep Mode (LSM). The
  * code has been designed for use with GCC for PowerPC EABI.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -33,14 +33,14 @@
  *   initFlash
  */
 
-#ifndef __VLE__
+#ifdef __VLE__
 
 /*
  * Include files
  */
 
 #include "sup_settings.h"
-#include "mmu_mmuRegions.h"
+#include "mmu_mmuRegions_VLE.h"
 
 
 /*
@@ -52,7 +52,7 @@
      See MCU reference manual, 5.3, p.126ff */
 #define RCHW_VLE        0x0100      /* Optional: Enable VLE instruction set */
 #define RCHW_BOOT_ID    0x005A      /* Fixed, hard-coded value */
-#define RCHW_VALUE      (RCHW_BOOT_ID)
+#define RCHW_VALUE      (RCHW_VLE|RCHW_BOOT_ID)
 
 
 /*
@@ -102,9 +102,9 @@ sup_bamData:
     .global sup_startUp
     .type   sup_startUp, @function
 sup_startUp:
-    bl      zeroizeRegisters        /* Clear all GPR and all relevant SPR */
-    bl      initExceptionHandlers   /* Set all IVOR registers of the MCU */
-    bl      initMMU                 /* Make MMU allow all memory accesses */
+    e_bl    zeroizeRegisters        /* Set MSR[SPE], clear all GPR and all relevant SPR */
+    e_bl    initExceptionHandlers   /* Set all IVOR registers of the MCU */
+    e_bl    initMMU                 /* Make MMU allow all memory accesses */
     
     /* Exception handlers are installed, memory is accessible - there's no reason to wait
        any longer with enabling the higher prior interrupts (critical and machine
@@ -113,18 +113,18 @@ sup_startUp:
          Note, the external interrupts are not enabled yet. They are entirely managed by
        the application software. */
     mfmsr   r0
-    oris    r0, r0, 0x0002          /* CE: Critical interrupts */
-    ori     r0, r0, 0x1000          /* ME: Machine check */
+    e_or2is r0, 0x0002              /* CE: Critical interrupts */
+    e_or2i  r0, 0x1000              /* ME: Machine check */
     mtmsr   r0
 
-    bl      initTimeBase            /* Start the MCU's high resolution counter */
-    bl      zeroizeSRAM             /* Clear all RAM */
+    e_bl    initTimeBase            /* Start the MCU's high resolution counter */
+    e_bl    zeroizeSRAM             /* Clear all RAM */
 
     /* The watchdog is disabled now. Most available sample code code does do this as C
        function at the beginning of main, however, if we are in lockstep mode and use the
        full available RAM of 128k then it takes much too long to copy the data section and
        to zeroize the bss section and the watchdog bites. */
-    bl      disableWatchdog
+    e_bl      disableWatchdog
 
    /* The initial setting of the stack pointer. The stack rises towards lower addresses so
       the initial value is the end of the reserved RAM area. The value is provided by the
@@ -133,58 +133,61 @@ sup_startUp:
         Note, there are some strict alignment constraints (16 Byte aligned values needed),
       which need to be ensured in the linker script file. They are not checked here and
       will in case cause an exception. */
-    addis   r8, 0, (ld_memStackEnd-16)@ha
-    addi    sp, r8, (ld_memStackEnd-16)@l
+    e_lis   sp, (ld_memStackEnd-16)@h
+    e_or2i  sp, (ld_memStackEnd-16)@l
 
     /* Select appropriate conditions for the operation of the flash (waitstates, caching,
        etc.) It is essential to do this prior to rising the CPU clock rate by configuring
        the PLL. */
-    bl      initFlash
+    e_bl    initFlash
 
     /* Fill the stack with a byte pattern. This pattern is used later to measure the
        current stack usage. */
-    addis   r8, 0, ld_memStackStart@ha
-    addi    r8, r8, ld_memStackStart@l
-    addis   r9, 0, ld_memStackSize@ha
-    addi    r9, r9, ld_memStackSize@l
+    e_lis   r8, ld_memStackStart@h
+    e_or2i  r8, ld_memStackStart@l
+    e_lis   r9, ld_memStackSize@h
+    e_or2i  r9, ld_memStackSize@l
     srawi   r9, r9, 0x2   /* Divide length in Byte by 2^2=4 */
     mtctr   r9
-    lis     r9, 0xa5a5a5a5@ha   /* Load pattern into r9 */
-    addi    r9, r9, 0xa5a5a5a5@l
+    e_lis   r9, 0xa5a5a5a5@h    /* Load pattern into r9 */
+    e_or2i  r9, 0xa5a5a5a5@l
 su_loopFillStack:
-    stw     r9, 0(r8)           /* Write the four pattern bytes in r9 */
-    la      r8, 4(r8)           /* Increment write pointer */
-    bdnz    su_loopFillStack    /* Branch on counter register not zero */
+    e_stw   r9, 0(r8)           /* Write the four pattern bytes in r9 */
+    e_la    r8, 4(r8)           /* Increment write pointer */
+    e_bdnz  su_loopFillStack    /* Branch on counter register not zero */
 
     /* Taken from NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file __start.c, l. 186ff:
        "Prepare a terminating stack record."
          Note, we'd set the stack pointer 16 Bytes below the end of the RAM area, so we
-       have enough head room to do so. */
-    li      r8, 0              /* Clear r8. */
-    stw     r8, 0(sp)          /* SysVr4 EABI Supp indicated that initial back chain word
+       have enough head room to do so.
+         @todo To be check if we misunderstood something. The standard stack frame of the
+       entry into main will already overwrite the word 4(sp) with the saved link register
+       and our -1 has no effect. */
+    e_lis   r8, 0              /* Clear r8. */
+    e_stw   r8, 0(sp)          /* SysVr4 EABI Supp indicated that initial back chain word
                                   should be null. */
-    addi    r8, 0, -1          /* Load 0xffffffff into r8. */
-    stw     r8, 4(sp)          /* Make an illegal return address of 0xffffffff.  */
+    e_addi  r8, r8, -1         /* Load 0xffffffff into r8. */
+    e_stw   r8, 4(sp)          /* Make an illegal return address of 0xffffffff.  */
     
     /* Copy the mirror of the initialized RAM sections from flash ROM to the RAM - all
        global C data will have the wanted initial values. */
-    addis   r8, 0, ld_dataMirrorStart@ha    /* r8 points into ROM mirror of RAM, moving */
-    addi    r8, r8, ld_dataMirrorStart@l
-    addis   r9, 0, ld_dataEnd@ha            /* r9 is const pointer to the end of the RAM */
-    addi    r9, r9, ld_dataEnd@l
-    addis   r10, 0, ld_dataStart@ha         /* r10 is moving pointer to RAM write location */
-    addi    r10, r10, ld_dataStart@l
+    e_lis   r8, ld_dataMirrorStart@h    /* r8 points into ROM mirror of RAM, moving */
+    e_or2i  r8, ld_dataMirrorStart@l
+    e_lis   r9, ld_dataEnd@h            /* r9 is const pointer to the end of the RAM */
+    e_or2i  r9, ld_dataEnd@l
+    e_lis   r10, ld_dataStart@h         /* r10 is moving pointer to RAM write location */
+    e_or2i  r10, ld_dataStart@l
 
     cmplw   cr0, r9, r10        /* The .data section may by empty */
-    beq     su_noInitData
+    e_beq   su_noInitData
 
 su_loopInitData:
-    lwz     r11, 0(r8)          /* Move next word from ROM to .data section in RAM */
-    la      r8, 4(r8)
-    stw     r11, 0(r10)
-    la      r10, 4(r10)
+    e_lwz   r11, 0(r8)          /* Move next word from ROM to .data section in RAM */
+    e_la    r8, 4(r8)
+    e_stw   r11, 0(r10)
+    e_la    r10, 4(r10)
     cmplw   cr0, r10, r9
-    blt     su_loopInitData
+    e_blt   su_loopInitData
     msync                       /* Complete the copy operation */
 su_noInitData:
 
@@ -192,19 +195,19 @@ su_noInitData:
        a callback on entry into main. Other compilers don't do so. For those, we call the
        routine directly prior to main. */
 #ifndef __GNUC__
-    bl      __eabi
+    e_bl    __eabi
 #endif
     /* Calling main: Load EABI function argument registers with argc=0, argv=NULL. */
-    lis     r3, 0
-    mr      r4, r3
-    bl      main
+    se_li   r3, 0
+    se_mr   r4, r3
+    e_bl    main
 
     /* We enter an infinite loop if someone should try to leave main - which is not
        intended. The external interrupts are disables so that possible RTOS code would not
        make some other portions of code become active any more. */
     wrteei  0
 su_waitForever:
-    b       su_waitForever
+    e_b     su_waitForever
 
     .size   sup_startUp, .-sup_startUp
 /* End of sup_startUp */
@@ -224,12 +227,13 @@ su_waitForever:
 zeroizeRegisters:
 
     /* Set the MSR[SPE] bit so code can use "evmergelo" instruction. */
-    lis     r6, 0x200
-    mtmsr   r6
-    isync
+    e_lis   r1, 0
+    e_or2is r1, 0x0200
+    mtmsr   r1
+    se_isync
 
     /* Initialize the 64-bits of GPR0 to 0 */
-    lis       r1, 0         /* Initialize the lower 32-bits of GPR1 to 0. */
+    e_lis     r1, 0         /* Initialize the lower 32-bits of GPR1 to 0. */
     evmergelo r0, r1, r1    /* Write the lower 32-bits of GPR1 into both halfs of GPR0. */
     evmergelo r1, r0, r0    /* Clear 64 Bit of r1, r2 ... */
     evmergelo r2 ,r0 ,r0
@@ -268,19 +272,19 @@ zeroizeRegisters:
     mtspr   284, r0     /* TBL     */
     mtspr   285, r0     /* TBU     */
     mtspr   272, r0     /* SPRG0-7 */
-    mtspr   273, r0     
-    mtspr   274, r0     
-    mtspr   275, r0     
-    mtspr   276, r0     
-    mtspr   277, r0     
-    mtspr   278, r0     
-    mtspr   279, r0     
+    mtspr   273, r0 
+    mtspr   274, r0 
+    mtspr   275, r0 
+    mtspr   276, r0 
+    mtspr   277, r0 
+    mtspr   278, r0 
+    mtspr   279, r0 
     mtspr   604, r0     /* SPRG8-9 */
-    mtspr   605, r0     
+    mtspr   605, r0 
     mtspr   26, r0      /* SRR0-1  */
-    mtspr   27, r0      
+    mtspr   27, r0 
     mtspr   58, r0      /* CSRR0-1 */
-    mtspr   59, r0      
+    mtspr   59, r0 
     mtspr   63, r0      /* IVPR    */
     mtspr   61, r0      /* DEAR    */
     mtspr   62, r0      /* ESR     */
@@ -292,12 +296,12 @@ zeroizeRegisters:
     mtspr   256, r0     /* USPRG0  */
     mtspr   9, r0       /* CTR     */
     mtspr   308, r0     /* DBCR0-6 */
-    mtspr   309, r0
-    mtspr   310, r0
-    mtspr   561, r0
-    mtspr   563, r0
-    mtspr   564, r0
-    mtspr   603, r0
+    mtspr   309, r0 
+    mtspr   310, r0 
+    mtspr   561, r0 
+    mtspr   563, r0 
+    mtspr   564, r0 
+    mtspr   603, r0 
     mtspr   574, r0     /* DSRR0-1 */
     mtspr   575, r0     /* DSRR1 */
     mtspr   400, r0     /* IVOR0-ICOR15 */
@@ -338,9 +342,9 @@ zeroizeRegisters:
        start using them, we need to save our CPU contexts on interrupts as full 64 Bit,
        although only very occasionally used only. */
     mtmsr   r0
-    isync
-
-    blr
+    se_isync
+    
+    se_blr
 .size   zeroizeRegisters, .-zeroizeRegisters
 
 /* End of zeroizeRegisters */
@@ -360,54 +364,60 @@ zeroizeRegisters:
 initExceptionHandlers:
     
     /* Write the common most significant 16 bits of all the exception handler addresses. */
-    lis     r0, sup_IVOR0trap@h
+    e_lis   r0, sup_IVOR0trap@h
     mtspr   63, r0      /* IVPR */
     
     /* Write the individual bits 4..15 of the all the exception handler addresses. It
        doesn't matter to write all bits, later at exception handling time they will
-       beignored or read zero. Therefore, we need to ensure that bits 0..3 of the actual
+       be ignored or read zero. Therefore, we need to ensure that bits 0..3 of the actual
        addresses are surely zero. This is done below by assembler statement .align. */
-    li      r0, sup_IVOR0trap@l
+    e_li    r0, sup_IVOR0trap@l
     mtspr   400, r0     /* IVOR0 Critical input */
-    li      r0, sup_IVOR1trap@l
+    e_li    r0, sup_IVOR1trap@l
     mtspr   401, r0     /* IVOR1 Machine check (non-maskable interrupt) */
-    li      r0, sup_IVOR2trap@l
+    e_li    r0, sup_IVOR2trap@l
     mtspr   402, r0     /* IVOR2 Data storage */
-    li      r0, sup_IVOR3trap@l
+    e_li    r0, sup_IVOR3trap@l
     mtspr   403, r0     /* IVOR3 Instruction storage */
-    li      r0, int_INTCInterruptHandler@l
+    
+    e_lis   r0, int_INTCInterruptHandler@ha
+    e_la    r0, int_INTCInterruptHandler@l(r0)
     mtspr   404, r0     /* IVOR4 External input */
-    li      r0, sup_IVOR5trap@l
+
+    e_li    r0, sup_IVOR5trap@l
     mtspr   405, r0     /* IVOR5 Alignment */
-    li      r0, sup_IVOR6trap@l
+    e_li    r0, sup_IVOR6trap@l
     mtspr   406, r0     /* IVOR6 Program */
-    li      r0, sup_IVOR7trap@l
+    e_li    r0, sup_IVOR7trap@l
     mtspr   407, r0     /* IVOR7 Floating-point unavailable */
-    li      r0, int_systemCallHandler@l
+    
+    e_lis   r0, int_systemCallHandler@ha
+    e_la    r0, int_systemCallHandler@l(r0)
     mtspr   408, r0     /* IVOR8 System call */
-    li      r0, sup_IVOR9trap@l
+
+    e_li    r0, sup_IVOR9trap@l
     mtspr   409, r0     /* IVOR9 AP unavailable (not used by this core) */
-    li      r0, sup_IVOR10trap@l
+    e_li    r0, sup_IVOR10trap@l
     mtspr   410, r0     /* IVOR10 Decrementer */
-    li      r0, sup_IVOR11trap@l
+    e_li    r0, sup_IVOR11trap@l
     mtspr   411, r0     /* IVOR11 Fixed-interval timer */
-    li      r0, sup_IVOR12trap@l
+    e_li    r0, sup_IVOR12trap@l
     mtspr   412, r0     /* IVOR12 Watchdog timer */
-    li      r0, sup_IVOR13trap@l
+    e_li    r0, sup_IVOR13trap@l
     mtspr   413, r0     /* IVOR13 Data TLB error */
-    li      r0, sup_IVOR14trap@l
+    e_li    r0, sup_IVOR14trap@l
     mtspr   414, r0     /* IVOR14 Instruction TLB error */
-    li      r0, sup_IVOR15trap@l
+    e_li    r0, sup_IVOR15trap@l
     mtspr   415, r0     /* IVOR15 Debug */
                  
-    li      r0, sup_IVOR32trap@l
+    e_li    r0, sup_IVOR32trap@l
     mtspr   528, r0      /* IVOR32 SPE unavailable */
-    li      r0, sup_IVOR33trap@l
+    e_li    r0, sup_IVOR33trap@l
     mtspr   529, r0      /* IVOR33 SPE data exception */
-    li      r0, sup_IVOR34trap@l
+    e_li    r0, sup_IVOR34trap@l
     mtspr   530, r0      /* IVOR34 SPE round exception */
 
-    blr
+    se_blr
 
     .size   initExceptionHandlers, .-initExceptionHandlers
 /* End of initExceptionHandlers */
@@ -423,7 +433,7 @@ initExceptionHandlers:
     .type   sup_IVOR0trap, @function
     .align  4
 sup_IVOR0trap:
-    b       sup_IVOR0trap   /* Critical Input interrupt handler */ 
+    se_b    sup_IVOR0trap   /* Critical Input interrupt handler */ 
     .size   sup_IVOR0trap, .-sup_IVOR0trap
 
 
@@ -435,7 +445,7 @@ sup_IVOR0trap:
     .type   sup_IVOR1trap, @function
     .align  4
 sup_IVOR1trap:
-    b       sup_IVOR1trap   /* Machine check / (NMI) interrupt handler */
+    se_b    sup_IVOR1trap   /* Machine check / (NMI) interrupt handler */
     .size   sup_IVOR1trap, .-sup_IVOR1trap
 
 
@@ -448,7 +458,7 @@ sup_IVOR1trap:
     .type   sup_IVOR2trap, @function
     .align  4
 sup_IVOR2trap:
-    b       sup_IVOR2trap   /* Data Storage interrupt handler */
+    se_b    sup_IVOR2trap   /* Data Storage interrupt handler */
     .size   sup_IVOR2trap, .-sup_IVOR2trap
 
 
@@ -461,7 +471,7 @@ sup_IVOR2trap:
     .type   sup_IVOR3trap, @function
     .align  4
 sup_IVOR3trap:
-    b       sup_IVOR3trap   /* Instruction Storage interrupt handler */
+    se_b    sup_IVOR3trap   /* Instruction Storage interrupt handler */
     .size   sup_IVOR3trap, .-sup_IVOR3trap
 
 
@@ -476,7 +486,7 @@ sup_IVOR3trap:
     .type   sup_IVOR5trap, @function
     .align  4
 sup_IVOR5trap:
-    b       sup_IVOR5trap   /* Alignment interrupt handler */
+    se_b    sup_IVOR5trap   /* Alignment interrupt handler */
     .size   sup_IVOR5trap, .-sup_IVOR5trap
 
 
@@ -488,7 +498,7 @@ sup_IVOR5trap:
     .type   sup_IVOR6trap, @function
     .align  4
 sup_IVOR6trap:
-    b       sup_IVOR6trap   /* Program interrupt handler */
+    se_b    sup_IVOR6trap   /* Program interrupt handler */
     .size   sup_IVOR6trap, .-sup_IVOR6trap
 
 
@@ -500,7 +510,7 @@ sup_IVOR6trap:
     .type   sup_IVOR7trap, @function
     .align  4
 sup_IVOR7trap:
-    b       sup_IVOR7trap   /* Floating-point unavailable interrupt handler */
+    se_b    sup_IVOR7trap   /* Floating-point unavailable interrupt handler */
     .size   sup_IVOR7trap, .-sup_IVOR7trap
 
 
@@ -516,7 +526,7 @@ sup_IVOR7trap:
     .type   sup_IVOR9trap, @function
     .align  4
 sup_IVOR9trap:
-    b       sup_IVOR9trap   /* AP unavailable interrupt handler */
+    se_b    sup_IVOR9trap   /* AP unavailable interrupt handler */
     .size   sup_IVOR9trap, .-sup_IVOR9trap
 
 
@@ -528,7 +538,7 @@ sup_IVOR9trap:
     .type   sup_IVOR10trap, @function
     .align  4
 sup_IVOR10trap:
-    b       sup_IVOR10trap   /* Decrementer interrupt handler */
+    se_b    sup_IVOR10trap   /* Decrementer interrupt handler */
     .size   sup_IVOR10trap, .-sup_IVOR10trap
 
 
@@ -540,7 +550,7 @@ sup_IVOR10trap:
     .type   sup_IVOR11trap, @function
     .align  4
 sup_IVOR11trap:
-    b       sup_IVOR11trap   /* Fixed Interval Timer interrupt handler */
+    se_b    sup_IVOR11trap   /* Fixed Interval Timer interrupt handler */
     .size   sup_IVOR11trap, .-sup_IVOR11trap
 
 
@@ -552,7 +562,7 @@ sup_IVOR11trap:
     .type   sup_IVOR12trap, @function
     .align  4
 sup_IVOR12trap:
-    b       sup_IVOR12trap   /* Watchdog Timer interrupt handler */
+    se_b    sup_IVOR12trap   /* Watchdog Timer interrupt handler */
     .size   sup_IVOR12trap, .-sup_IVOR12trap
 
 
@@ -564,7 +574,7 @@ sup_IVOR12trap:
     .type   sup_IVOR13trap, @function
     .align  4
 sup_IVOR13trap:
-    b       sup_IVOR13trap   /* Data TLB Error interrupt handler */
+    se_b    sup_IVOR13trap   /* Data TLB Error interrupt handler */
     .size   sup_IVOR13trap, .-sup_IVOR13trap
 
 
@@ -576,7 +586,7 @@ sup_IVOR13trap:
     .type   sup_IVOR14trap, @function
     .align  4
 sup_IVOR14trap:
-    b       sup_IVOR14trap   /* Instruction TLB Error interrupt handler */
+    se_b    sup_IVOR14trap   /* Instruction TLB Error interrupt handler */
     .size   sup_IVOR14trap, .-sup_IVOR14trap
 
 
@@ -588,7 +598,7 @@ sup_IVOR14trap:
     .type   sup_IVOR15trap, @function
     .align  4
 sup_IVOR15trap:
-    b       sup_IVOR15trap   /* Debug Interrupt */
+    se_b    sup_IVOR15trap   /* Debug Interrupt */
     .size   sup_IVOR15trap, .-sup_IVOR15trap
 
 /**
@@ -599,7 +609,7 @@ sup_IVOR15trap:
     .type   sup_IVOR32trap, @function
     .align  4
 sup_IVOR32trap:
-    b       sup_IVOR32trap   /* SPE unavailable */
+    se_b    sup_IVOR32trap   /* SPE unavailable */
     .size   sup_IVOR32trap, .-sup_IVOR32trap
 
 
@@ -611,7 +621,7 @@ sup_IVOR32trap:
     .type   sup_IVOR33trap, @function
     .align  4
 sup_IVOR33trap:
-    b       sup_IVOR33trap   /* SPE data exception */
+    se_b    sup_IVOR33trap   /* SPE data exception */
     .size   sup_IVOR33trap, .-sup_IVOR33trap
 
 
@@ -623,7 +633,7 @@ sup_IVOR33trap:
     .type   sup_IVOR34trap, @function
     .align  4
 sup_IVOR34trap:
-    b       sup_IVOR34trap   /* SPE round exception */
+    se_b    sup_IVOR34trap   /* SPE round exception */
     .size   sup_IVOR34trap, .-sup_IVOR34trap
 
 /* End of IVOR exception handlers 0..15 and 32..24 */
@@ -660,20 +670,20 @@ initMMU:
     /* Install the temporary table entry for flash ROM instruction read. We use the normal
        configuration with the only modification of selecting another address space.
          1MB at 0x0 (flash ROM), address space 1. */
-    lis     r3, MMU_TLB1_TMP_ENTRY1_MAS0@h
-    ori     r3, r3, MMU_TLB1_TMP_ENTRY1_MAS0@l
-    lis     r4, MMU_TLB1_TMP_ENTRY1_MAS1@h
-    ori     r4, r4, MMU_TLB1_TMP_ENTRY1_MAS1@l
-    lis     r5, MMU_TLB1_TMP_ENTRY1_MAS2@h
-    ori     r5, r5, MMU_TLB1_TMP_ENTRY1_MAS2@l
-    lis     r6, MMU_TLB1_TMP_ENTRY1_MAS3@h
-    ori     r6, r6, MMU_TLB1_TMP_ENTRY1_MAS3@l
-    bl      writeMMUTableEntryS
+    e_lis   r3, MMU_TLB1_TMP_ENTRY1_MAS0@h
+    e_or2i  r3, MMU_TLB1_TMP_ENTRY1_MAS0@l
+    e_lis   r4, MMU_TLB1_TMP_ENTRY1_MAS1@h
+    e_or2i  r4, MMU_TLB1_TMP_ENTRY1_MAS1@l
+    e_lis   r5, MMU_TLB1_TMP_ENTRY1_MAS2@h
+    e_or2i  r5, MMU_TLB1_TMP_ENTRY1_MAS2@l
+    e_lis   r6, MMU_TLB1_TMP_ENTRY1_MAS3@h
+    e_or2i  r6, MMU_TLB1_TMP_ENTRY1_MAS3@l
+    e_bl    writeMMUTableEntryS
 
     /* Make the new entry operate by switching to the other address space 1. */
     mfmsr   r3
-    mr      r7, r3          /* Save current value of msr. t7 is not used in the sub-routines */
-    ori     r3, r3, 0x20    /* Set IS. DS irrelevant, we must anyway not do a data access */
+    se_mr   r7, r3          /* Save current value of msr. t7 is not used in the sub-routines */
+    e_or2i  r3, 0x20        /* Set IS. DS irrelevant, we must anyway not do a data access */
     mtmsr   r3              /* Does implicit isync, next instruction should be re-read
                                through our new table entry */
 
@@ -682,15 +692,15 @@ initMMU:
        BAM provided boot section region is overwritten and thereby invalidated at the same
        time.
          1MB at 0x0 (flash ROM), address space 0. */
-    lis     r3, MMU_TLB1_ENTRY0_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY0_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY0_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY0_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY0_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY0_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY0_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY0_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY0_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY0_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY0_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY0_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY0_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY0_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY0_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY0_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* Switch back the normal address space. */
     mtmsr   r7              /* Does implicit isync, next instruction should be re-read
@@ -701,119 +711,119 @@ initMMU:
     
     /* 1MB at 0xf0_0000 (shadow flash ROM). Writing this entry implicitely invalidates the
        temporary flash ROM entry for address space 1. */
-    lis     r3, MMU_TLB1_ENTRY1_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY1_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY1_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY1_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY1_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY1_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY1_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY1_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY1_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY1_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY1_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY1_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY1_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY1_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY1_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY1_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* 128k at 0x4000_0000 (SRAM) */
-    lis     r3, MMU_TLB1_ENTRY2_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY2_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY2_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY2_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY2_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY2_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY2_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY2_MAS3@l
-    bl      writeMMUTableEntryS             /* "S": We may execute some code in RAM, see
+    e_lis   r3, MMU_TLB1_ENTRY2_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY2_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY2_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY2_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY2_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY2_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY2_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY2_MAS3@l
+    e_bl    writeMMUTableEntryS             /* "S": We may execute some code in RAM, see
                                                e.g. initFlash */
 
     /* 256k at 0x8ff0_0000 (on platform 1 peripherals, from PBRIDGE_0 till STM_1) */
-    lis     r3, MMU_TLB1_ENTRY3_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY3_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY3_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY3_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY3_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY3_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY3_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY3_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY3_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY3_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY3_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY3_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY3_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY3_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY3_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY3_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* 64k at 0x8ff4_0000 (on platform 1 peripherals, ECSM_1 and INTC_1) */
-    lis     r3, MMU_TLB1_ENTRY4_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY4_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY4_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY4_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY4_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY4_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY4_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY4_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY4_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY4_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY4_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY4_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY4_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY4_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY4_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY4_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* 512k at 0xC3f8_0000 (off-platform peripherals, till STCU) */
-    lis     r3, MMU_TLB1_ENTRY5_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY5_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY5_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY5_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY5_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY5_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY5_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY5_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY5_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY5_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY5_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY5_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY5_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY5_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY5_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY5_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* 512k at 0xffe0_0000 (off-platform peripherals, from ADC) */
-    lis     r3, MMU_TLB1_ENTRY6_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY6_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY6_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY6_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY6_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY6_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY6_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY6_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY6_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY6_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY6_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY6_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY6_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY6_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY6_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY6_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* 256k at 0xfff0_0000 (on Platform 0 Peripherals, from PBRIDGE till STM) */
-    lis     r3, MMU_TLB1_ENTRY7_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY7_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY7_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY7_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY7_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY7_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY7_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY7_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY7_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY7_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY7_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY7_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY7_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY7_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY7_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY7_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* 64k at 0xfff4_0000 (on Platform 0 Peripherals, from ECSM till INTC) */
-    lis     r3, MMU_TLB1_ENTRY8_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY8_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY8_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY8_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY8_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY8_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY8_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY8_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY8_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY8_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY8_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY8_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY8_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY8_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY8_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY8_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* 64k at 0xfff9_0000 (off Platform Peripherals, only DSPI) */
-    lis     r3, MMU_TLB1_ENTRY9_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY9_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY9_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY9_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY9_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY9_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY9_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY9_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY9_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY9_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY9_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY9_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY9_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY9_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY9_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY9_MAS3@l
+    e_bl    writeMMUTableEntry
 
     /* 256k at 0xfffc_0000 (off Platform Peripherals, rest) */
-    lis     r3, MMU_TLB1_ENTRY10_MAS0@h
-    ori     r3, r3, MMU_TLB1_ENTRY10_MAS0@l
-    lis     r4, MMU_TLB1_ENTRY10_MAS1@h
-    ori     r4, r4, MMU_TLB1_ENTRY10_MAS1@l
-    lis     r5, MMU_TLB1_ENTRY10_MAS2@h
-    ori     r5, r5, MMU_TLB1_ENTRY10_MAS2@l
-    lis     r6, MMU_TLB1_ENTRY10_MAS3@h
-    ori     r6, r6, MMU_TLB1_ENTRY10_MAS3@l
-    bl      writeMMUTableEntry
+    e_lis   r3, MMU_TLB1_ENTRY10_MAS0@h
+    e_or2i  r3, MMU_TLB1_ENTRY10_MAS0@l
+    e_lis   r4, MMU_TLB1_ENTRY10_MAS1@h
+    e_or2i  r4, MMU_TLB1_ENTRY10_MAS1@l
+    e_lis   r5, MMU_TLB1_ENTRY10_MAS2@h
+    e_or2i  r5, MMU_TLB1_ENTRY10_MAS2@l
+    e_lis   r6, MMU_TLB1_ENTRY10_MAS3@h
+    e_or2i  r6, MMU_TLB1_ENTRY10_MAS3@l
+    e_bl    writeMMUTableEntry
 
     mtlr r27
 
-    blr
+    se_blr
 
     .size   initMMU, .-initMMU
 /* End of initMMU */
@@ -853,7 +863,7 @@ writeMMUTableEntryS:
     msync
     isync
 
-    blr
+    se_blr
 
     .size   writeMMUTableEntryS, .-writeMMUTableEntryS
 /* End of writeMMUTableEntryS */
@@ -882,7 +892,7 @@ writeMMUTableEntry:
     /* Write the table entry */
     tlbwe
 
-    blr
+    se_blr
 
     .size   writeMMUTableEntry, .-writeMMUTableEntry
 /* End of writeMMUTableEntry */
@@ -898,16 +908,16 @@ writeMMUTableEntry:
     .type   initTimeBase, @function
 initTimeBase:
     /* Reset timer */
-    li      r0, 0
+    se_li   r0, 0
     mtspr   284, r0    /* Clear TBL */
     mtspr   285, r0    /* Clear TBU */
 
     /* Enable time base */
     mfspr   r0, 1008    /* Read register Hardware implementation dependent (HID) 0 */
-    ori     r0, r0, 1<<14   /* Set bit time base enable (TBEN) */
+    e_or2i  r0, 1<<14   /* Set bit time base enable (TBEN) */
     mtspr   1008, r0    /* Write updated value back to HID0 */
 
-    blr
+    se_blr
 
     .size   initTimeBase, .-initTimeBase
 /* End of initTimeBase */
@@ -930,25 +940,25 @@ initTimeBase:
     .type   zeroizeSRAM, @function
     .extern ld_memRamStart, ld_memRamSize
 zeroizeSRAM:
-    addis   r8, 0, ld_memRamStart@ha
-    addi    r8, r8, ld_memRamStart@l
-    addis   r9, 0, ld_memRamSize@ha
-    addi    r9, r9, ld_memRamSize@l
-    srawi   r9, r9, (0x4)   /* Divide length in Byte by 2^4=16 */
+    e_lis   r8, ld_memRamStart@h
+    e_or2i  r8, ld_memRamStart@l
+    e_lis   r9, ld_memRamSize@h
+    e_or2i  r9, ld_memRamSize@l
+    srawi   r9, r9, 4       /* Divide length in Byte by 2^4=16 */
     mtctr   r9
-    li  r31, 0
-    li  r30, 0
-    li  r29, 0
-    li  r28, 0
+    se_li   r31, 0
+    se_li   r30, 0
+    se_li   r29, 0
+    se_li   r28, 0
 
 zreg_loop:
-    /* ECC SRAM must be initialized with 64-bit writes, hence stmw;
-     * 16-btye alignment should work always */
-    stmw    r28, 0(r8)      /* Write registers 28-31 thus 16 Byte */
-    la      r8, 16(r8)
-    bdnz    zreg_loop
+    /* ECC SRAM must be initialized with 64-bit writes, hence stmw; 16-btye alignment
+       should work always */
+    e_stmw  r28, 0(r8)      /* Write registers 28-31 thus 16 Byte */
+    e_la    r8, 16(r8)
+    e_bdnz  zreg_loop
 
-    blr
+    se_blr
 
     .size   zeroizeSRAM, .-zeroizeSRAM
 /* End of zeroizeSRAM */
@@ -966,24 +976,24 @@ zreg_loop:
     .type   disableWatchdog, @function
 disableWatchdog:
     // SWT.SR.R = 0x0000c520;   /* Write 1st key to clear soft lock bit */
-    lis     r9, 0xfff3
-    ori     r9, r9, 0x8000
-    li      r10, 0
-    ori     r10, r10, 0xc520
-    stw     r10, 16(r9)
+    e_lis   r9, 0xfff3
+    e_or2i  r9, 0x8000
+    e_li    r10, 0
+    e_or2i  r10, 0xc520
+    e_stw   r10, 16(r9)
     // SWT.SR.R = 0x0000d928;   /* Write 2nd key to clear soft lock bit */
-    li      r10, 0
-    ori     r10, r10, 0xd928
-    stw     r10, 16(r9)
+    e_li    r10, 0
+    e_or2i  r10, 0xd928
+    e_stw   r10, 16(r9)
     // SWT.CR.R = 0x8000010A;   /* Clear watchdog enable (WEN) */
-    lis     r10, 0x8000
-    ori     r10, r10, 0x10a
-    stw     r10, 0(r9)
+    e_lis   r10, 0x8000
+    e_or2i  r10, 0x10a
+    e_stw   r10, 0(r9)
     // Clear e200 Core Watchdog Timer
-    li      r9, 0
+    e_li    r9, 0
     mtspr   340, r9
 
-    blr
+    se_blr
 
     .size   disableWatchdog, .-disableWatchdog
 /* End of disableWatchdog */
@@ -1008,44 +1018,45 @@ disableWatchdog:
  */
     .type   initFlash, @function
 initFlash:
-    stwu  sp, -24(sp) /* We need 20 Byte but stack frame must be multiple of 8 (EABI) */
+    e_stwu  sp, -24(sp) /* We need 20 Byte but stack frame must be multiple of 8 (EABI) */
     mflr    r0
-    stw     r0, 28(sp)
+    e_stw   r0, 28(sp)
     
     /* Load the required three movable instructions into r8..r10. */
-    lis     r9, if_movalbeMachineCode@ha
-    la      r10, if_movalbeMachineCode@l(r9)
-    lwz     r8, 0(r10)
-    lwz     r9, 4(r10)
-    lwz     r10, 8(r10)
+    e_lis   r10, if_movalbeMachineCode@h
+    e_add16i r10, r10, if_movalbeMachineCode@l
+    e_lwz   r8, 0(r10)
+    e_lwz   r9, 4(r10)
+    e_lwz   r10, 8(r10)
     
     /* Store moveable sub-routine in the stack area. */
-    stw     r8, 8(sp)
-    stw     r9, 12(sp)
-    stw     r10, 16(sp)
+    e_stw   r8, 8(sp)
+    e_stw   r9, 12(sp)
+    e_stw   r10, 16(sp)
     
     /* Load function arguments of our moveable sub-routine. */
-    lis     r3, 0x18c7      /* 0x18c7eded: Configuration word. */
-    ori     r3, r3, 0xeded
-    lis     r4, 0xc3f8      /* &CFLASH.PFCR0.R: Configuration register of flash controller */
-    ori r4, r4, 0x801c
+    e_lis   r3, 0x18c7      /* 0x18c7eded: Configuration word. */
+    e_or2i  r3, 0xeded
+    e_lis   r4, 0xc3f8      /* &CFLASH.PFCR0.R: Configuration register of flash controller */
+    e_or2i  r4, 0x801c
     msync
     isync
     
     /* Call sub-routine, which is in the stack area. */
-    la      r9, 8(sp)
+    e_la    r9, 8(sp)
     mtctr   r9
-    bctrl
+    se_bctrl
     
-    lwz     r0, 28(sp)
+    e_lwz   r0, 28(sp)
     mtlr    r0
-    la      sp, 24(sp)
-    blr
+    e_la    sp, 24(sp)
+    se_blr
 
 if_movalbeMachineCode:
-    stw     r3, 0(r4)
+    e_stw   r3, 0(r4)
     msync
-    blr
+    se_blr
+    .dc.w   0               /* We move 3 32 Bit words, so ensure there are those. */
     
     .size   initFlash, .-initFlash
 /* End of initFlash */
@@ -1066,12 +1077,12 @@ if_movalbeMachineCode:
     .extern _SDA_BASE_, _SDA2_BASE_
     .type   __eabi, @function
 __eabi:
-    lis     r13, _SDA_BASE_@h       /* Load .sdata base into r13 */
-    ori     r13, r13, _SDA_BASE_@l
-    lis     r2, _SDA2_BASE_@h       /* Load .sdata2 base into r2 */
-    ori     r2, r2, _SDA2_BASE_@l
+    e_lis   r13, _SDA_BASE_@h       /* Load .sdata base into r13 */
+    e_or2i  r13, _SDA_BASE_@l
+    e_lis   r2, _SDA2_BASE_@h       /* Load .sdata2 base into r2 */
+    e_or2i  r2, _SDA2_BASE_@l
 
-    blr
+    se_blr
 
     .size   __eabi, .-__eabi
 /* End of __eabi */
@@ -1080,4 +1091,4 @@ __eabi:
        in Code Warrior 10.7 fail to flash the code. */
     .align  4
 
-#endif /* !defined(VLE), i.e. Book E */
+#endif /* VLE */
