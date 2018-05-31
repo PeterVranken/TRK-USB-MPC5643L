@@ -96,7 +96,7 @@ APP ?= code/samples/alternatingContexts
 
 # Exclusion list: Edit the list of excluded files. A blank separated list of source files
 # (with extension but without path) is expected, which are excluded from the compilation of
-# all *.c and *.cpp
+# all *.c, *.cpp and *.S
 cFileListExcl :=
 
 # Additional include directories (besides the source directories and common, project

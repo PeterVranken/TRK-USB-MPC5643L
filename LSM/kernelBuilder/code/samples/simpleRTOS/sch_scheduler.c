@@ -346,7 +346,7 @@ static uint32_t activateTask( int_cmdContextSwitch_t *pCmdContextSwitch
                             , uint32_t signal
                             )
 {
-    /* Look for the active task of highest priority. The behaviour of our tasks D and E
+    /* Look for the active task of highest priority. The behavior of our tasks D and E
        ensures that there's always such a task - otherwise we could resume the initial
        context of the C main function as idle task context (most RTOS implementation decide
        this way). */
@@ -373,7 +373,7 @@ static uint32_t activateTask( int_cmdContextSwitch_t *pCmdContextSwitch
             assert(_idActiveTask == idTaskB  ||  _idActiveTask == idTaskC);
             
             /* The flag terminateSupendedTask is set when the single shot tasks B and C
-               signalled their termination. The information is returned to the IVOR #8
+               signaled their termination. The information is returned to the IVOR #8
                handler by return code. 
                  On leave of this function, we will evidently switch to another task. The
                context switch code will not save the current stack pointer but restore the
@@ -579,7 +579,7 @@ uint32_t sch_sc_suspend( int_cmdContextSwitch_t *pCmdContextSwitch
                        )
 {
     /* This demo doesn't define generic kernel operations but hardcodes the demonstrated
-       kernel actions. We use a switch case to implement the individual behaviour for each
+       kernel actions. We use a switch case to implement the individual behavior for each
        task. */
     assert(_idActiveTask < noTasks);
     _taskStateAry[_idActiveTask].isReady = false;
@@ -596,7 +596,7 @@ uint32_t sch_sc_suspend( int_cmdContextSwitch_t *pCmdContextSwitch
         _taskStateAry[_idActiveTask].isTerminating = true;
         break;
 
-        /* Task pair D and E suspend in favor of eachother.
+        /* Task pair D and E suspend in favor of each other.
              Note, sending a signal from E to D or vice versa as implemented here is not a
            general coding pattern. In a normal, generic scheduler implementation, a task A
            cannot easily signal the argument of a system call directly to another task

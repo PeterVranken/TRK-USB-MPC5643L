@@ -35,9 +35,7 @@
  * Local functions
  */
 
-#ifdef __VLE__
-# error This file is intended for compilation for Book E instruction set only
-#endif
+#ifndef __VLE__
 
 /*
  * Include files
@@ -211,7 +209,7 @@ int_INTCInterruptHandler:
     stw     r0, O_I_CR(sp)
     mflr    r0                  /* Save LR before reusing it for call of ISR */
     stw     r0, O_I_LR(sp)
-    stw     r3, O_I_R03(sp)     /* Store r3 and r4 prior to modification */
+    stw     r3, O_I_R03(sp)     /* Store r3 prior to modification */
 
     /* Save SRR0 and SRR1. This needs to be done before enabling EE in order to enable
        nested interupts. */
@@ -228,22 +226,22 @@ int_INTCInterruptHandler:
     lwz     r3, 0x0(r3)         /* Read ISR address from ISR Vector Table using pointer  */
 
     /* For preemptable interrupt handlers set the EE bit in the MSR. The property
-       preemptability of a handler is encoded as bit 1 (0x2) of the vector in the table. */
-    rlwinm  r0, r3, 31, 31, 31  /* Move bit 1 of r3 to r0 and set CR1 */
+       preemptability of a handler is encoded as bit 31 (0x1) of the vector in the table. */
+    rlwinm  r0, r3, 0, 31, 31   /* Move bit 31 of r3 to r0 and set CR1 */
     cmplwi  cr1, r0, 0
 
-    /* Kernel relevant ISR's have bit 0 set in the address. */
-    rlwinm. r0, r3, 0, 31, 31   /* Move bit 0 of r3 to r0 and set CR0 */
+    /* Kernel relevant ISR's have bit 30 (0x2) set in the address. */
+    rlwinm. r0, r3, 31, 31, 31  /* Move bit 30 of r3 to r0 and set CR0 */
 
     /* Clear the flag bits to get the proper address back. Do this without modifying CR. */
-    rlwinm  r3, r3, 0, 0, 29    /* Keep bits 2..31 in r3 */
+    rlwinm  r3, r3, 0, 0, 29    /* Keep bits 0..29 in r3 */
     mtlr    r3                  /* Put true ISR address in LR */
 
     /* Note: Do not change cr0 and cr1 in the next lines, we need the decisions later, when
        actually branching. */
 
 #ifdef DEBUG
-    beq     cr0, int_eeh_endCheckINTCCurPrio    /* Branch on r4=0 */
+    beq     cr0, int_eeh_endCheckINTCCurPrio    /* Branch on simple ISR */
 
     /* An assertion ensures that the priority of this kernel interrupt has the only
        permitted value 1. */
@@ -313,7 +311,7 @@ int_eeh_callOsIsr:
          - return from asynchronous, External Interrupt
          - return from system call */
 
-    /* The C function return code in r3 is bit set saying whether (!= 0) or not (== 0) to
+    /* The C function return code in r3 is a bit set saying whether (!= 0) or not (== 0) to
        switch the context, whether to terminate the left context (LSB==1) and whether to
        create the context we switch to (MSB==1). */
     cmpwi   cr1, r3, 0
@@ -601,7 +599,7 @@ int_sch_idxFctInRange:
          - return from interrupt
          - return from system call */
 
-    /* The C function return code in r3 is bit set saying whether (!= 0) or not (== 0) to
+    /* The C function return code in r3 is a bit set saying whether (!= 0) or not (== 0) to
        switch the context, whether to terminate the left context (LSB==1) and whether to
        create the context we switch to (MSB==1). */
     cmpwi   cr1, r3, 0
@@ -957,3 +955,5 @@ int_systemCall:
 #undef SIZE_OF_STACKFRAME
     .size   int_systemCall, .-int_systemCall
 /* End of int_systemCall */
+
+#endif /* !defined(VLE), i.e. Book E */

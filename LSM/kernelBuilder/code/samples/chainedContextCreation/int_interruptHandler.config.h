@@ -47,7 +47,7 @@
     configurations, with or without stack sharing support. */
 #define INT_USE_SHARED_STACKS   0
 
-    
+
 /*
  * Global type definitions
  */

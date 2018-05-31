@@ -71,6 +71,11 @@
 /** Configuration of kernelBuilder: This sample doesn't make use of stack sharing but can
     be compiled in both configurations, with or without stack sharing support. */
 
+/** The scond context can be replaced by a spinning assembler routine, which loads test
+    patterns into all avvailable CPU registers and check them for these patterns after the
+    context switch. Set the macro to 1 in order to compile this test mode. */
+#define TEST_SECOND_CTXT_CHECKS_REGS  0
+
 /** The first context is the normal context and the stack is the main stack defined in the
     linker command file. The second context requires its own stack. The size needs to be at
     minimum N times the size of the ISR stack frame, where N is the number of interrupt
@@ -747,10 +752,10 @@ void xsw_loop()
     memset(&_stack2ndCtxt[0], 0xa5, sizeof(_stack2ndCtxt));
     ccx_createContext( &_contextSaveDesc2
                      , /* stackPointer */ (uint8_t*)&_stack2ndCtxt[0] + sizeof(_stack2ndCtxt)
-#if 1
-                     , /* fctEntryIntoContext */ &secondContext
-#else
+#if TEST_SECOND_CTXT_CHECKS_REGS == 1
                      , /* fctEntryIntoContext */ &tcx_testContext
+#else
+                     , /* fctEntryIntoContext */ &secondContext
 #endif
                      , /* privilegedMode */ true
                      );
@@ -823,10 +828,16 @@ void xsw_loop()
 
             unsigned long noCtxSw = (volatile unsigned long)xsw_noContextSwitches;
             static unsigned long noCtxSwPrintf_ = 0;
-            iprintf( "No successful test loops: %lu, PIT2: %lu, no. context switches: %lu."
+            iprintf( 
+#if TEST_SECOND_CTXT_CHECKS_REGS == 1
+                     "No successful register check test loops: %lu, "
+#endif
+                     "PIT2: %lu, no. context switches: %lu."
                      " (The execution of this printf has been interrupted by %lu"
                      " context switches.)\r\n"
+#if TEST_SECOND_CTXT_CHECKS_REGS == 1
                    , tcx_cntTestLoops
+#endif
                    , xsw_cntIsrPit2
                    , xsw_noContextSwitches
                    , noCtxSwPrintf_
