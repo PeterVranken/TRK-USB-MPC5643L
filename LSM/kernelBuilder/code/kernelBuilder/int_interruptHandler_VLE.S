@@ -880,7 +880,7 @@ int_systemCall:
     /* Destroy stack frame and return. */
     se_lwz  r0, (SIZE_OF_STACKFRAME+4)(sp)
     se_mtlr r0
-    e_la    sp, SIZE_OF_STACKFRAME(sp)
+    se_addi sp, SIZE_OF_STACKFRAME
     se_blr
 
 #undef SIZE_OF_STACKFRAME

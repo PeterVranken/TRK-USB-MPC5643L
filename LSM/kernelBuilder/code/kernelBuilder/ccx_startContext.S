@@ -98,7 +98,7 @@ ccx_startContext:
 #ifdef __VLE__
 
     /* Load address of context entry function and branch there with link to execute it. */
-    e_lwz   r0, O_CTXT_ENTRY(sp)
+    se_lwz  r0, O_CTXT_ENTRY(sp)
     mtlr    r0
     se_blrl
     
@@ -106,9 +106,9 @@ ccx_startContext:
        normal EABI function epilogue; the stack had been prepared by the C code
        accordingly. If the context entry function returns a value in r3 then it becomes the
        function argument of the guard function. */
-    e_lwz   r0, (SIZE_OF_STACKFRAME+4)(sp)
+    se_lwz  r0, (SIZE_OF_STACKFRAME+4)(sp)
     mtlr    r0
-    e_la    sp, SIZE_OF_STACKFRAME(sp)
+    se_addi sp, SIZE_OF_STACKFRAME
     se_blr
     
 #else /* Book E implementation */
