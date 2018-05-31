@@ -59,8 +59,8 @@
 # The makefile compiles and links all source files which are located in a given list of
 # source directories. The list of directories is hard coded in the makefile, please look
 # for the setting of srcDirList below.
-#   A second list of files is found as cFileListExcl. These C/C++ files are excluded from
-# build.
+#   A second list of files is found as cFileListExcl. These C/C++ or assembler files are
+# excluded from build.
 
 
 # General settings for the makefile.
@@ -88,7 +88,7 @@ projectExe := $(target).s19
 .DEFAULT_GOAL := help
 h help targets usage:
 	$(info Usage: make [-s] [-k] [CONFIG=<configuration>] [SAVE_TMP=1] {<target>})
-	$(info <configuration> is one out of DEBUG (default) or PRODUCTION.)
+	$(info CONFIG: <configuration> is one out of DEBUG (default) or PRODUCTION.)
 	$(info SAVE_TMP set to one will make the preprocessed C(++) sources and the assembler \
            files appear in the target directory bin/ppc/<configuration>/obj/)
 	$(info Available targets are:)
@@ -144,14 +144,14 @@ targetDir := $(call binFolder)
 .PHONY: makeDir
 makeDir: | $(targetDir)obj
 $(targetDir)obj:
-	-$(mkdir) -p $@
+	-$(mkdir) -pv $@
 
 # Some core variables have already been set prior to reading this common part of the
 # makefile. These variables are:
 #   project: Name of the sub-project; used e.g. as name of the executable
 #   srcDirList: a blank separated list of directories holding source files
 #   cFileListExcl: a blank separated list of source files (with extension but without path)
-# excluded from the compilation of all *.c and *.cpp
+# excluded from the compilation of all *.S, *.c and *.cpp
 #   incDirList: a blank separated list of directories holding header files. The directory
 # names should end with a slash. The list must not comprise common, project independent
 # directories and nor must the directories listed in srcDirList be included
@@ -217,7 +217,7 @@ VPATH := $(srcDirList) $(targetDir)
 # 64k each (RAM and ROM) become too small to hold all "small" data objects. Prior to
 # disabling the mode you should first try to reduce the size limit to 4 or 2 Byte.
 useSoftwareEmulation := 0
-targetFlags := -mcpu=e200z4 -mbig-endian -mno-vle -mspe -misel=yes                          \
+targetFlags := -mcpu=e200z4 -mbig-endian -mno-vle -misel=yes                                \
                -meabi -msdata=default -G8                                                   \
                -mregnames
 ifeq ($(useSoftwareEmulation),1)
@@ -243,7 +243,7 @@ productionCodeOptimization := -Os
 asmFlags = $(targetFlags)                                                                   \
            -Wall                                                                            \
            -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                  \
-           $(foreach path,$(srcDirList) $(incDirList),-I$(path))                            \
+           $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path)) \
            $(cDefines) $(foreach def,$(defineList),-D$(def))                                \
            -Wa,-g -Wa,-gdwarf-2
 
@@ -264,14 +264,14 @@ cFlags = $(targetFlags) -mno-string                                             
          -fshort-enums -fdiagnostics-show-option -finline-functions                         \
          -fzero-initialized-in-bss -fno-tree-loop-optimize                                  \
          -Wall -Wno-main -Wno-old-style-declaration -Winline -Wextra -Wstrict-overflow=4    \
-         -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat -Wformat-security             \
-         -Wignored-qualifiers -Wsign-conversion -Wsign-compare                              \
+         -Wmissing-declarations -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat        \
+         -Wformat-security -Wignored-qualifiers -Wsign-conversion -Wsign-compare            \
          -Werror=missing-declarations -Werror=implicit-function-declaration                 \
          -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
          -Werror=pointer-to-int-cast -Werror=return-local-addr -Werror=missing-prototypes   \
          -Werror=missing-field-initializers                                                 \
          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                    \
-         $(foreach path,$(srcDirList) $(incDirList),-I$(path))                              \
+         $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path))   \
          $(cDefines) $(foreach def,$(defineList),-D$(def))
 ifeq ($(SAVE_TMP),1)
     # Debugging the build: Put preprocessed C file and assembler listing in the output

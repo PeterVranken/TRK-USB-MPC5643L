@@ -268,41 +268,41 @@ zeroizeRegisters:
     evmergelo r30, r0, r0
     evmergelo r31, r0, r0   /* ... r31 */
 
-    mtcr    r29
+    mtcr    r0
 
-    mtspr   284, r29    /* TBL     */
-    mtspr   285, r29    /* TBU     */
-    mtspr   272, r29    /* SPRG0-7 */
-    mtspr   273, r29
-    mtspr   274, r29
-    mtspr   275, r29
-    mtspr   276, r29
-    mtspr   277, r29
-    mtspr   278, r29
-    mtspr   279, r29
-    mtspr   604, r29    /* SPRG8-9 */
-    mtspr   605, r29
-    mtspr   26, r29     /* SRR0-1  */
-    mtspr   27, r29
-    mtspr   58, r29     /* CSRR0-1 */
-    mtspr   59, r29
-    mtspr   63, r29     /* IVPR    */
-    mtspr   61, r29     /* DEAR    */
-    mtspr   62, r29     /* ESR     */
-    mtspr   570, r29    /* MCSRR0  */
-    mtspr   571, r29    /* MCSRR1  */
-    mtspr   340, r29    /* TCR     */
-    mtspr   512, r29    /* SPEFSCR */
-    mtspr   1, r29      /* XER     */
-    mtspr   256, r29    /* USPRG0  */
-    mtspr   9, r29      /* CTR     */
-    mtspr   308, r29    /* DBCR0-6 */
-    mtspr   309, r29
-    mtspr   310, r29
-    mtspr   561, r29
-    mtspr   563, r29
-    mtspr   564, r29
-    mtspr   603, r29
+    mtspr   284, r0     /* TBL     */
+    mtspr   285, r0     /* TBU     */
+    mtspr   272, r0     /* SPRG0-7 */
+    mtspr   273, r0     
+    mtspr   274, r0     
+    mtspr   275, r0     
+    mtspr   276, r0     
+    mtspr   277, r0     
+    mtspr   278, r0     
+    mtspr   279, r0     
+    mtspr   604, r0     /* SPRG8-9 */
+    mtspr   605, r0     
+    mtspr   26, r0      /* SRR0-1  */
+    mtspr   27, r0      
+    mtspr   58, r0      /* CSRR0-1 */
+    mtspr   59, r0      
+    mtspr   63, r0      /* IVPR    */
+    mtspr   61, r0      /* DEAR    */
+    mtspr   62, r0      /* ESR     */
+    mtspr   570, r0     /* MCSRR0  */
+    mtspr   571, r0     /* MCSRR1  */
+    mtspr   340, r0     /* TCR     */
+    mtspr   512, r0     /* SPEFSCR */
+    mtspr   1, r0       /* XER     */
+    mtspr   256, r0     /* USPRG0  */
+    mtspr   9, r0       /* CTR     */
+    mtspr   308, r0     /* DBCR0-6 */
+    mtspr   309, r0
+    mtspr   310, r0
+    mtspr   561, r0
+    mtspr   563, r0
+    mtspr   564, r0
+    mtspr   603, r0
     mtspr   574, r0     /* DSRR0-1 */
     mtspr   575, r0     /* DSRR1 */
     mtspr   400, r0     /* IVOR0-ICOR15 */
@@ -337,7 +337,13 @@ zeroizeRegisters:
     mtspr   628, r0     /* MAS4 */
     mtspr   630, r0     /* MAS6 */
 
-    evmra   r0, r4      /* ACC */
+    evmra   r0, r0      /* ACC */
+
+    /* Reset the MSR[SPE] bit. The 64 Bit SPE instructions are generally unwanted. Once we
+       start using them, we need to save our CPU contexts on interrupts as full 64 Bit,
+       although only very occasionally used only. */
+    mtmsr   r0
+    isync
 
     blr
 .size   zeroizeRegisters, .-zeroizeRegisters

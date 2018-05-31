@@ -217,10 +217,10 @@ SECTIONS
 
     /* Compute the used portions of RAM and ROM, so that they appear in the map file and
        can be used from the startup and application code. */
-    ld_dataSize = ld_dataEnd - ld_dataStart ;
-    ld_ramSize = ld_ramEnd - ld_ramStart ;
+    ld_dataSize = ld_dataEnd - ld_dataStart;
+    ld_ramSize = ld_ramEnd - ld_ramStart;
     ld_dataMirrorStart = LOADADDR(.data);
     ld_dataMirrorEnd   = LOADADDR(.sdata) + SIZEOF(.sdata);
-    ld_dataMirrorSize = ld_dataMirrorEnd - ld_dataMirrorStart;
-    ld_romSize = ld_romEnd - ld_romStart ;
+    ld_dataMirrorSize  = ld_dataMirrorEnd - ld_dataMirrorStart;
+    ld_romSize = ld_romEnd - ld_romStart;
 }
