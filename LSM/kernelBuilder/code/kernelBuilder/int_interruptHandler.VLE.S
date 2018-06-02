@@ -29,6 +29,7 @@
  */
 /* Module interface
  *   int_INTCInterruptHandler
+ *   int_simpleSystemCall
  *   int_systemCallHandler
  *   int_fctOnContextEnd (weak default implementation)
  *   int_systemCall
@@ -103,6 +104,7 @@ int_fileName:
     .section .sdata
     .global int_cntRetFromIsr, int_cntIsrToSc, int_cntIsrToIsr, int_cntIsrToNewCtxt
     .global int_cntRetFromSc, int_cntScToSc, int_cntScToIsr, int_cntScToNewCtxt
+    .global int_cntRetFromSimpleSc
 int_cntRetFromIsr:
     .dc.l   0
 int_cntIsrToSc:
@@ -118,6 +120,8 @@ int_cntScToSc:
 int_cntScToIsr:
     .dc.l   0
 int_cntScToNewCtxt:
+    .dc.l   0
+int_cntRetFromSimpleSc:
     .dc.l   0
 #endif
 
@@ -220,7 +224,7 @@ int_INTCInterruptHandler:
        preemptability of a handler is encoded as bit 31 (0x1) of the vector in the table. */
     se_btsti r3, 31             /* Copy bit 31 (0x1) of r3 to CR1, positive */
     e_mcrf  cr1, cr0
-    
+
     /* Kernel relevant ISR's have bit 0 (0x80000000) set in the address. */
     se_btsti r3, 0              /* Copy MSBit of r3 to CR0, positive */
 
@@ -352,7 +356,7 @@ int_eeh_endCallSimpleIsr:
     /* Restore all GPRegisters and SPR, which are volatile according to the EABI and which
        are no longer in use between here and the rfi. */
     e_lmvsprw   O_I_CR(sp)  /* CR, LR, CTR, XER: 4*4 Byte. */
-                               
+
     /* Disable processor recognition of interrupts. */
     wrteei  0
     // Elder NXP samples place a memory barrier here before doing the interrupt acknowledge
@@ -402,6 +406,99 @@ int_eeh_errorBadKernelIrqPrio:
 
 
 /**
+ *   @func int_simpleSystemCall
+ * System calls are basically intended for operating system services, which can normaly
+ * lead to some context switch decisions. This requires some overhead for handling of race
+ * conditions and an API needs to be provided for commanding context switches. This
+ * overhead is undesired for simple services, which do not interfere with kernel
+ * operations. If such a servive requires the execution in supervisor mode then it can be
+ * implemented as "simple system call". Simple system calls have positive indexes
+ * (including zero) and their execution is implemented in this function.
+ */
+    .section .text.ivor
+    .type   int_simpleSystemCall, @function
+    .extern int_simpleSystemCallHandlerAry, int_noSimpleSystemCalls
+    .align  2
+int_simpleSystemCall:
+
+    e_stwu  sp, -S_SSC_StFr(sp)    /* Create stack frame */
+
+    /* Save SRR0 and SRR1. This needs to be done prior to re-enabling the External
+       Interrupt handling. */
+    mfsrr0  r0
+    se_stw  r0, O_SRR0(sp)
+    mfsrr1  r0
+    se_stw  r0, O_SRR1(sp)
+
+    /* After saving SRRi we can re-enable the handling of External Interrupts. */
+    wrteei 1
+
+    /* Check index of system call. */
+#ifdef DEBUG
+    se_mr   r0, r3          /* r0 must not be used for indexed lwz */
+    e_lis   r3, int_noSimpleSystemCalls@ha
+    e_lwz   r3, int_noSimpleSystemCalls@l(r3)
+    se_cmpl r0, r3
+    se_bge  int_ssc_errorSysCallIndexOutOfRange
+    se_mr   r3, r0
+#endif
+
+    /* Read ISR address from the simple system call vector table using the index in r3. */
+    se_slwi r3, 2
+    e_lwz   r3, int_simpleSystemCallHandlerAry(r3)
+    mtlr    r3                  /* Put handler address in LR */
+
+    /* Branch to simple system call handler address read from vector table. This is the
+       signature of such a handler:
+         uint32_t simpleSysCallHandler(uint32_t * const pMSR, ...); */
+    e_la    r3, O_SRR1(sp)  /* Load pMSR into first function argument */
+    se_blrl                 /* Branch to handler, but return here */
+
+    /* System call result is in r3 and can be returned just like that. */
+
+#if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
+    e_lwz   r4, int_cntRetFromSimpleSc@sda21(%r0)
+    se_addi r4, 1
+    e_stw   r4, int_cntRetFromSimpleSc@sda21(%r0)
+#endif
+
+    /* Disable handling of External Interrupts is required for savely accessing the SSRi */
+    wrteei  0
+    // Elder NXP samples place a memory barrier here before interacting with the INTC,
+    // newer NXP sample toggle the order of wrteei and msync. We believe that no memory
+    // barrier is required here. Successful processing of the code down here does not
+    // depend on the completion of the loads and stores before and the order of EE=0 and
+    // writes to the SSRi is guaranteed by the instruction synchronizing character of
+    // wrteei
+    /// @todo Intensive testing with commented msync
+    msync
+
+    /* Restore SRR0 but set SRR1 - the value of the MSR may have been changed by the
+       interrupt handler in the C code. */
+    se_lwz  r0, O_SRR0(sp)      /* Prepare PC to go to */
+    mtsrr0  r0
+    se_lwz  r0, O_SRR1(sp)      /* Prepare value of MSR after return */
+    mtsrr1  r0
+
+    /* Discard stack frame */
+    se_addi sp, S_SSC_StFr
+
+    /* End of software interrupt */
+    se_rfi
+
+#ifdef DEBUG
+    /* Error trap: The index of the simple system call is out of range. */
+int_ssc_errorSysCallIndexOutOfRange:
+    wrteei  0
+    se_b    .
+#endif
+
+    .size   int_simpleSystemCall, .-int_simpleSystemCall
+/* End of int_simpleSystemCall */
+
+
+
+/**
  *   @func int_systemCallHandler
  * This is the interrupt handler for the CPU interrupt IVOR #8, System Calls. IVOR #8
  * relates to software interrupts intended to invoke operation system function that are
@@ -421,6 +518,15 @@ int_eeh_errorBadKernelIrqPrio:
     .align  4
 int_systemCallHandler:
 
+    /* We provide an execution time efficient support of kernel-irrelated system calls.
+       They can be used for operations, which require the supervisor mode but don't compete
+       with OS operations like context switches. These operations should not run through
+       the priority ceiling protocol code and they should not offer the context switch API.
+       To make the operation as efficient as possible we specify the negative system call
+       number range to these operations. */
+    se_cmpi r3, 0
+    se_bge  int_simpleSystemCall
+
     e_stwu  sp, -S_SC_StFr(sp)     /* Create stack frame */
 
     /* A part of CR, cr2-4, is non-volatile. If we don't make use of these
@@ -430,6 +536,11 @@ int_systemCallHandler:
        Interrupt handling. */
     e_stmvsrrw  O_SRR0(sp)      /* SRR0/SRR1: 2*4 Byte */
 
+    /* Kernel relevant system calls use negative indexes. We need the positive number for
+       address computation. We use the one's complement to map the first negative index,
+       -1, on the first positive index, which is 0. */
+    se_not  r3
+
     e_stw   r14, O_SC_R14(sp)   /* Save r3 = sys call index for later use */
     se_mtar r14, r3             /* Do this in a later anyway saved register */
 
@@ -438,25 +549,7 @@ int_systemCallHandler:
     e_lis   r3, int_noSystemCalls@ha
     e_lwz   r3, int_noSystemCalls@l(r3)
     cmplw   cr0, r14, r3
-    e_blt   int_sch_idxFctInRange
-    e_lis   r3, int_fileName@ha
-    e_la    r3, int_fileName(r3)
-    e_li    r4, __LINE__
-    e_lis   r5, int_sch_funcName@ha
-    e_la    r5, int_sch_funcName(r5)
-    e_lis   r6, int_sch_expression@ha
-    e_la    r6, int_sch_expression(%r6)
-    e_bl    __assert_func
-
-    .section .text
-int_sch_funcName:
-    .asciz  "int_systemCallHandler"
-int_sch_expression:
-    .ascii  "idxSystemCall < int_noSystemCalls"
-
-    .section .text.ivor
-    .align  2
-int_sch_idxFctInRange:
+    e_bge   int_sch_errorSysCallIndexOutOfRange
 #endif
 
     /* The kernel code is not reentrant. We use the INTC's current priority register to
@@ -758,7 +851,7 @@ int_sch_endCntIsrToNewCtxt:
     e_lis   r3, int_fctOnContextEnd@ha
     e_la    r3, int_fctOnContextEnd@l(r3)
     se_mtlr r3
-    
+
     /// @todo Check if we need r14 here? Using lower GPR will avoid 32 Bit instructions
     e_lwz   r14, O_RET_pRCSD(sp)/* Load pointer to context save data of new context */
 #if INT_USE_SHARED_STACKS == 1
@@ -820,6 +913,13 @@ int_sch_endSystemCall:
 
     /* End of software interrupt */
     se_rfi
+
+#ifdef DEBUG
+    /* Error trap: The (negative) index of the kernel relevant system call is out of
+       range. */
+int_sch_errorSysCallIndexOutOfRange:
+    se_b    .
+#endif
 
     /* Error trap: The priority ceiling applied to protect the execution of system calls
        without interference of interrupts had failed. On exit from the system call the

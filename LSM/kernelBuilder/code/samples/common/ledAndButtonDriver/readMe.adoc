@@ -1,0 +1,48 @@
+This folder holds the implementation of a simple I/O driver. Access is
+provided to the LEDs and buttons on the evaluation board. The purpose of
+the implementation is to demonstrate how a system call API can be built up
+in a kernelBuilder project environment.
+
+If kernelBuilder is used to implement a task scheduler and if at least one
+task is intended to run in user mode then the APIs of the I/O drivers
+available to that task need to be implemented as system calls: A typical
+I/O driver can't be implemented without supervisor mode instructions and
+the use of these in a user mode task leads to an exception.
+
+kernelBuilder provides all the assembler code, which is needed for a
+system call. The remaining difficulty is the organization of the software
+in a (larger) project in order to safely use the offered code
+infrastructure. Any reasonable implementation of system calls requires a
+centralized table of pointers to all the supported system calls. For
+efficiency reasons, kernelBuilder took the design decision to make the
+table constant. Consequently, all table entries and their indexes in the
+table need to be defined and known at compile time.
+
+It would be straight forward to have one centralized module, which
+implements all of this. However, this would intermingle the implementation
+of all I/O drivers throughout the entire project. The files in this folder
+demonstrate a modified concept.
+
+An I/O driver exports the list of provided system calls and the related
+list of the implementing functions. It has no knowledge of the central
+table and where its system calls will be placed inside that table. The
+export of the lists is done by preprocessor macros, which expand to a
+fragment of
+
+* an enumeration of system call indexes
+* the initializer expression for the centralized table
+
+These macros are published in a dedicated header file. The central module
+`sc_systemCalls`, which defines the one and only global table of system
+calls, includes this header from all I/O drivers and puts the macros in
+its (published) enumeration definition and into the initializer expression
+of the table of system call implementing functions.
+
+The I/O driver doesn't know, which actual indexes its system calls will
+get (it doesn't know the contributions of other drivers and where it'll be
+placed in the table). However, it has exported all its indexes as symbols
+-- the enumeration values -- and can use its indexes as symbol.
+
+To enable the compiler resolving these symbols at compile time the I/O
+driver has to include the central file `sc_systemCalls.h`, where the
+enumeration is compiled from all the I/O drivers contributions.

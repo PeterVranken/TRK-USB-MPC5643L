@@ -27,6 +27,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "int_interruptHandler.h"
+#include "lbd_sysCallInterface.tableEntries.h"
+#include "sio_sysCallInterface.tableEntries.h"
+
 
 /*
  * Defines
@@ -42,13 +46,15 @@
 # endif
 #endif
 
-/** The enumeration of system call indexes.\n
-      Caution, this enumeration needs to be always in sync with the table of function
-    pointers! */
-#define SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT  0
-#define SC_IDX_SYS_CALL_SWITCH_CONTEXT      1
+/** The enumeration of indexes of kernel relevant system calls.\n
+      Note, kernel relevant system calls are distinguished from simple system calls in that
+    they use the negative range of indexes.\n
+      Caution, this enumeration needs to be always in sync with table
+    int_systemCallHandlerAry of function pointers! */
+#define SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT  (-1)
+#define SC_IDX_SYS_CALL_SWITCH_CONTEXT      (-2)
 
-/** The number of system calls. */
+/** The number of kernel relevant system calls. */
 #define SC_NO_SYSTEM_CALLS                  2
 
 /** System call: Create a new execution context and possibly start it.\n
@@ -83,6 +89,21 @@
                                   , idxOfResumedContext                                     \
                                   , signalToResumedContext                                  \
                                   )
+
+
+/** The enumeration of indexes of kernel unrelated, simple system calls.\n
+      Caution, this enumeration needs to be always in sync with table
+    int_simpleSystemCallHandlerAry of function pointers! */
+typedef enum sc_enum_simpleSystemCallIndex_t
+{
+    SIO_SIMPLE_SYSTEM_CALLS_ENUMERATION
+    LBD_SIMPLE_SYSTEM_CALLS_ENUMERATION
+    
+    /** The number of kernel unrelated, simple system calls. */
+    SC_NO_SIMPLE_SYSTEM_CALLS
+
+} sc_enum_simpleSystemCallIndex_t;
+
 
 
 /*

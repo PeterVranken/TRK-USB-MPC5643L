@@ -19,7 +19,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
+ *   tcx_testContext
  * Local functions
+ *   fillRegisters
+ *   testRegisters
  */
 
 #ifdef __VLE__

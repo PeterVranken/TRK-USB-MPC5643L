@@ -29,6 +29,7 @@
  */
 /* Module interface
  *   int_INTCInterruptHandler
+ *   int_simpleSystemCall
  *   int_systemCallHandler
  *   int_fctOnContextEnd (weak default implementation)
  *   int_systemCall
@@ -103,6 +104,7 @@ int_fileName:
     .section .sdata
     .global int_cntRetFromIsr, int_cntIsrToSc, int_cntIsrToIsr, int_cntIsrToNewCtxt
     .global int_cntRetFromSc, int_cntScToSc, int_cntScToIsr, int_cntScToNewCtxt
+    .global int_cntRetFromSimpleSc
 int_cntRetFromIsr:
     .dc.l   0
 int_cntIsrToSc:
@@ -118,6 +120,8 @@ int_cntScToSc:
 int_cntScToIsr:
     .dc.l   0
 int_cntScToNewCtxt:
+    .dc.l   0
+int_cntRetFromSimpleSc:
     .dc.l   0
 #endif
 
@@ -319,7 +323,7 @@ int_eeh_callOsIsr:
 #if INT_USE_SHARED_STACKS == 1
     rlwinm. r3, r3, 0, 31, 31   /* Filter bit 0 (terminate) and set CR0 */
 #endif
-    
+
     /* If we get here we need to switch to another execution context. This means that we
        have to save all non-volatile registers, too. We do this in the stack frame of the
        left context. We save GPR 13 in order to become later able to restore all registers
@@ -344,7 +348,7 @@ int_eeh_callOsIsr:
     li      r0, 0
     lis     r3, INTC_EOIR_PRC0@ha       /* Load upper half of INTC_EOIR address */
     stw     r0, INTC_EOIR_PRC0@l(r3)    /* Write 0 to INTC_EOIR */
-  
+
     /* The new current priority in CPR is read and saved in the left context. The priority
        ceiling protocol implemented in the INTC and applied by the system call handler
        permits the handling of interrupts, which asserted before the CPR has been raised.
@@ -364,7 +368,7 @@ int_eeh_callOsIsr:
        ISR. This is encoded by -1 in r14 as system call index. */
     /// @todo Can we use r11 or r12 for this purpose and avoid one register to be saved in case normal-return-without-context-switch?
     li      r14, -1
-    
+
     /* The handler may have demanded to resume an existing or to create a new context.
          The equal bit of cr0 holds the information "terminate left context". */
     bgt     cr1, int_sch_doContextSwitch
@@ -452,6 +456,97 @@ int_eeh_errorBadKernelIrqPrio:
 
 
 
+/**
+ *   @func int_simpleSystemCall
+ * System calls are basically intended for operating system services, which can normaly
+ * lead to some context switch decisions. This requires some overhead for handling of race
+ * conditions and an API needs to be provided for commanding context switches. This
+ * overhead is undesired for simple services, which do not interfere with kernel
+ * operations. If such a servive requires the execution in supervisor mode then it can be
+ * implemented as "simple system call". Simple system calls have positive indexes
+ * (including zero) and their execution is implemented in this function.
+ */
+    .section .text.ivor
+    .type   int_simpleSystemCall, @function
+    .extern int_simpleSystemCallHandlerAry, int_noSimpleSystemCalls
+    .align  2
+int_simpleSystemCall:
+
+    stwu    sp, -S_SSC_StFr(sp)    /* Create stack frame */
+
+    /* Save SRR0 and SRR1. This needs to be done prior to re-enabling the External
+       Interrupt handling. */
+    mfsrr0  r0
+    stw     r0, O_SRR0(sp)
+    mfsrr1  r0
+    stw     r0, O_SRR1(sp)
+
+    /* After saving SRRi we can re-enable the handling of External Interrupts. */
+    wrteei 1
+
+    /* Check index of system call. */
+#ifdef DEBUG
+    mr      r0, r3          /* r0 must not be used for indexed lwz */
+    lis     r3, int_noSimpleSystemCalls@ha
+    lwz     r3, int_noSimpleSystemCalls@l(r3)
+    cmplw   cr0, r0, r3
+    bge     cr0, int_ssc_errorSysCallIndexOutOfRange
+    mr      r3, r0
+#endif
+
+    /* Read ISR address from the simple system call vector table using the index in r3. */
+    slwi    r3, r3, 2
+    lwz     r3, int_simpleSystemCallHandlerAry(r3)
+    mtlr    r3                  /* Put handler address in LR */
+
+    /* Branch to simple system call handler address read from vector table. This is the
+       signature of such a handler:
+         uint32_t simpleSysCallHandler(uint32_t * const pMSR, ...); */
+    la      r3, O_SRR1(sp)  /* Load pMSR into first function argument */
+    blrl                    /* Branch to handler, but return here */
+
+    /* System call result is in r3 and can be returned just like that. */
+
+#if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
+    lwz     r4, int_cntRetFromSimpleSc@sda21(%r0)
+    addi    r4, r4, 1
+    stw     r4, int_cntRetFromSimpleSc@sda21(%r0)
+#endif
+
+    /* Disable handling of External Interrupts is required for savely accessing the SSRi */
+    wrteei  0
+    // Elder NXP samples place a memory barrier here before interacting with the INTC,
+    // newer NXP sample toggle the order of wrteei and msync. We believe that no memory
+    // barrier is required here. Successful processing of the code down here does not
+    // depend on the completion of the loads and stores before and the order of EE=0 and
+    // writes to the SSRi is guaranteed by the instruction synchronizing character of
+    // wrteei
+    /// @todo Intensive testing with commented msync
+    msync
+
+    /* Restore SRR0 but set SRR1 - the value of the MSR may have been changed by the
+       interrupt handler in the C code. */
+    lwz     r0, O_SRR0(sp)      /* Prepare PC to go to */
+    mtsrr0  r0
+    lwz     r0, O_SRR1(sp)      /* Prepare value of MSR after return */
+    mtsrr1  r0
+
+    /* Discard stack frame */
+    la      sp, S_SSC_StFr(sp)
+
+    /* End of software interrupt */
+    rfi
+
+#ifdef DEBUG
+    /* Error trap: The index of the simple system call is out of range. */
+int_ssc_errorSysCallIndexOutOfRange:
+    b       .
+#endif
+
+    .size   int_simpleSystemCall, .-int_simpleSystemCall
+/* End of int_simpleSystemCall */
+
+
 
 /**
  *   @func int_systemCallHandler
@@ -473,6 +568,15 @@ int_eeh_errorBadKernelIrqPrio:
     .align  4
 int_systemCallHandler:
 
+    /* We provide an execution time efficient support of kernel-irrelated system calls.
+       They can be used for operations, which require the supervisor mode but don't compete
+       with OS operations like context switches. These operations should not run through
+       the priority ceiling protocol code and they should not offer the context switch API.
+       To make the operation as efficient as possible we specify the negative system call
+       number range to these operations. */
+    cmpwi   cr0, r3, 0
+    bge     cr0, int_simpleSystemCall
+
     stwu    sp, -S_SC_StFr(sp)     /* Create stack frame */
 
     /* A part of CR, cr2-4, is non-volatile. If we don't make use of these
@@ -485,33 +589,20 @@ int_systemCallHandler:
     mfsrr1  r0
     stw     r0, O_SRR1(sp)
 
+    /* Kernel relevant system calls use negative indexes. We need the positive number for
+       address computation. We use the one's complement to map the first negative index,
+       -1, on the first positive index, which is 0. */
+    not     r3, r3
+
     stw     r14, O_SC_R14(sp)   /* Save r3 = sys call index for later use */
     mr      r14, r3             /* Do this in a later anyway saved register */
 
     /* Check index of system call. */
 #ifdef DEBUG
-    lis     r3, int_noSystemCalls@ha
-    lwz     r3, int_noSystemCalls@l(r3)
+    lis     r3, int_noSimpleSystemCalls@ha
+    lwz     r3, int_noSimpleSystemCalls@l(r3)
     cmplw   cr0, r14, r3
-    blt     int_sch_idxFctInRange
-    lis     r3, int_fileName@ha
-    la      r3, int_fileName(r3)
-    li      r4, __LINE__
-    lis     r5, int_sch_funcName@ha
-    la      r5, int_sch_funcName(r5)
-    lis     r6, int_sch_expression@ha
-    la      r6, int_sch_expression(%r6)
-    bl      __assert_func
-
-    .section .text
-int_sch_funcName:
-    .asciz  "int_systemCallHandler"
-int_sch_expression:
-    .ascii  "idxSystemCall < int_noSystemCalls"
-
-    .section .text.ivor
-    .align  2
-int_sch_idxFctInRange:
+    bge     cr0, int_sch_errorSysCallIndexOutOfRange
 #endif
 
     /* The kernel code is not reentrant. We use the INTC's current priority register to
@@ -529,7 +620,7 @@ int_sch_idxFctInRange:
     /* We put a memory barrier between the modification of the INTC's priority register and
        the re-enabling of the External Interrupt handling by the CPU. */
     mbar
-    
+
     /* Relevant MSR bits:
          0x02000000: SPE
          0x00020000: CE
@@ -616,7 +707,7 @@ int_sch_idxFctInRange:
 
     /* The handler may have demanded to create a new context. */
     blt     cr1, int_sch_startNewContext
-    
+
     /*  If we get here then we do a context switch to a previously suspended context.
           This label is shared with the IVOR #4 handler. If a kernel interrupt demands a
        context switch then we jump here. Preconditions:
@@ -654,7 +745,7 @@ int_sch_doContextSwitch:
     lwz     r3, 4(r3)           /* Load address of stack pointer save variable */
     stw     r14, 0(r3)          /* and make stack reusable for the other sharing contexts */
     b       int_sch_swCtxt_endSaveCtxt
-    
+
 int_sch_swCtxt_saveCtxt:
     stw     r14, 0(r3)          /* Store system call index at offset 0 in the struct */
     lwz     r3, 4(r3)           /* Load address of stack pointer save variable. */
@@ -664,7 +755,7 @@ int_sch_swCtxt_endSaveCtxt:
     stw     r14, 0(r3)          /* Store system call index at offset 0 in the struct */
     stw     sp, 4(r3)           /* Store current sp of left context at 4 in the struct */
 #endif
-    
+
     lwz     r3, O_RET_RC(sp) /* Load result of sys call now ending in the resumed context. */
     lwz     r14, O_RET_pRCSD(sp)/* Load pointer to context save data of resumed context */
     lwz     sp, 4(r14)          /* Load sp (or address of) from descriptor of resumed ctxt */
@@ -743,11 +834,11 @@ int_sch_endCntIsrToIsr:
 
     /* Pre-emptable ISRs require to restore the current priority in the INTC. This step is
        required only in the rare situation when a kernel relevant interrupt had preempted
-       a system call but it doesn't harm in all other cases. */ 
+       a system call but it doesn't harm in all other cases. */
     lwz     r0, O_I_CPR(sp)
     lis     r3, INTC_CPR_PRC0@ha
     stw     r0, INTC_CPR_PRC0@l(r3)
-    
+
     lwz     r0, O_I_CR(sp)      /* Restore CR */
     mtcr    r0
     lwz     r0, O_I_LR(sp)      /* Restore LR */
@@ -787,7 +878,7 @@ int_sch_startNewContext:
     lwz     r3, O_RET_pSCSD(sp) /* Load pointer to context save data of suspending ctxt. */
 #if INT_USE_SHARED_STACKS == 1
     beq     cr0, int_sch_newCtxt_saveCtxt
-    
+
     /* Context termination: Don't store current sp in save variable but the initial value
        it had at context creation time. This leaves the stack ready to use for other
        contexts, which share the stack. */
@@ -795,7 +886,7 @@ int_sch_startNewContext:
     lwz     r3, 4(r3)           /* Load address of stack pointer save variable. */
     stw     r15, 0(r3)          /* and make stack reusable for sharing contexts */
     b       int_sch_newCtxt_endSaveCtxt
-    
+
 int_sch_newCtxt_saveCtxt:
     stw     r14, 0(r3)          /* Store system call index at offset 0 in the struct */
     lwz     r3, 4(r3)           /* Load address of stack pointer save variable. */
@@ -805,7 +896,7 @@ int_sch_newCtxt_endSaveCtxt:
     stw     r14, 0(r3)          /* Store system call index at offset 4 in the struct */
     stw     sp, 4(r3)           /* Store current sp of left context at 0 in the struct */
 #endif
-    
+
 #if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
     cmpwi   cr0, r14, 0         /* Test flag: return from ISR or system call */
     blt     cr0, int_sch_cntIsrToNewCtxt     /* -1: we return from ISR */
@@ -890,6 +981,13 @@ int_sch_endSystemCall:
     /* End of software interrupt */
     rfi
 
+#ifdef DEBUG
+    /* Error trap: The (negative) index of the kernel relevant system call is out of
+       range. */
+int_sch_errorSysCallIndexOutOfRange:
+    b       .
+#endif
+
     /* Error trap: The priority ceiling applied to protect the execution of system calls
        without interference of interrupts had failed. On exit from the system call the
        current priority had been unexpectedly altered. */
@@ -906,7 +1004,7 @@ int_sch_errorPrioLowered:
 /* End of int_systemCallHandler */
 
 
-/** 
+/**
  *   @func int_fctOnContextEnd
  * Default implementation of guard function, which is invoked when a context entry function
  * is left with return. The default function is meant an assertion, it's just spinning

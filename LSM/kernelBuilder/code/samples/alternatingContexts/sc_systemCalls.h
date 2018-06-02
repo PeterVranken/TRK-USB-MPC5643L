@@ -27,6 +27,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "int_interruptHandler.h"
+#include "lbd_sysCallInterface.tableEntries.h"
+#include "sio_sysCallInterface.tableEntries.h"
+
 
 /*
  * Defines
@@ -42,14 +46,16 @@
 # endif
 #endif
 
-/** The enumeration of system call indexes.\n
-      Caution, this enumeration needs to be always in sync with the table of function
-    pointers! */
-#define SC_IDX_SYS_CALL_TEST_AND_DECREMENT  0
-#define SC_IDX_SYS_CALL_INCREMENT           1
-#define SC_IDX_SYS_CALL_SWITCH_CONTEXT      2
+/** The enumeration of indexes of kernel relevant system calls.\n
+      Note, kernel relevant system calls are distinguished from simple system calls in that
+    they use the negative range of indexes.\n
+      Caution, this enumeration needs to be always in sync with table
+    int_systemCallHandlerAry of function pointers! */
+#define SC_IDX_SYS_CALL_TEST_AND_DECREMENT  (-1)
+#define SC_IDX_SYS_CALL_INCREMENT           (-2)
+#define SC_IDX_SYS_CALL_SWITCH_CONTEXT      (-3)
 
-/** The number of system calls. */
+/** The number of kernel relevant system calls. */
 #define SC_NO_SYSTEM_CALLS                  3
 
 /** System call: Semaphore operation test and decrement.\n
@@ -75,6 +81,21 @@
     implements the system call. */
 #define /* uint32_t */ sc_switchContext(/* uint32_t */ signalToResumedContext) \
                     int_systemCall(SC_IDX_SYS_CALL_SWITCH_CONTEXT, signalToResumedContext)
+
+
+/** The enumeration of indexes of kernel unrelated, simple system calls.\n
+      Caution, this enumeration needs to be always in sync with table
+    int_simpleSystemCallHandlerAry of function pointers! */
+typedef enum sc_enum_simpleSystemCallIndex_t
+{
+    SIO_SIMPLE_SYSTEM_CALLS_ENUMERATION
+    LBD_SIMPLE_SYSTEM_CALLS_ENUMERATION
+    
+    /** The number of kernel unrelated, simple system calls. */
+    SC_NO_SIMPLE_SYSTEM_CALLS
+
+} sc_enum_simpleSystemCallIndex_t;
+
 
 
 /*

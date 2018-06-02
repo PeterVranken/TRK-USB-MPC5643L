@@ -86,7 +86,7 @@ targetRunArgs := $(ARG)
 
 # Specify a blank separated list of directories holding source files. The directories are
 # searched recursively for C/C++ and assembler source files.
-srcDirList := code/kernelBuilder/ code/serial/ code/startup/
+srcDirList := code/kernelBuilder/ code/serial/ code/startup/ code/samples/common/
 
 # kernelBuilder is a kind of library (although distributed as source code). It requires
 # some application code. A few samples are part of this repository. The sample to compile

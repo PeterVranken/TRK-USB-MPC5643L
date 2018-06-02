@@ -96,6 +96,13 @@ is got. The only observable difference to a normal function call is the
 (arbitrarily long) time span between entry into and exit from the system
 call.
 
+There is actually one more path through the IVOR handlers: A system call
+can be a so called simple one, which is a kernel unrelated system call. It
+can not command a context switch and will always return to the calling
+context. From the behavior such a simple system call is like an ordinary
+function call, it takes arguments and returns a result. The major
+difference to an ordinary function is its execution in supervisor mode.
+
 The added value of this TRK-USB-MPC5643L sample is that all of this
 functionality is offered through a C API. The handlers and the described
 mechanisms are implemented in assembler code but the client code can be
@@ -119,17 +126,40 @@ type of the ISR function pointer depends on this. Kernel relevant ISRs can
 no longer be of type `void (*)(void)` -- they require a signature, which
 permits commanding the context switch on return.
 
-System call handlers are collected in a static, constant table of those.
-Dynamic adding at run-time is not possible here; the set of system calls
-is considered a finalized design decision for the aimed
-scheduler/kernel/RTOS. The table is declared extern to the assembler code
-and the client code is in charge to compile it.footnote:[
+System call handlers are collected in two static, constant tables of
+addresses of those. There is a table for kernel relevant system calls and
+a second one for simple system calls.
+
+The distinction between the two types of system calls has been made
+although the kernel relevant handlers can emulate the same behavior in
+most situations. Wherever the simple handlers can be applied they have the
+following advantages:
+
+* They offer to change the machine state in which the calling context is
+  executed. The principal use case is a pair of system calls to suspend
+  and resume handling of External Interrupts
+* They produce less overhead
+* They are not serialized with other system calls (neither simple nor
+  kernel relevant) and nor with ISRs. Therefore, they barely impact the
+  real time behavior of a kernel
+
+Dynamic adding of table entries is not possible for system calls at
+run-time; the set of system calls is considered a finalized design
+decision for the aimed scheduler/kernel/RTOS. The tables are declared
+extern to the assembler code and the client code is in charge to compile
+them.footnote:[
   The assembler implementation of the IVOR #8 handler invokes a particular
 system call by index into this table, it doesn't need to known anything
 about the table contents. The normal design decision for the client code
 will be to provide a preprocessor macro or an inline function for each
 system call, which wraps the genric call `init_systemCall(idxSysCall)`
-with a meaningful name.]
+with a meaningful name.]footnote:[
+  Meanwhile it appears that at least for the simple system calls a
+run-time table configuration could be the better choice: Most I/O drivers
+will require to register some of these system calls in order to provide
+their APIs. The current centralized table requires cumbersome sharing of
+various handlers. Proper separation of driver implementation and kernel
+is complicated.]
 
 === Creation and deletion of execution contexts
 
@@ -193,7 +223,9 @@ removed) and folder `code\kernelBuilder`.
 
 The folders in folder `code\samples` contain a sample client
 implementation each. Folder `code\serial` is the known implementation of
-`printf` and only used by the client code.
+`printf` and only used by the client code. Package `serial` was extended
+by a wrapper around the driver API so that it is available to contexts
+running in user mode. The wrapper implements the same API as system calls.
 
 The build and debug scripts are a bit different to what you know from the
 other samples. They take an argument to select a client code sample;

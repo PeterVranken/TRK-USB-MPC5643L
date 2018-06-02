@@ -76,6 +76,7 @@
 #include <assert.h>
 
 #include "typ_types.h"
+#include "sio_sysCallInterface.h"
 #include "sio_serialIO.h"
 
 
@@ -281,8 +282,12 @@ signed int write(int file, const void *msg, size_t noBytes)
         return 0;
     else
     {
+#if SIO_USE_KERNEL_BUILDER_SYSTEM_CALLS == 1
         /// @todo Do we need EOL conversion?
+        return (signed int)sio_sc_writeSerial((const char*)msg, (unsigned int)noBytes);
+#else
         return (signed int)sio_writeSerial((const char*)msg, (unsigned int)noBytes);
+#endif
     }
 } /* End of write */
 
