@@ -35,15 +35,28 @@ client code.
 
 To see how the sample works you need to open a terminal software on your
 host machine. You can find a terminal as part of the CodeWarrior Eclipse
-IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal".
+IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal" (see
+<<figOpenTerminalView>>).
 
-Open the serial port, which is offered by the TRK-USB-MPC5643L. (On
-Windows, open the Computer Management and go to the Device Manager to find
-out.) The Baud rate has been selected as 115200 Bd in file
-`code\common\mai_main.c`, 8 Bit, no parity, 1 start and stop Bit. The
-sequence \r\n is used as end of line character. The terminal should print
-the messages, which are regularly sent by the sample code running on the
-evaluation board.
+[[figOpenTerminalView]]
+.Code Warrior Eclipse -- How to open the terminal window
+image::doc/ShowTerminalView.jpg[ShowTerminalView,width=30%,pdfwidth=30%,align=center]
+
+Open the serial port, which is offered by the TRK-USB-MPC5643L. (Mostly,
+it is the last one offered in the drop down box of the terminal settings.
+Otherwise, on Windows, open the Computer Management and go to the Device
+Manager to find out.) The Baud rate has been selected as 115200 Bd in file
+`code\common\mai_main.c`, 8 Bit, no parity, 1 start and stop Bit (see
+<<figTerminalSettings>>). The sequence \r\n is used as end of line
+character. The terminal should print the messages, which are regularly
+sent by the sample code running on the evaluation board.
+
+[[figTerminalSettings]]
+[.text-center]
+.Code How to configure the terminal
+image::doc/TerminalSettings.jpg[TerminalSettings,width=30%,pdfwidth=30%,align=center]
+
+
 
 === Book E versus VLE
 
