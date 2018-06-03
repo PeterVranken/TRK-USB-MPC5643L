@@ -67,7 +67,7 @@
     #LBD_SIMPLE_SYSTEM_CALLS_ENUMERATION. */
 #define LBD_SIMPLE_SYSTEM_CALLS_TABLE_ENTRIES                                               \
             [LBD_IDX_SIMPLE_SYS_CALL_SET_LED] = (int_simpleSystemCallFct_t)lbd_sc_setLED,   \
-            [LBD_IDX_SIMPLE_SYS_CALL_GET_BUTTON] = (int_simpleSystemCallFct_t)lbd_sc_getButton
+            [LBD_IDX_SIMPLE_SYS_CALL_GET_BUTTON] = (int_simpleSystemCallFct_t)lbd_sc_getButton,
 
 /*
  * Global type definitions
