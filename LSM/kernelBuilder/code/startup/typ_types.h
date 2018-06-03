@@ -52,6 +52,10 @@
     explicitly disable inlining here. */
 # define NO_INLINE __attribute__((noinline))
 
+/** Some function may better be inlined even if the optimizer rates code size higher and
+    wouldn't therefore inline it. */
+# define ALWAYS_INLINE inline __attribute__((always_inline))
+
 /** Place a piece of code or data objects into a sepcific linker section. */
 # define SECTION(sectionName)  __attribute__((section (#sectionName)))
 
@@ -59,6 +63,7 @@
 # define ATTRIB_UNUSED
 # define ATTRIB_DBG_ONLY
 # define NO_INLINE
+# define ALWAYS_INLINE inline
 # define SECTION
 #endif
 

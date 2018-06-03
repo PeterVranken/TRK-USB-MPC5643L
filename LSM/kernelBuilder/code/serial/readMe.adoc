@@ -1,0 +1,4 @@
+* Modification of TRK-USB-MPC5643L sample
+* Self-contained module: Can be used in different samples in their differently compiled tables
+* Wrapper around existing driver, old use cases are still supported
+* Naming problem: Macro should have same name as original function, which is a contradiction with support of old use cases

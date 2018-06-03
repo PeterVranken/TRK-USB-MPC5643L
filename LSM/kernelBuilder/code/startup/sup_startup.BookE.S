@@ -40,7 +40,7 @@
  */
 
 #include "sup_settings.h"
-#include "mmu_mmuRegions.h"
+#include "mmu_mmuRegions_BookE.h"
 
 
 /*

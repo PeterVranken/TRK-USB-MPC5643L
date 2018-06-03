@@ -599,8 +599,8 @@ int_systemCallHandler:
 
     /* Check index of system call. */
 #ifdef DEBUG
-    lis     r3, int_noSimpleSystemCalls@ha
-    lwz     r3, int_noSimpleSystemCalls@l(r3)
+    lis     r3, int_noSystemCalls@ha
+    lwz     r3, int_noSystemCalls@l(r3)
     cmplw   cr0, r14, r3
     bge     cr0, int_sch_errorSysCallIndexOutOfRange
 #endif

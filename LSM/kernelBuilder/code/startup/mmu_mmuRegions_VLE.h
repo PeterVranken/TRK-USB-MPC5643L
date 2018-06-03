@@ -1,5 +1,5 @@
-#ifndef MMU_MMUREGIONS_INCLUDED
-#define MMU_MMUREGIONS_INCLUDED
+#ifndef MMU_MMUREGIONS_VLE_INCLUDED
+#define MMU_MMUREGIONS_VLE_INCLUDED
 /**
  * @file mmu_mmuRegions.h
  * Definition of registers of MMU. Macros are provided that allow to access the fields of
@@ -257,4 +257,4 @@
 
 
 
-#endif  /* MMU_MMUREGIONS_INCLUDED */
+#endif  /* MMU_MMUREGIONS_VLE_INCLUDED */

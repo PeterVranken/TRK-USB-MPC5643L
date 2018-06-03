@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "typ_types.h"
 #include "sup_settings.h"
 #include "int_interruptHandler.h"
 
@@ -80,12 +81,10 @@
  *   @remark Note, suspending all External Interrupts does not affect all other interrupts
  * (effectively CPU traps), like Machine Check interrupt.
  */
-static inline void ihw_suspendAllInterrupts()
+static ALWAYS_INLINE void ihw_suspendAllInterrupts()
 {
-    /// @todo There are conflicting documentation excerpts, which say we need or need not a memory barrier after disabling the interrupts. To be clarified
     asm volatile ( /* AssemblerTemplate */
                    "wrteei 0\n"
-                   "msync\n"
                  : /* OutputOperands */
                  : /* InputOperands */
                  : /* Clobbers */
@@ -98,7 +97,7 @@ static inline void ihw_suspendAllInterrupts()
  * Enable all External Interrupts. This is done unconditionally, there's no nesting
  * counter.
  */
-static inline void ihw_resumeAllInterrupts()
+static ALWAYS_INLINE void ihw_resumeAllInterrupts()
 {
     asm volatile ( /* AssemblerTemplate */
                    "msync\n\t"
@@ -123,7 +122,7 @@ static inline void ihw_resumeAllInterrupts()
  * The main difference of this function in comparison to ihw_suspendAllInterrupts() is the
  * possibility to nest the calls at different hierarchical code sub-function levels.
  */
-static inline uint32_t ihw_enterCriticalSection()
+static ALWAYS_INLINE uint32_t ihw_enterCriticalSection()
 {
     uint32_t msr;
     asm volatile ( /* AssemblerTemplate */
@@ -147,7 +146,7 @@ static inline uint32_t ihw_enterCriticalSection()
  * The machine status register content as it used to be at entry into the critical section.
  * See ihw_enterCriticalSection() for more.
  */
-static inline void ihw_leaveCriticalSection(uint32_t msr)
+static ALWAYS_INLINE void ihw_leaveCriticalSection(uint32_t msr)
 {
     asm volatile ( /* AssemblerTemplate */
                    "msync\n\t"
