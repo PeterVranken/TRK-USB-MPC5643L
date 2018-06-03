@@ -7,7 +7,7 @@
  * MCU operation, too, but this can't be offered here. Without MMU configuration, we could
  * not reach or execute the code offered in this module.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -442,7 +442,7 @@ static void initINTCInterruptController()
  * served, 1 is the lowest real priority and 15 the highest. Preemption of a handler (if
  * enabled), which serves an interrupt of priority n will be possible only by another
  * interrupt of priority n+1 or higher.
- *   @param
+ *   @param isPreemptable
  * For each interrupt it can be sayed, whether it is preemptable by other interrupts of
  * higher priority or not. If this is \a false then the interrupt handler will always be
  * entered with the status bit EE reset in the machine status register MSR.\n
@@ -453,7 +453,7 @@ static void initINTCInterruptController()
  * The function can be used at any time. It is possible to exchange a handler at run-time,
  * while interrrupts are being processed. However, the normal use case will rather be to
  * call this function for all required interrupts and only then call the other function
- * initINTCInterruptController().
+ * ihw_resumeAllInterrupts().\n
  *   This function must not be called for an interrupt number n from the context of that
  * interrupt n.
  *   @remark

@@ -389,10 +389,10 @@ static void initINTCInterruptController()
 
     /* Normally, this function should always be called at the very first beginning, when
        all interrupts are still globally disabled at the CPU. However, we make it safe
-       against deviating code constructs we locally disable all interrupts. */
+       against deviating code constructs if we locally disable all interrupts. */
     uint32_t msr;
     asm volatile ( /* AssemblerTemplate */
-                   "mfmsr %0\n"
+                   "mfmsr %0\n\t"
                    "wrteei 0\n"
                  : /* OutputOperands */ "=r" (msr)
                  : /* InputOperands */
@@ -405,7 +405,7 @@ static void initINTCInterruptController()
     INTC.BCR.R = 0;
 
     /* The address of our vector table is stored in field VTBA_PRC0. Only the most
-       significant 21 Bit will matter, the reset will at run-time be preplaced by the index
+       significant 21 Bit will matter, the reset will at run-time be replaced by the index
        of the pending interrupt. */
     INTC.IACKR_PRC0.R = (uint32_t)&int_INTCInterruptHandlerAry[0];
 
@@ -415,6 +415,7 @@ static void initINTCInterruptController()
     /* Restore the machine status register including the enable external interrupt bit.
        For the normal, intended use case this won't have an effect. */
     asm volatile ( /* AssemblerTemplate */
+                   "mbar \n\t"
                    "mtmsr %0\n"
                  : /* OutputOperands */
                  : /* InputOperands */ "r" (msr)
@@ -441,7 +442,7 @@ static void initINTCInterruptController()
  * served, 1 is the lowest real priority and 15 the highest. Preemption of a handler (if
  * enabled), which serves an interrupt of priority n will be possible only by another
  * interrupt of priority n+1 or higher.
- *   @param
+ *   @param isPreemptable
  * For each interrupt it can be sayed, whether it is preemptable by other interrupts of
  * higher priority or not. If this is \a false then the interrupt handler will always be
  * entered with the status bit EE reset in the machine status register MSR.\n
@@ -452,7 +453,7 @@ static void initINTCInterruptController()
  * The function can be used at any time. It is possible to exchange a handler at run-time,
  * while interrrupts are being processed. However, the normal use case will rather be to
  * call this function for all required interrupts and only then call the other function
- * initINTCInterruptController().
+ * ihw_resumeAllInterrupts().\n
  *   This function must not be called for an interrupt number n from the context of that
  * interrupt n.
  *   @remark
