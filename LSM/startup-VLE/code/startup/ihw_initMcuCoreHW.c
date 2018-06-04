@@ -7,7 +7,7 @@
  * MCU operation, too, but this can't be offered here. Without MMU configuration, we could
  * not reach or execute the code offered in this module.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -470,7 +470,7 @@ void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
        need to disable them shortly to avoid inconsistent states (vector and priority). */
     uint32_t msr;
     asm volatile ( /* AssemblerTemplate */
-                   "mfmsr %0\n"
+                   "mfmsr %0\n\t"
                    "wrteei 0\n"
                  : /* OutputOperands */ "=r" (msr)
                  : /* InputOperands */
@@ -493,6 +493,7 @@ void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
     INTC.PSR[vectorNum].B.PRI = psrPriority;
 
     asm volatile ( /* AssemblerTemplate */
+                   "mbar \n\t"
                    "mtmsr %0\n"
                  : /* OutputOperands */
                  : /* InputOperands */ "r" (msr)
