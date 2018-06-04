@@ -303,7 +303,7 @@ typedef union int_externalInterruptHandler_t
 } int_externalInterruptHandler_t;
 
 
-/** Each system call needs to be implemented by a function of this type.
+/** Each kernel relevent system call needs to be implemented by a function of this type.
       @remark
     The C signature is formally not correct. The assembly code only supports function
     arguments in CPU registers, which limits the total number to eight. The ... stands for
@@ -315,12 +315,23 @@ typedef int_retCodeKernelIsr_t (*int_systemCallFct_t)
                                     , ...
                                     );
 
+/** Each simple (i.e. kernel unrelated) system call needs to be implemented by a function
+    of this type.
+      @remark
+    The C signature is formally not correct. The assembly code only supports function
+    arguments in CPU registers, which limits the total number to eight. The ... stands for
+    0..7 arguments of up to 32 Bit. If a system call function has more arguments or if it
+    are 64 Bit arguments then the assembly code will not propagate all arguments properly
+    to the system call function and the behavior will be undefined! */
+typedef uint32_t (*int_simpleSystemCallFct_t)(uint32_t * const pMSR, ...);
+
+
 /*
  * Global data declarations
  */
 
 
-/** The behavior of the system calls are implemented in the C implementation of the
+/** The behavior of the kernel system calls are implemented in the C implementation of the
     scheduler/kernel. The assembly code implements the call of these functions as a
     software interrupt. The interface between assembler and C code is a table of function
     pointers, which is declared by and extern to the assembler code. The actual scheduler
@@ -328,16 +339,35 @@ typedef int_retCodeKernelIsr_t (*int_systemCallFct_t)
     and fill the table accordingly.\n
       Note, the entries in the table are normal, proper C functions; no considerations
     about specific calling conventions or according type decorations need to be made.\n
+      Note, there are two tables, one for kernel relevant system calls, which can yield a
+    context switch and one for kernel unrelated system calls, which just require code
+    execution in supervisor mode. This is the table for kernel relevant system calls.\n
       Note, we place the table into the IVOR ROM, which enables a single instruction load
     of the function pointer. */
 extern const SECTION(.rodata.ivor) int_systemCallFct_t int_systemCallHandlerAry[];
 
 #ifdef DEBUG
-/** The number of entries in the table of system calls. Only required for boundary check in
-    DEBUG compilation.\n
+/** The number of entries in the table of kernel relevant system calls. Only required for
+    boundary check in DEBUG compilation.\n
       The variable is read by the assembler code but needs to be defined in the scheduler
     implementation. */
 extern const uint32_t int_noSystemCalls;
+#endif
+
+
+/** The table of C functions, which implement the simple system calls (i.e. the kernel
+    unrelated system calls).\n
+      Note, simple system calls are adressed to by negative indexes when calling
+    int_systemCall(). Index -1 maps onto the first table entry, i.e. table index 0. Simple
+    system call index -2 maps onto table entry 1, and so forth. */
+extern const SECTION(.rodata.ivor) int_simpleSystemCallFct_t int_simpleSystemCallHandlerAry[];
+
+#ifdef DEBUG
+/** The number of entries in the table of simple (i.e. kernel unrelated) system calls. Only
+    required for boundary check in DEBUG compilation.\n
+      The variable is read by the assembler code but needs to be defined in the scheduler
+    implementation. */
+extern const uint32_t int_noSimpleSystemCalls;
 #endif
 
 
@@ -367,12 +397,21 @@ extern const uint32_t int_noSystemCalls;
 _Noreturn void int_fctOnContextEnd(uint32_t retValOfContext);
 
 
+
 /**
  * System call; entry point into operating system function for user code.
  *   @return
  * The return value depends on the system call.
  *   @param idxSysCall
- * Each system call is identified by an index. The index is a non negative integer.\n
+ * Each system call is identified by an index. The index is a signed integer.\n
+ *   A positive number (including zero) addresses a kernel relevant system call, which
+ * may yield a context switch. The number is the index into function pointer table \a
+ * int_systemCallHandlerAry.\n
+ *   A negative number addresses a simple kernel unrelated system call, which simply
+ * returns a result to the calling context as any ordinary function does. (The major
+ * difference to an ordinary function is the execution in supervisor mode.) The
+ * bit-inverted number is the index into function pointer table \a
+ * int_simpleSystemCallHandlerAry.\n
  *   The further function arguments depend on the system call.
  *   @remark
  * The C signature for system calls is formally not correct. The assembly code only

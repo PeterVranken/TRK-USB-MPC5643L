@@ -4,7 +4,7 @@
 <cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="0.27344492">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492" moduleId="org.eclipse.cdt.core.settings" name="tc16, DEBUG">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492" moduleId="org.eclipse.cdt.core.settings" name="tc16, Book E, DEBUG">
 				<macros>
 					<stringListMacro name="Path" type="VALUE_TEXT_LIST"/>
 				</macros>
@@ -19,11 +19,11 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc16 for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492" isPrebuildInvalidatingBuild="false" name="tc16, DEBUG" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc16 as Book E for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492" isPrebuildInvalidatingBuild="false" name="tc16, Book E, DEBUG" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
 					<folderInfo id="0.27344492." name="/" resourcePath="">
 						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.1536408283" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.1536408283.1249798448" name=""/>
-							<builder arguments="" autoBuildTarget="-s jobs=4 APP=tc16 CONFIG=DEBUG build" buildPath="${ProjDirPath}" cleanBuildTarget="-s APP=tc16 CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.1366328964" incrementalBuildTarget="-s jobs=4 APP=tc16 CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 INSTR=BOOK_E APP=tc16 CONFIG=DEBUG build" buildPath="${ProjDirPath}" cleanBuildTarget="-s INSTR=BOOK_E APP=tc16 CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.1366328964" incrementalBuildTarget="-s jobs=4 INSTR=BOOK_E APP=tc16 CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.189979424" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1946264837" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1320621573" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
@@ -41,7 +41,7 @@
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 		<cconfiguration id="0.27344492.1172700428">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.1172700428" moduleId="org.eclipse.cdt.core.settings" name="tc16, PRODUCTION">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.1172700428" moduleId="org.eclipse.cdt.core.settings" name="tc16, Book E, PRODUCTION">
 				<externalSettings/>
 				<extensions>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
@@ -53,11 +53,11 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc16 with high optimization and without self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.1172700428" isPrebuildInvalidatingBuild="false" name="tc16, PRODUCTION" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc16 as Book E with high optimization and without self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.1172700428" isPrebuildInvalidatingBuild="false" name="tc16, Book E, PRODUCTION" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
 					<folderInfo id="0.27344492.1172700428." name="/" resourcePath="">
 						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.1840150055" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.1840150055.2064178792" name=""/>
-							<builder arguments="" autoBuildTarget="-s jobs=4 APP=tc16 CONFIG=PRODUCTION build" buildPath="${ProjDirPath}" cleanBuildTarget="-s APP=tc16 CONFIG=PRODUCTION clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.281948894" incrementalBuildTarget="-s jobs=4 APP=tc16 CONFIG=PRODUCTION build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 INSTR=BOOK_E APP=tc16 CONFIG=PRODUCTION build" buildPath="${ProjDirPath}" cleanBuildTarget="-s INSTR=BOOK_E APP=tc16 CONFIG=PRODUCTION clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.281948894" incrementalBuildTarget="-s jobs=4 INSTR=BOOK_E APP=tc16 CONFIG=PRODUCTION build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.19605490" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.825568669" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.988109869" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
@@ -75,7 +75,7 @@
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 		<cconfiguration id="0.27344492.423565547">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.423565547" moduleId="org.eclipse.cdt.core.settings" name="tc11, DEBUG">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.423565547" moduleId="org.eclipse.cdt.core.settings" name="tc11, Book E, DEBUG">
 				<macros>
 					<stringListMacro name="Path" type="VALUE_TEXT_LIST"/>
 				</macros>
@@ -90,11 +90,11 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc11 for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.423565547" isPrebuildInvalidatingBuild="false" name="tc11, DEBUG" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc11 as Book E for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.423565547" isPrebuildInvalidatingBuild="false" name="tc11, Book E, DEBUG" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
 					<folderInfo id="0.27344492.423565547." name="/" resourcePath="">
 						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.497165950" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.497165950.1315114137" name=""/>
-							<builder arguments="" autoBuildTarget="-s jobs=4 APP=tc11 CONFIG=DEBUG build" buildPath="${ProjDirPath}" cleanBuildTarget="-s APP=tc11 CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.630320639" incrementalBuildTarget="-s jobs=4 APP=tc11 CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 INSTR=BOOK_E APP=tc11 CONFIG=DEBUG build" buildPath="${ProjDirPath}" cleanBuildTarget="-s INSTR=BOOK_E APP=tc11 CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.630320639" incrementalBuildTarget="-s jobs=4 INSTR=BOOK_E APP=tc11 CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.1671972316" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.2059927936" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.76708175" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
@@ -112,7 +112,7 @@
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 		<cconfiguration id="0.27344492.948600033">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.948600033" moduleId="org.eclipse.cdt.core.settings" name="tc11, PRODUCTION">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.948600033" moduleId="org.eclipse.cdt.core.settings" name="tc11, Book E, PRODUCTION">
 				<macros>
 					<stringListMacro name="Path" type="VALUE_TEXT_LIST"/>
 				</macros>
@@ -127,11 +127,11 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc11 for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.948600033" isPrebuildInvalidatingBuild="false" name="tc11, PRODUCTION" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc11 as Book E with high optimization and without self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.948600033" isPrebuildInvalidatingBuild="false" name="tc11, Book E, PRODUCTION" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
 					<folderInfo id="0.27344492.948600033." name="/" resourcePath="">
 						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.856173337" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.856173337.976720714" name=""/>
-							<builder arguments="" autoBuildTarget="-s jobs=4 APP=test CONFIG=DEBUG build" buildPath="${ProjDirPath}/tc11, PRODUCTION" cleanBuildTarget="-s APP=test CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.1026781142" incrementalBuildTarget="-s jobs=4 APP=test CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 INSTR=BOOK_E APP=tc11 CONFIG=PRODUCTION build" buildPath="${ProjDirPath}" cleanBuildTarget="-s INSTR=BOOK_E APP=tc11 CONFIG=PRODUCTION clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.1026781142" incrementalBuildTarget="-s jobs=4 INSTR=BOOK_E APP=tc11 CONFIG=PRODUCTION build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.1574454089" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1537039104" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1169394111" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
@@ -141,6 +141,151 @@
 							</tool>
 							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1183652124" name="Freescale GCC C" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.940010716" languageId="org.eclipse.cdt.core.gcc.custom" languageName="Freescale GCC C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="0.27344492.1678843923">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.1678843923" moduleId="org.eclipse.cdt.core.settings" name="tc11, VLE, DEBUG">
+				<macros>
+					<stringListMacro name="Path" type="VALUE_TEXT_LIST"/>
+				</macros>
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc11 as VLE for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.1678843923" isPrebuildInvalidatingBuild="false" name="tc11, VLE, DEBUG" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+					<folderInfo id="0.27344492.1678843923." name="/" resourcePath="">
+						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.422590029" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
+							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.422590029.426523488" name=""/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 INSTR=VLE APP=tc11 CONFIG=DEBUG build" buildPath="${ProjDirPath}" cleanBuildTarget="-s INSTR=VLE APP=tc11 CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.1436625941" incrementalBuildTarget="-s jobs=4 INSTR=VLE APP=tc11 CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.1569941781" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.82579480" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.242513389" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1429630067" name="Freescale GCC C++" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1668812784" languageId="org.eclipse.cdt.core.g++.custom" languageName="Freescale GCC C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.990166821" name="Freescale GCC C" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.125362570" languageId="org.eclipse.cdt.core.gcc.custom" languageName="Freescale GCC C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="0.27344492.948600033.1859533703">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.948600033.1859533703" moduleId="org.eclipse.cdt.core.settings" name="tc11, VLE, PRODUCTION">
+				<macros>
+					<stringListMacro name="Path" type="VALUE_TEXT_LIST"/>
+				</macros>
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc11 as VLE with high optimization and without self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.948600033.1859533703" isPrebuildInvalidatingBuild="false" name="tc11, VLE, PRODUCTION" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+					<folderInfo id="0.27344492.948600033.1859533703." name="/" resourcePath="">
+						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.1403640263" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
+							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.1403640263.192041701" name=""/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 INSTR=VLE APP=tc11 CONFIG=PRODUCTION build" buildPath="${ProjDirPath}" cleanBuildTarget="-s INSTR=VLE APP=tc11 CONFIG=PRODUCTION clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.275350852" incrementalBuildTarget="-s jobs=4 INSTR=VLE APP=tc11 CONFIG=PRODUCTION build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.810747365" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1017129188" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1138367553" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1087260112" name="Freescale GCC C++" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1189928526" languageId="org.eclipse.cdt.core.g++.custom" languageName="Freescale GCC C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.866358718" name="Freescale GCC C" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1603402862" languageId="org.eclipse.cdt.core.gcc.custom" languageName="Freescale GCC C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="0.27344492.1771645478">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.1771645478" moduleId="org.eclipse.cdt.core.settings" name="tc16, VLE, DEBUG">
+				<macros>
+					<stringListMacro name="Path" type="VALUE_TEXT_LIST"/>
+				</macros>
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc16 as VLE for debugging and with self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.1771645478" isPrebuildInvalidatingBuild="false" name="tc16, VLE, DEBUG" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+					<folderInfo id="0.27344492.1771645478." name="/" resourcePath="">
+						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.750349519" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
+							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.750349519.1683052334" name=""/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 INSTR=VLE APP=tc16 CONFIG=DEBUG build" buildPath="${ProjDirPath}" cleanBuildTarget="-s INSTR=VLE APP=tc16 CONFIG=DEBUG clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.297500837" incrementalBuildTarget="-s jobs=4 INSTR=VLE APP=tc16 CONFIG=DEBUG build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.653769000" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1245452692" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1843422523" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.578557634" name="Freescale GCC C++" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.173844734" languageId="org.eclipse.cdt.core.g++.custom" languageName="Freescale GCC C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1186560573" name="Freescale GCC C" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.293142958" languageId="org.eclipse.cdt.core.gcc.custom" languageName="Freescale GCC C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="0.27344492.1172700428.1456282377">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.27344492.1172700428.1456282377" moduleId="org.eclipse.cdt.core.settings" name="tc16, VLE, PRODUCTION">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration buildProperties="" buildReferences="true" buildReferencingConfigurations="false" description="Compilation of RTuinOS with application tc16 as VLE with high optimization and without self-tests" errorParsers="org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GCCErrorParser;" id="0.27344492.1172700428.1456282377" isPrebuildInvalidatingBuild="false" name="tc16, VLE, PRODUCTION" parent="org.eclipse.cdt.build.core.prefbase.cfg" produceBuildErrorsWithMissingReferences="true">
+					<folderInfo id="0.27344492.1172700428.1456282377." name="/" resourcePath="">
+						<toolChain errorParsers="" id="org.eclipse.cdt.build.core.prefbase.toolchain.654282460" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
+							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.654282460.486543075" name=""/>
+							<builder arguments="" autoBuildTarget="-s jobs=4 INSTR=VLE APP=tc16 CONFIG=PRODUCTION build" buildPath="${ProjDirPath}" cleanBuildTarget="-s INSTR=VLE APP=tc16 CONFIG=PRODUCTION clean" command="make.exe" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.build.core.settings.default.builder.790089627" incrementalBuildTarget="-s jobs=4 INSTR=VLE APP=tc16 CONFIG=PRODUCTION build" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" parallelBuildWorkspaceOn="false" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.libs.1518944534" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.1355714024" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1696817712" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.507490577" name="Freescale GCC C++" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1185609418" languageId="org.eclipse.cdt.core.g++.custom" languageName="Freescale GCC C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.build.core.settings.holder.996594504" name="Freescale GCC C" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.639235312" languageId="org.eclipse.cdt.core.gcc.custom" languageName="Freescale GCC C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
@@ -163,14 +308,23 @@
 		<configuration configurationName="Default">
 			<resource resourceType="PROJECT" workspacePath="/RTuinOS"/>
 		</configuration>
+		<configuration configurationName="tc16, Book E, PRODUCTION"/>
+		<configuration configurationName="tc11, Book E, DEBUG"/>
+		<configuration configurationName="tc16, VLE, DEBUG"/>
+		<configuration configurationName="tc11, VLE, DEBUG"/>
+		<configuration configurationName="tc11, DEBUG"/>
+		<configuration configurationName="test, PRODUCTION"/>
+		<configuration configurationName="PRODUCTION"/>
+		<configuration configurationName="tc11, Book E, PRODUCTION"/>
 		<configuration configurationName="tc11, PRODUCTION"/>
 		<configuration configurationName="test, DEBUG"/>
+		<configuration configurationName="tc16, Book E, DEBUG"/>
 		<configuration configurationName="tc16, DEBUG">
 			<resource resourceType="PROJECT" workspacePath="/RTuinOS"/>
 		</configuration>
-		<configuration configurationName="tc11, DEBUG"/>
-		<configuration configurationName="test, PRODUCTION"/>
+		<configuration configurationName="tc11, VLE, PRODUCTION"/>
 		<configuration configurationName="DEBUG"/>
-		<configuration configurationName="PRODUCTION"/>
+		<configuration configurationName="tc16, VLE, PRODUCTION"/>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>

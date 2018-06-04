@@ -270,6 +270,8 @@ $(targetDir)obj/%.o: %.S
 
 # Pattern rules for compilation of, C and C++ source files.
 
+# TODO We could decide to not add -Winline if we optimize for size. With -Os it's quite
+# normal that an inline function is not implemented as such.
 cFlags = $(targetFlags) -mno-string                                                         \
          -fno-common -fno-exceptions -ffunction-sections -fdata-sections                    \
          -fshort-enums -fdiagnostics-show-option -finline-functions                         \

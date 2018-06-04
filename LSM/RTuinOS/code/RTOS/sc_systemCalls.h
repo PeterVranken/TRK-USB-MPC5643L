@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "int_interruptHandler.h"
 
 /*
  * Defines
@@ -45,8 +46,8 @@
 /** The enumeration of system call indexes.\n
       Caution, this enumeration needs to be always in sync with the table of function
     pointers! */
-#define SC_IDX_SYS_CALL_WAIT_FOR_EVENT      0
-#define SC_IDX_SYS_CALL_SEND_EVENT          1
+#define SC_IDX_SYS_CALL_WAIT_FOR_EVENT      (-1)
+#define SC_IDX_SYS_CALL_SEND_EVENT          (-2)
 
 /** The number of system calls. */
 #define SC_NO_SYSTEM_CALLS                  2
@@ -73,6 +74,18 @@
                                   , pThisContextSaveDesc                                    \
                                   , initialData                                             \
                                   )
+/** The enumeration of indexes of kernel unrelated, simple system calls.\n
+      Caution, this enumeration needs to be always in sync with table
+    int_simpleSystemCallHandlerAry of function pointers! */
+typedef enum sc_enum_simpleSystemCallIndex_t
+{
+	// (no simple system calls in use so far)
+    
+    /** The number of kernel unrelated, simple system calls. */
+    SC_NO_SIMPLE_SYSTEM_CALLS
+
+} sc_enum_simpleSystemCallIndex_t;
+
 
 
 /*

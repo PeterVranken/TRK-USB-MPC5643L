@@ -117,8 +117,19 @@
 
 #define S_SC_StFr  104      /* No content bytes rounded to next multiple of eight */
 
+
 /* Define the offsets of words saved in the stack frame. After creation of the stack frame,
-   the words are addressed by O_I_xxx(sp).
+   the words are addressed by O_yyy_xxx(sp).
+     Here for the stack frame of function int_simpleSystemCall that implements simple
+   system calls. */
+#define O_SSC_SRR0 O_SRR0   /* 8, shared with IVOR handler definition */
+#define O_SSC_SRR1 O_SRR1   /* 12, shared with IVOR handler definition */
+
+#define S_SSC_StFr 16       /* No content bytes rounded to next multiple of eight */
+
+
+/* Define the offsets of words saved in the stack frame. After creation of the stack frame,
+   the words are addressed by O_yyy_xxx(sp).
      Here for the assembler written context start function ccx_startContext. */
 #define O_StCtxt_CTXT_ENTRY 8   /* Adress of entry function into new context */
 #define S_StCtxt_StFr  16       /* No content bytes rounded to next multiple of eight */

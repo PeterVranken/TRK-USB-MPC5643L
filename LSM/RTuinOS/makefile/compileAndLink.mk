@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -87,9 +87,10 @@ projectExe := $(target).s19
 .PHONY: h help targets usage
 .DEFAULT_GOAL := help
 h help targets usage:
-	$(info Usage: make [-s] [-k] APP=<appSrcFolder> [CONFIG=<configuration>] [SAVE_TMP=1] \
+	$(info Usage: make [-s] [-k] [INSTR=<instructionSet>] APP=<appSrcFolder> [CONFIG=<configuration>] [SAVE_TMP=1] \
            {<target>})
-	$(info <appSrcFolder> is a path to a folder inside code/applications, where the \
+	$(info INSTR: <instructionSet> is one out of BOOK_E (default) or VLE.)
+	$(info APP: <appSrcFolder> is a path to a folder inside code/applications, where the \
            source code of the RTuinOS application to build is kept)
 	$(info <configuration> is one out of DEBUG (default) or PRODUCTION.)
 	$(info SAVE_TMP set to one will make the preprocessed C(++) sources and the assembler \
@@ -124,15 +125,16 @@ h help targets usage:
 # + debug output possible
 # + all assertions active
 #
+INSTR ?= BOOK_E
 CONFIG ?= DEBUG
 ifeq ($(CONFIG),PRODUCTION)
     ifeq ($(MAKELEVEL),1)
-        $(info Compiling $(target) for production)
+        $(info Compiling $(target) in $(if $(call eq,$(INSTR),VLE),VLE,BOOK E) for production)
     endif
     cDefines := -DPRODUCTION -DNDEBUG
 else ifeq ($(CONFIG),DEBUG)
     ifeq ($(MAKELEVEL),1)
-        $(info Compiling $(target) for debugging)
+        $(info Compiling $(target) in $(if $(call eq,$(INSTR),VLE),VLE,BOOK E) for debugging)
     endif
     cDefines := -DDEBUG
 else
@@ -220,9 +222,14 @@ VPATH := $(srcDirList) $(targetDir)
 # 64k each (RAM and ROM) become too small to hold all "small" data objects. Prior to
 # disabling the mode you should first try to reduce the size limit to 4 or 2 Byte.
 useSoftwareEmulation := 0
-targetFlags := -mcpu=e200z4 -mbig-endian -mno-vle -misel=yes                                \
-               -meabi -msdata=default -G8                                                   \
-               -mregnames
+targetFlags := -mcpu=e200z4 -mbig-endian -misel=yes -meabi -msdata=default -G8 -mregnames
+ifeq ($(INSTR),BOOK_E)
+    targetFlags += -mno-vle
+else ifeq ($(INSTR),VLE)
+    targetFlags += -mvle
+else
+    $(error Please set INSTR to either BOOK_E or VLE)
+endif
 ifeq ($(useSoftwareEmulation),1)
     targetFlags += -msoft-float -fshort-double
 else
@@ -240,13 +247,13 @@ endif
     # O1: 52%
     # Os: 50%, requires linkage of crtsavres.S
     # Ofast: 41%, likely same as -O3
-productionCodeOptimization := -Ofast
+productionCodeOptimization := -Os
 
 # Pattern rules for assembler language source files.
 asmFlags = $(targetFlags)                                                                   \
            -Wall                                                                            \
            -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                  \
-           $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path)) \
+           $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path))    \
            $(cDefines) $(foreach def,$(defineList),-D$(def))                                \
            -Wa,-g -Wa,-gdwarf-2
 
@@ -275,7 +282,7 @@ cFlags = $(targetFlags) -mno-string                                             
          -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
          -Werror=pointer-to-int-cast -Werror=return-local-addr                              \
          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                    \
-         $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path))   \
+         $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path))      \
          $(cDefines) $(foreach def,$(defineList),-D$(def))
 ifeq ($(SAVE_TMP),1)
     # Debugging the build: Put preprocessed C file and assembler listing in the output
@@ -359,13 +366,15 @@ $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath) $(projectResourceFile)
 	$(info File created)
 
 # Let the linker create the flashable binary file.
-lFlags = -Wl,-Tmakefile/linkerControlFile.ld -nostartfiles -Wl,--gc-sections $(targetFlags) \
+lFlags = -Wl,-Tmakefile/linkerControlFile$(if $(call eq,$(INSTR),BOOK_E),.BookE,.VLE).ld    \
+         -nostartfiles -Wl,--gc-sections $(targetFlags)                                     \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
          -Wl,--warn-common,--warn-once -Wl,-g                                               \
          --sysroot=$(dir $(gcc))../powerpc-eabivle/newlib
 
-$(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt makefile/linkerControlFile.ld
-	$(info Linking project. Mapfile is $(targetDir)$(target).map)
+$(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt                               \
+                makefile/linkerControlFile$(if $(call eq,$(INSTR),BOOK_E),.BookE,.VLE).ld
+	$(info Linking $(if $(call eq,$(INSTR),VLE),VLE,BOOK E) project. Mapfile is $(targetDir)$(target).map)
 	$(gcc) $(lFlags) -o $@ @$< -lm
 
 # Create hex file from linker output.

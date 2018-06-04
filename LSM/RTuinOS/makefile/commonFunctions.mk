@@ -21,7 +21,7 @@ endef
 #   Determine the name of the root folder of all build products. The name should
 # distinguish between all supported target systems. Furthermore, under Windows it should if
 # possible distinguish between 32 or 64 Bit systems.
-binFolder = bin/ppc/$(notdir $(call noTrailingSlash,$(APP)))/$(CONFIG)/
+binFolder = bin/ppc$(if $(call eq,$(INSTR),BOOK_E),-BookE,-VLE)/$(notdir $(call noTrailingSlash,$(APP)))/$(CONFIG)/
 # Example:
 # $(info Target folder for produced binaries is $(call binFolder))
 

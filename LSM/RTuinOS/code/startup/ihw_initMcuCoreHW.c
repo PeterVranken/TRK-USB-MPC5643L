@@ -7,7 +7,7 @@
  * MCU operation, too, but this can't be offered here. Without MMU configuration, we could
  * not reach or execute the code offered in this module.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -493,19 +493,56 @@ void ihw_installINTCInterruptHandler( int_externalInterruptHandler_t interruptHa
                  : /* Clobbers */
                  );
 
+    /* The Book E definition of kernelBuilder had specified the two least significant bits
+       of the stored handler address as Boolean properties of the handler (kernel relevance
+       and preemptability). For a VLE implementation this needs to be changed since handler
+       address only have one safe unused bit, the least significant one; all handler
+       addresses are 2 Byte aligned. We keep the concept but use another bit for the second
+       property, the most significant bit.
+         Implications: While the Book E definition is generally correct does the VLE
+       definition depend on the memory layout; it'll fail if the text section is in the
+       upper half of the 32 Bit address space. For this project, which is dedicated to the
+       MPC5643L, there's no risk but easy portability to similar controllers with a
+       possibly different memory map requires a run-time check if the made assumptions are
+       met.
+         For Book E an assertion would be sufficient; VLE must double check in any
+       compilation configuration: The handler addresses will definitely differ between the
+       configurations. Since the run-time check is cheap we can inherit it in the Book E
+       implementation.
+         We don't have a remedial action if the check fails. All we can do is what an
+       assertion does: halting further code execution and reporting the problem through a
+       connected debugger. This technique is adequate since the failure is a pure compile
+       time problem. */
+    const uintptr_t handlerAddress = isKernelInterrupt? (uintptr_t)interruptHandler.kernelIsr
+                                                      : (uintptr_t)interruptHandler.simpleIsr;
+#ifdef __VLE__
+    const bool addressOk = (handlerAddress & 0x80000001) == 0;
+#else
+    const bool addressOk = (handlerAddress & 0x00000003) == 0;
+#endif
+    /* We can enter an endless loop to safely halt the software execution because the
+       handling of External Interrupts is globally switched off (see above). Check your
+       memory map if your debugger would make a break in the loop. */
+    while(!addressOk)
+        ;
+
+       
     /* Set the function pointer in the ISR Handler table. We use the two least significant
        bits of the address to store the information about preemption and kernel relevance.
        This convention is known and considered by the assembler code that implements the
        common part of all INTC interrupts. */
-    assert(((uintptr_t)interruptHandler.simpleIsr & 0x00000003) == 0);
     if(isKernelInterrupt)
     {
         /* A kernel ISR, which can preempt a context then return to and resume another one. */
         int_ivor4KernelIsr_t isr =
-            (int_ivor4KernelIsr_t)((uintptr_t)interruptHandler.kernelIsr | 0x00000001);
+#ifdef __VLE__
+            (int_ivor4KernelIsr_t)((uintptr_t)interruptHandler.kernelIsr | 0x80000000);
+#else
+            (int_ivor4KernelIsr_t)((uintptr_t)interruptHandler.kernelIsr | 0x00000002);
+#endif
         if(isPreemptable)
-            isr = (int_ivor4KernelIsr_t)((uintptr_t)isr | 0x00000002);
-        
+            isr = (int_ivor4KernelIsr_t)((uintptr_t)isr | 0x00000001);
+
         int_INTCInterruptHandlerAry[vectorNum] =
                                         (int_externalInterruptHandler_t){.kernelIsr = isr};
         
@@ -522,8 +559,8 @@ void ihw_installINTCInterruptHandler( int_externalInterruptHandler_t interruptHa
            context. */
         int_ivor4SimpleIsr_t isr = interruptHandler.simpleIsr;
         if(isPreemptable)
-            isr = (int_ivor4SimpleIsr_t)((uintptr_t)isr | 0x00000002);
-        
+            isr = (int_ivor4SimpleIsr_t)((uintptr_t)isr | 0x00000001);
+
         int_INTCInterruptHandlerAry[vectorNum] =
                                         (int_externalInterruptHandler_t){.simpleIsr = isr};
 

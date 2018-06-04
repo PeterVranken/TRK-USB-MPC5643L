@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "typ_types.h"
 #include "sup_settings.h"
 #include "int_interruptHandler.h"
 
