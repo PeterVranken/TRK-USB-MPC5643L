@@ -2,6 +2,7 @@
 :Author:    Peter Vranken 
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
+:toclevels: 3
 :xrefstyle: short
 :numbered:
 
@@ -61,8 +62,17 @@ image::doc/TerminalSettings.jpg[TerminalSettings,width=30%,pdfwidth=30%,align=ce
 === Book E versus VLE
 
 The implementation of RTuinOS is not specific to one of the instruction
-sets. However, as of writing, its foundation kernelBuilder is not yet
-available in VLE assembler and the project setup is done for Book E.
+sets. The build scripts and the Eclipse configuration support both
+instruction sets.
+
+The makefile takes an additional switch on the command line, state
+`INSTR=BOOK_E` (default) or `INSTR=VLE` to build the software in the
+wanted instruction set.
+
+In the Eclipse project, all build and debug configurations have been
+duplicated, once for each instruction set. The TCL scripts, which can be
+used in CodeWarrior's debugger shell window to flash the software, have
+got another argument to select the instruction set, too.
 
 == RTuinOS
 
@@ -247,12 +257,16 @@ Possible application names can be found as the name of the folders inside
 example):
 
     mingw32-make -s build APP=tc01
-    mingw32-make -s build APP=tc01 CONFIG=PRODUCTION
+    mingw32-make -s build APP=tc01 INSTR=BOOK_E CONFIG=PRODUCTION
+    mingw32-make -s build APP=tc01 INSTR=VLE
+    mingw32-make -s build APP=tc01 INSTR=VLE CONFIG=PRODUCTION
 
 to produce the flashable files
-`bin\ppc\tc01\DEBUG\TRK-USB-MPC5643L-RTuinOS-tc01.elf` 
+`bin\ppc-BookE\tc01\DEBUG\TRK-USB-MPC5643L-RTuinOS-tc01.elf`,
+`bin\ppc-BookE\tc01\PRODUCTION\TRK-USB-MPC5643L-RTuinOS-tc01.elf`,
+`bin\ppc-VLE\tc01\DEBUG\TRK-USB-MPC5643L-RTuinOS-tc01.elf`,
 and
-`bin\ppc\tc01\PRODUCTION\TRK-USB-MPC5643L-RTuinOS-tc01.elf`.
+`bin\ppc-VLE\tc01\PRODUCTION\TRK-USB-MPC5643L-RTuinOS-tc01.elf`.
 
 To get more information, type:
 
@@ -276,20 +290,22 @@ View/Other/Debug/Debugger Shell". In the debugger shell window, type:
 
     cd <rootFolderOfSample>/makefile/debugger
     set APP tc01
+    set INSTR VLE
     source flashDEBUG.tcl
     
 or
 
     set APP tc01
+    set INSTR BOOK_E
     source flashPRODUCTION.tcl
 
 (Setting TCL variable APP doesn't need to be repeated prior to every
 repeated flashing.)
 
 The debugger is started by a click on the black triangle next to the blue
-icon "bug", then click "Debug Configurations.../CodeWarrior/RTuinOS tc01
-(DEBUG)". Confirm and start the debugger with a last click on button
-"Debug".
+icon "bug", then click "Debug Configurations.../CodeWarrior/RTuinOS (tc01,
+Book E, DEBUG)". Confirm and start the debugger with a last click on
+button "Debug".
 
 (Or select the according debug configuration for another RTuinOS application.)
 
@@ -299,7 +315,8 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 == Code architecture
 
 This sample builds on sample "kernelBuilder" located in a sibling folder.
-"RTuinOS" is compiled for the Book E instruction set. All build settings
-and the software architecture are identical to "kernelBuilder". Please refer to
+"RTuinOS" can be compiled for both, the Book E and the VLE instruction
+set. All build settings and the software architecture are identical to
+"kernelBuilder". Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/readMe.adoc[LSM/kernelBuilder/readMe.adoc]
 for details.
