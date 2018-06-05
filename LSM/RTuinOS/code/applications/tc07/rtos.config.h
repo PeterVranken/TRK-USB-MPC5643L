@@ -92,9 +92,10 @@
 
 /** Enable the application defined interrupt 0. (Two such interrupts are pre-configured in
     the code and more can be implemented by taking these two as a code template.)\n
-      To install an application interrupt, this define is set to #RTOS_FEATURE_ON.\n
+      To install the application interrupt this define is set to #RTOS_FEATURE_ON.\n
       Secondary, you will define #RTOS_ISR_USER_00 in order to specify the interrupt
-    source.\n
+    source and #RTOS_ISR_USER_00_ACKNOWLEDGE_IRQ to specify some interrupt source dependent
+    code.\n
       Then, you will implement the callback \a rtos_enableIRQUser00(void) which enables the
     interrupt, typically by accessing the interrupt control register of some peripheral.\n
       Now the interrupt is enabled and if it occurs it'll post the event
@@ -102,7 +103,6 @@
     for this event in order to handle the interrupt when it is resumed by the event. */
 #define RTOS_USE_APPL_INTERRUPT_00 RTOS_FEATURE_OFF
 
-/// @todo To be discarded
 /** The index of the interrupt which is assigned to application interrupt 0.\n
       All possible external interrupt sources are hardwired to the interrupt controller.
     They are indentified by index. The table, which interrupt source (mostly I/O device) is
@@ -110,15 +110,30 @@
     section 28.7, table 28-4. */
 #define RTOS_ISR_USER_00    -1
 
+/** The interrupt service routines, which are installed for the application defined
+    interrupts are widely generic and part of the RTuinOS kernel implementation. However,
+    the acknowledge of the interrupt bit in the interrupt source device depends on the
+    interrupt source and can't be anticipated by the kernel. You need to add appropriate
+    code to the implementation of the ISR through this macro. Assign an expression, which
+    is then compiled as part of the ISR. Mostly, the expression will be a simple assignment
+    to a register of the configured device but if this should not suffice you can define
+    the call to an arbitrary, application owned function; now the configuration by macro
+    behaves like a standard callback mechanism.\n
+      Here for application defined interrupt 0. */
+#define RTOS_ISR_USER_00_ACKNOWLEDGE_IRQ
+
 
 /** Enable the application defined interrupt 1. See #RTOS_USE_APPL_INTERRUPT_00 for
     details. */
 #define RTOS_USE_APPL_INTERRUPT_01 RTOS_FEATURE_OFF
 
-/// @todo To be discarded
-/** The name of the interrupt vector which is assigned to application interrupt 1. See
+/** The index of the interrupt which is assigned to application interrupt 1. See
     #RTOS_ISR_USER_00 for details. */
 #define RTOS_ISR_USER_01    -1
+
+/** The code to acknowledge the interrupt bit in the interrupt source of application
+    defined interrupt 1. See #RTOS_ISR_USER_00_ACKNOWLEDGE_IRQ for details. */
+#define RTOS_ISR_USER_01_ACKNOWLEDGE_IRQ
 
 
 /** The default EOL character sequence used in the startup message is overridden. Our

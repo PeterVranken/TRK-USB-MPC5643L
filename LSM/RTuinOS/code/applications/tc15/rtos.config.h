@@ -92,9 +92,10 @@
 
 /** Enable the application defined interrupt 0. (Two such interrupts are pre-configured in
     the code and more can be implemented by taking these two as a code template.)\n
-      To install an application interrupt, this define is set to #RTOS_FEATURE_ON.\n
+      To install the application interrupt this define is set to #RTOS_FEATURE_ON.\n
       Secondary, you will define #RTOS_ISR_USER_00 in order to specify the interrupt
-    source.\n
+    source and #RTOS_ISR_USER_00_ACKNOWLEDGE_IRQ to specify some interrupt source dependent
+    code.\n
       Then, you will implement the callback \a rtos_enableIRQUser00(void) which enables the
     interrupt, typically by accessing the interrupt control register of some peripheral.\n
       Now the interrupt is enabled and if it occurs it'll post the event
