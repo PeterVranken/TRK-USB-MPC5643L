@@ -1,4 +1,4 @@
-= Sample "kernelBuilder" - A platform to build your RTOS for MPC5643L
+= Sample "kernelBuilder" - A platform to build your RTOS for e200z4
 :Author:    Peter Vranken 
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
@@ -12,7 +12,7 @@
 
 This sample offers a pair of IVOR #4 (External Interrupt) and IVOR #8
 (System Call) handlers, which are designed to support the build of a
-single core operating system kernel for the NXP MPC5643L. The IVOR #4
+single core operating system kernel for the NXP MPC5643L (e200z4). The IVOR #4
 handler supports both, ordinary interrupt service routines (ISR) and
 kernel relevant ISRs.
 
@@ -30,13 +30,15 @@ continue any other execution context. "Any other execution context"
 normally is one of those, which had been left by a similar, earlier
 decision, i.e. which had _not_ been continued at that time.
 
-Our simplest sample code is a "scheduler", which implements a regular timer
-interrupt as kernel relevant ISR. Unconditionally in each tick, it demands
-a context switch between two existing execution contexts. The CPU executes
-both program paths alternatingly and pseudo-parallel.
+Our simplest sample code,
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder/code/samples/alternatingContexts[alternatingContexts],
+is a "scheduler", which implements a regular timer interrupt as kernel
+relevant ISR. Unconditionally in each tick, it demands a context switch
+between two existing execution contexts. The CPU executes both program
+paths alternatingly and pseudo-parallel.
 
 The second IVOR handler implements the concept of system calls. These are
-software interrupt, which preempt a context at the particular location, at
+software interrupts, which preempt a context at the particular location, at
 which the code contains the system call instruction. The difference to an
 ordinary branch instruction is that the same CPU mechanisms are used as for
 asynchronous interrupts; in particular the CPU returns from user mode back
@@ -45,26 +47,33 @@ The latter ensures that system calls and External Interrupts can be
 serialized, that coherency of access to data they both share can be safely
 implemented.
 
-System call handlers in this package are always implemented like the
-kernel relevant ISRs and the function signature is the similar. On return
-they can decide to either return to the calling context or they can demand
-a context switch. In the former case, the complete system call behaves
-like a conventional, synchronous function call. However it is executed in
-supervisor mode, while the calling context is executed in user mode.
+As for asynchronous interrupts, there are two kinds of system calls. The
+so called simple system calls correspond with the ordinary ISRs. The will
+usually implement kernel unrelated operations. They can not command a
+context switch and will always return to the calling context. With respect
+to behavior, such a simple system call is like an ordinary function call,
+it takes arguments and returns a result. The major difference to an
+ordinary function is its execution in supervisor mode, which makes it
+suitable for the implementation of I/O drivers.
 
-In the latter case, the calling context is suspended. The typical use case
-is, that the calling context needs to wait for completion of something
-done by one or more other contexts.
+The other kind of system calls behave like kernel relevant ISRs and the
+function signature is similar. On return, such system calls can decide to
+either return to the calling context or they can demand a context switch.
+In the former case, the system call behaves exactly like a simple system
+call. In the latter case, the calling context is suspended to the
+advantage of another, instead continued context. The typical use case is
+that the calling context needs to wait for completion of something done by
+one or more other contexts.
 
-The two IVOR implementations work together. The share the same C data
+The two IVOR implementations work together. They share the same C data
 structure definitions for execution contexts and context switches. If a
 context had been preempted and left (i.e. suspended) by an External
 Interrupt ISR then the same context can later become the target for a
-context switch and this way it'll be resumed. In the same way can a system
-call suspend a context and this context is later target of an IVOR #4 ISR,
-which decides on return for a context switch to that context. Furthermore,
-both IVORs can be commanded to create a new context on the fly and to
-continue with that.
+context switch demanded by a system call and this way it'll be resumed. In
+the same way can a system call suspend a context and this context is later
+target of an IVOR #4 ISR, which decides on return for a context switch to
+that context. Furthermore, both IVORs can be commanded to create a new
+context on the fly and to continue with that.
 
 In total, eight paths are possible for kernel relevant ISRs and system
 calls:
@@ -76,8 +85,8 @@ calls:
   had been suspended earlier by an ISR
 * The ISR can suspend the preempted context and resume a context, which
   had been suspended earlier by a system call
-* The system call can return to the calling context, like an ordinary
-  function call
+* The system call can return to the calling context, like a simple system
+  call or an ordinary function call
 * The system call can suspend the calling context and create and enter a
   new context
 * The system call can suspend the calling context and resume a context,
@@ -96,17 +105,10 @@ is got. The only observable difference to a normal function call is the
 (arbitrarily long) time span between entry into and exit from the system
 call.
 
-There is actually one more path through the IVOR handlers: A system call
-can be a so called simple one, which is a kernel unrelated system call. It
-can not command a context switch and will always return to the calling
-context. From the behavior such a simple system call is like an ordinary
-function call, it takes arguments and returns a result. The major
-difference to an ordinary function is its execution in supervisor mode.
-
 The added value of this TRK-USB-MPC5643L sample is that all of this
 functionality is offered through a C API. The handlers and the described
 mechanisms are implemented in assembler code but the client code can be
-implemented in proper C code. A complete, cooperative or preemptive
+implemented in sheer C code. A complete, cooperative or preemptive
 operating system kernel can be built on this platform without any
 additional assembler code. No inline assembler spoils your kernel
 implementation or makes it compiler dependent.
@@ -114,17 +116,18 @@ implementation or makes it compiler dependent.
 Furthermore, all context synchronization is done in the assembler code and
 the kernel implementation in C is a race condition free development
 environment. Once you've understood the C API of kernelBuilder, writing
-your own RTOS gets really simple.
+your own RTOS becomes really simple. (And you may have a look at the
+samples, a tiny RTOS is present, too.)
 
 === Registration of ISRs and system calls
 
 ISRs -- ordinary and kernel relevant -- are dynamically defined by the
 client code using the known mechanisms from the common startup code. A
 change has been made in the call for registering an ISR: A Boolean
-argument makes the distinction between ordinary and kernel relevant and the
-type of the ISR function pointer depends on this. Kernel relevant ISRs can
-no longer be of type `void (*)(void)` -- they require a signature, which
-permits commanding the context switch on return.
+argument makes the distinction between ordinary and kernel relevant ISRs
+and the type of the ISR function pointer depends on this. Kernel relevant
+ISRs can no longer be of type `void (*)(void)` -- they require a
+signature, which permits commanding the context switch on return.
 
 System call handlers are collected in two static, constant tables of
 addresses of those. There is a table for kernel relevant system calls and
@@ -152,14 +155,14 @@ them.footnote:[
 system call by index into this table, it doesn't need to known anything
 about the table contents. The normal design decision for the client code
 will be to provide a preprocessor macro or an inline function for each
-system call, which wraps the genric call `init_systemCall(idxSysCall)`
+system call, which wraps the generic call `init_systemCall(idxSysCall, ...)`
 with a meaningful name.]footnote:[
   Meanwhile it appears that at least for the simple system calls a
 run-time table configuration could be the better choice: Most I/O drivers
 will require to register some of these system calls in order to provide
-their APIs. The current centralized table requires cumbersome sharing of
-various handlers. Proper separation of driver implementation and kernel
-is complicated.]
+their APIs. The current centralized constant table requires careful code
+design in order to properly separate the implementation of the kernel and
+different drivers. The samples demonstrate how this can be done.]
 
 === Creation and deletion of execution contexts
 
@@ -176,7 +179,9 @@ context in suspended state is an ordinary function call,
 `ccx_createContext()`. It takes the pointer to a C function `uint32_t
 (*)(uint32_t)` and some stack space as principal arguments. The entry into
 this C function will become the very first instructions of the new context
-once it is resumed on return from a system call or kernel interrupt.
+once it is resumed on return from a system call or kernel interrupt. A
+variant of this function, `ccx_createContextShareStack()`, supports stack
+sharing beteen two or more contexts.
 
 TIP: Typical RTOS design: The kernel initialization routine calls function
 `ccx_createContext()` a number of times to create the requested number of
@@ -191,10 +196,10 @@ function" rather than "resume at where we had suspended". "on-the-fly"
 dates from an earlier design of the API, where the ISR/handler indeed
 specified the entry function on return. In the current design, the entry
 function (and other properties) are specified using the same kind of
-object as the suspended start and the same preparatory function is used to
-create this object. Effectively, the suspended context creation for later
-resume is no longer an essential element -- however still useful for
-typical constructs.]
+object as the suspended start and the same or similar preparatory
+functions are used to create this object. Effectively, the suspended
+context creation for later resume is no longer an essential element --
+however still useful for typical constructs.]
 
 On return from a system call or kernel interrupt, and if it comes to a
 context switch, the handler can not only decide to suspend the left
@@ -203,6 +208,12 @@ termination reinitializes the stack of the terminating context. The use
 tase is stack sharing; several contexts can share one stack and if one of
 the contexts terminates then the others using the same stack can be safely
 resumed.
+
+TODOC: Concept of on-the-fly start and termination. Use case for this and
+for suspended start
+
+TODOC: Stack sharing. Conditions, when sharing is possible, typical use
+case BCC tasks
 
 The implementation of an operating system kernel will have to deal with
 task creation and deletion. Our kernelBuilder doesn't do. It has no
@@ -217,15 +228,20 @@ scope and fully in the design-sphere of the client code.footnote:[
 allocation. It just means to leave the stack of a no longer used context
 in a well defined state to maintain it useable for other contexts.]
 
+TODOC: The next paragraphs require another section title, rearrange text
+
 kernelBuilder consists of the source code folder `code\startup` (known
 from the other samples, only the standard IVOR #4 handler has been
 removed) and folder `code\kernelBuilder`.
 
 The folders in folder `code\samples` contain a sample client
-implementation each. Folder `code\serial` is the known implementation of
-`printf` and only used by the client code. Package `serial` was extended
-by a wrapper around the driver API so that it is available to contexts
-running in user mode. The wrapper implements the same API as system calls.
+implementation each.footnote:[
+  With the exception of `common`, which common code of all or some of the
+samples.]
+  Folder `code\serial` is the known implementation of `printf` and only
+used by the client code. Package `serial` was extended by a wrapper around
+the driver API so that it is available to contexts running in user mode.
+The wrapper implements the same API as system calls.
 
 The build and debug scripts are a bit different to what you know from the
 other samples. They take an argument to select a client code sample;

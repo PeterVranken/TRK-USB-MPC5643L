@@ -85,7 +85,7 @@
  *   @param stackPointer
  * The initial value of the stack pointer. The client code will allocate sufficient stack
  * memory. This pointer will usually point at the first address beyond the allocated memory
- * chunk; our stacks grow downward to lower addresses.\n
+ * chunk; our stacks grow downwards to lower addresses.\n
  *   Note, each preemption of a context by an asynchronous External Interrupt requires
  * about 170 Byte of stack space. Another about 100 Byte need to be reserved for the system
  * call interrupt. If your application makes use of all interrupt priorities then you need
@@ -247,6 +247,43 @@ void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
 
 
 
+/// @todo There are use cases for a context, which is not prepare but started on the fly, although it has its own stack (or because it's the first one of a group of stack sharing contexts)
+/// @todo Double check implementation outline, document and have a test case
+#if 0
+void ccx_createContextOnTheFly
+                ( int_contextSaveDesc_t *pNewContextSaveDesc
+                , void *stackPointer
+                , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
+                , bool privilegedMode
+                )
+{
+    /* The new context references the same stack pointer save variable as the other one.
+       Both contexts save the stack pointer on suspend and on termination at the same
+       memory location. */
+    pNewContextSaveDesc->ppStack = &pNewContextSaveDesc->pStack;
+    
+    /* The storage of the stack pointer value is not used. We reference the according
+       variable from our peer, we share the stack with. */
+    /// @todo Double-check if we need an offset, a head room, in order to implement the task termination
+    pNewContextSaveDesc->pStack = stackPointer;
+    
+    /* Store the context entry function for later on-the-fly start of the context. */
+    pNewContextSaveDesc->fctEntryIntoContext = fctEntryIntoOnTheFlyStartedContext;
+    
+    /* The context can be started in user of in privileged mode. */
+    pNewContextSaveDesc->privilegedMode = privilegedMode;
+    
+    /* The remaining fields don't care. They will be written on start and maybe later on
+       suspend of this context. */
+    pNewContextSaveDesc->pStackOnEntry = NULL;
+    pNewContextSaveDesc->idxSysCall = 0;
+
+} /* End of ccx_createContextOnTheFly */
+#endif
+
+
+
+
 #if INT_USE_SHARED_STACKS == 1
 /**
  * Create a new execution context for on-the-fly start and which shares the stack with
@@ -286,9 +323,9 @@ void ccx_createContextShareStack
                 , bool privilegedMode
                 )
 {
-    /* The new stack references the same stack pointer save variable as the other one. Both
-       contexts save the stack pointer on suspend and on termination at the same memory
-       location. */
+    /* The new context references the same stack pointer save variable as the other one.
+       Both contexts save the stack pointer on suspend and on termination at the same
+       memory location. */
     pNewContextSaveDesc->ppStack = pPeerContextSaveDesc->ppStack;
     
     /* The storage of the stack pointer value is not used. We reference the according
