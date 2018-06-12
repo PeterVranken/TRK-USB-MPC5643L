@@ -164,56 +164,125 @@ their APIs. The current centralized constant table requires careful code
 design in order to properly separate the implementation of the kernel and
 different drivers. The samples demonstrate how this can be done.]
 
-=== Creation and deletion of execution contexts
+=== What is a context in kernelBuilder?
+
+In kernelBuilder, a context is represented by an object of type
+`int_contextSaveDesc_t`. Not the register contents, which constitute an
+execution context, are stored in this object but the address of where they
+are stored.footnote:[
+  kernelBuilder stores the register contents on the stack, so storing the
+address of where they are stored actually means storing the current stack
+pointer value in the context object.]
+  This information is maintained and updated by the IVOR handlers when it
+comes to a context switch.
+
+By principle, the execution of a context starts with entry into a C
+function. Two typical use cases exist for contexts: forever running
+contexts and single-shot contexts.
+
+The former enter the entry function once but never leave it by return;
+there will be an infinite loop implemented in the function, which controls
+the tasks implemented in the context.
+
+The latter execute their tasks implemented in the entry function and
+return from it. Returning from the entry function means terminating the
+context. These contexts typically expect that the entry function is
+repeatedly executed, from beginning till end, and either regularly or
+triggered by some kind of event.
+
+To support the initial and repeated start of a context, the entry function
+is element of the context object. Finally, the execution mode is specified
+in the object. A context can be executed in either supervisor or user
+mode.
+
+Both kinds of contexts can be suspended and later resumed - at any point
+in time and as often as suitable. kernelBuilder makes no difference between
+both kinds with respect to suspend and resume (i.e. normal context
+switches). Only start and termination make a difference. See next section.
+
+=== Creating and starting execution contexts
 
 We saw how to switch between different execution contexts. But where do
-they initially come from? And where do they go if no longer needed?
+they initially come from?
 
 One particular execution context is always there. It's the execution
 context from the startup code, passed on to C function `main`. To make use
 of the context switching capabilities of the IVOR handlers, we need at
 minimum one other context:
 
-kernelBuilder offers the service to create a new context. Creating a
-context in suspended state is an ordinary function call,
-`ccx_createContext()`. It takes the pointer to a C function `uint32_t
-(*)(uint32_t)` and some stack space as principal arguments. The entry into
-this C function will become the very first instructions of the new context
-once it is resumed on return from a system call or kernel interrupt. A
-variant of this function, `ccx_createContextShareStack()`, supports stack
-sharing beteen two or more contexts.
+kernelBuilder offers the service to create a new context. Three functions
+exist:
+
+* `ccx_createContextOnTheFly()` expects a C entry function, the execution
+  mode (supervisor or user) and a stack area as arguments. It initializes
+  a context object such that it can be started (not resumed!) later, when
+  a kernel relevant handler commands a context switch on return. (This way
+  to start a context is called on the fly.) In case of single-shot tasks,
+  the context object can be reused as often as suitable to re-start the
+  same single-shot context footnote:[
+    It needs to be granted that the previous shot has properly terminated
+  prior to restart a single-shot context.]
+* `ccx_createContextShareStack()` is nearly the same, but the stack
+  specification is made indirectly by reference to another, already
+  initialized context: The two will use the same stack area
+* `ccx_createContext()` expects the same arguments as the first function.
+  It initializes the context object and, additionally, it prepares the
+  contents of the specified stack area such as if the context were already
+  running and had then been suspended again - immediately before entering
+  the C entry function. The context doesn't need to be started an more
+  
+`ccx_createContextOnTheFly()` can be used for both, infinitely running
+and single-shot contexts.
+
+`ccx_createContextShareStack()` is useful only for single-shot tasks
+because of the stack sharing; a context, which inherits the stack from
+another one needs to terminate before the other one may be resumed again.
+
+The use case for `ccx_createContext` are RTOS designs, where all or some
+of the contexts are declared and created prior to starting the kernel. The
+contexts are created in started but then suspended state and the scheduler
+doesn't need to take any care when commanding a context switch to one of
+these contexts. When using `ccx_createContextOnTheFly()` the scheduler
+needs to distinguish between starting a context (first context switch to
+it) and resuming it (subsequent context switches to it)
 
 TIP: Typical RTOS design: The kernel initialization routine calls function
 `ccx_createContext()` a number of times to create the requested number of
 tasks beforehand. From the system timer interrupt, when the particular due
 times are reached, these contexts are resumed.
 
-Creation of a context can be done on the fly, too. On return from a system
-call or kernel interrupt, the handler can specify a C function to enter as
-a new context.footnote:[
-TODOC: The term on-the-fly relates to "Force start with entry into entry
-function" rather than "resume at where we had suspended". "on-the-fly"
-dates from an earlier design of the API, where the ISR/handler indeed
-specified the entry function on return. In the current design, the entry
-function (and other properties) are specified using the same kind of
-object as the suspended start and the same or similar preparatory
-functions are used to create this object. Effectively, the suspended
-context creation for later resume is no longer an essential element --
-however still useful for typical constructs.]
+The motivation of having `ccx_createContextOnTheFly()` although
+`ccx_createContext()` can do the same, and even more convenient, is overhead.
+Using `ccx_createContextOnTheFly()` is much cheaper in terms of CPU
+instructions and the slightly increased complexity of the scheduler logic
+will surely pay off for frequently started single-shot contexts.
+
+=== Termination of execution contexts
 
 On return from a system call or kernel interrupt, and if it comes to a
 context switch, the handler can not only decide to suspend the left
-context but it can let it terminate, too. The difference is that
-termination reinitializes the stack of the terminating context. The use
-tase is stack sharing; several contexts can share one stack and if one of
-the contexts terminates then the others using the same stack can be safely
-resumed.
+context but it can let it terminate, too. Note, kernelBuilder is not a
+scheduler. Evidently, a scheduler implementation can easily let a context
+terminate by switching to another context and never resuming the
+terminated context. 
+
+The context termination service offered by kernelBuilder only adds a
+subtle thing: It reinitializes the stack of the terminating context. The
+use cases are single-shot contexts and stack sharing. Only with
+reinitialized stack it is safely possible to re-start a single-shot task
+later. And if several contexts share one stack and if one of them
+terminates and properly cleans up its portion of the stack then the others
+using the same stack can be safely resumed.
 
 TODOC: Concept of on-the-fly start and termination. Use case for this and
 for suspended start
 
 TODOC: Stack sharing. Conditions, when sharing is possible, typical use
 case BCC tasks
+
+TODOC: Return from entry function and required scheduler actions
+
+=== Deletion of contexts
 
 The implementation of an operating system kernel will have to deal with
 task creation and deletion. Our kernelBuilder doesn't do. It has no
@@ -226,9 +295,10 @@ context or whether it returns it into an object pool for re-use is out of
 scope and fully in the design-sphere of the client code.footnote:[
   Even context termination is not connected to pooling and memory
 allocation. It just means to leave the stack of a no longer used context
-in a well defined state to maintain it useable for other contexts.]
+in a well defined state to maintain it usable for re-starting the same or
+resuming other, stack-sharing contexts.]
 
-TODOC: The next paragraphs require another section title, rearrange text
+=== TODOC: The next paragraphs require another section title, rearrange text
 
 kernelBuilder consists of the source code folder `code\startup` (known
 from the other samples, only the standard IVOR #4 handler has been
@@ -236,8 +306,8 @@ removed) and folder `code\kernelBuilder`.
 
 The folders in folder `code\samples` contain a sample client
 implementation each.footnote:[
-  With the exception of `common`, which common code of all or some of the
-samples.]
+  With the exception of `common`, which contains common code of all or
+some of the samples.]
   Folder `code\serial` is the known implementation of `printf` and only
 used by the client code. Package `serial` was extended by a wrapper around
 the driver API so that it is available to contexts running in user mode.
