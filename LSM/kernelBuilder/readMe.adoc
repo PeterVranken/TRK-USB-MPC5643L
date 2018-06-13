@@ -200,7 +200,7 @@ in time and as often as suitable. kernelBuilder makes no difference between
 both kinds with respect to suspend and resume (i.e. normal context
 switches). Only start and termination make a difference. See next section.
 
-=== Creating and starting execution contexts
+=== Creation and start of execution contexts
 
 We saw how to switch between different execution contexts. But where do
 they initially come from?
@@ -257,30 +257,163 @@ Using `ccx_createContextOnTheFly()` is much cheaper in terms of CPU
 instructions and the slightly increased complexity of the scheduler logic
 will surely pay off for frequently started single-shot contexts.
 
+=== Context switching
+
+External Interrupts and system calls are considered events, which may
+yield a context switch. Most prominent example is the timer interrupt of a
+typical RTOS. The handler will count the occurrences and compare with the
+due time of different configured tasks. If the due time of a task is
+reached then the context will be started or resumed, which implements the
+task.
+
+The concept of kernelBuilder is that handlers for these events, which are
+implemented client code, do all the organizational work, which is required
+to keep track of which context should be served next and on return they
+will tell kernelBuilder's underlying assembler code what to do.
+
+The return value of a handler indicates whether or not to do a context
+switch. If a context switch is wanted then it'll further indicate whether
+to either suspend or terminate the left context and whether to start or
+resume the entered context. 
+
+All of this requires the specification of two context objects, one for the
+left context and in order to say where to store the information about
+left context and the second one for the entered context. These two objects
+are returned by reference by the handler.
+
+The "organizational work" inside the handlers, e.g. update of task lists,
+maintenance of pointer to active task, etc., happens necessarily before
+(inside the handler) the taken decision, the yielded context switch can be
+performed (after return from the handler). This is no issue because of the
+race condition free implementation paradigm for the client scheduler code.
+All kernel relevant handler invocations, External Interrupts and system
+calls, are serialized. A handler will never be preempted by another one
+and even less by a context under control of the scheduler. kernelBuilder
+applies the priority ceiling protocol for doing so, which means that
+kernel unrelated External Interrupts can still preempt all the scheduler
+code. (Therefore they must not make use of scheduler functions without
+additional, explicit synchronization code.)
+
+A handler, which requests a context switch on return can furthermore
+specify a result value for the entered context; if this context is started
+then the value is the function argument of the context entry function, if
+it had suspended in a system call and is now resumed then the value is the
+return value from the system call. Otherwise the value won't have an effect.
+
 === Termination of execution contexts
 
-On return from a system call or kernel interrupt, and if it comes to a
+On return from a system call or kernel relevant interrupt, and if it comes to a
 context switch, the handler can not only decide to suspend the left
-context but it can let it terminate, too. Note, kernelBuilder is not a
-scheduler. Evidently, a scheduler implementation can easily let a context
-terminate by switching to another context and never resuming the
-terminated context. 
+context but it can let it terminate, too.
 
-The context termination service offered by kernelBuilder only adds a
-subtle thing: It reinitializes the stack of the terminating context. The
-use cases are single-shot contexts and stack sharing. Only with
-reinitialized stack it is safely possible to re-start a single-shot task
-later. And if several contexts share one stack and if one of them
-terminates and properly cleans up its portion of the stack then the others
-using the same stack can be safely resumed.
+The context termination service offered by kernelBuilder has nothing to do
+with deletion or destruction of contexts or stacks, it only adds a subtle
+thing to the demanded context switch: It reinitializes the stack of the
+terminating context. The use cases are single-shot contexts and stack
+sharing. Only with reinitialized stack it is safely possible to re-start a
+single-shot context later. And if several contexts share one stack and if
+one of them terminates and properly cleans up its portion of the stack
+then the others using the same stack can be safely resumed.
 
-TODOC: Concept of on-the-fly start and termination. Use case for this and
-for suspended start
+Note, context start and termination will most likely be applied to the
+implementation of single-shot tasks. In which case the context descriptor
+object remains valid even after context termination: The same object can
+be used just like that to command a start-of-context at next due time of
+the single-shot task.
+
+Note, if a context has been terminated on return from a handler then the
+according context cannot be resumed again but it can be re-started.
+
+==== Return from the context entry function
+
+The context entry function can be left with return. It can even return a
+value. Leaving the entry function is a totally different thing than
+commanding context termination at return from a kernel relevant IVOR
+handler but both things are logically connected and this connection needs
+to be understood for an actual scheduler implementation.
+
+When the entry function is left then code execution branches into a
+callback, a global notification function, which is named
+`int_fctOnContextEnd()`. It's argument is the value returned from the
+entry function. This function is executed still in the same context as the
+left entry function and executing `int_fctOnContextEnd()` needs to the
+virtually last thing a context can do. However, this function is not an
+IVOR handler, it is not executed in the scheduler context, it can not
+command context termination on return. Instead, the client code will
+likely put a system call in the body of this function will has the meaning
+"signal end of task". The system call implementation -- an IVOR handler --
+will update the scheduler data structure to reflect the changed task state
+and command the task termination on return in order to do the stack
+cleanup.
+
+Note, the callback is reentrant and shared by all contexts. Regardless,
+the client code doesn't need to implement a mechanism for signaling, which
+particular context invoked it and is about to terminate: The scheduler is
+as said race condition free and if we get into the hypothetic system call
+"signal end of task" then we can be sure that it is always the currently
+active task, which is the one. Whichever that will be -- but the scheduler
+knows of course.
+
+=== Task sharing
 
 TODOC: Stack sharing. Conditions, when sharing is possible, typical use
 case BCC tasks
 
-TODOC: Return from entry function and required scheduler actions
+=== Typical context life cycles
+
+There are typical scenarios for contexts and context descriptor objects.
+
+1. All tasks are declared beforehand. The initialization code will use
+`ccx_createContext()` an according number of times to create all context
+descriptor objects. The new contexts are created in suspended state and
+can be resumed by the scheduler on whatever events.
++
+The context entry function is never left, the tasks are implemented as
+forever spinning loops, each cycle likely connected to a real time event.
+The loop body makes a system call as very last statement that waits for
+the event of interest.
+
+2. The maximum number of tasks is specified beforehand. A pool of tasks
+with individual stack areas is created once. A context descriptor object
+is created for each, preliminarily stating `NULL` as entry function.
++
+A system call is offered to start a task. The task entry function is
+argument to the call. It is stored in an otherwise ready to use context
+object taken from the pool. The system call handler is left with
+commanding the switch to the new context.
++
+The task is ended by making a dedicated system call. The system call
+handler returns the context object into the pool and on return it commands
+the termination of the context and the switch to any other context (maybe
+the idle task). The termination request ensures that the stack area
+specified in the context object remains properly reusable for future
+cycles.
++
+Note, it doesn't matter whether the system call for termination is still
+inside the context entry function or if this function is left and the
+system call is instead placed in the end-of-context callback
+`int_fctOnContextEnd()` -- the former solution saves a few instructions
+but moves the responsibility of making the system call to the user.
+
+3. Task pool without end-of-task notification. Scenario 2. can be
+implemented without applying kernelBuilder's context termination support,
+too. A scheduler can offer a system call to end a task and it implements
+it by only putting the context object back into the pool. It'll simply
+never consider it again for resume. What differs is the code
+required when later reusing a context object from the pool: Since we didn't do
+the stack cleanup, we need now to reinitialize the context object entirely,
+e.g. using `ccx_createContextOnTheFly()`
++
+Choosing scenario 2. and 3. doesn't make a significant difference in
+performance. If the system call is placed into the end-of-context callback
+then 2. is maybe a bit more elegant and less error-prone. 2. basically
+permitts using stack sharing for certain sub-sets of contexts, while this
+would be inhibited in 3.
+
+4. The scenarios can be mixed. A number of tasks can be predefined, others
+can be pooled. Some tasks can be implemented by never left, forever
+spinning entry functions, others can be implemented as single-shot
+contexts, which terminate by leaving the context entry function.
 
 === Deletion of contexts
 
