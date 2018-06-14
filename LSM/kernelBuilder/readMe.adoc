@@ -12,9 +12,31 @@
 
 This sample offers a pair of IVOR #4 (External Interrupt) and IVOR #8
 (System Call) handlers, which are designed to support the build of a
-single core operating system kernel for the NXP MPC5643L (e200z4). The IVOR #4
-handler supports both, ordinary interrupt service routines (ISR) and
-kernel relevant ISRs.
+single core operating system kernel for the NXP MPC5643L (e200z4). The
+operation is entirely connected to the handling of asynchronous (External)
+and software interrupts.
+
+The e200z4 core has one common handler each for External Interrupts and
+for system calls. kernelBuilder implements these handlers such that they
+branch into sub-handlers, which are implemented in the client code. By
+configuration the client code can assign different handlers to different
+External Interrupt sources and to different system calls.footnote:[
+  The first function argument of a system call is the index into the
+configuration table of handlers.]
+  The sub-handlers in the client code can communicate with the common code
+inside kernelBuilder in order to let it start, suspend, resume, and
+terminate different contexts.
+
+The complete software, kernelBuilder plus client code, can thus be
+understood as an event driven state machine. The different External
+Interrupts and the different system calls denote events, which are
+recognized and processed by the various handlers and which lead to an
+according sequence of context switches.
+
+The IVOR #4 handler for the External Interrupts supports ordinary
+interrupt service routines (ISR) and kernel relevant ISRs. When
+registering its ISRs, the client code will specify which category the
+handlers belong to.
 
 The ordinary ISRs behave as usual, they preempt an execution context at
 arbitrary code location, do their job and continue the same context at the
@@ -100,15 +122,15 @@ context-switching system call, then the handler can provide a uint32_t
 value, which is returned to the resumed context as function result of the
 system call, which had made it suspended. Consequently, from the
 perspective of the system calling context a system call always looks like
-an ordinary function call -- it is invoked and on return a function result
-is got. The only observable difference to a normal function call is the
-(arbitrarily long) time span between entry into and exit from the system
-call.
+an ordinary function call -- it is invoked with a number of arguments and
+on return a function result is got. The only observable difference to a
+normal function call is the (arbitrarily long) time span between entry
+into and exit from the system call.
 
 The added value of this TRK-USB-MPC5643L sample is that all of this
-functionality is offered through a C API. The handlers and the described
-mechanisms are implemented in assembler code but the client code can be
-implemented in sheer C code. A complete, cooperative or preemptive
+functionality is offered through a C API. The IVOR handlers and the
+described mechanisms are implemented in assembler code but the client code
+can be implemented in sheer C code. A complete, cooperative or preemptive
 operating system kernel can be built on this platform without any
 additional assembler code. No inline assembler spoils your kernel
 implementation or makes it compiler dependent.
@@ -126,8 +148,8 @@ client code using the known mechanisms from the common startup code. A
 change has been made in the call for registering an ISR: A Boolean
 argument makes the distinction between ordinary and kernel relevant ISRs
 and the type of the ISR function pointer depends on this. Kernel relevant
-ISRs can no longer be of type `void (*)(void)` -- they require a
-signature, which permits commanding the context switch on return.
+ISRs can no longer be of type `void (*)(void)` -- they require a more
+complex signature, which permits commanding the context switch on return.
 
 System call handlers are collected in two static, constant tables of
 addresses of those. There is a table for kernel relevant system calls and
@@ -150,19 +172,20 @@ Dynamic adding of table entries is not possible for system calls at
 run-time; the set of system calls is considered a finalized design
 decision for the aimed scheduler/kernel/RTOS. The tables are declared
 extern to the assembler code and the client code is in charge to compile
-them.footnote:[
-  The assembler implementation of the IVOR #8 handler invokes a particular
-system call by index into this table, it doesn't need to known anything
-about the table contents. The normal design decision for the client code
-will be to provide a preprocessor macro or an inline function for each
-system call, which wraps the generic call `init_systemCall(idxSysCall, ...)`
-with a meaningful name.]footnote:[
+them.
+
+kernelBuilder offers the API `init_systemCall(idxSysCall, ...)` to invoke
+the system call handler at given index in the table. The normal design
+decision for the client code will be to provide a preprocessor macro or an
+inline function for each system call, which wraps the generic call
+`init_systemCall(idxSysCall, ...)` with a meaningful name.footnote:[
   Meanwhile it appears that at least for the simple system calls a
 run-time table configuration could be the better choice: Most I/O drivers
 will require to register some of these system calls in order to provide
-their APIs. The current centralized constant table requires careful code
-design in order to properly separate the implementation of the kernel and
-different drivers. The samples demonstrate how this can be done.]
+their APIs. The current, centralized constant table requires careful code
+design in order to achieve proper separation of the implementation of
+kernel and of the different drivers. The samples demonstrate how this can
+be done.]
 
 === What is a context in kernelBuilder?
 
@@ -198,7 +221,7 @@ mode.
 Both kinds of contexts can be suspended and later resumed - at any point
 in time and as often as suitable. kernelBuilder makes no difference between
 both kinds with respect to suspend and resume (i.e. normal context
-switches). Only start and termination make a difference. See next section.
+switches). Only start and termination make a difference. See next sections.
 
 === Creation and start of execution contexts
 
@@ -229,7 +252,7 @@ exist:
   It initializes the context object and, additionally, it prepares the
   contents of the specified stack area such as if the context were already
   running and had then been suspended again - immediately before entering
-  the C entry function. The context doesn't need to be started an more
+  the C entry function. The context doesn't need to be started any more
   
 `ccx_createContextOnTheFly()` can be used for both, infinitely running
 and single-shot contexts.
@@ -263,13 +286,14 @@ External Interrupts and system calls are considered events, which may
 yield a context switch. Most prominent example is the timer interrupt of a
 typical RTOS. The handler will count the occurrences and compare with the
 due time of different configured tasks. If the due time of a task is
-reached then the context will be started or resumed, which implements the
-task.
+reached then the context, which implements the task, will be started or
+resumed.
 
 The concept of kernelBuilder is that handlers for these events, which are
-implemented client code, do all the organizational work, which is required
-to keep track of which context should be served next and on return they
-will tell kernelBuilder's underlying assembler code what to do.
+implemented in the client code, do all the organizational work, which is
+required to keep track of which context should be served next and on
+return they will tell kernelBuilder's underlying assembler code what to
+do.
 
 The return value of a handler indicates whether or not to do a context
 switch. If a context switch is wanted then it'll further indicate whether
@@ -277,25 +301,33 @@ to either suspend or terminate the left context and whether to start or
 resume the entered context. 
 
 All of this requires the specification of two context objects, one for the
-left context and in order to say where to store the information about
+left context and in order to say where to store the information about the
 left context and the second one for the entered context. These two objects
 are returned by reference by the handler.
 
 The "organizational work" inside the handlers, e.g. update of task lists,
-maintenance of pointer to active task, etc., happens necessarily before
-(inside the handler) the taken decision, the yielded context switch can be
-performed (after return from the handler). This is no issue because of the
-race condition free implementation paradigm for the client scheduler code.
-All kernel relevant handler invocations, External Interrupts and system
-calls, are serialized. A handler will never be preempted by another one
-and even less by a context under control of the scheduler. kernelBuilder
-applies the priority ceiling protocol for doing so, which means that
-kernel unrelated External Interrupts can still preempt all the scheduler
-code. (Therefore they must not make use of scheduler functions without
-additional, explicit synchronization code.)
+priority decisions, maintenance of pointer to active task, etc., happens
+necessarily before (inside the handler) the taken decision, i.e. the
+yielded context switch, can be performed (after return from the handler).
+This is no issue because of the race condition free implementation
+paradigm for the client scheduler code. All kernel relevant handler
+invocations, External Interrupts and system calls, are serialized. A
+handler will never be preempted by another one and even less by a context
+under control of the scheduler. 
+
+kernelBuilder applies the priority ceiling protocol for serializing the
+handler invocations, which means that kernel unrelated External Interrupts
+can still preempt all the scheduler code. (Therefore they must not make
+use of scheduler functions without additional, explicit synchronization
+code.)
+
+NOTE: Because of the serialization of all kernel relevant handlers, any
+system call handler can be sure that the calling context always is the
+very one, which had been last recently started or resumed by the
+scheduler.
 
 A handler, which requests a context switch on return can furthermore
-specify a result value for the entered context; if this context is started
+specify a uint32_t result value for the entered context; if this context is started
 then the value is the function argument of the context entry function, if
 it had suspended in a system call and is now resumed then the value is the
 return value from the system call. Otherwise the value won't have an effect.
@@ -327,37 +359,98 @@ according context cannot be resumed again but it can be re-started.
 ==== Return from the context entry function
 
 The context entry function can be left with return. It can even return a
-value. Leaving the entry function is a totally different thing than
-commanding context termination at return from a kernel relevant IVOR
+uint32_t value. Leaving the entry function is a totally different thing
+than commanding context termination at return from a kernel relevant IVOR
 handler but both things are logically connected and this connection needs
 to be understood for an actual scheduler implementation.
 
 When the entry function is left then code execution branches into a
 callback, a global notification function, which is named
-`int_fctOnContextEnd()`. It's argument is the value returned from the
+`int_fctOnContextEnd()`. Its argument is the value returned from the
 entry function. This function is executed still in the same context as the
-left entry function and executing `int_fctOnContextEnd()` needs to the
-virtually last thing a context can do. However, this function is not an
-IVOR handler, it is not executed in the scheduler context, it can not
-command context termination on return. Instead, the client code will
-likely put a system call in the body of this function will has the meaning
-"signal end of task". The system call implementation -- an IVOR handler --
-will update the scheduler data structure to reflect the changed task state
-and command the task termination on return in order to do the stack
-cleanup.
+left entry function and executing `int_fctOnContextEnd()` is the
+virtually last thing a context can do.footnote:[
+  Returning from the end-of-context notification callback
+`int_fctOnContextEnd()` surely means a crash.]
+  However, this function is not an IVOR handler, it is not executed in the
+scheduler context, it can not command context termination on return.
+Instead, the implementation of the callback in the client code will likely
+contain a system call which has the meaning "signal end of task". The
+system call implementation -- again an IVOR handler -- will update the
+scheduler's data structures to reflect the changed task state and command the
+context termination on return in order to do the stack cleanup.
 
 Note, the callback is reentrant and shared by all contexts. Regardless,
 the client code doesn't need to implement a mechanism for signaling, which
 particular context invoked it and is about to terminate: The scheduler is
 as said race condition free and if we get into the hypothetic system call
 "signal end of task" then we can be sure that it is always the currently
-active task, which is the one. Whichever that will be -- but the scheduler
-knows of course.
+active task, which is the calling one. The scheduler knows of course,
+which one that is.
 
-=== Task sharing
+=== Stack sharing
 
-TODOC: Stack sharing. Conditions, when sharing is possible, typical use
-case BCC tasks
+Basically, any context will have its own stack area. This enables
+arbitrary switching between all contexts, any one can be suspended to the
+advantage of any other. The only drawback is the memory consumption. For
+the capacity of the stack of a context one needs to consider not only the
+consumption of the context's entry and all its sub-functions -- there
+needs to be an additional headroom for preemptions by asynchronous
+interrupts.
+
+The e200z4 core uses the normal stack pointer on entry into an ISR and it
+has up to 15 levels of preemption by External Interrupts. For sake of
+performance and simplicity, our IVOR #4 handler creates on entry a worst
+case stack frame, which already considers the space for a possible context
+switch on return (as opposed to enlarging the stack frame in case of an
+actually happening context switch). This stack frame has a size of about
+170 Byte. If all 15 interrupt levels are in use then this would sum up to
+a required headroom of about 2.5 kByte -- even if you will never be able
+to create a test case, which proves this.
+
+This headroom has to be spent for any stack. Certain sub-sets of context
+can use one and the same stack and the headroom applies only once to all
+contexts in the set. This denotes the possible memory saving.
+
+Note: Stack sharing is not at all a performance improvement in terms of
+execution speed. It just saves the stack headroom memory.
+
+Two contexts A and B can share the stack, if the scheduling strategy
+ensures
+
+* that B becomes active only when and while A has suspended and
+* that B has terminated before A is resumed again.
+
+This comes normally down to single-shot contexts of different priority,
+which do not suspend voluntarily, but this is not a must. A could well be
+an infinitely spinning context, which cyclically suspends. And even B may
+voluntarily suspend if only the scheduler keeps track that it must not
+activate A during the time B is suspended (but it may resume C, D, E,
+...).
+
+The standard use case of stack sharing is a simple, priority controlled
+RTOS not offering event passing between its tasks. This is often referred
+to as tasks of Basic Conformance Class. The tasks A, B, C, ..., have
+rising priorities. B can preempt A but never vice versa, C can preempt A
+and B but never become preempted by them and so on. None of the tasks
+needs to suspend voluntarily -- there's no event to wait for -- so the
+conditions above are fulfilled for all pairs of contexts and all of them
+can safely use the same stack. These considerations include even the
+startup context, which will become the never terminating idle task -- and
+the entire RTOS implementation can use the ordinary, normal stack from the
+startup code.
+
+With kernelBuilder, stack sharing is implemented through initialization of
+context descriptor objects. When initializing the object one either
+specifies the initial stack pointer value for the new context or another,
+already initialized context object -- now the second context inherits the
+stack from the first one. This can be chained to share the stack with more
+contexts. In the BCC example we would start initializing the idle task's
+descriptor and then pass it for stack sharing to the initialization call
+of all the tasks' context objects.
+
+TODOC: Footnote to explain how to initialize the idle context object. This
+could be considered confusing since idle is already up and running.
 
 === Typical context life cycles
 
@@ -366,10 +459,10 @@ There are typical scenarios for contexts and context descriptor objects.
 1. All tasks are declared beforehand. The initialization code will use
 `ccx_createContext()` an according number of times to create all context
 descriptor objects. The new contexts are created in suspended state and
-can be resumed by the scheduler on whatever events.
+can be resumed by the scheduler on whatever event.
 +
 The context entry function is never left, the tasks are implemented as
-forever spinning loops, each cycle likely connected to a real time event.
+forever spinning loops, each cycle likely connected to a real-time event:
 The loop body makes a system call as very last statement that waits for
 the event of interest.
 
@@ -404,7 +497,7 @@ required when later reusing a context object from the pool: Since we didn't do
 the stack cleanup, we need now to reinitialize the context object entirely,
 e.g. using `ccx_createContextOnTheFly()`
 +
-Choosing scenario 2. and 3. doesn't make a significant difference in
+Choosing scenario 2. or 3. doesn't make a significant difference in
 performance. If the system call is placed into the end-of-context callback
 then 2. is maybe a bit more elegant and less error-prone. 2. basically
 permitts using stack sharing for certain sub-sets of contexts, while this
@@ -413,72 +506,24 @@ would be inhibited in 3.
 4. The scenarios can be mixed. A number of tasks can be predefined, others
 can be pooled. Some tasks can be implemented by never left, forever
 spinning entry functions, others can be implemented as single-shot
-contexts, which terminate by leaving the context entry function.
+contexts, which terminate by returning from the context entry function.
 
 === Deletion of contexts
 
 The implementation of an operating system kernel will have to deal with
 task creation and deletion. Our kernelBuilder doesn't do. It has no
 concept of memory allocation, new and free, pools of objects, etc.
-Therefore you will not find any support of context deletion. For the IVOR
-handlers this is simply irrelevant; a no longer required context will just
-never be commanded again as target for resume. Whether the client code
-uses a free method to release the memory connected to a no longer used
-context or whether it returns it into an object pool for re-use is out of
-scope and fully in the design-sphere of the client code.footnote:[
+Therefore you will not find any support of context object deletion. For
+the IVOR handlers this is simply irrelevant; a no longer required context
+will just never be commanded again as target for resume. Whether the
+client code uses a free method to release the memory connected to a no
+longer used context or whether it returns it into an object pool for
+re-use is out of scope and fully in the design-sphere of the client
+code.footnote:[
   Even context termination is not connected to pooling and memory
 allocation. It just means to leave the stack of a no longer used context
 in a well defined state to maintain it usable for re-starting the same or
 resuming other, stack-sharing contexts.]
-
-=== TODOC: The next paragraphs require another section title, rearrange text
-
-kernelBuilder consists of the source code folder `code\startup` (known
-from the other samples, only the standard IVOR #4 handler has been
-removed) and folder `code\kernelBuilder`.
-
-The folders in folder `code\samples` contain a sample client
-implementation each.footnote:[
-  With the exception of `common`, which contains common code of all or
-some of the samples.]
-  Folder `code\serial` is the known implementation of `printf` and only
-used by the client code. Package `serial` was extended by a wrapper around
-the driver API so that it is available to contexts running in user mode.
-The wrapper implements the same API as system calls.
-
-The build and debug scripts are a bit different to what you know from the
-other samples. They take an argument to select a client code sample;
-kernelBuilder itself is an infra-structure only, it is not a
-self-contained, flashable executable, you always need to compile it
-together with some client code.
-
-The samples demonstrate preemptive and cooperative scheduling.
-
-To see how the sample works you need to open a terminal software on your
-host machine. You can find a terminal as part of the CodeWarrior Eclipse
-IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal".
-
-Open the serial port, which is offered by the TRK-USB-MPC5643L. (On
-Windows, open the Computer Management and go to the Device Manager to find
-out.) The Baud rate has been selected as 115200 Bd in file
-`code\mai_main.c`, 8 Bit, no parity, 1 start and stop Bit. The sequence
-\r\n is used as end of line character. The terminal should print the
-messages, which are regularly sent by the sample code running on the
-evaluation board.
-
-=== Book E versus VLE
-
-kernelBuilder is written in both, Book E and VLE assembler. The build
-scripts and the Eclipse configuration support both instruction sets.
-
-The makefile takes an additional switch on the command line, state
-`INSTR=BOOK_E` (default) or `INSTR=VLE` to build the software in the
-wanted instruction set.
-
-In the Eclipse project, all build and debug configurations have been
-duplicated, once for each instruction set. The TCL scripts, which can be used
-in CodeWarrior's debugger shell window to flash the software, have got
-another argument to select the instruction set, too.
 
 == Tools
 
@@ -570,6 +615,9 @@ the `make.exe` from the compiler installation archive. The makefile is
 designed to run on different host systems but has been tested with Windows
 7 only.
 
+TODOC: Put APP= and INSTR= into the sample command lines to make these
+details more prominent
+
 === Flashing and debugging
 
 The sample code can be flashed and debugged with the CodeWarrior IDE.
@@ -614,12 +662,55 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 
 == Code architecture
 
-This sample builds on the basic sample "startup" (and on startup-VLE,
-evidently) located in a sibling folder. "kernelBuilder" can be compiled
-for both, Book E and VLE instruction set. All build settings and the
-software architecture are identical to "startup". Please refer to
+kernelBuilder consists of the source code folders `code\startup` and
+`code\kernelBuilder`. Folder `startup` combines the code known from the
+other samples "startup" and "startup-VLE", only the standard IVOR #4
+handler has been removed. Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
 for details.
+
+The sub-folders of folder `code\samples` contain a sample client
+implementation each.footnote:[
+  With the exception of `common`, which contains common code of all or
+some of the samples.]
+  Folder `code\serial` is the known implementation of `printf` and only
+used by the client code. Package `serial` was extended by a wrapper around
+the driver API so that it is available to contexts running in user mode.
+The wrapper implements the same API as system calls.
+
+The build and debug scripts are a bit different to what you know from the
+other samples. They take an argument to select a client code sample;
+kernelBuilder itself is an infra-structure only, it is not a
+self-contained, flashable executable, you always need to compile it
+together with some client code.
+
+The samples demonstrate preemptive and cooperative scheduling.
+
+To see how a sample works you need to open a terminal software on your
+host machine. You can find a terminal as part of the CodeWarrior Eclipse
+IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal".
+
+Open the serial port, which is offered by the TRK-USB-MPC5643L. (On
+Windows, open the Computer Management and go to the Device Manager to find
+out.) The Baud rate has been selected as 115200 Bd in file
+`code\samples\*\mai_main.c`, 8 Bit, no parity, 1 start and stop Bit. The
+sequence \r\n is used as end of line character. The terminal should print
+the messages, which are regularly sent by the sample code running on the
+evaluation board.
+
+=== Book E versus VLE
+
+kernelBuilder is written in both, Book E and VLE assembler. The build
+scripts and the Eclipse configuration support both instruction sets.
+
+The makefile takes an additional switch on the command line, state
+`INSTR=BOOK_E` (default) or `INSTR=VLE` to build the software in the
+wanted instruction set.
+
+In the Eclipse project, all build and debug configurations have been
+duplicated, once for each instruction set. The TCL scripts, which can be used
+in CodeWarrior's debugger shell window to flash the software, have got
+another argument to select the instruction set, too.
 
 === API
 
@@ -658,7 +749,7 @@ for all needed interrupt sources.
 
 TODOC: Signature has changed to differentiate ordinary and kernel relevant ISRs
 
-=== TODOC Simple sample code
+== TODOC Simple sample code
 
 == Known issues
 
