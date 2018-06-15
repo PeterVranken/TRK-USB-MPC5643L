@@ -1,8 +1,8 @@
-#ifndef CCX_CREATECONTEXT_INCLUDED
-#define CCX_CREATECONTEXT_INCLUDED
+#ifndef CCX_CREATECONTEXTSAVEDESC_INCLUDED
+#define CCX_CREATECONTEXTSAVEDESC_INCLUDED
 /**
- * @file ccx_createContext.h
- * Definition of global interface of module ccx_createContext.c
+ * @file ccx_createContextSaveDesc.h
+ * Definition of global interface of module ccx_createContextSaveDesc.c
  *
  * Copyright (C) 2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -58,27 +58,27 @@
  */
 
 /** Create a (still suspended) new context and its descriptor for later resume. */
-void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
-                      , void *stackPointer
-                      , int_fctEntryIntoContext_t fctEntryIntoContext
-                      , bool privilegedMode
-                      );
+void ccx_createContextSaveDesc( int_contextSaveDesc_t *pContextSaveDesc
+                              , void *stackPointer
+                              , int_fctEntryIntoContext_t fctEntryIntoContext
+                              , bool privilegedMode
+                              );
 
 /** Create the descriptor for an execution context intended for on-the-fly creation. */
-void ccx_createContextOnTheFly
-                ( int_contextSaveDesc_t *pNewContextSaveDesc
-                , void *stackPointer
-                , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
-                , bool privilegedMode
-                );
+void ccx_createContextSaveDescOnTheFly
+                        ( int_contextSaveDesc_t *pNewContextSaveDesc
+                        , void *stackPointer
+                        , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
+                        , bool privilegedMode
+                        );
 
 #if INT_USE_SHARED_STACKS == 1
 /** Create a new execution context, which shares the stack with another context. */
-void ccx_createContextShareStack( int_contextSaveDesc_t *pNewContextSaveDesc
-                                , const int_contextSaveDesc_t *pPeerContextSaveDesc
-                                , int_fctEntryIntoContext_t fctEntryIntoContext
-                                , bool privilegedMode
-                                );
+void ccx_createContextSaveDescShareStack( int_contextSaveDesc_t *pNewContextSaveDesc
+                                        , const int_contextSaveDesc_t *pPeerContextSaveDesc
+                                        , int_fctEntryIntoContext_t fctEntryIntoContext
+                                        , bool privilegedMode
+                                        );
 #endif
 
-#endif  /* CCX_CREATECONTEXT_INCLUDED */
+#endif  /* CCX_CREATECONTEXTSAVEDESC_INCLUDED */

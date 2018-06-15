@@ -49,7 +49,7 @@
 #include "ihw_initMcuCoreHW.h"
 #include "int_defStackFrame.h"
 #include "sc_systemCalls.h"
-#include "ccx_createContext.h"
+#include "ccx_createContextSaveDesc.h"
 #include "xsw_contextSwitch.h"
 
 
@@ -262,11 +262,11 @@ uint32_t xsw_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
     {
         /* Initialize the context save information such that the desired entry function,
            execution mode and stack pointer initial value are considered. */
-        ccx_createContextOnTheFly( pNewContextSaveDesc
-                                 , pNewContextDesc->stackPointer
-                                 , pNewContextDesc->executionEntryPoint
-                                 , pNewContextDesc->privilegedMode
-                                 );
+        ccx_createContextSaveDescOnTheFly( pNewContextSaveDesc
+                                         , pNewContextDesc->stackPointer
+                                         , pNewContextDesc->executionEntryPoint
+                                         , pNewContextDesc->privilegedMode
+                                         );
 
         pCmdContextSwitch->signalToResumedContext = initialData;
         pCmdContextSwitch->pSuspendedContextSaveDesc = pThisContextSaveDesc;
@@ -278,11 +278,11 @@ uint32_t xsw_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
     }
     else
     {
-        ccx_createContext( /* pNewContextSaveDesc */ pNewContextSaveDesc
-                         , pNewContextDesc->stackPointer
-                         , /* fctEntryIntoContext */ pNewContextDesc->executionEntryPoint
-                         , /* privilegedMode */ true
-                         );
+        ccx_createContextSaveDesc( /* pNewContextSaveDesc */ pNewContextSaveDesc
+                                 , pNewContextDesc->stackPointer
+                                 , pNewContextDesc->executionEntryPoint
+                                 , /* privilegedMode */ true
+                                 );
     
         /* Return to system calling context. It'll receive the created but suspended new
            context in *pNewContextSaveDesc. */
@@ -486,11 +486,11 @@ void _Noreturn xsw_startContextSwitching(void)
     /* Prepare the context save descriptor of the first, already running context such that
        this context can be safely suspended. (The other contexts save descriptors are
        initialized in the chained call of executionContext().) */
-    ccx_createContextOnTheFly( &_contextSaveDescAry[0]
-                             , /* stackPointer */ NULL
-                             , /* fctEntryIntoOnTheFlyStartedContext */ NULL
-                             , /* privilegedMode */ true
-                             );
+    ccx_createContextSaveDescOnTheFly( &_contextSaveDescAry[0]
+                                     , /* stackPointer */ NULL
+                                     , /* fctEntryIntoOnTheFlyStartedContext */ NULL
+                                     , /* privilegedMode */ true
+                                     );
 
     /* Enter first (this) execution context. It'll create and start all others. */
     _idxActiveContext = 0;

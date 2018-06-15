@@ -1,5 +1,5 @@
 /**
- * @file ccx_createContext.c
+ * @file ccx_createContextSaveDesc.c
  * Support functions for using kernelBuilder: A new execution context is created. A
  * scheduler implementation can use the offered functions to create new tasks.\n
  *   Note, there's no concept of context deletion. The entire framework doesn't deal with
@@ -27,9 +27,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   ccx_createContext
- *   ccx_createContextOnTheFly
- *   ccx_createContextShareStack
+ *   ccx_createContextSaveDesc
+ *   ccx_createContextSaveDescOnTheFly
+ *   ccx_createContextSaveDescShareStack
  * Local functions
  */
 
@@ -48,7 +48,7 @@
 #include "int_interruptHandler.h"
 #include "sc_systemCalls.h"
 #include "ccx_startContext.h"
-#include "ccx_createContext.h"
+#include "ccx_createContextSaveDesc.h"
 
 
 /*
@@ -79,10 +79,10 @@
  * Create the descriptor for a new execution context. A scheduler implementation can use
  * this function to create a new task or to re-initialize an existing task with a new task
  * function (support of task pooling to avoid dynamic memory allocation).\n
- *   Note the difference with ccx_createContextOnTheFly(): This function does not only
- * initialize the descriptor object * \a pContextSaveDesccreates, but it also prepares the
- * stack contents such that we effectively have the context in already started state. Using
- * the descriptor on return from a kernel relevant interrupt handler, a scheduler can
+ *   Note the difference with ccx_createContextSaveDescOnTheFly(): This function does not
+ * only initialize the descriptor object * \a pContextSaveDesccreates, but it also prepares
+ * the stack contents such that we effectively have the context in already started state.
+ * Using the descriptor on return from a kernel relevant interrupt handler, a scheduler can
  * immediately resume the new context. The other function requires the
  * create-context-on-the-fly command on very first context activation. (See signature of
  * kernel relevant ISRs and their return value \a int_retCodeKernelIsr_t for details.)
@@ -115,11 +115,11 @@
  * which access I/O registers or protected CPU registers, like ihw_suspendAllInterrupts()
  * and ihw_resumeAllInterrupts(), are not permitted in user mode.
  */
-void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
-                      , void *stackPointer
-                      , int_fctEntryIntoContext_t fctEntryIntoContext
-                      , bool privilegedMode
-                      )
+void ccx_createContextSaveDesc( int_contextSaveDesc_t *pContextSaveDesc
+                              , void *stackPointer
+                              , int_fctEntryIntoContext_t fctEntryIntoContext
+                              , bool privilegedMode
+                              )
 {
     /* The alignment matters. EABI requires 8 Byte alignment. */
     assert(stackPointer != NULL  &&  ((uint32_t)stackPointer & 0x7) == 0
@@ -251,7 +251,7 @@ void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
        on-the-fly start becomes an option if we set this field nonetheless. */
     pContextSaveDesc->privilegedMode = privilegedMode;
     
-} /* End of ccx_createContext */
+} /* End of ccx_createContextSaveDesc */
 
 
 
@@ -269,9 +269,9 @@ void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
  * suspending (and maybe later resuming) it. See notes below.\n
  *   If you have a set of single-shot contexts, which share the stack, then you would
  * typically use this function once for the first context in the set and then repeatedly
- * function ccx_createContextShareStack() for the descriptors of all other contexts in the
- * set.\n
- *   Note the difference with ccx_createContext(): This function is intended and
+ * function ccx_createContextSaveDescShareStack() for the descriptors of all other contexts
+ * in the set.\n
+ *   Note the difference with ccx_createContextSaveDesc(): This function is intended and
  * significantly more efficient for frequently and repeatedly executed single-shot contexts
  * but it requires explicit creation of the context, when it is activated the first time.
  * (See signature of kernel relevant ISRs and their return value \a int_retCodeKernelIsr_t
@@ -307,12 +307,12 @@ void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
  * context. It is already started, the execution mode is already decided and cannot be
  * changed any more.
  */
-void ccx_createContextOnTheFly
-                ( int_contextSaveDesc_t *pNewContextSaveDesc
-                , void *stackPointer
-                , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
-                , bool privilegedMode
-                )
+void ccx_createContextSaveDescOnTheFly
+                    ( int_contextSaveDesc_t *pNewContextSaveDesc
+                    , void *stackPointer
+                    , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
+                    , bool privilegedMode
+                    )
 {
     /* Full specified arguments or special use case startup context. */
     assert(stackPointer != NULL  &&  fctEntryIntoOnTheFlyStartedContext != NULL
@@ -345,7 +345,7 @@ void ccx_createContextOnTheFly
 #endif
     pNewContextSaveDesc->idxSysCall = -1;
 
-} /* End of ccx_createContextOnTheFly */
+} /* End of ccx_createContextSaveDescOnTheFly */
 
 
 
@@ -355,8 +355,8 @@ void ccx_createContextOnTheFly
  * Create a new execution context for on-the-fly start and which shares the stack with
  * another context. A scheduler implementation can use this function to create a new
  * on-the-fly task (usually a single shot task).\n
- *   Use this function instead of ccx_createContext() if you create a context, which should
- * share the stack with another, already created context.\n
+ *   Use this function instead of ccx_createContextSaveDesc() if you create a context,
+ * which should share the stack with another, already created context.\n
  *   Note, a context, which is created with this function can only be started on the fly,
  * using flag \a int_rcIsr_createEnteredContext (see enum \a int_retCodeKernelIsr_t) on
  * return from a kernel interrupt.
@@ -369,7 +369,8 @@ void ccx_createContextOnTheFly
  * The context save descripto of the other context, which the new one will share the stack
  * with, is provided by reference. This context
  *   - needs to be already created
- *   - can have been created with either ccx_createContext() or ccx_createContextShareStack()
+ *   - can have been created with either ccx_createContextSaveDesc()
+ *     or ccx_createContextSaveDescShareStack()
  *   @param fctEntryIntoOnTheFlyStartedContext
  * A C function, which is the entry point into the new execution context. This function
  * will be called later, when an interrupt handler commands on return the start of a new
@@ -382,12 +383,12 @@ void ccx_createContextOnTheFly
  * which access I/O registers or protected CPU registers, like ihw_suspendAllInterrupts()
  * and ihw_resumeAllInterrupts(), are not permitted in user mode.
  */
-void ccx_createContextShareStack
-                ( int_contextSaveDesc_t *pNewContextSaveDesc
-                , const int_contextSaveDesc_t *pPeerContextSaveDesc
-                , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
-                , bool privilegedMode
-                )
+void ccx_createContextSaveDescShareStack
+                    ( int_contextSaveDesc_t *pNewContextSaveDesc
+                    , const int_contextSaveDesc_t *pPeerContextSaveDesc
+                    , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
+                    , bool privilegedMode
+                    )
 {
     /* The new context references the same stack pointer save variable as the other one.
        Both contexts save the stack pointer on suspend and on termination at the same
@@ -409,5 +410,5 @@ void ccx_createContextShareStack
     pNewContextSaveDesc->pStackOnEntry = NULL;
     pNewContextSaveDesc->idxSysCall = 0;
 
-} /* End of ccx_createContextShareStack */
+} /* End of ccx_createContextSaveDescShareStack */
 #endif

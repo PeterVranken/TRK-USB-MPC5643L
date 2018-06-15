@@ -29,7 +29,7 @@
 
 #include "typ_types.h"
 #include "int_interruptHandler.h"
-#include "ccx_createContext.h"
+#include "ccx_createContextSaveDesc.h"
 #include "xsw_contextSwitch.h"
 
 #include "sc_systemCalls.h"

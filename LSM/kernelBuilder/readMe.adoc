@@ -230,55 +230,61 @@ they initially come from?
 
 One particular execution context is always there. It's the execution
 context from the startup code, passed on to C function `main`. To make use
-of the context switching capabilities of the IVOR handlers, we need at
-minimum one other context:
+of the context switching capabilities of the IVOR handlers, we need a
+context descriptor object for the startup context (to be able to safely
+suspend it) and at minimum one other context:
 
-kernelBuilder offers the service to create a new context. Three functions
-exist:
+kernelBuilder offers the service to create a new context. Three helper
+functions exist:
 
-* `ccx_createContextOnTheFly()` expects a C entry function, the execution
-  mode (supervisor or user) and a stack area as arguments. It initializes
-  a context object such that it can be started (not resumed!) later, when
-  a kernel relevant handler commands a context switch on return. (This way
-  to start a context is called on the fly.) In case of single-shot tasks,
-  the context object can be reused as often as suitable to re-start the
-  same single-shot context footnote:[
+* `ccx_createContextSaveDescOnTheFly()` expects a C entry function, the
+  execution mode (supervisor or user) and a stack area as arguments. It
+  initializes a context object such that the context can be created and
+  started (not resumed!) later, when a kernel relevant handler commands a
+  context switch on return. (This way to start a context is called on the
+  fly.) In case of single-shot tasks, the context object can be reused as
+  often as suitable to re-start the same single-shot context footnote:[
     It needs to be granted that the previous shot has properly terminated
   prior to restart a single-shot context.]
-* `ccx_createContextShareStack()` is nearly the same, but the stack
-  specification is made indirectly by reference to another, already
-  initialized context: The two will use the same stack area
-* `ccx_createContext()` expects the same arguments as the first function.
-  It initializes the context object and, additionally, it prepares the
-  contents of the specified stack area such as if the context were already
-  running and had then been suspended again - immediately before entering
-  the C entry function. The context doesn't need to be started any more
+* `ccx_createContextSaveDescShareStack()` is nearly the same, but the
+  stack specification is made indirectly by reference to another, already
+  initialized context object: The two contexts will use the same stack
+  area
+* `ccx_createContextSaveDesc()` expects the same arguments as the first
+  function. It initializes the context object and, additionally, it
+  prepares the contents of the specified stack area such as if the context
+  were already running and had then been suspended again - immediately
+  before entering the C entry function. The context doesn't need to be
+  started any more
   
-`ccx_createContextOnTheFly()` can be used for both, infinitely running
-and single-shot contexts.
+`ccx_createContextSaveDescOnTheFly()` can be used for both, infinitely
+running and single-shot contexts.
 
-`ccx_createContextShareStack()` is useful only for single-shot tasks
-because of the stack sharing; a context, which inherits the stack from
-another one needs to terminate before the other one may be resumed again.
+`ccx_createContextSaveDescShareStack()` is useful only for single-shot
+contexts because of the stack sharing; a context, which inherits the stack
+from another one needs to terminate before the other one may be resumed
+again.
 
-The use case for `ccx_createContext` are RTOS designs, where all or some
-of the contexts are declared and created prior to starting the kernel. The
-contexts are created in started but then suspended state and the scheduler
-doesn't need to take any care when commanding a context switch to one of
-these contexts. When using `ccx_createContextOnTheFly()` the scheduler
-needs to distinguish between starting a context (first context switch to
-it) and resuming it (subsequent context switches to it)
+The use case for `ccx_createContextSaveDesc()` are RTOS designs, where all
+or some of the contexts are declared and created prior to starting the
+kernel. The contexts are created in started but then suspended state and
+the scheduler doesn't need to take any care when commanding a context
+switch to one of these contexts. When using
+`ccx_createContextSaveDescOnTheFly()` the scheduler needs to distinguish
+between starting a context (first context switch to it) and resuming it
+(subsequent context switches to it)
 
 TIP: Typical RTOS design: The kernel initialization routine calls function
-`ccx_createContext()` a number of times to create the requested number of
-tasks beforehand. From the system timer interrupt, when the particular due
-times are reached, these contexts are resumed.
+`ccx_createContextSaveDesc()` a number of times to create the requested
+number of tasks beforehand. From the system timer interrupt, when the
+particular due times are reached, these contexts are resumed.
 
-The motivation of having `ccx_createContextOnTheFly()` although
-`ccx_createContext()` can do the same, and even more convenient, is overhead.
-Using `ccx_createContextOnTheFly()` is much cheaper in terms of CPU
-instructions and the slightly increased complexity of the scheduler logic
-will surely pay off for frequently started single-shot contexts.
+The motivation of having `ccx_createContextSaveDescOnTheFly()` although
+`ccx_createContextSaveDesc()` can do the same, and even more convenient,
+is overhead. Using `ccx_createContextSaveDescOnTheFly()` is much cheaper
+in terms of CPU instructions and the slightly increased complexity of the
+scheduler logic will surely pay off for frequently started single-shot
+contexts.
 
 === Context switching
 
@@ -415,11 +421,26 @@ contexts in the set. This denotes the possible memory saving.
 Note: Stack sharing is not at all a performance improvement in terms of
 execution speed. It just saves the stack headroom memory.
 
+This is kernelBuilder's concept of stack sharing: Our stacks grow
+downwards. If a context A is preempted and for now suspended then another
+context B can safely use the stack area below the stack area currently in
+use by A. The current stack use of A is known through its stack pointer
+value at time of suspension. As soon as A is resumed it can make arbitrary
+use of the whole stack area -- so B needs to have left the shared stack.
+Only suspending B would mean leaving B's context information on the stack
+for later resume. It would be overwritten by a resumed A and B would crash
+on an attempt to resume it. Therefore B needs to enter the scene by
+context start and needs to leave it by termination -- and all of this
+while A is suspended.
+
+[NOTE]
+=====================================================================
 Two contexts A and B can share the stack, if the scheduling strategy
 ensures
 
 * that B becomes active only when and while A has suspended and
 * that B has terminated before A is resumed again.
+=====================================================================
 
 This comes normally down to single-shot contexts of different priority,
 which do not suspend voluntarily, but this is not a must. A could well be
@@ -457,9 +478,9 @@ could be considered confusing since idle is already up and running.
 There are typical scenarios for contexts and context descriptor objects.
 
 1. All tasks are declared beforehand. The initialization code will use
-`ccx_createContext()` an according number of times to create all context
-descriptor objects. The new contexts are created in suspended state and
-can be resumed by the scheduler on whatever event.
+`ccx_createContextSaveDesc()` an according number of times to create all
+context descriptor objects. The new contexts are created in suspended
+state and can be resumed by the scheduler on whatever event.
 +
 The context entry function is never left, the tasks are implemented as
 forever spinning loops, each cycle likely connected to a real-time event:
@@ -495,7 +516,7 @@ it by only putting the context object back into the pool. It'll simply
 never consider it again for resume. What differs is the code
 required when later reusing a context object from the pool: Since we didn't do
 the stack cleanup, we need now to reinitialize the context object entirely,
-e.g. using `ccx_createContextOnTheFly()`
+e.g. using `ccx_createContextSaveDescOnTheFly()`
 +
 Choosing scenario 2. or 3. doesn't make a significant difference in
 performance. If the system call is placed into the end-of-context callback

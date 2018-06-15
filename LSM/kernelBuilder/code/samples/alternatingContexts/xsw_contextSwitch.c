@@ -60,7 +60,7 @@
 #include "int_defStackFrame.h"
 #include "tcx_testContext.h"
 #include "sc_systemCalls.h"
-#include "ccx_createContext.h"
+#include "ccx_createContextSaveDesc.h"
 #include "xsw_contextSwitch.h"
 
 
@@ -743,11 +743,11 @@ void xsw_loop()
        this context to become able to suspend and later resume it. The values for stack
        pointer and entry function don't care. */
     fputs("Prepare first context\r\n", stdout);
-    ccx_createContextOnTheFly( &_contextSaveDesc1
-                             , /* stackPointer */ NULL
-                             , /* fctEntryIntoOnTheFlyStartedContext */ NULL
-                             , /* privilegedMode */ true
-                             );
+    ccx_createContextSaveDescOnTheFly( &_contextSaveDesc1
+                                     , /* stackPointer */ NULL
+                                     , /* fctEntryIntoOnTheFlyStartedContext */ NULL
+                                     , /* privilegedMode */ true
+                                     );
 
     /* The scheduler always keeps track, which context is the currently executed, active
        one. */
@@ -760,15 +760,16 @@ void xsw_loop()
          Prefill stack memory to make stack usage observable. */
     fputs("Prepare second context\r\n", stdout);
     memset(&_stack2ndCtxt[0], 0xa5, sizeof(_stack2ndCtxt));
-    ccx_createContext( &_contextSaveDesc2
-                     , /* stackPointer */ (uint8_t*)&_stack2ndCtxt[0] + sizeof(_stack2ndCtxt)
+    ccx_createContextSaveDesc( &_contextSaveDesc2
+                             , /* stackPointer */ (uint8_t*)&_stack2ndCtxt[0]
+                                                  + sizeof(_stack2ndCtxt)
 #if TEST_SECOND_CTXT_CHECKS_REGS == 1
-                     , /* fctEntryIntoContext */ &tcx_testContext
+                             , /* fctEntryIntoContext */ &tcx_testContext
 #else
-                     , /* fctEntryIntoContext */ &secondContext
+                             , /* fctEntryIntoContext */ &secondContext
 #endif
-                     , /* privilegedMode */ true
-                     );
+                             , /* privilegedMode */ true
+                             );
 
     iprintf("New context, initial stack pointer: %p\r\n", _contextSaveDesc2.pStack);
     u = sizeOfAry(_stack2ndCtxt);

@@ -72,7 +72,7 @@
 #include "int_defStackFrame.h"
 #include "int_interruptHandler.h"
 #include "tsk_taskFunction.h"
-#include "ccx_createContext.h"
+#include "ccx_createContextSaveDesc.h"
 #include "sc_systemCalls.h"
 #include "sch_scheduler.h"
 
@@ -733,38 +733,40 @@ _Noreturn void sch_initAndStartScheduler()
     #define SP(stack)   ((void*)((const uint8_t*)(stack)+sizeof(stack)))
 
     idTask = idTaskA;
-    ccx_createContext( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
-                     , /* stackPointer */ SP(_stackTaskA)
-                     , /* fctEntryIntoContext */ taskA
-                     , /* privilegedMode */ false
-                     );
+    ccx_createContextSaveDesc( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
+                             , /* stackPointer */ SP(_stackTaskA)
+                             , /* fctEntryIntoContext */ taskA
+                             , /* privilegedMode */ false
+                             );
 
     /* Task E is created next so that sharing its stacl becomes most easy to implement: Its
        context save descriptor is initialized and can be referenced for cloning by the
        sharing single-shot tasks. */
     idTask = idTaskE;
-    ccx_createContext( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
-                     , /* stackPointer */ SP(_stackTaskBCE)
-                     , /* fctEntryIntoContext */ taskE
-                     , /* privilegedMode */ false
-                     );
+    ccx_createContextSaveDesc( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
+                             , /* stackPointer */ SP(_stackTaskBCE)
+                             , /* fctEntryIntoContext */ taskE
+                             , /* privilegedMode */ false
+                             );
     
     /* Task B, started on the fly: No entry function is specified here. */
     idTask = idTaskB;
-    ccx_createContextShareStack( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
-                               , /* pPeerContextSaveDesc */ &_contextSaveDescAry[idTaskE]
-                               , /* fctEntryIntoContext */ taskB
-                               , /* privilegedMode */ false
-                               );
+    ccx_createContextSaveDescShareStack
+                            ( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
+                            , /* pPeerContextSaveDesc */ &_contextSaveDescAry[idTaskE]
+                            , /* fctEntryIntoContext */ taskB
+                            , /* privilegedMode */ false
+                            );
 
     /* Task C, started on the fly, shares the stack with B. No entry function is specified
        here. */
     idTask = idTaskC;
-    ccx_createContextShareStack( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
-                               , /* pPeerContextSaveDesc */ &_contextSaveDescAry[idTaskB]
-                               , /* fctEntryIntoContext */ taskC
-                               , /* privilegedMode */ false
-                               );
+    ccx_createContextSaveDescShareStack
+                            ( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
+                            , /* pPeerContextSaveDesc */ &_contextSaveDescAry[idTaskB]
+                            , /* fctEntryIntoContext */ taskC
+                            , /* privilegedMode */ false
+                            );
 
     /* Task D: Note the -1: Since B and C share the stack we have one element less than
        tasks in the array of stacks.
@@ -772,21 +774,21 @@ _Noreturn void sch_initAndStartScheduler()
        has not been migrated to the use of system calls yet and can't be used in user mode.
        Task D is the only task, we can run in user mode. Let's try it. */
     idTask = idTaskD;
-    ccx_createContext( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
-                     , /* stackPointer */ SP(_stackTaskD)
-                     , /* fctEntryIntoContext */ taskD
-                     , /* privilegedMode */ false
-                     );
+    ccx_createContextSaveDesc( /* pNewContextSaveDesc */  &_contextSaveDescAry[idTask]
+                             , /* stackPointer */ SP(_stackTaskD)
+                             , /* fctEntryIntoContext */ taskD
+                             , /* privilegedMode */ false
+                             );
 
     #undef SP
 
     /* The context save descriptor of the idle task needs to be initialized, too. It is
        used once at the beginning, when we leave the idle context. */
-    ccx_createContextOnTheFly( &_contextSaveDescAry[idTaskIdle]
-                             , /* stackPointer */ NULL
-                             , /* fctEntryIntoOnTheFlyStartedContext */ NULL
-                             , /* privilegedMode */ true
-                             );
+    ccx_createContextSaveDescOnTheFly( &_contextSaveDescAry[idTaskIdle]
+                                     , /* stackPointer */ NULL
+                                     , /* fctEntryIntoOnTheFlyStartedContext */ NULL
+                                     , /* privilegedMode */ true
+                                     );
     
     /* Initialize the interrupt, which triggers the activation of the conventional RTOS
        tasks A, B and C. */
