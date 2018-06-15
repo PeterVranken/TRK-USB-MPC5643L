@@ -29,7 +29,6 @@
 
 #include "typ_types.h"
 #include "int_interruptHandler.h"
-#include "ccx_createContext.h"
 #include "rtos.h"
 #include "rtos_systemCalls.h"
 #include "sc_systemCalls.h"

@@ -372,7 +372,7 @@ int_eeh_callOsIsr:
     /* The handler may have demanded to resume an existing or to create a new context.
          The equal bit of cr0 holds the information "terminate left context". */
     bgt     cr1, int_sch_doContextSwitch
-    b       int_sch_startNewContext
+    b       int_sch_createNewContext
 
 int_eeh_callSimpleIsr:
     /* Branch to ISR handler address from SW vector table */
@@ -706,7 +706,7 @@ int_systemCallHandler:
     stmw    r15, O_SC_R15(sp)   /* Write registers 15-31 */
 
     /* The handler may have demanded to create a new context. */
-    blt     cr1, int_sch_startNewContext
+    blt     cr1, int_sch_createNewContext
 
     /*  If we get here then we do a context switch to a previously suspended context.
           This label is shared with the IVOR #4 handler. If a kernel interrupt demands a
@@ -874,7 +874,7 @@ int_sch_endCntIsrToIsr:
        - the INTC is satisfied (interrupt acknowledged, priority stack cleared)
        - The equal bit of cr0 holds the information "terminate left context"
        - r14 contains the system call index (or -1 if the left context is an IVOR #4) */
-int_sch_startNewContext:
+int_sch_createNewContext:
     lwz     r3, O_RET_pSCSD(sp) /* Load pointer to context save data of suspending ctxt. */
 #if INT_USE_SHARED_STACKS == 1
     beq     cr0, int_sch_newCtxt_saveCtxt
@@ -926,7 +926,7 @@ int_sch_endCntIsrToNewCtxt:
 #else
     lbz     r3, 12(14)          /* Load field priviledgedMode */
 #endif
-    cmplwi  cr0, r3, 0          /* Load Bit priviledgedMode into CR0, positive */
+    cmplwi  cr0, r3, 0          /* Load bit priviledgedMode into CR0, positive */
     lwz     r3, O_RET_RC(sp)    /* Load signal from ISR, is function arg of new context */
     lwz     sp, 4(r14)          /* Load address of stack pointer save variable */
 #if INT_USE_SHARED_STACKS == 1

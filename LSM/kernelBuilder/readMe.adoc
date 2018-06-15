@@ -430,16 +430,16 @@ use of the whole stack area -- so B needs to have left the shared stack.
 Only suspending B would mean leaving B's context information on the stack
 for later resume. It would be overwritten by a resumed A and B would crash
 on an attempt to resume it. Therefore B needs to enter the scene by
-context start and needs to leave it by termination -- and all of this
-while A is suspended.
+on-the-fly context creation and needs to leave it by termination -- and
+all of this while A is suspended.
 
 [NOTE]
 =====================================================================
 Two contexts A and B can share the stack, if the scheduling strategy
-ensures
+ensures that
 
-* that B becomes active only when and while A has suspended and
-* that B has terminated before A is resumed again.
+* B becomes active only when and while A is suspended and
+* B has terminated before A is resumed again.
 =====================================================================
 
 This comes normally down to single-shot contexts of different priority,

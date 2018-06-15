@@ -69,8 +69,8 @@
                     &&  offsetof(int_contextSaveDesc_t, pStackOnEntry) == 12                \
                     &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStackOnEntry)               \
                         == sizeof(uint32_t)                                                 \
-                    &&  offsetof(int_contextSaveDesc_t, fctEntryIntoContext) == 16       \
-                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->fctEntryIntoContext)      \
+                    &&  offsetof(int_contextSaveDesc_t, fctEntryIntoContext) == 16          \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->fctEntryIntoContext)         \
                         == sizeof(uint32_t)                                                 \
                     &&  offsetof(int_contextSaveDesc_t, privilegedMode) == 20               \
                     &&  sizeof(((int_contextSaveDesc_t*)NULL)->privilegedMode)              \
@@ -89,8 +89,8 @@
                         == sizeof(uint32_t)                                                 \
                     &&  offsetof(int_contextSaveDesc_t, pStack) == 4                        \
                     &&  sizeof(((int_contextSaveDesc_t*)NULL)->pStack) == sizeof(uint32_t)  \
-                    &&  offsetof(int_contextSaveDesc_t, fctEntryIntoContext) == 8        \
-                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->fctEntryIntoContext)      \
+                    &&  offsetof(int_contextSaveDesc_t, fctEntryIntoContext) == 8           \
+                    &&  sizeof(((int_contextSaveDesc_t*)NULL)->fctEntryIntoContext)         \
                         == sizeof(uint32_t)                                                 \
                     &&  offsetof(int_contextSaveDesc_t, privilegedMode) == 12               \
                     &&  sizeof(((int_contextSaveDesc_t*)NULL)->privilegedMode)              \
@@ -152,15 +152,15 @@ typedef enum int_retCodeKernelIsr_t
     /** The ISR returns without context switch. The preempted context (External Interrupt)
         or calling context (system call) is continued after return from the ISR. */
     int_rcIsr_doNotSwitchContext = 0u,
-    
+
     /** The ISR demands a context switch on return. The aimed context is an already created
         but currently resume context. */
     int_rcIsr_switchContext = 0x2u,
-    
+
     /** The ISR demands a context switch on return. The aimed context is a new, on the fly
         created context. */
     int_rcIsr_createEnteredContext = 0x80000000u,
-    
+
 #if INT_USE_SHARED_STACKS == 1
     /** The ISR demands a context switch on return. The suspended context is terminated.
         (The aimed context is either a suspended or a new, on the fly created context. This

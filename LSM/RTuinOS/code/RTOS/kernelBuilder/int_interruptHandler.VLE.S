@@ -346,7 +346,7 @@ int_eeh_callOsIsr:
     /* The handler may have demanded to resume an existing or to create a new context.
          The equal bit of cr0 holds the information "terminate left context". */
     e_bgt   cr1, int_sch_doContextSwitch
-    e_b     int_sch_startNewContext
+    e_b     int_sch_createNewContext
 
 int_eeh_callSimpleIsr:
     /* Branch to ISR handler address from SW vector table */
@@ -653,7 +653,7 @@ int_systemCallHandler:
     e_stmw  r15, O_SC_R15(sp)   /* Write registers 15-31 */
 
     /* The handler may have demanded to create a new context. */
-    e_blt   cr1, int_sch_startNewContext
+    e_blt   cr1, int_sch_createNewContext
 
     /*  If we get here then we do a context switch to a previously suspended context.
           This label is shared with the IVOR #4 handler. If a kernel interrupt demands a
@@ -684,7 +684,7 @@ int_sch_doContextSwitch:
 #endif
     se_lwz  r3, O_RET_pSCSD(sp) /* Load pointer to context save data of suspending ctxt. */
 #if INT_USE_SHARED_STACKS == 1
-    se_beq  int_sch_swCtxt_saveCtxt /* Branch on CR0, Bit zero, not "terminate left context" */
+    se_beq  int_sch_swCtxt_saveCtxt /* Branch on CR0, bit zero, not "terminate left context" */
 
     /* Context termination: Don't store current sp in save variable but the initial value
        it had at context creation time. This leaves the stack ready to use for other
@@ -807,7 +807,7 @@ int_sch_endCntIsrToIsr:
        - the INTC is satisfied (interrupt acknowledged, priority stack cleared)
        - The equal bit of cr0 holds the information "terminate left context"
        - r14 contains the system call index (or -1 if the left context is an IVOR #4) */
-int_sch_startNewContext:
+int_sch_createNewContext:
     se_lwz  r3, O_RET_pSCSD(sp) /* Load pointer to context save data of suspending ctxt. */
 #if INT_USE_SHARED_STACKS == 1
     se_beq  int_sch_newCtxt_saveCtxt /* Branch on CR0, equal, not "terminate left context" */

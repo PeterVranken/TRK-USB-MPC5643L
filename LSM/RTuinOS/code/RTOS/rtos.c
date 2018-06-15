@@ -70,7 +70,7 @@
 #include "int_interruptHandler.h"
 #include "sc_systemCalls.h"
 #include "del_delay.h"
-#include "ccx_createContext.h"
+#include "ccx_createContextSaveDesc.h"
 #include "rtos_systemCalls.h"
 #include "rtos.h"
 
@@ -1819,11 +1819,12 @@ _Noreturn void rtos_initRTOS(void)
            infrastructure is missing; in particular the critical sections are implemented
            such that they require privileged instructions. */
         prepareTaskStack(pT->pStackArea, pT->stackSize);
-        ccx_createContext( /* pNewContextSaveDesc */ &pT->contextSaveDesc
-                         , /* stackPointer */ (uint8_t*)pT->pStackArea + pT->stackSize
-                         , /* fctEntryIntoContext */(int_fctEntryIntoContext_t)pT->taskFunction
-                         , /* privilegedMode */ true
-                         );
+        ccx_createContextSaveDesc
+                        ( /* pNewContextSaveDesc */ &pT->contextSaveDesc
+                        , /* stackPointer */ (uint8_t*)pT->pStackArea + pT->stackSize
+                        , /* fctEntryIntoContext */(int_fctEntryIntoContext_t)pT->taskFunction
+                        , /* privilegedMode */ true
+                        );
 #ifdef DEBUG
 # if RTOS_NO_TASKS <= 3
         {
