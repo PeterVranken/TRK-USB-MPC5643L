@@ -260,20 +260,13 @@ uint32_t xsw_sc_createContext( int_cmdContextSwitch_t *pCmdContextSwitch
 {
     if(runImmediately)
     {
-        /* Initialize the context save information such that the desired stack pointer
-           initial value is considered. */
-        pNewContextSaveDesc->pStack = pNewContextDesc->stackPointer;
-        pNewContextSaveDesc->idxSysCall = SC_IDX_SYS_CALL_CREATE_NEW_CONTEXT;
-        pNewContextSaveDesc->fctEntryIntoContext = pNewContextDesc->executionEntryPoint;
-        pNewContextSaveDesc->privilegedMode = pNewContextDesc->privilegedMode;
-        
-        /* The sample doesn't make use of stack sharing. However, the code can be
-           compiled and run even if this option is on if we do the according initialization
-           of the additional fields of the context save descriptor. */
-#if INT_USE_SHARED_STACKS == 1
-        pNewContextSaveDesc->ppStack = &pNewContextSaveDesc->pStack;
-        pNewContextSaveDesc->pStackOnEntry = NULL;
-#endif
+        /* Initialize the context save information such that the desired entry function,
+           execution mode and stack pointer initial value are considered. */
+        ccx_createContextOnTheFly( pNewContextSaveDesc
+                                 , pNewContextDesc->stackPointer
+                                 , pNewContextDesc->executionEntryPoint
+                                 , pNewContextDesc->privilegedMode
+                                 );
 
         pCmdContextSwitch->signalToResumedContext = initialData;
         pCmdContextSwitch->pSuspendedContextSaveDesc = pThisContextSaveDesc;
@@ -492,14 +485,12 @@ void _Noreturn xsw_startContextSwitching(void)
     
     /* Prepare the context save descriptor of the first, already running context such that
        this context can be safely suspended. (The other contexts save descriptors are
-       initialized in the chained call of executionContext().)\n
-         Note, the only essential setting is ppStack, all other value are never used. */
-    _contextSaveDescAry[0].pStack = NULL;
-    _contextSaveDescAry[0].idxSysCall = 0;
-#if INT_USE_SHARED_STACKS == 1
-    _contextSaveDescAry[0].ppStack = &_contextSaveDescAry[0].pStack;
-    _contextSaveDescAry[0].pStackOnEntry = NULL;
-#endif
+       initialized in the chained call of executionContext().) */
+    ccx_createContextOnTheFly( &_contextSaveDescAry[0]
+                             , /* stackPointer */ NULL
+                             , /* fctEntryIntoOnTheFlyStartedContext */ NULL
+                             , /* privilegedMode */ true
+                             );
 
     /* Enter first (this) execution context. It'll create and start all others. */
     _idxActiveContext = 0;

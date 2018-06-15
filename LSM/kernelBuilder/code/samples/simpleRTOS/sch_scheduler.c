@@ -782,7 +782,11 @@ _Noreturn void sch_initAndStartScheduler()
 
     /* The context save descriptor of the idle task needs to be initialized, too. It is
        used once at the beginning, when we leave the idle context. */
-    _contextSaveDescAry[idTaskIdle].ppStack = &_contextSaveDescAry[idTaskIdle].pStack;
+    ccx_createContextOnTheFly( &_contextSaveDescAry[idTaskIdle]
+                             , /* stackPointer */ NULL
+                             , /* fctEntryIntoOnTheFlyStartedContext */ NULL
+                             , /* privilegedMode */ true
+                             );
     
     /* Initialize the interrupt, which triggers the activation of the conventional RTOS
        tasks A, B and C. */

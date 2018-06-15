@@ -28,6 +28,7 @@
  */
 /* Module interface
  *   ccx_createContext
+ *   ccx_createContextOnTheFly
  *   ccx_createContextShareStack
  * Local functions
  */
@@ -75,9 +76,16 @@
  */
 
 /**
- * Create a new execution context. A scheduler implementation can use this function to
- * create a new task or to re-initialize an existing task with a new task function (support
- * of task pooling to avoid dynamic memory allocation).
+ * Create the descriptor for a new execution context. A scheduler implementation can use
+ * this function to create a new task or to re-initialize an existing task with a new task
+ * function (support of task pooling to avoid dynamic memory allocation).\n
+ *   Note the difference with ccx_createContextOnTheFly(): This function does not only
+ * initialize the descriptor object * \a pContextSaveDesccreates, but it also prepares the
+ * stack contents such that we effectively have the context in already started state. Using
+ * the descriptor on return from a kernel relevant interrupt handler, a scheduler can
+ * immediately resume the new context. The other function requires the
+ * create-context-on-the-fly command on very first context activation. (See signature of
+ * kernel relevant ISRs and their return value \a int_retCodeKernelIsr_t for details.)
  *   @param pContextSaveDesc
  * The caller provides the location of the context save descriptor for the newly created
  * context. This context save descriptor can then be used by a scheduler to command resume
@@ -247,9 +255,58 @@ void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
 
 
 
-/// @todo There are use cases for a context, which is not prepare but started on the fly, although it has its own stack (or because it's the first one of a group of stack sharing contexts)
-/// @todo Double check implementation outline, document and have a test case
-#if 0
+/*
+ * Create the descriptor for a new execution context. A scheduler implementation can use
+ * this function to create a new task or to re-initialize an existing task with a new task
+ * function (support of task pooling to avoid dynamic memory allocation).\n
+ *   The use case of this function are frequently on-the-fly re-created single-shot
+ * contexts but it can be used for once created, infinitely spinning contexts, too. Anyhow,
+ * a scheduler needs to command the on-the-fly creation of the new context on return from
+ * the kernel relevant interrupt handler, when it activates the context the first time.\n
+ *   This function can be used for description of the anyway created startup context, i.e.
+ * the context, which is inherited from the startup code, which is always present and which
+ * is used as idle task in most RTOS. A descriptor for this context is required for safely
+ * suspending (and maybe later resuming) it. See notes below.\n
+ *   If you have a set of single-shot contexts, which share the stack, then you would
+ * typically use this function once for the first context in the set and then repeatedly
+ * function ccx_createContextShareStack() for the descriptors of all other contexts in the
+ * set.\n
+ *   Note the difference with ccx_createContext(): This function is intended and
+ * significantly more efficient for frequently and repeatedly executed single-shot contexts
+ * but it requires explicit creation of the context, when it is activated the first time.
+ * (See signature of kernel relevant ISRs and their return value \a int_retCodeKernelIsr_t
+ * for details.)
+ *   @param stackPointer
+ * The initial value of the stack pointer. The client code will allocate sufficient stack
+ * memory. This pointer will usually point at the first address beyond the allocated memory
+ * chunk; our stacks grow downwards to lower addresses.\n
+ *   Note, each preemption of a context by an asynchronous External Interrupt requires
+ * about 170 Byte of stack space. Another about 100 Byte need to be reserved for the system
+ * call interrupt. If your application makes use of all interrupt priorities then you need
+ * to have 15*170+100 Byte as a minimum of stack space for safe operation, not yet counted
+ * the stack consumption of your application itself.\n
+ *   Note, this lower bounds even holds if you apply the implementation of the priority
+ * ceiling protocol from the startup code to mutually exclude sets of interrupts from
+ * preempting one another, see https://community.nxp.com/message/993795 for details.\n
+ *   The passed address needs to be 8 Byte aligned; this is double-checked by assertion.\n
+ *   Specify NULL if the context descriptor object is made for the startup context. This
+ * context is already started, the stack area is decided and cannot be changed any more.
+ * Note: Having a descriptor object for the startup context is required for suspending it.
+ *   @param fctEntryIntoOnTheFlyStartedContext
+ * A C function, which is the entry point into the new execution context.\n
+ *   Specify NULL if the context descriptor object is made for the startup context. It is
+ * already started, the entry function is already decided and cannot be changed any more.
+ *   @param privilegedMode
+ * The newly created context can be run either in user mode or in privileged mode.\n
+ *   Note, the user mode should be preferred but can generally be used only if the whole
+ * system design supports this. All system level functions (in particular the I/O drivers)
+ * need to have an API, which is based on system calls. Even the most simple functions
+ * which access I/O registers or protected CPU registers, like ihw_suspendAllInterrupts()
+ * and ihw_resumeAllInterrupts(), are not permitted in user mode.\n
+ *   This parameter doesn't care if the context descriptor object is made for the startup
+ * context. It is already started, the execution mode is already decided and cannot be
+ * changed any more.
+ */
 void ccx_createContextOnTheFly
                 ( int_contextSaveDesc_t *pNewContextSaveDesc
                 , void *stackPointer
@@ -257,14 +314,22 @@ void ccx_createContextOnTheFly
                 , bool privilegedMode
                 )
 {
+    /* Full specified arguments or special use case startup context. */
+    assert(stackPointer != NULL  &&  fctEntryIntoOnTheFlyStartedContext != NULL
+           ||  stackPointer == NULL  &&  fctEntryIntoOnTheFlyStartedContext == NULL
+          );
+
+    /* The alignment matters. EABI requires 8 Byte alignment. */
+    assert(((uint32_t)stackPointer & 0x7) == 0);
+
+#if INT_USE_SHARED_STACKS == 1
     /* The new context references the same stack pointer save variable as the other one.
        Both contexts save the stack pointer on suspend and on termination at the same
        memory location. */
     pNewContextSaveDesc->ppStack = &pNewContextSaveDesc->pStack;
+#endif
     
-    /* The storage of the stack pointer value is not used. We reference the according
-       variable from our peer, we share the stack with. */
-    /// @todo Double-check if we need an offset, a head room, in order to implement the task termination
+    /* The initial value of the stack pointer. The stack will grow downwards from here. */
     pNewContextSaveDesc->pStack = stackPointer;
     
     /* Store the context entry function for later on-the-fly start of the context. */
@@ -273,13 +338,14 @@ void ccx_createContextOnTheFly
     /* The context can be started in user of in privileged mode. */
     pNewContextSaveDesc->privilegedMode = privilegedMode;
     
-    /* The remaining fields don't care. They will be written on start and maybe later on
-       suspend of this context. */
+    /* The remaining fields don't care. They will be written on start or on suspend of this
+       context. */
+#if INT_USE_SHARED_STACKS == 1
     pNewContextSaveDesc->pStackOnEntry = NULL;
-    pNewContextSaveDesc->idxSysCall = 0;
+#endif
+    pNewContextSaveDesc->idxSysCall = -1;
 
 } /* End of ccx_createContextOnTheFly */
-#endif
 
 
 

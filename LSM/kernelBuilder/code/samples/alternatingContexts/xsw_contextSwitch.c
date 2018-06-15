@@ -382,8 +382,7 @@ static float subRoutineOf2ndCtx(float a, float b)
                  , y = 0.5f * b;
 
     static uint32_t signalCtx2To1_ = 11;
-    const uint32_t signalCtx1To2 ATTRIB_UNUSED =
-                    sc_switchContext(/* signal */ signalCtx2To1_);
+    const uint32_t signalCtx1To2 ATTRIB_UNUSED = sc_switchContext(/* signal */ signalCtx2To1_);
     signalCtx2To1_ += 11;
 
     volatile float z = x * y;
@@ -724,23 +723,34 @@ static void enableIRQPit2(void)
 
 
 
-// The loop routine runs over and over again forever:
+/** 
+ * Main entry point into the scheduler. Initialize the two context descriptors. One for the
+ * context on entry into this function (the startup context) and another one for the
+ * intended second context, implemented by function secondContext(). Then enter an
+ * infinite loop, which always switches from this context to the second one (which will
+ * switch back to here). This back and forth context switch is done cooperatively.\n
+ *   Additionally, there are frequent preempting switches between both contexts at
+ * arbitrary and irregular points in time, under control of two asynchronously running
+ * timer interrupts.
+ */
 void xsw_loop()
 {
     unsigned int u;
 
     fputs("Start\r\n", stdout);
 
-    /* First context is running on entry and the stored values must not matter. */
+    /* First context is running already on entry but regardless we need a descriptor of
+       this context to become able to suspend and later resume it. The values for stack
+       pointer and entry function don't care. */
     fputs("Prepare first context\r\n", stdout);
-#if INT_USE_SHARED_STACKS == 1
-    _contextSaveDesc1.ppStack = &_contextSaveDesc1.pStack;
-    _contextSaveDesc1.pStackOnEntry = NULL;
-#endif
-    _contextSaveDesc1.pStack = NULL;
-    _contextSaveDesc1.idxSysCall = -1;
-    _contextSaveDesc1.fctEntryIntoContext = NULL; /* Actually not used */
-    _contextSaveDesc1.privilegedMode = true;         /* Actually not used */
+    ccx_createContextOnTheFly( &_contextSaveDesc1
+                             , /* stackPointer */ NULL
+                             , /* fctEntryIntoOnTheFlyStartedContext */ NULL
+                             , /* privilegedMode */ true
+                             );
+
+    /* The scheduler always keeps track, which context is the currently executed, active
+       one. */
     _context1IsActive = true;
 
     /* As a compile time option, the second context defined here in this module can be

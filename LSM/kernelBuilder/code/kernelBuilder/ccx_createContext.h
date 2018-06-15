@@ -57,12 +57,20 @@
  * Global prototypes
  */
 
-/** Create a (still suspended) new context for later resume. */
+/** Create a (still suspended) new context and its descriptor for later resume. */
 void ccx_createContext( int_contextSaveDesc_t *pContextSaveDesc
                       , void *stackPointer
                       , int_fctEntryIntoContext_t fctEntryIntoContext
                       , bool privilegedMode
                       );
+
+/** Create the descriptor for an execution context intended for on-the-fly creation. */
+void ccx_createContextOnTheFly
+                ( int_contextSaveDesc_t *pNewContextSaveDesc
+                , void *stackPointer
+                , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
+                , bool privilegedMode
+                );
 
 #if INT_USE_SHARED_STACKS == 1
 /** Create a new execution context, which shares the stack with another context. */
