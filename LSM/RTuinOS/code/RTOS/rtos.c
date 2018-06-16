@@ -1906,15 +1906,15 @@ _Noreturn void rtos_initRTOS(void)
     pT = _pIdleTask;
     
     /* The context save descriptor of the idle task needs to be initialized, too. It is
-       used when we leave the idle context.
-         Note, stack sharing is not applied by RTuinOS and INT_USE_SHARED_STACKS should be
-       configured zero. However, the initialization of ppStack keeps the code runnable even
-       with stack sharing support compiled. */
-    pT->contextSaveDesc.pStack = NULL;      /* Used only later at de-activation. */
-    pT->contextSaveDesc.idxSysCall = 0 ;    /* Used only later at de-activation. */
-#if INT_USE_SHARED_STACKS != 0
-    pT->contextSaveDesc.ppStack = &pT->contextSaveDesc.pStack;
-#endif
+       used when we leave and later resume the idle context.
+         Note, the parameters besides the reference to the initzialized object don't care
+       in this situation; the startup context is already created and started and all of
+       this has already been decided. */
+    ccx_createContextSaveDescOnTheFly( &pT->contextSaveDesc
+                                     , /* stackPointer */ NULL
+                                     , /* fctEntryIntoOnTheFlyStartedContext */ NULL
+                                     , /* privilegedMode */ true
+                                     );
 
     pT->timeDueAt = 0;              /* Not used at all. */
 #if RTOS_ROUND_ROBIN_MODE_SUPPORTED == RTOS_FEATURE_ON

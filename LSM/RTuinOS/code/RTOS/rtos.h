@@ -654,7 +654,11 @@ static ALWAYS_INLINE void rtos_enterCriticalSection()
        See https://community.nxp.com/message/993795 for more. */
     asm volatile ( "mbar\n\t"
                    "wrteei 1\n\t"
+#ifndef __VLE__
                    "isync\n"
+#else
+                   "se_isync\n"
+#endif
                    :::
                  );
     
