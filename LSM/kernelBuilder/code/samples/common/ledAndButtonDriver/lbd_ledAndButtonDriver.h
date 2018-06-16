@@ -117,6 +117,6 @@ uint32_t lbd_sc_getButton(uint32_t * const pMSR, lbd_button_t button);
 /** Simple system call: Invoke the API getButton() from the LED and button I/O driver as a
     system call. For a detailed function description refer to the API function. */
 #define /* bool */ lbd_getButton(/* lbd_button_t */ button)  \
-                        int_systemCall(LBD_IDX_SIMPLE_SYS_CALL_SET_LED, button)
+                        int_systemCall(LBD_IDX_SIMPLE_SYS_CALL_GET_BUTTON, button)
 
 #endif  /* LBD_LEDANDBUTTONDRIVER_INCLUDED */
