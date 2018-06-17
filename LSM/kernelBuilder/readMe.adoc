@@ -1,5 +1,5 @@
 = Sample "kernelBuilder" - A platform to build your RTOS for e200z4
-:Author:    Peter Vranken 
+:Author:    Peter Vranken
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :toc:       left
 :toclevels: 3
@@ -232,7 +232,7 @@ One particular execution context is always there. It's the execution
 context from the startup code, passed on to C function `main`. To make use
 of the context switching capabilities of the IVOR handlers, we need a
 context descriptor object for the startup context (to be able to safely
-suspend it) and at minimum one other context:
+suspend it) and at minimum one other context.
 
 kernelBuilder offers the service to create a new context. Three helper
 functions exist:
@@ -256,9 +256,13 @@ functions exist:
   were already running and had then been suspended again - immediately
   before entering the C entry function. The context doesn't need to be
   started any more
-  
+
 `ccx_createContextSaveDescOnTheFly()` can be used for both, infinitely
 running and single-shot contexts.
+
+`ccx_createContextSaveDescOnTheFly()` can be used for creating a context
+descriptor for the already existing startup context, in order to safely
+suspend it to the advantage of other, newly created contexts.
 
 `ccx_createContextSaveDescShareStack()` is useful only for single-shot
 contexts because of the stack sharing; a context, which inherits the stack
@@ -304,7 +308,7 @@ do.
 The return value of a handler indicates whether or not to do a context
 switch. If a context switch is wanted then it'll further indicate whether
 to either suspend or terminate the left context and whether to start or
-resume the entered context. 
+resume the entered context.
 
 All of this requires the specification of two context objects, one for the
 left context and in order to say where to store the information about the
@@ -319,7 +323,7 @@ This is no issue because of the race condition free implementation
 paradigm for the client scheduler code. All kernel relevant handler
 invocations, External Interrupts and system calls, are serialized. A
 handler will never be preempted by another one and even less by a context
-under control of the scheduler. 
+under control of the scheduler.
 
 kernelBuilder applies the priority ceiling protocol for serializing the
 handler invocations, which means that kernel unrelated External Interrupts
@@ -470,9 +474,6 @@ contexts. In the BCC example we would start initializing the idle task's
 descriptor and then pass it for stack sharing to the initialization call
 of all the tasks' context objects.
 
-TODOC: Footnote to explain how to initialize the idle context object. This
-could be considered confusing since idle is already up and running.
-
 === Typical context life cycles
 
 There are typical scenarios for contexts and context descriptor objects.
@@ -484,8 +485,8 @@ state and can be resumed by the scheduler on whatever event.
 +
 The context entry function is never left, the tasks are implemented as
 forever spinning loops, each cycle likely connected to a real-time event:
-The loop body makes a system call as very last statement that waits for
-the event of interest.
+The loop body makes a system call as first or very last statement that
+waits for the event of interest.
 
 2. The maximum number of tasks is specified beforehand. A pool of tasks
 with individual stack areas is created once. A context descriptor object
@@ -516,7 +517,7 @@ it by only putting the context object back into the pool. It'll simply
 never consider it again for resume. What differs is the code
 required when later reusing a context object from the pool: Since we didn't do
 the stack cleanup, we need now to reinitialize the context object entirely,
-e.g. using `ccx_createContextSaveDescOnTheFly()`
+e.g. using `ccx_createContextSaveDescOnTheFly()`.
 +
 Choosing scenario 2. or 3. doesn't make a significant difference in
 performance. If the system call is placed into the end-of-context callback
@@ -555,7 +556,7 @@ resuming other, stack-sharing contexts.]
 The makefiles and related scripts require a few settings of the
 environment in the host machine. In particular, the location of the GNU
 compiler installation needs to be known and the PATH variable needs to
-contain the paths to the required tools. 
+contain the paths to the required tools.
 
 For Windows users there is a shortcut to PowerShell in the root of this
 project (not sample), which opens the shell with the prepared environment.
@@ -607,37 +608,40 @@ Compilation and linkage are makefile controlled. The compiler is GCC
 reused for other projects, not only for a tiny "Hello World" with a few
 source files. It supports a number of options (targets); get an overview
 by typing:
- 
+
     cd <projectRoot>/LSM/kernelBuilder
     mingw32-make help
 
 The main makefile `GNUmakefile` has been configured for the build of
-sample "kernelBuilder". By default the sample client code is
-`alternatingContexts` and the instruction set is Book E. Type: 
+sample "kernelBuilder". By default, the sample client application is
+`alternatingContexts` and the instruction set is Book E. Type:
 
-    mingw32-make -s build 
+    mingw32-make -s build
     mingw32-make -s build CONFIG=PRODUCTION
 
 to produce the flashable files
-`bin\ppc-BookE\alternatingContexts\DEBUG\TRK-USB-MPC5643L-kernelBuilder.elf` 
+`bin\ppc-BookE\alternatingContexts\DEBUG\TRK-USB-MPC5643L-kernelBuilder.elf`
 and
 `bin\ppc-BookE\alternatingContexts\PRODUCTION\TRK-USB-MPC5643L-kernelBuilder.elf`.
 
-To select the compilation of kernelBuilder with other sample client code
-add for example `APP=code/samples/chainedContextCreation/` to the command
-line of mingw32-make.
+To select the compilation of kernelBuilder with another sample client
+application add a term like `APP=code/samples/chainedContextCreation/` to
+the command line of mingw32-make.
 
 To select the compilation for the other instruction set add `INSTR=VLE` to
-the command line of mingw32-make.
+the command line of mingw32-make. For example, type:
+
+    mingw32-make -s build APP=code/samples/simpleRTOS/ INSTR=VLE CONFIG=PRODUCTION
+
+to build our simple demo RTOS in VLE and PRODUCTION configuration. The
+flashable file is
+`bin\ppc-VLE\simpleRTOS\PRODUCTION\TRK-USB-MPC5643L-kernelBuilder.elf`.
 
 NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
 port will fail with obscure, misleading error messages. It's safe to use
 the `make.exe` from the compiler installation archive. The makefile is
 designed to run on different host systems but has been tested with Windows
 7 only.
-
-TODOC: Put APP= and INSTR= into the sample command lines to make these
-details more prominent
 
 === Flashing and debugging
 
@@ -649,7 +653,7 @@ window, type for example:
 
     cd <rootFolderOfSample>/makefile/debugger
     source flashAlternatingContextsDEBUG.tcl
-    
+
 or
 
     source flashAlternatingContextsPRODUCTION.tcl
@@ -735,40 +739,158 @@ another argument to select the instruction set, too.
 
 === API
 
-kernelBuilder offers an API for using it. This API is an extension to the
+kernelBuilder offers a C API for using it. This API is an extension to the
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
-offered by the startup code] and which is still required, too. This
+offered by the startup code], which is still required, too. This
 section outlines, which functions and data structures are available and how to use them.
-Detailed information is found as
+More detailed information is found as
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.h[source
 code] comments.
 
-==== TODOC New API by kernelBuilder
-
-For now: Please consult file
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.h[int_interruptHandler.h]
-in the first place. It is the header file that specifies the API between
-kernelBuilder and client code. You really need to read and understand this
-file entirely before you can succesfully start writing your kernel.
-
-Furthermore, have a look at the implementation of the
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/samples[kernelBilder
-samples].
-
-
 ==== Registering an ISR
 
-This function from the startup API lets your application define a handler
-for all needed interrupt sources.
+This modified function from the startup API lets your application define a handler
+for all needed External Interrupt sources.
 
     #include "ihw_initMcuCoreHW.h"
-    void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
+    void ihw_installINTCInterruptHandler( int_externalInterruptHandler_t interruptHandler
                                         , unsigned short vectorNum
                                         , unsigned char psrPriority
                                         , bool isPreemptable
+                                        , bool isKernelInterrupt
                                         );
 
-TODOC: Signature has changed to differentiate ordinary and kernel relevant ISRs
+.interruptHandler
+`interruptHandler` is the C function implemented in your application, that
+serves a device when it raises the interrupt. The function argument's type
+`int_externalInterruptHandler_t` denotes a union of the two possible
+actual types `int_ivor4SimpleIsr_t` and `int_ivor4KernelIsr_t`.
+
+.isKernelInterrupt
+`true` if `interruptHandler` is a kernel relevant ISR, `false` if it is an
+ordinary ISR.
+
+In comparison to our startup sample, the signature of the function has
+changed to differentiate ordinary and kernel relevant ISRs. This affects
+the two explained arguments, all others are as they used to be, please
+refer to
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup[sample
+startup] for details.
+
+==== The ordinary ISR
+
+The type of an ordinary ISR, which cannot command a context switch, and
+which will always continue the preempted context after return, is unchanged:
+`void (*)(void)`.
+
+==== The kernel relevant ISR
+
+The signature of a kernel relevant handler is `uint32_t
+(*)(int_cmdContextSwitch_t *pCmdCtxtSw)`.
+
+On return from the handler you can command a command switch by return
+value and provide more details by writing to the function argument:
+
+* Return bit `int_rcIsr_switchContext` to command a context switch
+* Binary OR bit `int_rcIsr_createEnteredContext` to the return value if
+  you want to start a new context on the fly
+* Do _not_ binary OR bit `int_rcIsr_createEnteredContext` to the return
+  value if you want to resume an already created but later suspended
+  context
+* Binary OR bit `int_rcIsr_terminateLeftContext` if you want to do a
+  cleanup of the stack of the left context. Note: Now this context is
+  destroyed and can never be resumed but its context descriptor object
+  is still valid and can be used to re-create the context again later on
+  the fly
+* Do _not_ binary OR bit `int_rcIsr_terminateLeftContext` if you want to
+  suspend the left context so that it can be resumed later
+* Return zero to not switch context, to continue the preempted context
+  like an ordinary ISR always does. `*pCmdCtxtSw` doesn't care
+
+If the return value is non zero then `*pCmdCtxtSw` needs to be filled with
+information about the two affected contexts. For both contexts, the
+pointer to the descriptor object is specified. Additionally, a uint32_t
+value can be set, which is signaled to the resumed or created context as
+result of a system call or as argument of the entry function,
+respectively. Setting the value is optional; it would have no effect if
+the entered context had been preempted and suspended by an External
+Interrupt.
+
+==== Creating context descriptors
+
+All context switches, all context suspend and resume operations or
+commanded and performed with help of the context descriptor objects. A
+context descriptor is not equivalent with a context; any context has a
+related descriptor but -- in case of single-shot contexts -- a descriptor
+can be related to an infinite series of contexts. (However, only one at a
+time.)
+
+===== Suspended context
+[[secSuspendedContext]]
+
+To create the descriptor of a context, which is already created and
+suspended, so that it can immediately be used for a context resume
+command, use:
+
+    #include "ccx_createContextSaveDesc.h"
+    void ccx_createContextSaveDesc( int_contextSaveDesc_t *pContextSaveDesc
+                                  , void *stackPointer
+                                  , int_fctEntryIntoContext_t fctEntryIntoContext
+                                  , bool privilegedMode
+                                  );
+
+.pContextSaveDesc
+The context descriptor object by reference. Its contents are written by the
+function.
+
+.stackPointer
+The top address of the aimed stack area. Points to the first address beyond
+the reserved space. Memory allocation for the stack is in the
+responsibility of the calling client code.
+
+.fctEntryIntoContext
+The context's entry function. An ordinary C function `uint32_t
+(*)(uint32_t)`.
+
+.privilegedMode
+`true` for supervisor or privileged mode, `false` for user or problem
+mode. This is the execution mode for the new context. Each context can use
+its individual mode.
+
+===== On-the-fly created context and startup context
+
+To create the descriptor for a context, which is not created yet and which
+requires on-the-fly creation, use `ccx_createContextSaveDescOnTheFly()`.
+The same function is applied to create a descriptor for the always created
+and existing startup context:
+
+    #include "ccx_createContextSaveDesc.h"
+    void ccx_createContextSaveDescOnTheFly
+                            ( int_contextSaveDesc_t *pNewContextSaveDesc
+                            , void *stackPointer
+                            , int_fctEntryIntoContext_t fctEntryIntoOnTheFlyStartedContext
+                            , bool privilegedMode
+                            );
+
+The function arguments are identical to <<secSuspendedContext,`ccx_createContextSaveDesc()`>>.
+
+===== On-the-fly created context with shared stack
+
+To create the descriptor for a context, which will be created later on the
+fly and which shares the stack with another context, use:
+
+    #include "ccx_createContextSaveDesc.h"
+    void ccx_createContextSaveDescShareStack( int_contextSaveDesc_t *pNewContextSaveDesc
+                                            , const int_contextSaveDesc_t *pPeerContextSaveDesc
+                                            , int_fctEntryIntoContext_t fctEntryIntoContext
+                                            , bool privilegedMode
+                                            );
+.pPeerContextSaveDesc
+An already created context descriptor object, which the new context will
+share the stack with.
+
+The other function arguments are identical to
+<<secSuspendedContext,`ccx_createContextSaveDesc()`>>.
 
 == TODOC Simple sample code
 
