@@ -3,6 +3,7 @@
 :Email:     mailto:Peter_Vranken@Yahoo.de
 :Revision:  1
 :toc:       left
+:toclevels: 3
 :numbered:
 
 == About this sample
@@ -396,7 +397,9 @@ connected to the empty trap handlers and can report severe code errors by
 going into those traps. The debugger would immediately show the details of
 the problem.
 
-==== Mutual exclusion, critical sections
+==== Mutual exclusion of contexts
+
+===== Critical section
 
 Virtually all interrupt handlers will share some data with either the main
 application context or other handlers. Due to the different CPU contexts
@@ -429,7 +432,7 @@ it will not alter the status before -- be it in or not in another critical
 section. This is why the enter function returns the status so far as
 "msr".
 
-==== Suspend all External Interrupts
+===== Suspend all External Interrupts
 
 Very similar to the implementation and meaning of critical sections is the
 function pair to suspend and resume all External Interrupts. The major
@@ -446,7 +449,7 @@ suspended and can do some critical operations, which require this. It may
 then call `ihw_resumeAllInterrupts` and continue doing less critical stuff
 as a normal, preemptable handler.
 
-==== Lock-free data exchange
+===== Lock-free data exchange
 
 Mutual exclusion is not always required. There are lock-free techniques,
 which are mostly built on volatile flag variables that signal particular
