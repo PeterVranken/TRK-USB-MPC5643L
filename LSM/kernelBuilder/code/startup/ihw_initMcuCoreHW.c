@@ -387,7 +387,7 @@ static void initINTCInterruptController()
                                        , /* psrPriority */ 0
 #endif
                                        , /* isPreemptable */ false
-                                       , /* isOsInterrupt */ false
+                                       , /* isKernelInterrupt */ false
                                        );
     } /* for(All entries in the INTC vector table) */
 

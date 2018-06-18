@@ -26,9 +26,8 @@ setlocal
 
 :: Process all command line arguments in a loop.
 :: The loop variable needs to be a colon followed by a single character.
-for %%A in (alternatingContexts chainedContextCreation simpleRTOS) do (
+for %%A in (alternatingContexts chainedContextCreation simpleRTOS simpleSampleFromReadme) do (
     echo Processing kernelBuilder sample %%A
-    set APP=code/samples/alternatingContexts/
     call :buildAllConfigs code/samples/%%A/
 )
 

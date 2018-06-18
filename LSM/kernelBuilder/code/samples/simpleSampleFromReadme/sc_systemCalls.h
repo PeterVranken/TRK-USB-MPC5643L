@@ -30,7 +30,6 @@
 #include <stdbool.h>
 
 #include "int_interruptHandler.h"
-#include "lbd_sysCallInterface.tableEntries.h"
 #include "sio_sysCallInterface.tableEntries.h"
 
 
@@ -48,36 +47,6 @@
 # endif
 #endif
 
-/** The enumeration of indexes of kernel relevant system calls.\n
-      Note, kernel relevant system calls are distinguished from simple system calls in that
-    they use the negative range of indexes.\n
-      Caution, this enumeration needs to be always in sync with table
-    int_systemCallHandlerAry of function pointers! */
-#define SC_IDX_SYS_CALL_SUSPEND             (-1)
-#define SC_IDX_SYS_CALL_ACTIVATE            (-2)
-
-/** The number of kernel relevant system calls. */
-#define SC_NO_SYSTEM_CALLS                  2
-
-/** System call: Immediate suspension of task, cooperative context switch.\n
-      This macro invokes the system call trap with system call index
-    #SC_IDX_SYS_CALL_SUSPEND.\n
-      Find a detailed function description at function sch_sc_suspend(), which
-    implements the system call. */
-#define /* uint32_t */ sc_suspend(/* uint32_t */ signalToResumedContext) \
-                    int_systemCall(SC_IDX_SYS_CALL_SUSPEND, signalToResumedContext)
-
-/** System call: Make a task ready, cooperative context switch.\n
-      This macro invokes the system call trap with system call index
-    #SC_IDX_SYS_CALL_ACTIVATE.\n
-      Find a detailed function description at function sch_sc_activate(), which
-    implements the system call. */
-#define /* void */ sc_activate( /* uint32_t */ taskID                                       \
-                              , /* uint32_t */ signalToResumedContext                       \
-                              )                                                             \
-                    int_systemCall(SC_IDX_SYS_CALL_ACTIVATE, taskID, signalToResumedContext)
-
-
 
 
 /*
@@ -90,7 +59,6 @@
 typedef enum sc_enum_simpleSystemCallIndex_t
 {
     SIO_SIMPLE_SYSTEM_CALLS_ENUMERATION
-    LBD_SIMPLE_SYSTEM_CALLS_ENUMERATION
     
     /** The number of kernel unrelated, simple system calls. */
     SC_NO_SIMPLE_SYSTEM_CALLS

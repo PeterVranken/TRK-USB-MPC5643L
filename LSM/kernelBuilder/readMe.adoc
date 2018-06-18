@@ -400,6 +400,8 @@ which one that is.
 
 === Stack sharing
 
+TODOC: Stack sharing is enabled by macro in int_interruptHandler.config.h
+
 Basically, any context will have its own stack area. This enables
 arbitrary switching between all contexts, any one can be suspended to the
 advantage of any other. The only drawback is the memory consumption. For
@@ -880,11 +882,13 @@ To create the descriptor for a context, which will be created later on the
 fly and which shares the stack with another context, use:
 
     #include "ccx_createContextSaveDesc.h"
-    void ccx_createContextSaveDescShareStack( int_contextSaveDesc_t *pNewContextSaveDesc
-                                            , const int_contextSaveDesc_t *pPeerContextSaveDesc
-                                            , int_fctEntryIntoContext_t fctEntryIntoContext
-                                            , bool privilegedMode
-                                            );
+    void ccx_createContextSaveDescShareStack
+                            ( int_contextSaveDesc_t *pNewContextSaveDesc
+                            , const int_contextSaveDesc_t *pPeerContextSaveDesc
+                            , int_fctEntryIntoContext_t fctEntryIntoContext
+                            , bool privilegedMode
+                            );
+
 .pPeerContextSaveDesc
 An already created context descriptor object, which the new context will
 share the stack with.
@@ -892,7 +896,52 @@ share the stack with.
 The other function arguments are identical to
 <<secSuspendedContext,`ccx_createContextSaveDesc()`>>.
 
-== TODOC Simple sample code
+==== TODOC: System call tables, `systemCall()` and system call handler
+
+==== Mutual exclusion, critical sections
+
+In any multi-threaded environment, which can be designed with
+kernelBuilder, there will be the need for well-controlled mutual exclusion
+of contexts. Code in different contexts, which accesses the same, shared
+resources (mostly shared memory) needs to form a "critical section".
+
+Our startup code offers some typical mechanisms to implement mutual
+exclusion. The offered
+mechanisms are:
+
+* Unconditional interrupt disable: `ihw_suspendAllInterrupts()`/`ihw_resumeAllInterrupts()`
+* Nestable interrupt disable: `ihw_enterCriticalSection()`/`ihw_leaveCriticalSection()`
+* Lock-free data exchange using memory barriers: `atomic_thread_fence()`
+
+Please find the details in the other
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup#mutual-exclusion-of-contexts[sample
+startup].
+
+These mechanisms may be used from the code that implements a kernelBuilder
+context, too, but some restrictions apply.
+
+The two pairs of interrupt disable functions make use of privileged
+instructions and require supervisor mode. They must not be used in
+contexts, which have been started in user mode. An exception would result.
+
+`atomic_thread_fence()` can be applied in user mode, too. (Not proven.)
+
+A typical kernelBuilder application, which wants to run contexts in user
+mode, will offer a pair of system calls to enter and leave a critical
+sections. The implementation of the system call can make use of all the
+functions above -- system calls are always executed in supervisor mode --
+and actually, those system calls would just be wrappers around the
+functions from the startup code.
+
+== Simple sample code
+
+The simplest possible kernelBuilder application is
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder/code/samples/simpleSampleFromReadme[simpleSampleFromReadme].
+The main implementation file is included here as a short yet complete
+sample. At the linked location you will find all the sub-ordinated
+remaining files as a buildable, flashable and executable project.
+
+include::code/samples/simpleSampleFromReadme/rms_readmeSample.c[]
 
 == Known issues
 

@@ -2,7 +2,9 @@
 #define SC_SYSTEMCALLS_INCLUDED
 /**
  * @file sc_systemCalls.h
- * Definition of global interface of module sc_systemCalls.c
+ * Definition of global interface of module sc_systemCalls.c.\n
+ *   Definition of global enumeration \a sc_enum_simpleSystemCallIndex_t, which coordinates
+ * the indexes of all simple system calls from all I/O drivers.
  *
  * Copyright (C) 2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -83,6 +85,10 @@
                     int_systemCall(SC_IDX_SYS_CALL_SWITCH_CONTEXT, signalToResumedContext)
 
 
+/*
+ * Global type definitions
+ */
+
 /** The enumeration of indexes of kernel unrelated, simple system calls.\n
       Caution, this enumeration needs to be always in sync with table
     int_simpleSystemCallHandlerAry of function pointers! */
@@ -95,12 +101,6 @@ typedef enum sc_enum_simpleSystemCallIndex_t
     SC_NO_SIMPLE_SYSTEM_CALLS
 
 } sc_enum_simpleSystemCallIndex_t;
-
-
-
-/*
- * Global type definitions
- */
 
 
 /*

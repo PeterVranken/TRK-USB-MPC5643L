@@ -46,7 +46,6 @@
 #include "ihw_initMcuCoreHW.h"
 #include "int_defStackFrame.h"
 #include "int_interruptHandler.h"
-#include "sc_systemCalls.h"
 #include "ccx_startContext.h"
 #include "ccx_createContextSaveDesc.h"
 

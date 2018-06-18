@@ -534,10 +534,8 @@ static uint32_t isrSystemTimerTick1(int_cmdContextSwitch_t *pCmdContextSwitch)
 
 
 /**
- * Start the interrupt which clocks the system time. Timer 2 is used as interrupt source
- * with a period time of about 2 ms or a frequency of 490.1961 Hz respectively.\n
- *   This is the default implementation of the routine, which can be overloaded by the
- * application code if another interrupt or other interrupt settings should be used.
+ * Start the interrupt which clocks the system time. Timer 0 is used as interrupt source
+ * with a period time of 1 ms.
  */
 static void enableIRQTimerTick1(void)
 {
