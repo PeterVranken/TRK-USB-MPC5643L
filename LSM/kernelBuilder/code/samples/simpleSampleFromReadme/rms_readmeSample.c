@@ -212,7 +212,7 @@ static _Noreturn uint32_t task100ms(uint32_t taskParam)
  */
 void _Noreturn rms_scheduler(void)
 {
-    /* Create a context descriptor of the idle task. */
+    /* Create a context descriptor of the startup context (idle task). */
     ccx_createContextSaveDescOnTheFly( &_contextSaveDescIdle
                                      , /* stackPointer */ NULL
                                      , /* fctEntryIntoOnTheFlyStartedContext */ NULL

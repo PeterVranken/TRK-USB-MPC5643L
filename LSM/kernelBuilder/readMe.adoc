@@ -1,7 +1,7 @@
 = Sample "kernelBuilder" - A platform to build your RTOS for e200z4
 :Author:    Peter Vranken
 :Email:     mailto:Peter_Vranken@Yahoo.de
-:toc:       left
+:toc2:      left
 :toclevels: 3
 :xrefstyle: short
 :numbered:
@@ -897,7 +897,45 @@ share the stack with.
 The other function arguments are identical to
 <<secSuspendedContext,`ccx_createContextSaveDesc()`>>.
 
-==== TODOC: System call tables, `systemCall()` and system call handler
+==== TODOC: System calls
+
+===== The simple system call
+
+===== The kernel relevant system call
+
+===== Configuration of system calls
+
+===== Making a system call
+
+From the C source code, a system call is made using:
+
+     #include "int_interruptHandler.h"
+     uint32_t int_systemCall(int32_t idxSysCall, ...);
+
+.idxSysCall
+The index of the system call. For simple system calls this is at the same
+time the index into configuration table `int_simpleSystemCallHandlerAry`.
+For kernel relevant system calls it is at the same time the one's
+complement of the index into configuration table
+`int_systemCallHandlerAry`. (The latter use the negative numeric range of
+`idxSysCall`.)
+
+. (...)
+The subsequent function arguments are not interpreted by
+`int_systemCall()` but passed on to the system call handler, i.e. the
+function found in the configuration table at given index.
+
+*Caution*, the assembler code, which implements `int_systemCall` doesn't
+fully implement the C ellipsis. It only supports the simple but normal
+situation, where each function argument is conveyed in the next GPR of the
+CPU, beginning with r3 and till r10. The assembler code will fail to pass
+the system call arguments to the handler if it has more than seven
+arguments (r3 holds the system call index) or if the arguments are not
+simple types of no more than 32 Bit length.
+
+Note, system calls are solely made from the task body of the aimed RTOS.
+From inside the kernel implementation it is not allowed and useless to
+make the system call.
 
 ==== Mutual exclusion, critical sections
 
@@ -933,6 +971,36 @@ sections. The implementation of the system call can make use of all the
 functions above -- system calls are always executed in supervisor mode --
 and actually, those system calls would just be wrappers around the
 functions from the startup code.
+
+==== Consistency of interface assembler/C
+
+kernelBuilder is written in assembler but it exposes a C API. This is
+possible due to the EABI specification, which contains a model of how a C
+compiler needs to interfere with machine code. A risk still arises from
+mixing C and assembler. An interface has at least two sides. If one side
+is changed without awareness and according modification of the other side
+then the use of this interface will fail. In a sheer C program the
+compiler is able to check this since both sides use the same header file.
+However, if our assembler code changes without careful update of the C
+header or if there's a revision mismatch then neither the assembler nor
+the compiler will report a problem and the likelihood of crashing code is
+high.
+
+In the C header, there's a macro defined,
+`INT_STATIC_ASSERT_INTERFACE_CONSISTENCY_C2AS`, which wraps a (lengthy)
+assertion that double-checks a lot of assumptions, the assembler code is
+based on. It's mostly about size of data structures and size and offset of
+their fields. An according change of the assembler code without a change
+of the C header, would be detected by the macro.
+
+It is strongly recommended putting the macro somewhere in the C code of
+every kernelBuilder application. The macro belongs as a statement into a
+function body. Any C module, which anyway includes the header
+`int_interruptHandler.h` is fine.
+
+The macro expands to a `_Static_assert` so it'll not produce any machine
+instruction in the binary artifacts; it'll just let the compilation abort if
+there's a mismatch.
 
 == Simple sample code
 
@@ -1086,7 +1154,7 @@ static _Noreturn uint32_t task100ms(uint32_t taskParam)
  */
 void _Noreturn rms_scheduler(void)
 {
-    /* Create a context descriptor of the idle task. */
+    /* Create a context descriptor of the startup context (idle task). */
     ccx_createContextSaveDescOnTheFly( &_contextSaveDescIdle
                                      , /* stackPointer */ NULL
                                      , /* fctEntryIntoOnTheFlyStartedContext */ NULL

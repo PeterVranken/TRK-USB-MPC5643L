@@ -439,17 +439,36 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_about_this_sample">1. About this sample</a></li>
 <li><a href="#_tools">2. Tools</a>
 <ul class="sectlevel2">
-<li><a href="#_environment">2.1. Environment</a></li>
-<li><a href="#_compiler_and_makefile">2.2. Compiler and makefile</a></li>
+<li><a href="#_environment">2.1. Environment</a>
+<ul class="sectlevel3">
+<li><a href="#_command_line_based_build">2.1.1. Command line based build</a></li>
+<li><a href="#_eclipse_for_building_flashing_and_debugging">2.1.2. Eclipse for building, flashing and debugging</a></li>
+</ul>
+</li>
+<li><a href="#_compiler_and_makefile">2.2. Compiler and makefile</a>
+<ul class="sectlevel3">
+<li><a href="#_floating_point_spe_and_eabi">2.2.1. Floating point, SPE and EABI</a></li>
+</ul>
+</li>
 <li><a href="#_flashing_and_debugging">2.3. Flashing and debugging</a></li>
 </ul>
 </li>
 <li><a href="#_code_architecture">3. Code architecture</a>
 <ul class="sectlevel2">
 <li><a href="#_only_gcc_only_lockstep_mode_lsm">3.1. Only GCC, only Lockstep Mode (LSM)</a></li>
-<li><a href="#_traps_and_interrupts">3.2. Traps and interrupts</a></li>
+<li><a href="#_traps_and_interrupts">3.2. Traps and interrupts</a>
+<ul class="sectlevel3">
+<li><a href="#_how_to_install_your_own_application_trap_handlers">3.2.1. How to install your own application trap handlers</a></li>
+</ul>
+</li>
 <li><a href="#_trap_4_external_interrupts">3.3. Trap #4, External Interrupts</a></li>
-<li><a href="#_api">3.4. API</a></li>
+<li><a href="#_api">3.4. API</a>
+<ul class="sectlevel3">
+<li><a href="#_system_initialization">3.4.1. System initialization</a></li>
+<li><a href="#_interrupt_registration">3.4.2. Interrupt registration</a></li>
+<li><a href="#_mutual_exclusion_of_contexts">3.4.3. Mutual exclusion of contexts</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -994,7 +1013,9 @@ the problem.
 </div>
 </div>
 <div class="sect3">
-<h4 id="_mutual_exclusion_critical_sections">3.4.3. Mutual exclusion, critical sections</h4>
+<h4 id="_mutual_exclusion_of_contexts">3.4.3. Mutual exclusion of contexts</h4>
+<div class="sect4">
+<h5 id="_critical_section">Critical section</h5>
 <div class="paragraph">
 <p>Virtually all interrupt handlers will share some data with either the main
 application context or other handlers. Due to the different CPU contexts
@@ -1033,8 +1054,8 @@ section. This is why the enter function returns the status so far as
 "msr".</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_suspend_all_external_interrupts">3.4.4. Suspend all External Interrupts</h4>
+<div class="sect4">
+<h5 id="_suspend_all_external_interrupts">Suspend all External Interrupts</h5>
 <div class="paragraph">
 <p>Very similar to the implementation and meaning of critical sections is the
 function pair to suspend and resume all External Interrupts. The major
@@ -1056,8 +1077,8 @@ then call <code>ihw_resumeAllInterrupts</code> and continue doing less critical 
 as a normal, preemptable handler.</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_lock_free_data_exchange">3.4.5. Lock-free data exchange</h4>
+<div class="sect4">
+<h5 id="_lock_free_data_exchange">Lock-free data exchange</h5>
 <div class="paragraph">
 <p>Mutual exclusion is not always required. There are lock-free techniques,
 which are mostly built on volatile flag variables that signal particular
@@ -1070,6 +1091,7 @@ code by:</p>
 <div class="content">
 <pre>#include &lt;stdatomic.h&gt;
 atomic_thread_fence(memory_order_seq_cst);</pre>
+</div>
 </div>
 </div>
 </div>
@@ -1097,7 +1119,7 @@ atomic_thread_fence(memory_order_seq_cst);</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-11-21 21:11:11 W. Europe Standard Time
+Last updated 2018-06-18 10:15:39 W. Europe Daylight Time
 </div>
 </div>
 </body>
