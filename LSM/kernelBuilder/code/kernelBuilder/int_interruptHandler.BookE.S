@@ -36,6 +36,14 @@
  * Local functions
  */
 
+/** @todo Optimization potential for RTOS which make heavy use of single-shot tasks: If a
+    context switch is commanded then we first save the full context (non-volatile GPR) and
+    then inspect the further conditions, among which terminateLeftContext. Context saving
+    is superfluous if this is requested. The relative speedup particularly for often
+    called, short tasks could be significant.\n
+      Unfortunately, changing the order of doing is not so easy because of the nested paths
+    through the code and requires a redesign. */
+
 #ifndef __VLE__
 
 /*

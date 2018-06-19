@@ -53,7 +53,7 @@
  */
 
 /** Overrun counter for task100ms. Counts lost activations. */
-extern unsigned int rms_cntOverrunTask100ms;
+extern volatile unsigned int rms_cntOverrunTask100ms;
 
 /*
  * Global prototypes
