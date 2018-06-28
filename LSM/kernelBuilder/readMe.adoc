@@ -1005,7 +1005,7 @@ specified when making a system is in bounds:
 There is a significant difference between configuring ISRs and system
 calls. The former can be registered at run-time, while the latter require
 a less flexible constant initializer expression. This can be considered a
-bad design decision; the original intention where kernel relevant system
+bad design decision; the original intention were kernel relevant system
 calls into the scheduler, so system calls from a limited scope only, which
 a simple centralized table is appropriate for. Soon it turned out that
 simple system calls are required, too, for the implementation of kernel

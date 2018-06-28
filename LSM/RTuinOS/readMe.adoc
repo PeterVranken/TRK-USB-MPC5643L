@@ -57,23 +57,6 @@ sent by the sample code running on the evaluation board.
 .Code How to configure the terminal
 image::doc/TerminalSettings.jpg[TerminalSettings,width=30%,pdfwidth=30%,align=center]
 
-
-
-=== Book E versus VLE
-
-The implementation of RTuinOS is not specific to one of the instruction
-sets. The build scripts and the Eclipse configuration support both
-instruction sets.
-
-The makefile takes an additional switch on the command line, state
-`INSTR=BOOK_E` (default) or `INSTR=VLE` to build the software in the
-wanted instruction set.
-
-In the Eclipse project, all build and debug configurations have been
-duplicated, once for each instruction set. The TCL scripts, which can be
-used in CodeWarrior's debugger shell window to flash the software, have
-got another argument to select the instruction set, too.
-
 == RTuinOS
 
 RTuinOS as such is not in the focus of this project. It's an Arduino
@@ -257,7 +240,7 @@ sample "RTuinOS" but the kernel can't be linked to a runnable binary
 without an application. You need to specify the name of an RTuinOS
 application on the command line of make. Set variable APP to do so.
 Possible application names can be found as the name of the folders inside
-`<projectRoot>/LSM/RTuinOS/code/applications'. Type ("tc01" is just an
+`<projectRoot>/LSM/RTuinOS/code/applications`. Type ("tc01" is just an
 example):
 
     mingw32-make -s build APP=tc01
@@ -333,3 +316,19 @@ set. All build settings and the software architecture are identical to
 "kernelBuilder". Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/readMe.adoc[LSM/kernelBuilder/readMe.adoc]
 for details.
+
+=== Book E versus VLE
+
+The implementation of RTuinOS is not specific to one of the instruction
+sets. The build scripts and the Eclipse configuration support both
+instruction sets.
+
+The makefile takes an additional switch on the command line, state
+`INSTR=BOOK_E` (default) or `INSTR=VLE` to build the software in the
+wanted instruction set.
+
+In the Eclipse project, all build and debug configurations have been
+duplicated, once for each instruction set. The TCL scripts, which can be
+used in CodeWarrior's debugger shell window to flash the software, have
+got another argument to select the instruction set, too.
+
