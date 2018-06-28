@@ -17,8 +17,8 @@ interrupts, which can cause task switches, and of system calls for
 suspending tasks or for sending events to resume others.
 
 RTuinOS consists of the source code folder `code\RTOS` (kernelBuilder is
-contained). To make it run on the evaluation board the known folder
-`code\startup` is required. All samples use console output and they share
+contained). To make it run on the evaluation board, the known folder
+`code\startup` was added. All samples use console output and they share
 the implementation of the serial interface in folder `code\serial`. Folder
 `code\common` contains the C entry point `main()`, which is designed such
 that the application code gets an environment similar to the original
@@ -29,10 +29,10 @@ RTuinOS each. Besides demonstrating the use of RTuinOS, they are
 considered test cases for the kernel -- which explains the name `tc<n>`.
 
 The build and debug scripts are a bit different to what you know from the
-other samples. They take an argument to select an application to compile;
-RTuinOS itself is an infra-structure only, it is not a self-contained,
-flashable executable, you always need to compile it together with some
-client code.
+other TRK-USB-MPC5643L samples. They take an argument to select an
+application to compile; RTuinOS itself is an infra-structure only, it is
+not a self-contained, flashable executable, you always need to compile it
+together with some client code.
 
 To see how the sample works you need to open a terminal software on your
 host machine. You can find a terminal as part of the CodeWarrior Eclipse
@@ -89,6 +89,8 @@ documentation has not been reworked so that you will still find remarks
 about Arduino specifics. It is not planned to edit the manual or to rework
 the code documentation in the future.
 
+=== Simplified configuration
+
 Effectively, the implementation of RTuinOS became simpler. The original
 Arduino implementation contains a lot of preprocessor code to make the
 type of some principal data objects configurable. This aimed at using as
@@ -100,8 +102,8 @@ removed all of this configuration stuff.
 
 The principle of how to let interrupts interfere with the kernel has not
 been changed but the interface with the client code has changed a bit.
-Acknowledging an interrupt at the source can not longer be done in a
-generic way and in the e200z4 port the client code needs to provide
+Acknowledging an interrupt at the source device can not longer be done in
+a generic way and in the e200z4 port the client code needs to provide
 according code. See configuration macro RTOS_ISR_USER_00_ACKNOWLEDGE_IRQ
 for details.
 
@@ -111,10 +113,11 @@ An alternative, more general, more transparent interface to install
 interrupts that interfere with the kernel has been added. The
 functionality is basically the same: A kernel interrupt can send an event
 to the tasks. Instead of doing this behind the curtain, the explicit, new
-API `rtos_sc_sendEvent()` is offered for interrupt handlers. Explicit
-sending of events from an ISR permits sending any set of events
-(broadcasted, mutex or semaphore) to the tasks instead of a single
-broadcasted event as it used to be in the Arduino implementation.
+API `rtos_sc_sendEvent()` is offered for kernel relevant interrupt
+handlers. Explicit sending of events from an ISR permits sending any set
+of events of any kind (broadcasted, mutex or semaphore) to the tasks
+instead of a single broadcasted event as it used to be in the Arduino
+implementation.
 
 The new way to deal with interrupts is demonstrated in sample application
 tc14. The ADC driver known from the other TRK-USB-MPC5643L sample
@@ -132,7 +135,8 @@ interrupt could otherwise send an event, which couldn't be safely
 processed yet) but the original Arduino/RTuinOS initialization callback,
 `setup()`, is invoked prior (and preparatory) to the kernel
 initialization. Although induced by the new interrupt interface the new
-callbacks are in no way specific to or restricted to this use case.
+callbacks are in no way specific to or restricted to this use case. See
+next section for details.
 
 === Additional, new initialization callbacks from kernel into client code
 
@@ -280,13 +284,22 @@ explicitly typing `mingw32-make` will avoid any problem.
 The makefile is designed to run on different host systems but has been
 tested with Windows 7 only.
 
+Note, the Eclipse project configuration in the root folder of this sample
+supports the build of only a sub-set of the possible configurations.
+RTuinOS can be compiled with a few sample applications only, each of them
+in DEBUG and PRODUCTION compilation and for either instruction set. To
+build the other samples with Eclipse you would have to duplicate the
+existing build configurations and adapt the make command lines in the
+build settings according to the explanations and examples above.
+
 === Flashing and debugging
 
 The sample code can be flashed and debugged with the CodeWarrior IDE.
 
 To flash the `*.elf` file of an RTuinOS application like `tc01`, open the
 CodeWarrior IDE, go to the menu, click "Window/Show
-View/Other/Debug/Debugger Shell". In the debugger shell window, type:
+View/Other/Debug/Debugger Shell". In the debugger shell window, type for
+example:
 
     cd <rootFolderOfSample>/makefile/debugger
     set APP tc01
@@ -299,8 +312,8 @@ or
     set INSTR BOOK_E
     source flashPRODUCTION.tcl
 
-(Setting TCL variable APP doesn't need to be repeated prior to every
-repeated flashing.)
+(Setting TCL variables APP and INSTR doesn't need to be repeated prior to
+every repeated flashing.)
 
 The debugger is started by a click on the black triangle next to the blue
 icon "bug", then click "Debug Configurations.../CodeWarrior/RTuinOS (tc01,
