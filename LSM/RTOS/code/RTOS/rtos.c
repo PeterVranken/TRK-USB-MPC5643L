@@ -6,7 +6,9 @@
  * pseudo parallel, concurrent execution of the tasks) all later used task are registered
  * at the scheduler, an application will repeatedly use the API rtos_registerTask().\n
  *   After all needed tasks are registered the application will start the RTOS' kernel
- * by calling the API rtos_initKernel(), task scheduling begins.
+ * by calling the API rtos_initKernel(), task scheduling begins. Alternatively, the RTOS'
+ * scheduler function rtos_onOsTimerTick() can be called from an externally defined clock
+ * source (effectively any regular interrupt service routine).\n
  *   A task is mainly characterized by a task function and a priority; the C code function
  * is invoked when the task is activated. The function is unconditionally executed until it
  * normally ends - this designates the end of the task.\n
@@ -30,7 +32,7 @@
  * task then it'll preempt the running task and it'll become the running task itself.\n
  *   If no task is ready at all then the scheduler continues the original code thread,
  * which is the code thread starting in function main() and which first registers the tasks
- * and then starts the kernel. (Everything from this code thread, which is placed behind
+ * and then starts the kernel. (Everything in this code thread, which is placed behind
  * the call of API rtos_initKernel() is called the "idle task".)\n
  *   The implemented scheduling scheme leads to a strictly hierarchical execution order of
  * tasks. It's simple, less than what most RTOSs offer but still powerful enough for the
@@ -42,10 +44,10 @@
  *   Any I/O interrupts can be combined with the tasks. Different to most RTOS we don't
  * impose a priority ordering between tasks and interrupts. A conventional design would put
  * interrupt service routines (ISR) at higher priorities than the highest task priority but
- * this is not a must. The RTOS doesn't have an API for interrupt handling; continue to use
- * the API from the infrastructure provided by the startup code to install your interrupt
- * handlers. This works fine with the RTOS. Please refer to
- * ihw_installINTCInterruptHandler().\n
+ * this is not a must.\n
+ *   The RTOS doesn't have an own API for interrupt handling; continue to use the API from
+ * the infrastructure provided by the startup code to install your interrupt handlers. This
+ * works fine with the RTOS. Please refer to ihw_installINTCInterruptHandler().\n
  *   Effectively, there's no difference between tasks and ISRs. All what has been said for
  * tasks with respect to priority, states and preemption holds for ISRs and the combination
  * of tasks and ISRs, too.\n
@@ -54,7 +56,7 @@
  * much of an RTOS kernel in hardware. The RTOS is just a wrapper around these hardware
  * capabilities. The reference manual of the INTC partly reads like an excerpt from the
  * OSEK/VDX specification, it effectively implements the basic task conformance classes BCC1
- * and partly BCC2 from the standard. Since we barely add software support, our operating
+ * and mostly BCC2 from the standard. Since we barely add software support, our operating
  * system is by principle restricted to these conformance classes.\n
  *   Basic conformance class means that a task cannot suspend intentionally and ahead of
  * its normal termination. Once started, it needs to be entirely executed. Due to the
@@ -80,6 +82,7 @@
  */
 /* Module interface
  *   rtos_registerTask
+ *   rtos_onOsTimerTick
  *   rtos_initKernel
  *   rtos_activateTask
  *   rtos_getNoActivationLoss
@@ -308,37 +311,14 @@ static inline void checkTaskDue( unsigned long tiOs
 
 
 /**
- * The OS timer handler. This routine is invoked once a Millisecond and triggers most of
- * the scheduler decisions. The application code is expected to run mainly in regular tasks
- * and these are activated by this routine when they become due. All the rest is done by
- * the interrupt controller INTC.
+ * The OS default timer handler. This routine is invoked once a Millisecond and triggers
+ * most of the scheduler decisions. The application code is expected to run mainly in
+ * regular tasks and these are activated by this routine when they become due. All the rest
+ * is done by the interrupt controller INTC.
  */
 static void osTimerTick(void)
 {
-    /* Note, the scheduler function is run at highest priority, which means that no task or
-       ISR can preempt this code. No mutual exclusion code is required. */
-
-    static unsigned long tiOs_ = 0;
-
-    /* The scheduler is most simple; the only condition to make a task ready is the next
-       periodic due time. The task activation is fully left to the hardware of the INTC and
-       we don't have to bother with priority handling or task/context switching.
-         The INTC is organized in two 32 Bit register, which handle four software
-       interrupts each. The manual doesn't offer the one-byte-per-object access (as
-       explicitly done for many other, structural similar hardware constructs), so we
-       better process the interrupts in groups of four and access the register as a whole.
-       The loop to handle all interrupts of one group is put into a reusable sub-routine. */
-    checkTaskDue( tiOs_
-                , /* idxFirstTask */ 0
-                , /* maxIdxTask */ _noTasks > 4? 4: _noTasks
-                , /* pINTC_SSCIR */ &INTC.SSCIR0_3.R
-                );
-    checkTaskDue( tiOs_
-                , /* idxFirstTask */ 4
-                , /* maxIdxTask */ _noTasks
-                , /* pINTC_SSCIR */ &INTC.SSCIR4_7.R
-                );
-    ++ tiOs_;
+    rtos_onOsTimerTick();
 
     /* Acknowledge the timer interrupt in the causing HW device. */
     PIT.TFLG0.B.TIF = 0x1;
@@ -453,8 +433,75 @@ unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
 
 
 /**
- * Initialization of the RTOS kernel. Can be called before or after the External Interrupts
- * are enabled at the CPU (see ihw_resumeAllInterrupts()).
+ * The operating system's scheduler function. This function needs to be called regularly
+ * from an interrupt service routine of highest available interrupt priority.\n
+ *   The expectation is to have a strictly periodic timer interrupt of 1ms period time.
+ * This is not a technical constraint but only in this case the documenation of the API is
+ * correct if it is about timing behavior. The documentation always uses the Millisecond as
+ * unit and this is based the expectation. If you use another clock tick - and even an
+ * irregular one may have its use cases - the scheduler will still work correct but the
+ * time designations have another unit than 1ms.\n
+ *   You can call this function directly from your external interrupt service routine. The
+ * simpler standard case is the call of rtos_initKernel(). That function initializes a
+ * timer device at 1ms clock tick and registers an interrupt service routine for you that
+ * calls this function. You must then not call this function yourself. 
+ *   @remark
+ * The demand "highest available interrupt priority" is a matter of design only. It is
+ * driven by the concept that the scheduler can force the execution of an application task
+ * in disfavor of any other context. No difference is made between interrupt service
+ * routines and regular application tasks.\n
+ *   However, most RTOSs distiguish between pure interrupt service routines and application
+ * tasks and let the latter generally have a priority lower than all of the former. And
+ * they would never preempt an interrupt in favor of an application task. If this behavior
+ * is modelled then the demand would change to "the highest application task priority plus
+ * one".
+ */
+void rtos_onOsTimerTick()
+{
+    /* Note, the scheduler function needs to run at highest priority, which means that no
+       task or ISR can preempt this code. No mutual exclusion code is required. */
+
+    static unsigned long tiOs_ = 0;
+
+    /* The scheduler is most simple; the only condition to make a task ready is the next
+       periodic due time. The task activation is fully left to the hardware of the INTC and
+       we don't have to bother with priority handling or task/context switching.
+         The INTC is organized in two 32 Bit register, which handle four software
+       interrupts each. The manual doesn't offer the one-byte-per-object access (as
+       explicitly done for many other, structural similar hardware constructs), so we
+       better process the interrupts in groups of four and access the register as a whole.
+       The loop to handle all interrupts of one group is put into a reusable sub-routine. */
+    checkTaskDue( tiOs_
+                , /* idxFirstTask */ 0
+                , /* maxIdxTask */ _noTasks > 4? 4: _noTasks
+                , /* pINTC_SSCIR */ &INTC.SSCIR0_3.R
+                );
+    checkTaskDue( tiOs_
+                , /* idxFirstTask */ 4
+                , /* maxIdxTask */ _noTasks
+                , /* pINTC_SSCIR */ &INTC.SSCIR4_7.R
+                );
+    ++ tiOs_;
+
+} /* End of rtos_onOsTimerTick */
+
+
+
+/**
+ * Initialization and start of the RTOS kernel.\n
+ *   The function initializes a hardware device to produce a 1ms clock tick and connects
+ * the OS schedule function rtos_onOsTimerTick() with the interrupt raised by this timer
+ * device. After return, the RTOS is running with a 1ms clock tick for scheduling the
+ * tasks.
+ *   Note, that it is not a nessicity to call this function. The condition for a running
+ * RTOS is the continuously repeated execution of rtos_onOsTimerTick() from an interrupt
+ * context of highest INTC priority level. No matter, which interrupt source it is and
+ * whether it is strictly periodic or not and at which rate. You can call
+ * rtos_onOsTimerTick() from an interrupt service routine of your choice if it fulfills the
+ * priority condition and then you must not call this function. See rtos_onOsTimerTick()
+ * for more details.
+ *   The function can be called before or after the External Interrupts are enabled at the
+ * CPU (see ihw_resumeAllInterrupts()).
  *   @remark
  * The RTOS kernel uses a tick of 1ms. It applies the Periodic Interrupt Timer 0 for this
  * purpose. This timer is reserved to the RTOS and must not be used at all by some

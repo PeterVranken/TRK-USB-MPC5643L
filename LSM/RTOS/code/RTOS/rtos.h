@@ -4,7 +4,7 @@
  * @file rtos.h
  * Definition of global interface of module rtos.c
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -177,7 +177,11 @@ static inline uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToT
        See https://community.nxp.com/message/993795 for more. */
     asm volatile ( "mbar\n\t"
                    "wrteei 1\n\t"
+#ifdef __VLE__
+                   "se_isync\n"
+#else
                    "isync\n"
+#endif
                    :::
                  );
                  
@@ -211,7 +215,7 @@ static inline void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisP
 {
     /* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority
        in the INTC should be done under global interrupt lock. A memory barrier ensures
-       that all memory operations inside the now left crtical section are completed. */
+       that all memory operations inside the now left critical section are completed. */
     asm volatile ( "mbar\n\t"
                    "wrteei 0\n"
                    :::
@@ -234,6 +238,9 @@ unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
 
 /** Kernel initialization. */
 void rtos_initKernel(void);
+
+/** The operating system's scheduler function. */
+void rtos_onOsTimerTick(void);
 
 /** Software triggered task activation. Can be called from other tasks or interrupts. */
 bool rtos_activateTask(unsigned int idTask);
