@@ -390,14 +390,7 @@ static void initINTCInterruptController()
     /* Normally, this function should always be called at the very first beginning, when
        all interrupts are still globally disabled at the CPU. However, we make it safe
        against deviating code constructs if we locally disable all interrupts. */
-    uint32_t msr;
-    asm volatile ( /* AssemblerTemplate */
-                   "mfmsr %0\n\t"
-                   "wrteei 0\n"
-                 : /* OutputOperands */ "=r" (msr)
-                 : /* InputOperands */
-                 : /* Clobbers */
-                 );
+    uint32_t msr = ihw_enterCriticalSection();
 
     /* Block Configuration register, INTC_BCR0
        VTES_PRC0, 0x20: 0 for 4 Byte entries, 1 for 8 Byte entries
@@ -414,13 +407,8 @@ static void initINTCInterruptController()
 
     /* Restore the machine status register including the enable external interrupt bit.
        For the normal, intended use case this won't have an effect. */
-    asm volatile ( /* AssemblerTemplate */
-                   "mbar \n\t"
-                   "mtmsr %0\n"
-                 : /* OutputOperands */
-                 : /* InputOperands */ "r" (msr)
-                 : /* Clobbers */
-                 );
+    ihw_leaveCriticalSection(msr);
+    
 } /* End of initINTCInterruptController */
 
 
@@ -468,14 +456,7 @@ void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
 {
     /* We permit to use this function at any time, i.e. even while interrupts may occur. We
        need to disable them shortly to avoid inconsistent states (vector and priority). */
-    uint32_t msr;
-    asm volatile ( /* AssemblerTemplate */
-                   "mfmsr %0\n\t"
-                   "wrteei 0\n"
-                 : /* OutputOperands */ "=r" (msr)
-                 : /* InputOperands */
-                 : /* Clobbers */
-                 );
+    uint32_t msr = ihw_enterCriticalSection();
 
     /* Set the function pointer in the ISR Handler table. We use the uppermost bit of the
        address to store the preemption information. This convention is known and considered
@@ -492,13 +473,8 @@ void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
     /* Set the PSR Priority */
     INTC.PSR[vectorNum].B.PRI = psrPriority;
 
-    asm volatile ( /* AssemblerTemplate */
-                   "mbar \n\t"
-                   "mtmsr %0\n"
-                 : /* OutputOperands */
-                 : /* InputOperands */ "r" (msr)
-                 : /* Clobbers */
-                 );
+    ihw_leaveCriticalSection(msr);
+    
 } /* End of ihw_installINTCInterruptHandler */
 
 

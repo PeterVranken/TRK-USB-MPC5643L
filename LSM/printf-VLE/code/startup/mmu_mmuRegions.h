@@ -103,7 +103,7 @@
 #define SUP_MMU_TBL_W       0x10    /// Cache: Write-through
 #define SUP_MMU_TBL_I       0x08    /// Cache inhibit
 #define SUP_MMU_TBL_M       0x04    /// Memory coherence required
-#define SUP_MMU_TBL_G       0x02    /// Guarded agianst bus cycle abortion
+#define SUP_MMU_TBL_G       0x02    /// Guarded against bus cycle abortion
 #define SUP_MMU_TBL_E       0x01    /// Endianess
 
 /** Use this macro to compose the value of MMU assist register MAS2 for flash ROM related

@@ -203,7 +203,7 @@ int_endIfPreemptable:
     e_lis   r4, INTC_EOIR_PRC0@ha   /* Load upper half of INTC_EOIR address */
     e_stw   r3, INTC_EOIR_PRC0@l(r4)/* Write 0 to INTC_EOIR */
 
-    /* Restore GPRegisters r0, r3-r12 */
+    /* Restore all GPRegisters and SPR, which are volatile according to the EABI. */
     e_lmvgprw   8(sp)       /* r0, r3-r12: 11*4 Byte */
     e_lmvsprw   52(sp)      /* CR, LR, CTR, XER: 4*4 Byte. Could be done earlier, when
                                still EE=1 */

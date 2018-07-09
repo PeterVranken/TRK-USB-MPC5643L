@@ -171,7 +171,7 @@ void ihw_installINTCInterruptHandler( int_externalInterruptHandler_t interruptHa
                                     , unsigned short vectorNum
                                     , unsigned char psrPriority
                                     , bool isPreemptable
-                                    , bool isOsInterrupt
+                                    , bool isKernelInterrupt
                                     );
 
 #endif  /* IHW_INITMCUCOREHW_INCLUDED */

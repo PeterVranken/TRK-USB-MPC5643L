@@ -4,7 +4,7 @@
  * the INTC. Used for MPC5643L in Lockstep Mode (LSM). The code has been designed for use
  * with GCC for PowerPC EABI.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
