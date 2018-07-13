@@ -24,7 +24,7 @@ External Interrupt sources and to different system calls.footnote:[
   The first function argument of a system call is the index into the
 configuration table of handlers.]
   The sub-handlers in the client code can communicate with the common code
-inside kernelBuilder in order to let it start, suspend, resume, and
+inside kernelBuilder in order to let it start, suspend, resume and
 terminate different contexts.
 
 The complete software, kernelBuilder plus client code, can thus be
@@ -32,6 +32,9 @@ understood as an event driven state machine. The different External
 Interrupts and the different system calls denote events, which are
 recognized and processed by the various handlers and which lead to an
 according sequence of context switches.
+
+The tiniest possible RTOS built on kernelBuilder is presented in
+<<secListingRTOS>>.
 
 The IVOR #4 handler for the External Interrupts supports ordinary
 interrupt service routines (ISR) and kernel relevant ISRs. When
@@ -78,9 +81,9 @@ it takes arguments and returns a result. The major difference to an
 ordinary function is its execution in supervisor mode, which makes it
 suitable for the implementation of I/O drivers.
 
-The other kind of system calls behave like kernel relevant ISRs and the
-function signature is similar. On return, such system calls can decide to
-either return to the calling context or they can demand a context switch.
+The other kind of system calls behaves like kernel relevant ISRs and the
+function signature is similar. On return, such a system call can decide to
+either return to the calling context or it can demand a context switch.
 In the former case, the system call behaves exactly like a simple system
 call. In the latter case, the calling context is suspended to the
 advantage of another, instead continued context. The typical use case is
@@ -143,7 +146,7 @@ samples, a tiny RTOS is present, too.)
 
 === Registration of ISRs and system calls
 
-ISRs -- ordinary and kernel relevant -- are dynamically defined by the
+ISRs -- ordinary and kernel relevant -- are defined at run-time by the
 client code using the known mechanisms from the common startup code. A
 change has been made in the call for registering an ISR: A Boolean
 argument makes the distinction between ordinary and kernel relevant ISRs
@@ -161,29 +164,29 @@ most situations. Wherever the simple handlers can be applied they have the
 following advantages:
 
 * They offer to change the machine state in which the calling context is
-  executed. The principal use case is a pair of system calls to suspend
+  continued. The principal use case is a pair of system calls to suspend
   and resume handling of External Interrupts
 * They produce less overhead
 * They are not serialized with other system calls (neither simple nor
   kernel relevant) and nor with ISRs. Therefore, they barely impact the
-  real time behavior of a kernel
+  real-time behavior of a kernel
 
-Dynamic adding of table entries is not possible for system calls at
-run-time; the set of system calls is considered a finalized design
-decision for the aimed scheduler/kernel/RTOS. The tables are declared
-extern to the assembler code and the client code is in charge to compile
-them.
+Dynamic adding of table entries at run-time is not possible for system
+calls; the set of system calls is considered a finalized design decision
+for the aimed scheduler/kernel/RTOS. The tables are declared extern to the
+assembler code and the client code is in charge of defining them.
 
 kernelBuilder offers the API `init_systemCall(idxSysCall, ...)` to invoke
-the system call handler at given index in the table. The normal design
-decision for the client code will be to provide a preprocessor macro or an
-inline function for each system call, which wraps the generic call
-`init_systemCall(idxSysCall, ...)` with a meaningful name.footnote:[
+the system call handler, which is found at given index in the table. The
+normal design decision for the client code will be to provide a
+preprocessor macro or an inline function for each system call, which wraps
+the generic call `init_systemCall(idxSysCall, ...)` with a meaningful
+name.footnote:[
   Meanwhile it appears that at least for the simple system calls a
 run-time table configuration could be the better choice: Most I/O drivers
 will require to register some of these system calls in order to provide
 their APIs. The current, centralized constant table requires careful code
-design in order to achieve proper separation of the implementation of
+design in order to achieve proper separation of the implementation of the
 kernel and of the different drivers. The samples demonstrate how this can
 be done.]
 
@@ -211,12 +214,13 @@ The latter execute their tasks implemented in the entry function and
 return from it. Returning from the entry function means terminating the
 context. These contexts typically expect that the entry function is
 repeatedly executed, from beginning till end, and either regularly or
-triggered by some kind of event.
+triggered by some kind of event.footnote:[
+  Where "regularly" will just mean having a regular (timer) event.]
 
-To support the initial and repeated start of a context, the entry function
-is element of the context object. Finally, the execution mode is specified
-in the object. A context can be executed in either supervisor or user
-mode.
+To support the initial and repeated start of a context, the address of the
+entry function is element of the context object. Finally, the execution
+mode is specified in the object. A context can be executed in either
+supervisor or user mode.
 
 Both kinds of contexts can be suspended and later resumed - at any point
 in time and as often as suitable. kernelBuilder makes no difference between
@@ -232,7 +236,7 @@ One particular execution context is always there. It's the execution
 context from the startup code, passed on to C function `main`. To make use
 of the context switching capabilities of the IVOR handlers, we need a
 context descriptor object for the startup context (to be able to safely
-suspend it) and at minimum one other context.
+suspend it) and at minimum for one other context.
 
 kernelBuilder offers the service to create a new context. Three helper
 functions exist:
@@ -245,7 +249,7 @@ functions exist:
   fly.) In case of single-shot tasks, the context object can be reused as
   often as suitable to re-start the same single-shot context footnote:[
     It needs to be granted that the previous shot has properly terminated
-  prior to restart a single-shot context.]
+  prior to re-start a single-shot context.]
 * `ccx_createContextSaveDescShareStack()` is nearly the same, but the
   stack specification is made indirectly by reference to another, already
   initialized context object: The two contexts will use the same stack
@@ -276,7 +280,7 @@ the scheduler doesn't need to take any care when commanding a context
 switch to one of these contexts. When using
 `ccx_createContextSaveDescOnTheFly()` the scheduler needs to distinguish
 between starting a context (first context switch to it) and resuming it
-(subsequent context switches to it)
+(subsequent context switches to it).
 
 TIP: Typical RTOS design: The kernel initialization routine calls function
 `ccx_createContextSaveDesc()` a number of times to create the requested
@@ -295,15 +299,15 @@ contexts.
 External Interrupts and system calls are considered events, which may
 yield a context switch. Most prominent example is the timer interrupt of a
 typical RTOS. The handler will count the occurrences and compare with the
-due time of different configured tasks. If the due time of a task is
+due time of different configured tasks. When the due time of a task is
 reached then the context, which implements the task, will be started or
 resumed.
 
-The concept of kernelBuilder is that handlers for these events, which are
-implemented in the client code, do all the organizational work, which is
-required to keep track of which context should be served next and on
-return they will tell kernelBuilder's underlying assembler code what to
-do.
+The concept of kernelBuilder is that the client code implements the
+handlers for all of these events. The handlers do all the organizational
+work, which is required to keep track of which context should be served
+next and on return they will tell kernelBuilder's underlying assembler
+code what to do in terms of context switching.
 
 The return value of a handler indicates whether or not to do a context
 switch. If a context switch is wanted then it'll further indicate whether
@@ -323,7 +327,13 @@ This is no issue because of the race condition free implementation
 paradigm for the client scheduler code. All kernel relevant handler
 invocations, External Interrupts and system calls, are serialized. A
 handler will never be preempted by another one and even less by a context
-under control of the scheduler.
+under control of the scheduler. This makes the execution of the whole
+handler plus the context switch, it may command on return, become a single
+atomic operation.footnote:[
+  For this reason, the execution time of any kernel relevant handler
+should be kept short. Kernel unrelated handlers, i.e. ordinary ISRs, can
+normally preempt kernel relevant handlers; their real-time behavior is not
+affected.]
 
 kernelBuilder applies the priority ceiling protocol for serializing the
 handler invocations, which means that kernel unrelated External Interrupts
@@ -357,14 +367,14 @@ single-shot context later. And if several contexts share one stack and if
 one of them terminates and properly cleans up its portion of the stack
 then the others using the same stack can be safely resumed.
 
+Note, if a context has been terminated on return from a handler then the
+according context cannot be resumed again but it can be re-started.
+
 Note, context start and termination will most likely be applied to the
 implementation of single-shot tasks. In which case the context descriptor
 object remains valid even after context termination: The same object can
 be used just like that to command a start-of-context at next due time of
 the single-shot task.
-
-Note, if a context has been terminated on return from a handler then the
-according context cannot be resumed again but it can be re-started.
 
 ==== Return from the context entry function
 
@@ -390,6 +400,15 @@ system call implementation -- again an IVOR handler -- will update the
 scheduler's data structures to reflect the changed task state and command the
 context termination on return in order to do the stack cleanup.
 
+Why do we provide the callback? It doesn't bring a technical advantage.
+The anyway required system call "signal end of task" can also be put
+directly into the code, which implements the context -- naturally but not
+necessarily at the end of its entry function. However, only having the
+callback, the system call can be hidden in the aimed RTOS implementation.
+Usually, the context entry function (then referred to as task function) is
+provided by the client code of the RTOS and the RTOS user would otherwise
+be in charge of putting the system call into his task function.
+
 Note, the callback is reentrant and shared by all contexts. Regardless,
 the client code doesn't need to implement a mechanism for signaling, which
 particular context invoked it and is about to terminate: The scheduler is
@@ -403,20 +422,20 @@ which one that is.
 Basically, any context will have its own stack area. This enables
 arbitrary switching between all contexts, any one can be suspended to the
 advantage of any other. The only drawback is the memory consumption. For
-the capacity of the stack of a context one needs to consider not only the
-consumption of the context's entry and all its sub-functions -- there
+the capacity of the stack of a context one needs not only to consider the
+consumption of the context's entry and all its sub-functions but there
 needs to be an additional headroom for preemptions by asynchronous
 interrupts.
 
-The e200z4 core uses the normal stack pointer on entry into an ISR and it
-has up to 15 levels of preemption by External Interrupts. For sake of
-performance and simplicity, our IVOR #4 handler creates on entry a worst
-case stack frame, which already considers the space for a possible context
-switch on return (as opposed to enlarging the stack frame in case of an
-actually happening context switch). This stack frame has a size of about
-170 Byte. If all 15 interrupt levels are in use then this would sum up to
-a required headroom of about 2.5 kByte -- even if you will never be able
-to create a test case, which proves this.
+kernelBuilder's IVOR handlers use the normal stack pointer on entry into
+an ISR and the core has up to 15 levels of preemption by External
+Interrupts. For sake of performance and simplicity, our IVOR #4 handler
+creates on entry a worst case stack frame, which already considers the
+space for a possible context switch on return (as opposed to enlarging the
+stack frame in case of an actually happening context switch). This stack
+frame has a size of about 170 Byte. If all 15 interrupt levels are in use
+then this would sum up to a required headroom of about 2.5 kByte -- even
+if you will never be able to create a test case, which proves this.
 
 This headroom has to be spent for any stack. Certain sub-sets of context
 can use one and the same stack and the headroom applies only once to all
@@ -506,9 +525,9 @@ commanding the switch to the new context.
 +
 The task is ended by making a dedicated system call. The system call
 handler returns the context object into the pool and on return it commands
-the termination of the context and the switch to any other context (maybe
-the idle task). The termination request ensures that the stack area
-specified in the context object remains properly reusable for future
+the termination of the context and the switch to any other context
+(including the idle task). The termination request ensures that the stack
+area specified in the context object remains properly reusable for future
 cycles.
 +
 Note, it doesn't matter whether the system call for termination is still
@@ -664,8 +683,8 @@ above.
 The sample code can be flashed and debugged with the CodeWarrior IDE.
 
 To flash the `*.elf` file, open the CodeWarrior IDE, go to the menu, click
-"Window/Show View/Other/Debug/Debugger Shell". In the debugger shell
-window, type for example:
+"Window/Show View/Other/Debug/Debugger Shell". In the appearing debugger
+shell window, type for example:
 
     cd <rootFolderOfSample>/makefile/debugger
     source flashAlternatingContextsDEBUG.tcl
@@ -674,28 +693,29 @@ or
 
     source flashAlternatingContextsPRODUCTION.tcl
 
-(Or the according scripts for the other samples.) As of writing, the named
-flash scripts have been prepared for the Book E compilation artifacts
-only. The VLE binaries can be flashed only with the generic flash scripts,
-which take the name of the sample application and the instruction set as
-arguments. These are the scripts `flashDEBUG.tcl` and
-`flashPRODUCTION.tcl`. The arguments are APP and INSTR and they are
-implemented as global TCL variables, which have to be set prior to the run
-of the script. Type for example:
+(Or the according scripts for the other kernelBuilder client
+applications.) As of writing, the named flash scripts have been prepared
+for the Book E compilation artifacts only. The VLE binaries can be flashed
+only with the generic flash scripts, which take the name of the client
+application and the instruction set as arguments. These are the scripts
+`flashDEBUG.tcl` and `flashPRODUCTION.tcl`. The arguments are APP and
+INSTR and they are implemented as global TCL variables, which have to be
+set prior to the run of the script. Type for example:
 
     cd <rootFolderOfSample>/makefile/debugger
     set APP simpleRTOS
     set INSTR VLE
     source flashDEBUG.tcl
 
-Open the TCL script in a text editor to get more details.
+Please consider opening the TCL script in a text editor to get more
+details.
 
 The debugger is started by a click on the black triangle next to the blue
 icon "bug", then click "Debug Configurations.../CodeWarrior/kernelBuilder
 (simpleRTOS, VLE, DEBUG)". Confirm and start the debugger with a last
 click on button "Debug".
 
-(Or select the according debug configuration for another sample
+(Or select the according debug configuration for another kernelBuilder client
 application or the other instruction set.)
 
 You can find more details on using the CodeWarrior IDE at
@@ -704,32 +724,30 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 == Code architecture
 
 kernelBuilder consists of the source code folders `code\startup` and
-`code\kernelBuilder`. Folder `startup` combines the code known from the
+`code\kernelBuilder`. Folder `startup` merges the code known from the
 other samples "startup" and "startup-VLE", only the standard IVOR #4
-handler has been removed. Please refer to
+handler has been removed to avoid a conflict with kernelBuilder's
+implementation of the handlers. Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
 for details.
 
-The sub-folders of folder `code\samples` contain a sample client
-implementation each.footnote:[
+The sub-folders of folder `code\samples` contain a kernelBuilder client
+code sample each.footnote:[
   With the exception of `common`, which contains common code of all or
 some of the samples.]
-  Folder `code\serial` is the known implementation of `printf` and only
-used by the client code. Package `serial` was extended by a wrapper around
-the driver API so that it is available to contexts running in user mode.
-The wrapper implements the same API as system calls.
+  The client code samples demonstrate preemptive and cooperative
+scheduling.
 
-The build and debug scripts are a bit different to what you know from the
-other samples. They take an argument to select a client code sample;
-kernelBuilder itself is an infra-structure only, it is not a
-self-contained, flashable executable, you always need to compile it
-together with some client code.
+Folder `code\serial` is the known implementation of `printf` and only used
+by the client code samples. Package `serial` was extended by a wrapper
+around the driver API so that it becomes available to contexts running in
+user mode, too. The wrapper implements the same API as there used to be
+but in form of system calls.
 
-The samples demonstrate preemptive and cooperative scheduling.
-
-To see how a sample works you need to open a terminal software on your
-host machine. You can find a terminal as part of the CodeWarrior Eclipse
-IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal".
+To see how a client code sample behave you need to open a terminal
+software on your host machine. You can find a terminal as part of the
+CodeWarrior Eclipse IDE; go to the menu, "Window/Show
+View/Other/Terminal/Terminal".
 
 Open the serial port, which is offered by the TRK-USB-MPC5643L. (On
 Windows, open the Computer Management and go to the Device Manager to find
@@ -739,10 +757,16 @@ sequence \r\n is used as end of line character. The terminal should print
 the messages, which are regularly sent by the sample code running on the
 evaluation board.
 
+The build and debug scripts are a bit different to what you know from the
+other TRK-USB-MPC5643L samples in this project. They take an argument to
+select a client code sample; kernelBuilder itself is an infra-structure
+only, it is not a self-contained, flashable executable, you always need to
+compile it together with some client code.
+
 === Book E versus VLE
 
-kernelBuilder is written in both, Book E and VLE assembler. The build
-scripts and the Eclipse configuration support both instruction sets.
+kernelBuilder is written in both, Book E and VLE assembler. The build and
+flash scripts and the Eclipse configuration support both instruction sets.
 
 The makefile takes an additional switch on the command line, state
 `INSTR=BOOK_E` (default) or `INSTR=VLE` to build the software in the
@@ -808,7 +832,7 @@ The signature of a kernel relevant handler is:
     uint32_t (*)(int_cmdContextSwitch_t *pCmdCtxtSw);
 
 .Return value
-On return from the handler you can command a command switch by return
+On return from the handler you can command a context switch by return
 value and provide more details by writing to the function argument:
 
 * Return bit `int_rcIsr_switchContext` to command a context switch
@@ -837,6 +861,10 @@ result of a system call or as argument of the entry function,
 respectively. Setting the value is optional; it would have no effect if
 the entered context had been preempted and suspended by an External
 Interrupt.
+
+The source code comments in file
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.h[`int_interruptHandler.h`]
+explain all further details.
 
 ==== Creating context descriptors
 
@@ -895,6 +923,9 @@ and existing startup context:
                             );
 
 The function arguments are identical to <<secSuspendedContext,`ccx_createContextSaveDesc()`>>.
+
+The source code comments for this function explain how to apply it for
+creation of a descriptor for startup context.
 
 ===== On-the-fly created context with shared stack
 
@@ -959,22 +990,23 @@ The returned values are identical to those of the kernel relevant ISR:
 
 .Return value
 On return from the handler and alike the kernel relevant ISR, you can
-command a command switch by return value and provide more details by
+command a context switch by return value and provide more details by
 writing to the function argument `*pCmdCtxtSw`. See
-<<secKernelRelevantISR>> for details.
+<<secKernelRelevantISR>> and the source code comments for the function and
+the affected data types for details.
 
 .pCmdCtxtSw
 See return value and <<secKernelRelevantISR>> for details.
+
+.(...)
+The subsequent function arguments are those passed from the client code.
+Please, see <<secMakingASysCall>> for details and constraints.
 
 Note, the system call handler is always executed in supervisor mode and
 with External Interrupt handling enabled. However, the handling of all
 kernel relevant ISRs is disabled. It is generally impossible for some
 client code to span a critical section across a system call by means of
 suspending all interrupts.
-
-.(...)
-The subsequent function arguments are those passed from the client code.
-Please, see <<secMakingASysCall>> for details and constraints.
 
 ==== Configuration of system calls
 
@@ -985,15 +1017,15 @@ The configuration is made by two static, compile-time defined tables:
     const SECTION(.rodata.ivor) int_systemCallFct_t int_systemCallHandlerAry[];
 
 The tables are external to the implementation of kernelBuilder; the client
-code will define them. The constant objects are filled by an
-initializer expression, which lists the function pointers to the handlers
+code will define them. The constant objects are filled by
+initializer expressions, which list the function pointers to the handlers
 for all actual system calls.
 
 If the compilation configuration is `DEBUG` then there are two more
 external declarations of kernelBuilder that need to be satisfied by the
 client code. The sizes of the two arrays are specified; kernelBuilder
 contains assertions that double-check at run-time that the table index
-specified when making a system is in bounds:
+specified when making a system call is in bounds:
 
     #include "int_interruptHandler.h"
     extern const uint32_t int_noSystemCalls;
@@ -1007,18 +1039,18 @@ calls. The former can be registered at run-time, while the latter require
 a less flexible constant initializer expression. This can be considered a
 bad design decision; the original intention were kernel relevant system
 calls into the scheduler, so system calls from a limited scope only, which
-a simple centralized table is appropriate for. Soon it turned out that
-simple system calls are required, too, for the implementation of kernel
-unrelated I/O drivers. I/O drivers are typically designed as independent
-compilation units and due to the centralized configuration table they are
-now forced into an unwanted relationship.
+a simple centralized table would be appropriate for. Soon it turned out
+that simple system calls are required, too, for the implementation of
+kernel unrelated I/O drivers. I/O drivers are typically designed as
+independent compilation units and due to the centralized configuration
+table they are now forced into an unwanted relationship.
 
 For now, the samples propose a stringent way of using header files and
-preprocessor definitions so that the I/O drivers can still be kept
+preprocessor definitions such that the I/O drivers can still be kept
 self-contained and independent of one another. They export only their
 individual contribution to the required initializer expressions but do not
 care about the table object. A scheduler owned module can define the table
-but referring to all the I/O driver's contributions.
+by referring to all the I/O driver's contributions.
 
 On the long term, we may need a dynamic configuration alike the ISRs even
 if this is on cost of additional RAM usage.
@@ -1055,9 +1087,9 @@ the system call arguments to the handler if it has more than seven
 arguments (r3 holds the system call index) or if the arguments are not
 simple types of no more than 32 Bit length.
 
-Note, system calls are solely made from the task body of the aimed RTOS.
-From inside the kernel implementation it is not allowed and useless to
-make the system call.
+NOTE: System calls are solely made from the task body of the aimed RTOS.
+From inside the kernel implementation, i.e. from an ISR or system
+call handler, it is not allowed and useless to make the system call.
 
 ==== Mutual exclusion, critical sections
 
@@ -1085,13 +1117,13 @@ The two pairs of interrupt disable functions make use of privileged
 instructions and require supervisor mode. They must not be used in
 contexts, which have been started in user mode. An exception would result.
 
-`atomic_thread_fence()` can be applied in user mode, too. (Not proven.)
+`atomic_thread_fence()` can be applied in user mode, too.
 
 A typical kernelBuilder application, which wants to run contexts in user
 mode, will offer a pair of simple system calls to enter and leave a
-critical sections. The would just return the wanted, modified machine
-status for continuation of the calling context without or with handling of
-External Interrupts.
+critical sections. They can set a flag in the scheduler to make it not
+schedule another task or they just change the External Interrupt
+enable flag in the machine status word for the calling context.
 
 ==== Consistency of interface assembler/C
 
@@ -1112,7 +1144,7 @@ In the C header, there's a macro defined,
 assertion that double-checks a lot of assumptions, the assembler code is
 based on. It's mostly about size of data structures and size and offset of
 their fields. An according change of the assembler code without a change
-of the C header, would be detected by the macro.
+of the C header, or vice versa, would be detected by the macro.
 
 It is strongly recommended putting the macro somewhere in the C code of
 every kernelBuilder application. The macro belongs as a statement into a
@@ -1123,21 +1155,22 @@ The macro expands to a `_Static_assert` so it'll not produce any machine
 instruction in the binary artifacts; it'll just let the compilation abort if
 there's a mismatch.
 
+[[secListingRTOS]]
 == Simple sample code
 
-The simplest possible kernelBuilder application is
+Now, the simplest possible RTOS built on kernelBuilder is presented. The
+main implementation file is included here as a short yet complete sample.
+You will find all the sub-ordinated remaining files as a buildable,
+flashable and executable kernelBuilder sample application, please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder/code/samples/simpleSampleFromReadme[simpleSampleFromReadme].
-The main implementation file is included here as a short yet complete
-sample. At the linked location you will find all the sub-ordinated
-remaining files as a buildable, flashable and executable project.
 
 [source,C,options="nowrap"]
 ----
 /**
- * This kernelBuilder sample implements the most simple RTOS. There is one task besides the
- * idle task. This task is a real time task in that it is executed every 100ms. Both tasks
- * regularly print a hello world message. (Serial port at 115200 Bd, 8 Bit, 1 Start, 1 Stop
- * bit)
+ * This kernelBuilder sample implements the most simple RTOS. There is one
+ * task besides the idle task. This task is a real-time task in that it is
+ * executed every 100ms. Both tasks regularly print a hello world message.
+ * (Serial port at 115200 Bd, 8 Bit, 1 Start, 1 Stop bit)
  */
 (...)
 
@@ -1145,7 +1178,8 @@ remaining files as a buildable, flashable and executable project.
  * Defines
  */
 
-/* System call index: Terminate context. */
+/* System call index: Terminate context. (Kernel relevant handlers use the
+   negative index range.) */
 #define IDX_SYS_CALL_TERMINATE_TASK  (-1)
 (...)
 
@@ -1219,7 +1253,8 @@ static void enableRTOSSystemTimer(void)
                 , /* isKernelInterrupt */ true
                 );
 
-    /* Peripheral clock has been initialized to 120 MHz. Set value for a 100ms tick. */
+    /* Peripheral clock has been initialized to 120 MHz. Set value for a 100ms
+       tick. */
     PIT.LDVAL0.R = 12000000-1;
 
     /* Enable interrupts by this timer and start it. */
@@ -1258,7 +1293,9 @@ static uint32_t sc_terminateTask(int_cmdContextSwitch_t *pCmdContextSwitch)
 static _Noreturn uint32_t task100ms(uint32_t taskParam)
 {
     static unsigned int cnt_ = 0;
-    printf("%s: %us, %lu lost activations so far\r\n", __func__, cnt_++/10, taskParam);
+    printf( "%s: %us, %lu lost activations so far\r\n"
+          , __func__, cnt_++/10, taskParam
+          );
 
     /* We terminate explicit in order to keep the sample one function shorter. */
     int_systemCall(IDX_SYS_CALL_TERMINATE_TASK);
@@ -1270,7 +1307,7 @@ static _Noreturn uint32_t task100ms(uint32_t taskParam)
 
 /** 
  * Main entry point into the scheduler. There are two tasks. The idle task, which
- * inherits the startup context and one real time task. The latter is a single-shot
+ * inherits the startup context and one real-time task. The latter is a single-shot
  * task, which is called every 100ms and which shares the stack with the idle task.
  */
 void _Noreturn rms_scheduler(void)

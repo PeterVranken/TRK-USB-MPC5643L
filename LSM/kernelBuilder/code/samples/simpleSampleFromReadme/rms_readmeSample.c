@@ -2,9 +2,10 @@
  * @file rms_readmeSample.c
  * This is the simple sample from the readme of kernelBuilder, see
  * https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder#simple-sample-code.
- * It implements the most simple RTOS. There is one task besides the idle task. This
- * task is a real time task in that it is executed every 100ms. Both tasks regularly
- * print a hello world message. (Serial port at 115200 Bd, 8 Bit, 1 Start, 1 Stop bit)
+ * This kernelBuilder sample implements the most simple RTOS. There is one
+ * task besides the idle task. This task is a real-time task in that it is
+ * executed every 100ms. Both tasks regularly print a hello world message.
+ * (Serial port at 115200 Bd, 8 Bit, 1 Start, 1 Stop bit)
  *
  * Copyright (C) 2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -55,7 +56,8 @@
  * Defines
  */
 
-/* System call index: Terminate context. */
+/* System call index: Terminate context. (Kernel relevant handlers use the
+   negative index range.) */
 #define IDX_SYS_CALL_TERMINATE_TASK  (-1)
 
 /*
@@ -150,17 +152,12 @@ static void enableRTOSSystemTimer(void)
                 , /* isKernelInterrupt */ true
                 );
 
-    /* Peripheral clock has been initialized to 120 MHz. To get a 100ms interrupt tick
-       we need to count till 12000000.
-         -1: See MCU reference manual, 36.5.1, p. 1157. */
+    /* Peripheral clock has been initialized to 120 MHz. Set value for a 100ms
+       tick. */
     PIT.LDVAL0.R = 12000000-1;
 
     /* Enable interrupts by this timer and start it. */
     PIT.TCTRL0.R = 0x3;
-
-    /* Enable timer operation and let them be stopped on debugger entry. Note, this is
-       a global setting for all four timers, even if we use and reserve only one for
-       the RTOS. */
     PIT.PITMCR.R = 0x1;
 
 } /* End of enableRTOSSystemTimer */
@@ -195,7 +192,9 @@ static uint32_t sc_terminateTask(int_cmdContextSwitch_t *pCmdContextSwitch)
 static _Noreturn uint32_t task100ms(uint32_t taskParam)
 {
     static unsigned int cnt_ = 0;
-    printf("%s: %us, %lu lost activations so far\r\n", __func__, cnt_++/10, taskParam);
+    printf( "%s: %us, %lu lost activations so far\r\n"
+          , __func__, cnt_++/10, taskParam
+          );
 
     /* We terminate explicit in order to keep the sample one function shorter. */
     int_systemCall(IDX_SYS_CALL_TERMINATE_TASK);
@@ -207,7 +206,7 @@ static _Noreturn uint32_t task100ms(uint32_t taskParam)
 
 /** 
  * Main entry point into the scheduler. There are two tasks. The idle task, which
- * inherits the startup context and one real time task. The latter is a single-shot
+ * inherits the startup context and one real-time task. The latter is a single-shot
  * task, which is called every 100ms and which shares the stack with the idle task.
  */
 void _Noreturn rms_scheduler(void)
