@@ -91,7 +91,7 @@ coding paradigm.
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTuinOS["RTuinOS"]
 is the proof of concept of kernelBuilder: RTuinOS, the event based Real
 Time Operating System (RTOS) for Arduino, could be ported to the e200z4
-core with a surprising little amount of changes.
+core with a surprisingly little amount of changes.
 
 All samples are self-contained. There are some common elements, which are
 same in some or all samples, like startup code and makefile. It would be
