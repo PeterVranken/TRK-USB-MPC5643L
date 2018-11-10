@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -106,6 +106,7 @@ h help targets usage:
              assembler module. Build product is sibling of source file)
 	$(info - versionGCC: Print information about which compiler is used)
 	$(info - helpGCC: Print usage text of compiler)
+	$(info - builtinMacrosGCC: Print builtin #define's of compiler for given configuration)
 	$(info - help: Print this help)
 	$(error)
 
@@ -278,6 +279,7 @@ ifeq ($(SAVE_TMP),1)
     # directory
     cFlags += -save-temps=obj -fverbose-asm #-dp
 endif
+# Debug settings see https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
 ifeq ($(CONFIG),DEBUG)
     cFlags += -g3 -gdwarf-2 -Og
 else
@@ -355,6 +357,16 @@ $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath) $(projectResourceFile)
 	$(info File created)
 
 # Let the linker create the flashable binary file.
+#   CAUTION: An unsolved problem with GCC 4.9.4 is the switch -fshort-double, which is
+# highly desired in software emulation mode and unavoidable in hardware mode. There seems
+# to be no set of libraries, which has been compiled in this mode. If we call a library
+# function using the type double for in- or output then the code doesn't crash but produces
+# bad results. A statement like x=exp(y); will produce the wrong result for x. We need to
+# do, what is anyway strongly recommended - using the float variants of these library
+# functions. Our example would become x=expf(y);, which works as expected. This problem can
+# only be solved by rebuilding the C library with our settings.
+#   Note, there's no such function for printf & co, e.g. printff. See sample "printf" work
+# a proposed, particular work-around.
 lFlags = -Wl,-Tmakefile/linkerControlFile.ld -nostartfiles -Wl,--gc-sections $(targetFlags) \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
          -Wl,--warn-common,--warn-once -Wl,-g                                               \

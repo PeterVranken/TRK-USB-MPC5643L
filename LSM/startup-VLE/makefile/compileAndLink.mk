@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -59,8 +59,8 @@
 # The makefile compiles and links all source files which are located in a given list of
 # source directories. The list of directories is hard coded in the makefile, please look
 # for the setting of srcDirList below.
-#   A second list of files is found as cFileListExcl. These C/C++ files are excluded from
-# build.
+#   A second list of files is found as cFileListExcl. These C/C++ or assembler files are
+# excluded from build.
 
 
 # General settings for the makefile.
@@ -88,7 +88,7 @@ projectExe := $(target).s19
 .DEFAULT_GOAL := help
 h help targets usage:
 	$(info Usage: make [-s] [-k] [CONFIG=<configuration>] [SAVE_TMP=1] {<target>})
-	$(info <configuration> is one out of DEBUG (default) or PRODUCTION.)
+	$(info CONFIG: <configuration> is one out of DEBUG (default) or PRODUCTION.)
 	$(info SAVE_TMP set to one will make the preprocessed C(++) sources and the assembler \
            files appear in the target directory bin/ppc/<configuration>/obj/)
 	$(info Available targets are:)
@@ -106,6 +106,7 @@ h help targets usage:
              assembler module. Build product is sibling of source file)
 	$(info - versionGCC: Print information about which compiler is used)
 	$(info - helpGCC: Print usage text of compiler)
+	$(info - builtinMacrosGCC: Print builtin #define's of compiler for given configuration)
 	$(info - help: Print this help)
 	$(error)
 
@@ -144,14 +145,14 @@ targetDir := $(call binFolder)
 .PHONY: makeDir
 makeDir: | $(targetDir)obj
 $(targetDir)obj:
-	-$(mkdir) -p $@
+	-$(mkdir) -pv $@
 
 # Some core variables have already been set prior to reading this common part of the
 # makefile. These variables are:
 #   project: Name of the sub-project; used e.g. as name of the executable
 #   srcDirList: a blank separated list of directories holding source files
 #   cFileListExcl: a blank separated list of source files (with extension but without path)
-# excluded from the compilation of all *.c and *.cpp
+# excluded from the compilation of all *.S, *.c and *.cpp
 #   incDirList: a blank separated list of directories holding header files. The directory
 # names should end with a slash. The list must not comprise common, project independent
 # directories and nor must the directories listed in srcDirList be included
@@ -242,8 +243,8 @@ productionCodeOptimization := -Os
 # Pattern rules for assembler language source files.
 asmFlags = $(targetFlags)                                                                   \
            -Wall                                                                            \
-           -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                  \
-           $(foreach path,$(srcDirList) $(incDirList),-I$(path))                            \
+           -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                             \
+           $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path))    \
            $(cDefines) $(foreach def,$(defineList),-D$(def))                                \
            -Wa,-g -Wa,-gdwarf-2
 
@@ -268,15 +269,17 @@ cFlags = $(targetFlags) -mno-string                                             
          -Wformat-security -Wignored-qualifiers -Wsign-conversion -Wsign-compare            \
          -Werror=missing-declarations -Werror=implicit-function-declaration                 \
          -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
-         -Werror=pointer-to-int-cast -Werror=return-local-addr                              \
+         -Werror=pointer-to-int-cast -Werror=return-local-addr -Werror=missing-prototypes   \
+         -Werror=missing-field-initializers                                                 \
          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                    \
-         $(foreach path,$(srcDirList) $(incDirList),-I$(path))                              \
+         $(foreach path,$(call noTrailingSlash,$(srcDirList) $(incDirList)),-I$(path))      \
          $(cDefines) $(foreach def,$(defineList),-D$(def))
 ifeq ($(SAVE_TMP),1)
     # Debugging the build: Put preprocessed C file and assembler listing in the output
     # directory
     cFlags += -save-temps=obj -fverbose-asm 
 endif
+# Debug settings see https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
 ifeq ($(CONFIG),DEBUG)
     cFlags += -g3 -gdwarf-2 -Og
 else
@@ -354,6 +357,22 @@ $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath) $(projectResourceFile)
 	$(info File created)
 
 # Let the linker create the flashable binary file.
+#   CAUTION: An unsolved problem with GCC 4.9.4 is the switch -fshort-double, which is
+# highly desired in software emulation mode and unavoidable in hardware mode. There seems
+# to be no set of libraries, which has been compiled in this mode. If we call a library
+# function using the type double for in- or output then the code doesn't crash but produces
+# bad results. A statement like x=exp(y); will produce the wrong result for x. We need to
+# do, what is anyway strongly recommended - using the float variants of these library
+# functions. Our example would become x=expf(y);, which works as expected. This problem can
+# only be solved by rebuilding the C library with our settings.
+#   Note, there's no such function for printf & co, e.g. printff. See sample "printf" for
+# a proposed, particular work-around.
+#  -nostartfiles: If not given (default) then the compiler generates the call of
+# __eabi(stackPointer) at the entry into main. __eabi is a function in the clib, which
+# checks the EABI registers r2 and r13 and then executes the initialization of the clib, in
+# particular, the constructors seem to be called. Without the switch, the linker doesn't link
+# these files but the compiler still calls __eabi() so that we need to offer a stub then.
+# It can be that elements from the clib won't work.
 lFlags = -Wl,-Tmakefile/linkerControlFile.ld -nostartfiles -Wl,--gc-sections $(targetFlags) \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
          -Wl,--warn-common,--warn-once -Wl,-g                                               \
