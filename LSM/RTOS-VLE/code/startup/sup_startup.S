@@ -1029,8 +1029,8 @@ initFlash:
     mflr    r0
     e_stw   r0, 28(sp)
     
-    /* Load the required three movable instructions into r8..r10. */
-    e_lis   r10, if_movalbeMachineCode@h
+    /* Load the required four movable instructions into r8..r10. */
+    e_lis   r10, if_movalbeMachineCode@ha
     e_add16i r10, r10, if_movalbeMachineCode@l
     e_lwz   r8, 0(r10)
     e_lwz   r9, 4(r10)
@@ -1041,13 +1041,13 @@ initFlash:
     e_stw   r9, 12(sp)
     e_stw   r10, 16(sp)
     
-    /* Load function arguments of our moveable sub-routine. */
-    e_lis   r3, 0x18c7      /* 0x18c7eded: Configuration word. */
+    /* Load function arguments of our moveable sub-routine.
+         Configuration word 0x18c7eded: 3 wait states on read and write, buffers enabled
+       and prefetch of buffers on instruction read, prefetch on miss or hit. */
+    e_lis   r3, 0x18c7
     e_or2i  r3, 0xeded
     e_lis   r4, 0xc3f8      /* &CFLASH.PFCR0.R: Configuration register of flash controller */
     e_or2i  r4, 0x801c
-    msync
-    isync
     
     /* Call sub-routine, which is in the stack area. */
     e_la    r9, 8(sp)
@@ -1059,12 +1059,13 @@ initFlash:
     e_la    sp, 24(sp)
     se_blr
 
+    .align  2
 if_movalbeMachineCode:
+    se_isync                /* Force re-reading instructions after leaving flash. */
     e_stw   r3, 0(r4)
-    msync
+    msync                   /* Accomplish transaction before return to flash. */
     se_blr
-    .dc.w   0               /* We move 3 32 Bit words, so ensure there are those. */
-    
+
     .size   initFlash, .-initFlash
 /* End of initFlash */
 

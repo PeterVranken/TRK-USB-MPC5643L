@@ -130,7 +130,7 @@ typedef struct rtos_taskDesc_t
  *   @remark
  * It is a severe application error if the priority is not restored again by the same task
  * and before it ends. The RTOS behavior will become unpredictable if this happens. It is
- * not possible to considere this function a mutex, which can be acquired in one task
+ * not possible to consider this function a mutex, which can be acquired in one task
  * activation and which can be releases in an arbitrary later task activation or from
  * another task.
  */

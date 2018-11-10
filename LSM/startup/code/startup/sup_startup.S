@@ -1021,29 +1021,29 @@ disableWatchdog:
  */
     .type   initFlash, @function
 initFlash:
-    stwu  sp, -24(sp) /* We need 20 Byte but stack frame must be multiple of 8 (EABI) */
+    stwu    sp, -24(sp)     /* We need 24 Byte of stack frame */
     mflr    r0
     stw     r0, 28(sp)
     
-    /* Load the required three movable instructions into r8..r10. */
+    /* Load the required four movable instructions into r8..r10. */
     lis     r9, if_movalbeMachineCode@ha
     la      r10, if_movalbeMachineCode@l(r9)
-    lwz     r8, 0(r10)
-    lwz     r9, 4(r10)
-    lwz     r10, 8(r10)
+    lwz     r7, 0(r10)
+    lwz     r8, 4(r10)
+    lwz     r9, 8(r10)
+    lwz     r10, 12(r10)
     
     /* Store moveable sub-routine in the stack area. */
-    stw     r8, 8(sp)
-    stw     r9, 12(sp)
-    stw     r10, 16(sp)
+    stw     r7, 8(sp)
+    stw     r8, 12(sp)
+    stw     r9, 16(sp)
+    stw     r10, 20(sp)
     
     /* Load function arguments of our moveable sub-routine. */
     lis     r3, 0x18c7      /* 0x18c7eded: Configuration word. */
     ori     r3, r3, 0xeded
     lis     r4, 0xc3f8      /* &CFLASH.PFCR0.R: Configuration register of flash controller */
     ori r4, r4, 0x801c
-    msync
-    isync
     
     /* Call sub-routine, which is in the stack area. */
     la      r9, 8(sp)
@@ -1056,8 +1056,9 @@ initFlash:
     blr
 
 if_movalbeMachineCode:
+    isync                   /* Force re-reading instructions after leaving flash. */
     stw     r3, 0(r4)
-    msync
+    msync                   /* Accomplish transaction before return to flash. */
     blr
     
     .size   initFlash, .-initFlash
