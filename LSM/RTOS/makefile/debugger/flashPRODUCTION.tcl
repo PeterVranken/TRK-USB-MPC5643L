@@ -4,7 +4,7 @@
 # 2017. The actual set of commands has been taken by Copy & Paste from the IDE's console
 # window after running the built-in flash tool.
 #   In the CodeWarrior IDE open the debugger shell to run this script. Click menu
-# Window/Show View/Debugger Shell to dos so. In the debugger shell window, type:
+# Window/Show View/Debugger Shell to do so. In the debugger shell window, type:
 #
 #   cd ../LSM/RTOS/makefile/debugger (depending on where you are)
 #   pwd

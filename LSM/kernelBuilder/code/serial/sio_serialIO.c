@@ -8,10 +8,10 @@
  * application by some input commands, but would become a problem if the intention is to
  * download large data amounts, e.g. for a kind of boot loader.\n
  *   The API is a small set of basic read and write routines, which adopt the conventions
- * of the C standard library so that the C functions for formatted output become usable.
+ * of the C standard library so that the C functions for formatted output become usable.\n
  * Note, the binding to the formatted output functions of the C library is not part of
- * this module.
- * (Formatted input is not possible through C standard functions.)
+ * this module.\n
+ *   Note, formatted input is not possible through C standard functions.
  *
  * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -34,7 +34,6 @@
  *   sio_getChar
  *   sio_getLine
  * Local functions
- *   initPBridge
  *   initDMA
  *   initLINFlex
  *   dmaTransferCompleteInterrupt
@@ -88,15 +87,15 @@
 #define DMA_CHN_FOR_SERIAL_OUTPUT   15
 
 /** The interrupt priority for serial output. The interrupt is requested by the DMA when
-    all bytes of the last recently initiated transfer are sent.
+    all bytes of the last recently initiated transfer are sent. The range is 1..15.
       @remark The chosen priority needs to be greater or equal than the priority of any
     context, that makes use of the API functions of this module. */
 #define INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT     5
 
 /** The interrupt priority for serial input. The interrupt is requested by the UART when
-    another byte has been received.
-      @remark The chosen priority needs to be greater or equal than the priority of any
-    context, that makes use of the API functions of this module.
+    another byte has been received. The range is 1..15.
+      @remark The chosen priority needs to be greater than the priority of any context,
+    that makes use of the API functions of this module.
       @remark Because of the larger UART buffer applied for serial output, this priority
     should normally be chosen higher than #INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT. */
 #define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     ((INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT)+1)
@@ -111,18 +110,20 @@
 #define SERIAL_INPUT_RING_BUFFER_SIZE   257
 
 /** The default behavior of terminal programs is to send a CR at the end of a message. By
-    configuration, this can also be a pair of CR and LF. This module handles this by
-    compile time settings. Each of the two characters can be configured to be understood as
-    end of line and the other one can be filtered out. If it is not filtered out then it
-    behaves like any ordinary character, it becomes part of the read message that is passed
-    on to the application.
+    configuration, this can also be a pair of CR and LF. For serial input, this module
+    handles this by compile time settings. Each of the two characters can be configured to
+    be understood as end of line and the other one can be filtered out. If it is not
+    filtered out then it behaves like any ordinary character, it becomes part of the read
+    message that is passed on to the application.\n
       Here we have the end of line character. Should normally be carriage return but may
-    also be the linefeed. Which one can depend on the terminal software you use. */
+    also be the linefeed. Which one can depend on the terminal software you use.\n
+      Note, for serial output, this module doesn't handle EOL at all. */
 #define SERIAL_INPUT_EOL    '\r'
 
 /** See #SERIAL_INPUT_EOL for an explanation. Here we have a character to be filtered out
-    from the input stream. Should normally be the other one as configure for
-    #SERIAL_INPUT_EOL. Inactive is expressed by '\0' (but the zero byte is not filtered). */
+    from the input stream. Should normally be the other one as configured for
+    #SERIAL_INPUT_EOL. Filtering inactive is expressed by '\0' (but the zero byte is not
+    filtered). */
 #define SERIAL_INPUT_FILTERED_CHAR  '\n'
 
 /** Compute the size of the output ring buffer as number of bytes. */
@@ -162,23 +163,22 @@
     power-up, to do the serial output */
 volatile unsigned long sio_serialOutNoDMATransfers = 0;
 
-/** The ring buffer for serial output can be memntarily full. In such a case a sent message
-    can be truncated (from a few bytes shortend up to entirely lost). This development
-    support variable counts the number of message since power-up, which underwent
-    trunction.
-      @remark Because of the race conditions between serial I/O interrupt an application
+/** The ring buffer for serial output can be momentarily full. In such a case a sent
+    message can be truncated (from a few bytes shortend up to entirely lost). This
+    development support variable counts the number of messages since power-up, which
+    underwent trunction.
+      @remark Because of the race conditions between serial I/O interrupt and application
     software can not clearly relate a change of \a sio_serialOutNoTruncatedMsgs to a
-    particular character or message it gets from the read functions sio_getChar or
-    sio_getLine. In particular, it must not try to reset the counter prior to a read
-    operation in order to establish such a relation. The application will just know that
-    there are garbled messages. */
+    particular character or message it sends with sio_writeSerial. In particular, it must
+    not try to reset the counter prior to a read operation in order to establish such a
+    relation. The application will just know that there are garbled messages. */
 volatile unsigned long sio_serialOutNoTruncatedMsgs = 0;
 
-/** The ring buffer for serial output can be memntarily full. In such a case a sent message
-    can be truncated (from a few bytes shortend up to entirely lost). This development
-    support variable counts the number of truncated, lost message characters since
-    power-up.
-      @remark See \a sio_serialOutNoTruncatedMsgs for race conditions with the input
+/** The ring buffer for serial output can be momentarily full. In such a case a sent
+    message can be truncated (from a few bytes shortend up to entirely lost). This
+    development support variable counts the number of truncated, lost message characters
+    since power-up.
+      @remark See \a sio_serialOutNoTruncatedMsgs for race conditions with the output
     functions of this module's API. Just the same holds for \a
     sio_serialOutNoLostMsgBytes. */ 
 volatile unsigned long sio_serialOutNoLostMsgBytes = 0;
@@ -202,7 +202,7 @@ static volatile unsigned int _serialOutRingBufIdxWrM = 0;
 
 /** On-DMA-Complete interrupt and API function sio_writeSerial need to share the
     information, whether a transfer is currently running. The flag is set when all elder
-    output had been completed and the client code demand a new output. It is reset when a
+    output had been completed and the client code demands a new output. It is reset when a
     DMA transfer completes and the client code has not demanded a new output meanwhile. */
 static volatile bool _serialOutDmaTransferIsRunning = false;
 
@@ -234,7 +234,7 @@ static volatile unsigned int _serialInNoEOL = 0;
 volatile unsigned long sio_serialInLostBytes = 0; 
 
 #ifdef DEBUG
-/** Count all characters received since last reset. This variable is support in DEBUG
+/** Count all characters received since last reset. This variable is supported in DEBUG
     compilation only. */
 volatile unsigned long sio_serialInNoRxBytes = 0;
 #endif
@@ -544,7 +544,7 @@ static void dmaTransferCompleteInterrupt(void)
         /* Set the number of bytes to transfer by DMA to the UART.
              Note, here we have a problem with the NXP support file MPC5643L.h. The same
            value needs to be written to the two fields CITER and BITER of the Transfer
-           Control Words 5 and 7, respectivels. These fields are defined conditionally,
+           Control Words 5 and 7, respectively. These fields are defined conditionally,
            depending on the channel-to-channel linking bit e_link - they have either
            9 or 15 Bit. This could be mapped by a support file e.g. in form of a union,
            which allows both variants. Unfortunately, MPC5643L.h defines CITER and BITER
