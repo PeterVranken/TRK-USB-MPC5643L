@@ -58,9 +58,9 @@
  * Local functions
  *   checkAndIncrementTaskCnts
  *   testPCP
- *   isrPid1
- *   isrPid2
- *   isrPid3
+ *   isrPit1
+ *   isrPit2
+ *   isrPit3
  *   task1ms
  *   task3ms
  *   task1s
@@ -125,7 +125,7 @@
 
 /** The task counter array is accessed by all tasks. Here it is modelled as an OSEK/VDX
     like resource to be used with #GetResource and #ReleaseResource. */
-#define RESOURCE_CNT_TASK_ARY   (MAXP(RESOURCE_ALL_TASKS,prioISRPid1))
+#define RESOURCE_CNT_TASK_ARY   (MAXP(RESOURCE_ALL_TASKS,prioISRPit1))
 
 /** The priority level to set if all tasks should be mutually excluded from accessing a
     shared resource. The macro is named such that the code resembles the resource API from
@@ -179,9 +179,9 @@ enum
     /** The interrupts that are applied mainly to produce system load for testing, continue
         the sequence of ids, so that they can share the shared data container with test
         data. */
-    , idISRPid1 = noRegisteredTasks    
-    , idISRPid2
-    , idISRPid3
+    , idISRPit1 = noRegisteredTasks    
+    , idISRPit2
+    , idISRPit3
     
     /** The number of registered tasks and ISRs. */
     , noRegisteredTasksAndISRs
@@ -215,9 +215,9 @@ enum
     , prioTaskCpuLoad = 1
     , prioTaskIdle = 0
     
-    , prioISRPid1 = 5
-    , prioISRPid2 = 6
-    , prioISRPid3 = 15
+    , prioISRPit1 = 5
+    , prioISRPit2 = 6
+    , prioISRPit3 = 15
 };
 
 
@@ -250,9 +250,9 @@ volatile unsigned long mai_cntTaskIdle = 0  /** Counter of cycles of infinite ma
                      , mai_cntActivationLossTaskNonCyclic = 0  /* Lost activations of non
                                                                   cyclic task by 17ms
                                                                   cyclic task. */
-                     , mai_cntISRPid1 = 0
-                     , mai_cntISRPid2 = 0
-                     , mai_cntISRPid3 = 0;
+                     , mai_cntISRPit1 = 0
+                     , mai_cntISRPit2 = 0
+                     , mai_cntISRPit3 = 0;
 
 /** The color currently used by the interrupt handlers are controlled through selection of
     a pin. The selection is made by global variable. Here for D5. */
@@ -474,53 +474,53 @@ static void testPCP(unsigned int idTask)
 
 
 /**
- * A regularly triggered interrupt handler for the timer PID1. The interrupt does nothing
+ * A regularly triggered interrupt handler for the timer PIT1. The interrupt does nothing
  * but counting a variable. The ISR participates the test of safely sharing data with the
  * application tasks. It is triggered at medium frequency and asynchronously to the
  * kernel's clock tick to prove the system stability and properness of the context
  * switches.
  */
-static void isrPid1()
+static void isrPit1()
 {
-    checkAndIncrementTaskCnts(idISRPid1);
-    ++ mai_cntISRPid1;
+    checkAndIncrementTaskCnts(idISRPit1);
+    ++ mai_cntISRPit1;
     
     /* Acknowledge the interrupt in the causing HW device. */
     PIT.TFLG1.B.TIF = 0x1;
 
-} /* End of isrPid1 */
+} /* End of isrPit1 */
 
 
 
 /**
- * A regularly triggered interrupt handler for the timer PID2. The interrupt does nothing
+ * A regularly triggered interrupt handler for the timer PIT2. The interrupt does nothing
  * but counting a variable. It is triggered at high frequency and asynchronously to the
  * kernel's clock tick to prove the system stability and properness of the context switches.
  */
-static void isrPid2()
+static void isrPit2()
 {
-    ++ mai_cntISRPid2;
+    ++ mai_cntISRPit2;
     
     /* Acknowledge the interrupt in the causing HW device. */
     PIT.TFLG2.B.TIF = 0x1;
 
-} /* End of isrPid2 */
+} /* End of isrPit2 */
 
 
 
 /**
- * A regularly triggered interrupt handler for the timer PID3. The interrupt does nothing
+ * A regularly triggered interrupt handler for the timer PIT3. The interrupt does nothing
  * but counting a variable. It is triggered at high frequency and asynchronously to the
  * kernel's clock tick to prove the system stability and properness of the context switches.
  */
-static void isrPid3()
+static void isrPit3()
 {
-    ++ mai_cntISRPid3;
+    ++ mai_cntISRPit3;
     
     /* Acknowledge the interrupt in the causing HW device. */
     PIT.TFLG3.B.TIF = 0x1;
 
-} /* End of isrPid3 */
+} /* End of isrPit3 */
 
 
 
@@ -795,7 +795,7 @@ static void taskCpuLoad(void)
 
 
 /**
- * This demonstartion software uses a number of fast interrupts to produce system load and
+ * This demonstration software uses a number of fast interrupts to produce system load and
  * prove stability. The interrupts are timer controlled (for simplicity) but the
  * activations are chosen as asynchonous to the operating system clock as possible to
  * provoke a most variable preemption pattern.
@@ -804,26 +804,26 @@ static void installInterruptServiceRoutines(void)
 {
     /* 0x2: Disable all PIT timers during configuration. Note, this is a
        global setting for all four timers. Accessing the bits makes this rountine have race
-       conditions with the RTOS initialization that uses timer PID0. Both routines must not
+       conditions with the RTOS initialization that uses timer PIT0. Both routines must not
        be called in concurrency. */
     PIT.PITMCR.R |= 0x2u;
     
     /* Install the ISRs now that all timers are stopped.
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
     
-    ihw_installINTCInterruptHandler( isrPid1
+    ihw_installINTCInterruptHandler( isrPit1
                                    , /* vectorNum */ 60
-                                   , /* psrPriority */ prioISRPid1
+                                   , /* psrPriority */ prioISRPit1
                                    , /* isPreemptable */ true
                                    );
-    ihw_installINTCInterruptHandler( isrPid2
+    ihw_installINTCInterruptHandler( isrPit2
                                    , /* vectorNum */ 61
-                                   , /* psrPriority */ prioISRPid2
+                                   , /* psrPriority */ prioISRPit2
                                    , /* isPreemptable */ true
                                    );
-    ihw_installINTCInterruptHandler( isrPid3
+    ihw_installINTCInterruptHandler( isrPit3
                                    , /* vectorNum */ 127
-                                   , /* psrPriority */ prioISRPid3
+                                   , /* psrPriority */ prioISRPit3
                                    , /* isPreemptable */ true
                                    );
 
@@ -985,7 +985,7 @@ void main(void)
     rtos_initKernel();
 
     /* Installing more interrupts should be possible while the system is already running.
-       We place the PID timer initialization here to prove this statement. */
+       We place the PIT timer initialization here to prove this statement. */
     del_delayMicroseconds(500000);
     installInterruptServiceRoutines();
        
