@@ -38,7 +38,7 @@
  * assertion, which will halt the code execution (in DEBUG compilation only). Everything is
  * fine as long as the LEDs continue blinking.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -57,10 +57,13 @@
  *   main
  * Local functions
  *   checkAndIncrementTaskCnts
+ *   testPCP_checkDataConsistency
  *   testPCP
  *   isrPit1
  *   isrPit2
  *   isrPit3
+ *   taskOs1ms
+ *   onButtonChangeCallback
  *   task1ms
  *   task3ms
  *   task1s
@@ -69,6 +72,8 @@
  *   taskOnButtonDown
  *   taskCpuLoad
  *   installInterruptServiceRoutines
+ *   taskInitProcess
+ *   taskIdlePID2
  */
 
 /*
@@ -87,13 +92,15 @@
 
 #include "MPC5643L.h"
 #include "typ_types.h"
-#include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"
-#include "RTOS.h"
+#include "prc_process.h"
+#include "mpu_systemMemoryProtectionUnit.h"
+#include "rtos.h"
 #include "del_delay.h"
 #include "gsl_systemLoad.h"
+#include "tcx_testContext.h"
 #include "mai_main.h"
 
 
@@ -139,7 +146,9 @@
     rtos_activateTask(task) is not reentrant; if several tasks want to activate one and the
     same task then this call needs to be placed into a critical section. The macro is named
     such that the code resembles the resource API from the OSEK/VDX standard. */
-#define RESOURCE_ACTIVATE_TASK_NON_CYCLIC  (MAXP(prioTask1ms,MAXP(prioTask17ms,prioTaskIdle)))
+#define RESOURCE_ACTIVATE_TASK_NON_CYCLIC \
+                            (MAXP(prioTask1ms,MAXP(prioTask17ms, \
+                             MAXP(prioTaskOs1ms,prioTaskIdle))))
 
 /** The priority level to set for the atomic operations done in function testPCP(). The
     macro is named such that the code resembles the resource API from the OSEK/VDX
@@ -157,7 +166,7 @@
 
 /** The enumeration of all tasks; the values are the task IDs. Actually, the ID is provided
     by the RTOS at runtime, when registering the task. However, it is guaranteed that the
-    IDs, which are dealt out by rtos_registerTask() form the series 0, 1, 2, ..., 7. So
+    IDs, which are dealt out by rtos_createEvent() form the series 0, 1, 2, ..., 7. So
     we don't need to have a dynamic storage of the IDs; we define them as constants and
     double-check by assertion that we got the correct, expected IDs. Note, this requires
     that the order of registering the tasks follows the order here in the enumeration. */
@@ -165,36 +174,48 @@ enum
 {
     /** The ID of the registered application tasks. They occupy the index range starting
         from zero. */
-    idTask1ms = 0
-    , idTask3ms
-    , idTask1s
-    , idTaskNonCyclic
-    , idTask17ms
-    , idTaskOnButtonDown
-    , idTaskCpuLoad
-    
+    idEv1ms = 0
+    , idEv3ms
+    , idEv1s
+    , idEvNonCyclic
+    , idEv17ms
+    , idEvOnButtonDown
+    , idEvCpuLoad
+
+    /** In this sample, we have a one by one relation between events and tasks for most
+        tasks. We duplicate the event IDs to have task IDs, too. */
+    , idTask1ms          = idEv1ms
+    , idTask3ms          = idEv3ms
+    , idTask1s           = idEv1s
+    , idTaskNonCyclic    = idEvNonCyclic
+    , idTask17ms         = idEv17ms
+    , idTaskOnButtonDown = idEvOnButtonDown
+    , idTaskCpuLoad      = idEvCpuLoad
+
+    , idTaskOs1ms
+
     /** The number of tasks to register. */
     , noRegisteredTasks
 
     /** The interrupts that are applied mainly to produce system load for testing, continue
         the sequence of ids, so that they can share the shared data container with test
         data. */
-    , idISRPit1 = noRegisteredTasks    
+    , idISRPit1 = noRegisteredTasks
     , idISRPit2
     , idISRPit3
-    
+
     /** The number of registered tasks and ISRs. */
     , noRegisteredTasksAndISRs
-    
+
     /** The number of ISRs. */
     , noISRs = noRegisteredTasksAndISRs - noRegisteredTasks
-    
+
     /** The idle task is not a task under control of the RTOS and it doesn't have an ID.
         We assign it a pseudo task ID that is used to store some task related data in the
         same array here in this sample application as we do by true task ID for all true
         tasks. */
     , idTaskIdle = noRegisteredTasksAndISRs
-    
+
     /** The number of all concurrent excution threads: The ISRs, the application tasks and
         the idle task. */
     , noExecutionContexts
@@ -213,11 +234,28 @@ enum
     , prioTask17ms = 4
     , prioTaskOnButtonDown = 1
     , prioTaskCpuLoad = 1
+    , prioTaskOs1ms = prioTask1ms /* same event, cannot have other prio */
     , prioTaskIdle = 0
-    
+
     , prioISRPit1 = 5
     , prioISRPit2 = 6
     , prioISRPit3 = 15
+};
+
+
+/** In the RTOS a task belongs to a process. The releationship is defined here. */
+enum
+{
+    pidTask1ms = 1
+    , pidTask3ms = 1
+    , pidTask1s = 1
+    , pidTaskNonCyclic = 1
+    , pidTask17ms = 1
+    , pidTaskOnButtonDown = 1
+    , pidTaskCpuLoad = 1
+    , pidTaskOs1ms = 0
+    , pidOnButtonChangeCallback = 1
+    , pidTaskIdle = 0
 };
 
 
@@ -232,43 +270,46 @@ enum
  */
 
 /** A task invokation counter, which is incremented by all application tasks. */
-volatile unsigned long long _cntAllTasks = 0;
+volatile unsigned long long _cntAllTasks SECTION(.bss.Shared) = 0;
 
 /** A cycle counter for each task. The last entry is meant for the idle task. */
-volatile unsigned long long _cntTaskAry[noExecutionContexts] =
+volatile unsigned long long _cntTaskAry[noExecutionContexts] SECTION(.bss.Shared) =
                                                         {[0 ... noExecutionContexts-1] = 0};
 
-volatile unsigned long mai_cntTaskIdle = 0  /** Counter of cycles of infinite main loop. */
-                     , mai_cntTask1ms = 0   /** Counter of cyclic task. */
-                     , mai_cntTask3ms = 0   /** Counter of cyclic task. */
-                     , mai_cntTask1s = 0    /** Counter of cyclic task. */
-                     , mai_cntTaskNonCyclic = 0  /** Counter of calls of software triggered
+volatile unsigned long mai_cntTaskIdle SECTION(.bss.OS) = 0  /** Counter of cycles of infinite main loop. */
+                     , mai_cntTask1ms SECTION(.bss.P1) = 0   /** Counter of cyclic task. */
+                     , mai_cntTask3ms SECTION(.bss.P1) = 0   /** Counter of cyclic task. */
+                     , mai_cntTask1s SECTION(.bss.P1) = 0    /** Counter of cyclic task. */
+                     , mai_cntTaskNonCyclic SECTION(.bss.P1) = 0  /** Counter of calls of software triggered
                                                      task */
-                     , mai_cntTask17ms = 0  /** Counter of cyclic task. */
-                     , mai_cntTaskOnButtonDown = 0  /** Counter of button event task. */
-                     , mai_cntTaskCpuLoad = 0   /** Counter of cyclic task. */
-                     , mai_cntActivationLossTaskNonCyclic = 0  /* Lost activations of non
+                     , mai_cntTask17ms SECTION(.bss.P1) = 0  /** Counter of cyclic task. */
+                     , mai_cntTaskOnButtonDown SECTION(.bss.P1) = 0  /** Counter of button event task. */
+                     , mai_cntTaskCpuLoad SECTION(.bss.P1) = 0   /** Counter of cyclic task. */
+                     , mai_cntActivationLossTaskNonCyclic SECTION(.bss.P1) = 0  /* Lost activations of non
                                                                   cyclic task by 17ms
                                                                   cyclic task. */
-                     , mai_cntISRPit1 = 0
-                     , mai_cntISRPit2 = 0
-                     , mai_cntISRPit3 = 0;
+                     , mai_cntISRPit1 SECTION(.bss.OS) = 0
+                     , mai_cntISRPit2 SECTION(.bss.OS) = 0
+                     , mai_cntISRPit3 SECTION(.bss.OS) = 0;
+
+/** We have an idle task in process 2. */
+volatile unsigned int mai_cntTaskIdlePID2 SECTION(.sdata.P2) = 0;
 
 /** The color currently used by the interrupt handlers are controlled through selection of
     a pin. The selection is made by global variable. Here for D5. */
-static volatile lbd_led_t _ledTask1s  = lbd_led_D5_grn;
+static volatile lbd_led_t _ledTask1s SECTION(.sdata.P1) = lbd_led_D5_grn;
 
 /** The color currently used by the interrupt handlers are controlled through selection of
     a pin. The selection is made by global variable. Here for D4. */
-static volatile lbd_led_t _ledTask1ms = lbd_led_D4_red;
+static volatile lbd_led_t _ledTask1ms SECTION(.sdata.P1) = lbd_led_D4_red;
 
 /** The average CPU load produced by all tasks and interrupts in tens of percent. */
-unsigned int mai_cpuLoad = 1000;
+unsigned int mai_cpuLoad SECTION(.data.OS) = 1000;
 
 /** Test of CPU load estimation: This variable controls the production of some artificial
     CPU load. This is done in a task of low priority so that all higher prioritized task
     should not or barely be affected. (One LED is, the other isn't affected.) */
-static unsigned int _cpuLoadInPercent = 0;
+static unsigned int _cpuLoadInPercent SECTION(.sdata.P1) = 0;
 
 /** Test of priority ceiling protocol. A sub-set of tasks, whereof non of highest priority
     in use, share this data object. Is has redundant fields so that a sharing conflict can
@@ -278,27 +319,27 @@ static volatile struct sharedDataTasksIdleAnd1msAndCpuLoad_t
 {
     /** Counter incremented on execution of task task1ms. */
     unsigned int cntTask1ms;
-    
+
     /** Counter incremented on execution of task taskCpuLoad. */
     unsigned int cntTaskCpuLoad;
-    
+
     /** Counter incremented on execution of the idle task. */
     unsigned int cntTaskIdle;
-    
+
     /** Total count, sum of all others. */
     unsigned int cntTotal;
-    
+
     /** The number of recognized data consistency errors. */
     unsigned int noErrors;
-    
-} _sharedDataTasksIdleAnd1msAndCpuLoad =
+
+} _sharedDataTasksIdleAnd1msAndCpuLoad SECTION(.data.Shared) =
     { .cntTask1ms = 0
     , .cntTaskCpuLoad = 0
     , .cntTaskIdle = 0
     , .cntTotal = 0
     , .noErrors = 0
     };
-    
+
 
 /*
  * Function implementation
@@ -326,19 +367,19 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
     }
     ReleaseResource();
 
-    /* Get all task counters and the common counter in an atomic operation. Now, we apply
-       another offered mechanism for mutual exclusion of tasks. */
+    /* Get all task counters and the common counter in an atomic operation. */
     unsigned long long cntTaskAryCpy[noExecutionContexts]
                      , cntAllTasksCpy;
     _Static_assert(sizeof(_cntTaskAry) == sizeof(cntTaskAryCpy), "Bad data definition");
-    const uint32_t msr = ihw_enterCriticalSection();
+    GetResource(RESOURCE_CNT_TASK_ARY);
     {
         memcpy(&cntTaskAryCpy[0], (void*)&_cntTaskAry[0], sizeof(cntTaskAryCpy));
         cntAllTasksCpy = _cntAllTasks;
     }
-    ihw_leaveCriticalSection(msr);
+    ReleaseResource();
 
     /* Check consistency of got data. */
+/// @todo Neither assert nor an endless loop will halt the SW
     unsigned int u;
     for(u=0; u<noExecutionContexts; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
@@ -354,35 +395,36 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
             ;
     }
 #endif
-
-    /* Get all task counters and the common counter again in an atomic operation. Now, we
-       apply the third offered mechanism for mutual exclusion of tasks to include it into
-       the test.
-         Note, this code requires that we are not yet inside a critical section; it's a
-       non-nestable call. */
-    ihw_suspendAllInterrupts();
-    {
-        memcpy(&cntTaskAryCpy[0], (void*)&_cntTaskAry[0], sizeof(cntTaskAryCpy));
-        cntAllTasksCpy = _cntAllTasks;
-    }
-    ihw_resumeAllInterrupts();
-
-    /* Check consistency of got data. */
-    for(u=0; u<noExecutionContexts; ++u)
-        cntAllTasksCpy -= cntTaskAryCpy[u];
-#ifdef DEBUG
-    assert(cntAllTasksCpy == 0);
-#else
-    if(cntAllTasksCpy != 0)
-    {
-        ihw_suspendAllInterrupts();
-        while(true)
-            ;
-    }
-#endif
 } /* End of checkAndIncrementTaskCnts. */
 
 
+
+/**
+ * Helper function of PCP test: The shared data is checked for consistency and a global
+ * error counter is incremented in case.
+ *   @return
+ * Get \a true as long as everything is alright.
+ */
+static bool testPCP_checkDataConsistency()
+{
+    const unsigned int sum = _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskIdle
+                             + _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskCpuLoad
+                             + _sharedDataTasksIdleAnd1msAndCpuLoad.cntTask1ms;
+    if(sum != _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal)
+    {
+        /* Resynchronize to enable further error recognition. */
+        _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal = sum;
+
+        const unsigned int noErr = _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors+1;
+        if(noErr > 0)
+            _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors = noErr;
+
+        return false;
+    }
+    else
+        return true;
+
+} /* End of testPCP_checkDataConsistency */
 
 
 /**
@@ -395,15 +437,22 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
  */
 static void testPCP(unsigned int idTask)
 {
+    /* The safe RTOS doesn't offer an idle task to the user code. The idle task belongs
+       to the OS context and needs to use the OS variant of the PCP. */
+    #define GetResource_OS(resource) \
+        { uint32_t priorityLevelSoFar = rtos_OS_suspendAllInterruptsByPriority          \
+                                            (/* suspendUpToThisPriority */ (resource));
+    #define ReleaseResource_OS() rtos_OS_resumeAllInterruptsByPriority(priorityLevelSoFar); }
+
     /* Increment task related counter and shared counter in an atomic operation. */
     if(idTask == idTaskIdle)
     {
-        GetResource(RESOURCE_TEST_PCP);
+        GetResource_OS(RESOURCE_TEST_PCP);
         {
             ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskIdle;
             ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal;
         }
-        ReleaseResource();
+        ReleaseResource_OS();
     }
     else if(idTask == idTaskCpuLoad)
     {
@@ -440,35 +489,44 @@ static void testPCP(unsigned int idTask)
     }
 
     /* Validate the consistency of the redundant data in an atomic operation. */
-    GetResource(RESOURCE_TEST_PCP);
+    bool bOkay;
+    if(idTask == idTaskIdle)
     {
-        const unsigned int sum = _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskIdle
-                                 + _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskCpuLoad
-                                 + _sharedDataTasksIdleAnd1msAndCpuLoad.cntTask1ms;
-        if(sum != _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal)
+        GetResource_OS(RESOURCE_TEST_PCP);
         {
-            /* Resynchronize to enable further error recognition. */
-            _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal = sum;
-            
-            const unsigned int noErr = _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors+1;
-            if(noErr > 0)
-                _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors = noErr;
-           
-            /* On desire, the application is halted. This makes the error observable
-               without connected terminal. */
+            bOkay = testPCP_checkDataConsistency();
+        }
+        ReleaseResource_OS();
+    }
+    else
+    {
+        GetResource(RESOURCE_TEST_PCP);
+        {
+            bOkay = testPCP_checkDataConsistency();
+        }
+        ReleaseResource();
+    }
+
+/// @todo Can't work yet. We need to observe the global error counter instead
+#if 0
+    if(!bOkay)
+    {
+        /* On desire, the application is halted. This makes the error observable
+           without connected terminal. */
 #if HALT_ON_PCP_TEST_FAILURE == 1
 # ifdef DEBUG
-            assert(false);
+        assert(false);
 # else
-            ihw_suspendAllInterrupts();
-            while(true)
-                ;
+        ihw_suspendAllInterrupts();
+        while(true)
+            ;
 # endif
 #endif
-        }
     }
-    ReleaseResource();
+#endif
 
+#undef GetResource_OS
+#undef ReleaseResource_OS
 } /* End of testPCP. */
 
 
@@ -479,13 +537,18 @@ static void testPCP(unsigned int idTask)
  * application tasks. It is triggered at medium frequency and asynchronously to the
  * kernel's clock tick to prove the system stability and properness of the context
  * switches.
+ *   @remark
+ * This is a normal interrupt running in the kernel context (supervisor mode, no MPU
+ * restrictions).
  */
-static void isrPit1()
+static void isrPit1(void)
 {
-    checkAndIncrementTaskCnts(idISRPit1);
+/// @todo Like in testPCP we need a differentiation between OS and user task. ISR is OS
+//    checkAndIncrementTaskCnts(idISRPit1);
     ++ mai_cntISRPit1;
-    
-    /* Acknowledge the interrupt in the causing HW device. */
+
+    /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
+       code" that is running in supervisor mode. */
     PIT.TFLG1.B.TIF = 0x1;
 
 } /* End of isrPit1 */
@@ -496,12 +559,16 @@ static void isrPit1()
  * A regularly triggered interrupt handler for the timer PIT2. The interrupt does nothing
  * but counting a variable. It is triggered at high frequency and asynchronously to the
  * kernel's clock tick to prove the system stability and properness of the context switches.
+ *   @remark
+ * This is a normal interrupt running in the kernel context (supervisor mode, no MPU
+ * restrictions).
  */
-static void isrPit2()
+static void isrPit2(void)
 {
     ++ mai_cntISRPit2;
-    
-    /* Acknowledge the interrupt in the causing HW device. */
+
+    /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
+       code" that is running in supervisor mode. */
     PIT.TFLG2.B.TIF = 0x1;
 
 } /* End of isrPit2 */
@@ -512,12 +579,16 @@ static void isrPit2()
  * A regularly triggered interrupt handler for the timer PIT3. The interrupt does nothing
  * but counting a variable. It is triggered at high frequency and asynchronously to the
  * kernel's clock tick to prove the system stability and properness of the context switches.
+ *   @remark
+ * This is a normal interrupt running in the kernel context (supervisor mode, no MPU
+ * restrictions).
  */
-static void isrPit3()
+static void isrPit3(void)
 {
     ++ mai_cntISRPit3;
-    
-    /* Acknowledge the interrupt in the causing HW device. */
+
+    /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
+       code" that is running in supervisor mode. */
     PIT.TFLG3.B.TIF = 0x1;
 
 } /* End of isrPit3 */
@@ -525,10 +596,90 @@ static void isrPit3()
 
 
 /**
+ * OS task function, cyclically activated every Millisecond. Used to clock the step
+ * functions of our I/O drivers.\n
+ *   This task is run in supervisor mode and it has no protection. The implementation
+ * belongs into the sphere of trusted code.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ */
+static int32_t taskOs1ms(void)
+{
+    lbd_task1ms();
+
+    return 0;
+
+} /* End of taskOs1ms */
+
+
+/**
+ * Notification callback from the button and LED I/O driver (lbd) in case of a button state
+ * change.
+ *   @param PID
+ * A user task or callback gets the process ID as first argument.
+ *   @param buttonState
+ * The new, changed button state. See lbd_onButtonChangeCallback_t for details.
+ */
+static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_UNUSED, uint8_t buttonState)
+{
+    /* Toggle the LED colors on button SW3 down. */
+    if((buttonState & lbd_btStMask_btnSw3_down) != 0)
+    {
+        static unsigned int cntButtonPress_ SECTION(.sbss.P1) = 0;
+
+        lbd_setLED(_ledTask1s, /* isOn */ false);
+        lbd_setLED(_ledTask1ms, /* isOn */ false);
+        _ledTask1s  = (cntButtonPress_ & 0x1) != 0? lbd_led_D5_red: lbd_led_D5_grn;
+        _ledTask1ms = (cntButtonPress_ & 0x2) != 0? lbd_led_D4_red: lbd_led_D4_grn;
+
+        /* Activate the non cyclic task a second time. The priority of the activated
+           task is higher than of this activating task so the first activation should
+           have been processed meanwhile and this one should be accepted, too.
+             Note, activating one and the same task from different contexts requires a
+           critical section. */
+        /// @todo Check: Statement about critical section should no longer hold. Remove resource
+#ifdef DEBUG
+        bool bActivationAccepted;
+#endif
+        GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
+        {
+#ifdef DEBUG
+            bActivationAccepted =
+#endif
+            rtos_triggerEvent(idEvNonCyclic);
+        }
+        ReleaseResource();
+        assert(bActivationAccepted);
+
+        /* Activate our button down event task. The activation will normally succeed
+           but at high load and very fast button press events it is theoretically
+           possible that not. We don't place an assertion. */
+#ifdef DEBUG
+        bActivationAccepted =
+#endif
+        rtos_triggerEvent(idEvOnButtonDown);
+        //assert(bActivationAccepted);
+
+        ++ cntButtonPress_;
+    }
+
+    return 0;
+
+} /* End of onButtonChangeCallback */
+
+
+
+/**
  * Task function, cyclically activated every Millisecond. The LED D4 is switched on and off
  * and the button SW3 is read and evaluated.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
  */
-static void task1ms(void)
+static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTask1ms);
     testPCP(idTask1ms);
@@ -543,67 +694,21 @@ static void task1ms(void)
        section. */
     GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
     {
-        rtos_activateTask(idTaskNonCyclic);
+        rtos_triggerEvent(idEvNonCyclic);
     }
     ReleaseResource();
 
 #if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
     del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ 50 /* approx. 5% load */);
-#endif    
-
-    /* Read the current button status to possibly toggle the LED colors. */
-    static bool lastStateButton_ = false;
-    if(lbd_getButton(lbd_bt_button_SW3))
-    {
-        if(!lastStateButton_)
-        {
-            /* Button down event: Toggle colors */
-            static unsigned int cntButtonPress_ = 0;
-
-            lbd_setLED(_ledTask1s, /* isOn */ false);
-            lbd_setLED(_ledTask1ms, /* isOn */ false);
-            _ledTask1s  = (cntButtonPress_ & 0x1) != 0? lbd_led_D5_red: lbd_led_D5_grn;
-            _ledTask1ms = (cntButtonPress_ & 0x2) != 0? lbd_led_D4_red: lbd_led_D4_grn;
-
-            /* Activate the non cyclic task a second time. The priority of the activated
-               task is higher than of this activating task so the first activation should
-               have been processed meanwhile and this one should be accepted, too.
-                 Note, activating one and the same task from different contexts requires a
-               critical section. */
-#ifdef DEBUG
-            bool bActivationAccepted;
 #endif
-            GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
-            {
-#ifdef DEBUG
-                bActivationAccepted =
-#endif
-                rtos_activateTask(idTaskNonCyclic);
-            }
-            ReleaseResource();
-            assert(bActivationAccepted);
 
-            /* Activate our button down event task. The activation will normally succeed
-               but at high load and very fast button press events it it theoretically
-               possible that not. We don't place an assertion. */
-#ifdef DEBUG
-            bActivationAccepted =
-#endif
-            rtos_activateTask(idTaskOnButtonDown);
-            //assert(bActivationAccepted);
-
-            lastStateButton_ = true;
-            ++ cntButtonPress_;
-        }
-    }
-    else
-        lastStateButton_ = false;
-
-    static int cntIsOn_ = 0;
+    static int cntIsOn_ SECTION(.sbss.P1) = 0;
     if(++cntIsOn_ >= 500)
         cntIsOn_ = -500;
     lbd_setLED(_ledTask1ms, /* isOn */ cntIsOn_ >= 0);
+
+    return 0;
 
 } /* End of task1ms */
 
@@ -612,8 +717,13 @@ static void task1ms(void)
 
 /**
  * Task function, cyclically activated every 3ms.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
  */
-static void task3ms(void)
+static int32_t task3ms(uint32_t PID ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTask3ms);
     ++ mai_cntTask3ms;
@@ -621,22 +731,29 @@ static void task3ms(void)
 #if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
     del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ 150 /* approx. 5% load */);
-#endif    
-    
+#endif
+
+    return 0;
+
 } /* End of task3ms */
 
 
 
 /**
  * Task function, cyclically activated every second.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
  */
-static void task1s(void)
+static int32_t task1s(uint32_t PID ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTask1s);
 
     ++ mai_cntTask1s;
 
-    static int cntIsOn_ = 0;
+    static int cntIsOn_ SECTION(.sbss.P1) = 0;
     if(++cntIsOn_ >= 1)
         cntIsOn_ = -1;
     lbd_setLED(_ledTask1s, /* isOn */ cntIsOn_ >= 0);
@@ -648,12 +765,18 @@ static void task1s(void)
        itself has a non negligible execution time, there's a significant chance of loosing
        an activation of the faster task once a second. */
     del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ 20000 /* approx. 2% load */);
-#endif    
+#endif
 
     /* Simple code: First calculation of time to print is wrong. */
-    static unsigned long tiPrintf = 0;
+    static unsigned long tiPrintf_ SECTION(.sbss.P1) = 0;
     unsigned long long tiFrom = GSL_PPC_GET_TIMEBASE();
-    iprintf( "CPU load is %u.%u%%. Stack reserve: %u Byte. Task activations (lost):\r\n"
+    iprintf( "CPU load is %u.%u%%. Stack reserve:\r\n"
+             "  OS: %u Byte\r\n"
+             "  PID 1: %u Byte\r\n"
+             "  PID 2: %u Byte\r\n"
+             "  PID 3: %u Byte\r\n"
+             "  PID 4: %u Byte\r\n"
+             "Task activations (lost):\r\n"
              "  task1ms: %lu (%u)\r\n"
              "  task3ms: %lu (%u)\r\n"
              "  task1s: %lu (%u)\r\n"
@@ -662,20 +785,37 @@ static void task1s(void)
              "  taskOnButtonDown: %lu (%u)\r\n"
              "  taskCpuLoad: %lu (%u)\r\n"
              "  taskIdle: %lu\r\n"
-             "  tiPrintf = %luus\r\n"
+             "  taskIdle PID 2: %u\r\n"
+             "Process errors:\r\n"
+             "  Total PID 1: %u\r\n"
+             "  thereof Deadline missed: %u\r\n"
+             "  Total PID 2: %u\r\n"
+             "  thereof Deadline missed: %u\r\n"
+             "tiPrintf = %luus\r\n"
            , mai_cpuLoad/10, mai_cpuLoad%10
-           , rtos_getStackReserve()
-           , mai_cntTask1ms, rtos_getNoActivationLoss(idTask1ms)
-           , mai_cntTask3ms, rtos_getNoActivationLoss(idTask3ms)
-           , mai_cntTask1s, rtos_getNoActivationLoss(idTask1s)
-           , mai_cntTaskNonCyclic, rtos_getNoActivationLoss(idTaskNonCyclic)
-           , mai_cntTask17ms, rtos_getNoActivationLoss(idTask17ms)
-           , mai_cntTaskOnButtonDown, rtos_getNoActivationLoss(idTaskOnButtonDown)
-           , mai_cntTaskCpuLoad, rtos_getNoActivationLoss(idTaskCpuLoad)
+           , rtos_getStackReserve(0)
+           , rtos_getStackReserve(1)
+           , rtos_getStackReserve(2)
+           , rtos_getStackReserve(3)
+           , rtos_getStackReserve(4)
+           , mai_cntTask1ms, rtos_getNoActivationLoss(idEv1ms)
+           , mai_cntTask3ms, rtos_getNoActivationLoss(idEv3ms)
+           , mai_cntTask1s, rtos_getNoActivationLoss(idEv1s)
+           , mai_cntTaskNonCyclic, rtos_getNoActivationLoss(idEvNonCyclic)
+           , mai_cntTask17ms, rtos_getNoActivationLoss(idEv17ms)
+           , mai_cntTaskOnButtonDown, rtos_getNoActivationLoss(idEvOnButtonDown)
+           , mai_cntTaskCpuLoad, rtos_getNoActivationLoss(idEvCpuLoad)
            , mai_cntTaskIdle
-           , tiPrintf
+           , mai_cntTaskIdlePID2
+           , rtos_getNoTotalTaskFailure(/* PID */ 1)
+           , rtos_getNoTaskFailure(/* PID */ 1, IVR_CAUSE_TASK_ABBORTION_DEADLINE)
+           , rtos_getNoTotalTaskFailure(/* PID */ 2)
+           , rtos_getNoTaskFailure(/* PID */ 2, IVR_CAUSE_TASK_ABBORTION_DEADLINE)
+           , tiPrintf_
            );
-    tiPrintf = (unsigned long)(GSL_PPC_GET_TIMEBASE() - tiFrom) / 120;
+    tiPrintf_ = (unsigned long)(GSL_PPC_GET_TIMEBASE() - tiFrom) / 120;
+
+    return 0;
 
 } /* End of task1s */
 
@@ -683,11 +823,18 @@ static void task1s(void)
 
 /**
  * A non cyclic task, which is solely activated by software triggers from other tasks.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
  */
-static void taskNonCyclic(void)
+static int32_t taskNonCyclic(uint32_t PID ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTaskNonCyclic);
     ++ mai_cntTaskNonCyclic;
+
+    return 0;
 
 } /* End of taskNonCyclic */
 
@@ -695,8 +842,13 @@ static void taskNonCyclic(void)
 
 /**
  * Task function, cyclically activated every 17ms.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
  */
-static void task17ms(void)
+static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTask17ms);
     ++ mai_cntTask17ms;
@@ -711,7 +863,7 @@ static void task17ms(void)
        heading part of this file. */
     GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
     {
-        if(!rtos_activateTask(idTaskNonCyclic))
+        if(!rtos_triggerEvent(idEvNonCyclic))
             ++ mai_cntActivationLossTaskNonCyclic;
     }
     ReleaseResource();
@@ -719,15 +871,17 @@ static void task17ms(void)
 #if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
     del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ 17*40 /* approx. 4% load */);
-#endif    
-    
+#endif
+
     /* A task can't activate itself, we do not queue activations and it's obviously active
        at the moment. Test it. */
 #ifdef DEBUG
     bool bActivationAccepted =
 #endif
-    rtos_activateTask(idTask17ms);
+    rtos_triggerEvent(idEv17ms);
     assert(!bActivationAccepted);
+
+    return 0;
 
 } /* End of task17ms */
 
@@ -736,8 +890,13 @@ static void task17ms(void)
 /**
  * A non cyclic task, which is activated by software trigger every time the button on the
  * evaluation board is pressed.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
  */
-static void taskOnButtonDown(void)
+static int32_t taskOnButtonDown(uint32_t PID ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTaskOnButtonDown);
     ++ mai_cntTaskOnButtonDown;
@@ -758,14 +917,22 @@ static void taskOnButtonDown(void)
        into a trap. See https://community.nxp.com/message/966809 for details.
          Note, this is likely due to a specific optimizer decision, which is really related
        to the conditions "printf" and "last statement" but not a common error, which could
-       unpredictedly anywhere else. */
-    asm volatile ("se_nop\n");
+       unpredictedly appear anywhere else. */
+    asm volatile ("se_nop\n\t");
 #endif
+
+    return 0;
+
 } /* End of taskOnButtonDown */
 
 
 /**
  * A cyclic task of low priority, which is used to produce some artificial CPU load.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
  *   @remark
  * We need to consider that in this sample, the measurement is inaccurate because the
  * idle loop is not empty (besides measuring the load) and so the observation window is
@@ -773,11 +940,15 @@ static void taskOnButtonDown(void)
  * observation window, which compensates for the effect of the discontinuous observation
  * window.
  */
-static void taskCpuLoad(void)
+static int32_t taskCpuLoad(uint32_t PID ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTaskCpuLoad);
     testPCP(idTaskCpuLoad);
-    
+
+    /* The next call produces 100 * noCycles*(waitTimePerCycleInUS/1000) / 23 percent of
+       CPU load. */
+    tcx_testContext(/* noCycles */ 3, /* waitTimePerCycleInUS */ 2000);
+
     ++ mai_cntTaskCpuLoad;
 
     /* Producing load is implemented as producing full load for a given span of world time.
@@ -790,6 +961,8 @@ static void taskCpuLoad(void)
                                      / 100;
     del_delayMicroseconds(/* fullLoadThisNoMicroseconds */ tiDelayInUs);
 
+    return 0;
+
 } /* End of taskCpuLoad */
 
 
@@ -797,7 +970,7 @@ static void taskCpuLoad(void)
 /**
  * This demonstration software uses a number of fast interrupts to produce system load and
  * prove stability. The interrupts are timer controlled (for simplicity) but the
- * activations are chosen as asynchonous to the operating system clock as possible to
+ * activations are chosen as asynchronous to the operating system clock as possible to
  * provoke a most variable preemption pattern.
  */
 static void installInterruptServiceRoutines(void)
@@ -807,21 +980,24 @@ static void installInterruptServiceRoutines(void)
        conditions with the RTOS initialization that uses timer PIT0. Both routines must not
        be called in concurrency. */
     PIT.PITMCR.R |= 0x2u;
-    
+
     /* Install the ISRs now that all timers are stopped.
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
-    
-    ihw_installINTCInterruptHandler( isrPit1
+    assert(((uintptr_t)isrPit1 & 0x80000000) == 0);
+    prc_installINTCInterruptHandler( &isrPit1
                                    , /* vectorNum */ 60
                                    , /* psrPriority */ prioISRPit1
                                    , /* isPreemptable */ true
                                    );
-    ihw_installINTCInterruptHandler( isrPit2
+
+    assert(((uintptr_t)isrPit2 & 0x80000000) == 0);
+    prc_installINTCInterruptHandler( &isrPit2
                                    , /* vectorNum */ 61
                                    , /* psrPriority */ prioISRPit2
                                    , /* isPreemptable */ true
                                    );
-    ihw_installINTCInterruptHandler( isrPit3
+    assert(((uintptr_t)isrPit3 & 0x80000000) == 0);
+    prc_installINTCInterruptHandler( &isrPit3
                                    , /* vectorNum */ 127
                                    , /* psrPriority */ prioISRPit3
                                    , /* isPreemptable */ true
@@ -842,14 +1018,67 @@ static void installInterruptServiceRoutines(void)
     PIT.TCTRL1.R = 0x3;
     PIT.TCTRL2.R = 0x3;
     PIT.TCTRL3.R = 0x3;
-    
+
     /* Enable timer operation, all four timers are affected. Interrupt processing should
        start. */
     PIT.PITMCR.R &= ~0x2u;
-    
+
 } /* End of installInterruptServiceRoutines */
 
 
+
+/**
+ * Initialization task of process \a PID.
+ *   @return
+ * The function returns the Boolean descision, whether the initialization was alright and
+ * the system can start up.
+ *   @param PID
+ * The ID of the process, the task function is executed in.
+ *   @remark
+ * In this sample, we demonstrate that different processes' tasks can share the same task
+ * function implementation. This is not meant a demonstration of the technical feasibility
+ * but not of good practice; the implementation needs to use shared memory, which may break
+ * a safety constraint, and it needs to consider the different privileges of the processes.
+ */
+static int32_t taskInitProcess(uint32_t PID)
+{
+    static unsigned int cnt_ SECTION(.data.Shared.cnt_) = 0;
+    ++ cnt_;
+
+    /* Only process 1 has access to the C lib (more precise: to those functions of the C
+       lib, which write to lib owned data objects) and can write a status message. */
+    if(PID == 1)
+        iprintf("taskInitPID%lu(): %u\r\n", PID, cnt_);
+
+    return cnt_ == PID;
+
+} /* End of taskInitProcess */
+
+
+
+/**
+ * A short function, which is regularly called from the idle OS process but whic is run in
+ * user process context 2.
+ *   @return
+ * The function returns 3 times \a taskParam (a meaningless test only).
+ *   @param PID
+ * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * Task parameter.
+ */
+static int32_t taskIdlePID2(uint32_t PID, uint32_t taskParam)
+{
+    static unsigned int cnt_ SECTION(.sdata.P2) = 0;
+    ++ cnt_;
+    mai_cntTaskIdlePID2 = cnt_;
+
+    volatile static unsigned int u_ SECTION(.data.P2) = 0;
+    for(u_=0; u_<1000; ++u_)
+        ;
+
+    return (signed int)(taskParam*PID + taskParam);
+
+} /* taskIdlePID2 */
 
 
 /**
@@ -866,146 +1095,249 @@ void main(void)
          ihw_initMcuCoreHW() does the remaining hardware initialization, that is still
        needed to bring the MCU in a basic stable working state. The main difference to the
        preliminary working state of the assembler startup code is the selection of
-       appropriate clock rates. Furthermore, the interrupt controller is configured.
+       appropriate clock rates.
          This part of the hardware configuration is widely application independent. The
        only reason, why this code has not been called directly from the assembler code
        prior to entry into main() is code transparency. It would mean to have a lot of C
        code without an obvious point, where it is called. */
     ihw_initMcuCoreHW();
 
-#ifdef DEBUG
-    /* Check linker script. It's error prone with respect to keeping the initialized RAM
-       sections and the according initial-data ROM sections strictly in sync. As long as
-       this has not been sorted out by a redesign of linker script and startup code we put
-       a minimal plausibility check here, which will likely detect typical errors.
-         If this assertion fires your initial RAM contents will be corrupt. */
-    extern const uint8_t ld_dataSize[0], ld_dataMirrorSize[0];
-    assert(ld_dataSize == ld_dataMirrorSize);
-#endif
+    /* The interrupt controller is configured. */
+    prc_initINTCInterruptController();
 
     /* Initialize the button and LED driver for the eval board. */
-    lbd_initLEDAndButtonDriver();
+    lbd_initLEDAndButtonDriver(onButtonChangeCallback, pidOnButtonChangeCallback);
 
     /* Initialize the serial output channel as prerequisite of using printf. */
     sio_initSerialInterface(/* baudRate */ 115200);
 
-    /* The external interrupts are enabled after configuring I/O devices. (Initialization
-       of the RTOS can be done later.) */
-    ihw_resumeAllInterrupts();
+    /* Arm the memory protection unit. */
+    mpu_initMPU();
 
-    /* The RTOS is restricted to eight tasks at maximum. */
-    _Static_assert(noRegisteredTasks <= 8, "RTOS only supports eight tasks");
+    /* Register the process initialization tasks. */
+    rtos_taskDesc_t taskConfig;
+    bool initOk = true;
+    taskConfig = (rtos_taskDesc_t){ .PID = 1
+                                    , .userTaskFct = taskInitProcess
+                                    , .tiTaskMaxInUS = 1000
+                                  };
+    if(!rtos_registerTask(&taskConfig, RTOS_EVENT_ID_INIT_TASK))
+        initOk = false;
+
+    taskConfig = (rtos_taskDesc_t){ .PID = 2
+                                    , .userTaskFct = taskInitProcess
+                                    , .tiTaskMaxInUS = 1000
+                                  };
+    if(!rtos_registerTask(&taskConfig, RTOS_EVENT_ID_INIT_TASK))
+        initOk = false;
 
     /* Register the application tasks at the RTOS. Note, we do not really respect the ID,
-       which is assigned to the task by the RTOS API rtos_registerTask(). The returned
+       which is assigned to the task by the RTOS API rtos_createEvent(). The returned
        value is redundant. This technique requires that we register the task in the right
        order and this requires in practice a double-check by assertion - later maintenance
        errors are unavoidable otherwise. */
 #ifdef DEBUG
-    unsigned int idTask =
+    unsigned int idEvent =
 #endif
-    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = task1ms
-                                         , .tiCycleInMs = 1
-                                         , .priority = prioTask1ms
-                                         }
-                     , /* tiFirstActivationInMs */ 10
-                     );
-    assert(idTask == idTask1ms);
+    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 1
+                                        , .tiFirstActivationInMs = 10
+                                        , .priority = prioTask1ms
+                                        , .minPIDToTriggerThisEvent = 1
+                                        }
+                    );
+    assert(idEvent == idEv1ms);
+    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = pidTaskOs1ms
+                                             , .osTaskFct = taskOs1ms
+                                             , .tiTaskMaxInUS = 0
+                                             }
+                         , idEv1ms
+                         )
+      )
+    {
+        initOk = false;
+    }
+    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = pidTask1ms
+                                             , .userTaskFct = task1ms
+                                             , .tiTaskMaxInUS = 0
+                                             }
+                         , idEv1ms
+                         )
+      )
+    {
+        initOk = false;
+    }
 
 #ifdef DEBUG
-    idTask =
+    idEvent =
 #endif
-    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = task3ms
-                                         , .tiCycleInMs = 3
-                                         , .priority = prioTask3ms
-                                         }
-                     , /* tiFirstActivationInMs */ 17
-                     );
-    assert(idTask == idTask3ms);
+    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 3
+                                        , .tiFirstActivationInMs = 17
+                                        , .priority = prioTask3ms
+                                        , .minPIDToTriggerThisEvent = 1
+                                        }
+                    );
+    assert(idEvent == idEv3ms);
+    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTask3ms
+                                            , .userTaskFct = task3ms
+                                            , .tiTaskMaxInUS = 0
+                                            }
+                         , idEv3ms
+                         )
+      )
+    {
+        initOk = false;
+    }
 
 #ifdef DEBUG
-    idTask =
+    idEvent =
 #endif
-    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = task1s
-                                         , .tiCycleInMs = 1000
-                                         , .priority = prioTask1s
-                                         }
-                     , /* tiFirstActivationInMs */ 100
-                     );
-    assert(idTask == idTask1s);
+    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 1000
+                                        , .tiFirstActivationInMs = 100
+                                        , .priority = prioTask1s
+                                        , .minPIDToTriggerThisEvent = 1
+                                        }
+                    );
+    assert(idEvent == idEv1s);
+    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTask1s
+                                            , .userTaskFct = task1s
+                                            , .tiTaskMaxInUS = 0
+                                            }
+                         , idEv1s
+                         )
+      )
+    {
+        initOk = false;
+    }
 
 #ifdef DEBUG
-    idTask =
+    idEvent =
 #endif
-    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = taskNonCyclic
-                                         , .tiCycleInMs = 0 /* non-cyclic */
-                                         , .priority = prioTaskNonCyclic
-                                         }
-                     , /* tiFirstActivationInMs */ 0
-                     );
-    assert(idTask == idTaskNonCyclic);
+    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 0 /* non-cyclic */
+                                        , .tiFirstActivationInMs = 0
+                                        , .priority = prioTaskNonCyclic
+                                        , .minPIDToTriggerThisEvent = 1
+                                        }
+                    );
+    assert(idEvent == idEvNonCyclic);
+    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTaskNonCyclic
+                                            , .userTaskFct = taskNonCyclic
+                                            , .tiTaskMaxInUS = 0
+                                            }
+                         , idEvNonCyclic
+                         )
+      )
+    {
+        initOk = false;
+    }
 
 #ifdef DEBUG
-    idTask =
+    idEvent =
 #endif
-    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = task17ms
-                                         , .tiCycleInMs = 17
-                                         , .priority = prioTask17ms
-                                         }
-                     , /* tiFirstActivationInMs */ 0
-                     );
-    assert(idTask == idTask17ms);
+    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 17
+                                        , .tiFirstActivationInMs = 0
+                                        , .priority = prioTask17ms
+                                        , .minPIDToTriggerThisEvent = 1
+                                        }
+                    );
+    assert(idEvent == idEv17ms);
+    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTask17ms
+                                            , .userTaskFct = task17ms
+                                            , .tiTaskMaxInUS = 0
+                                            }
+                         , idEv17ms
+                         )
+      )
+    {
+        initOk = false;
+    }
 
 #ifdef DEBUG
-    idTask =
+    idEvent =
 #endif
-    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = taskOnButtonDown
-                                         , .tiCycleInMs = 0 /* Event task, no coycle time */
-                                         , .priority = prioTaskOnButtonDown
-                                         }
-                     , /* tiFirstActivationInMs */ 0
-                     );
-    assert(idTask == idTaskOnButtonDown);
+    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 0 /* Event task, no cycle time */
+                                        , .tiFirstActivationInMs = 0
+                                        , .priority = prioTaskOnButtonDown
+                                        , .minPIDToTriggerThisEvent = 1
+                                        }
+                    );
+    assert(idEvent == idEvOnButtonDown);
+    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTaskOnButtonDown
+                                            , .userTaskFct = taskOnButtonDown
+                                            , .tiTaskMaxInUS = 0
+                                            }
+                         , idEvOnButtonDown
+                         )
+      )
+    {
+        initOk = false;
+    }
 
 #ifdef DEBUG
-    idTask =
+    idEvent =
 #endif
-    rtos_registerTask( &(rtos_taskDesc_t){ .taskFct = taskCpuLoad
-                                         , .tiCycleInMs = 23 /* ms */
-                                         , .priority = prioTaskCpuLoad
-                                         }
-                     , /* tiFirstActivationInMs */ 3
-                     );
-    assert(idTask == idTaskCpuLoad);
+    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 23 /* ms */
+                                        , .tiFirstActivationInMs = 3
+                                        , .priority = prioTaskCpuLoad
+                                        , .minPIDToTriggerThisEvent = 1
+                                        }
+                    );
+    assert(idEvent == idEvCpuLoad);
+    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTaskCpuLoad
+                                            , .userTaskFct = taskCpuLoad
+                                            , .tiTaskMaxInUS = 0
+                                            }
+                         , idEvCpuLoad
+                         )
+      )
+    {
+        initOk = false;
+    }
 
     /* The last check ensures that we didn't forget to register a task. */
-    assert(idTask == noRegisteredTasks-1);
+    assert(idEvent == noRegisteredTasks-2);
 
-    /* Initialize the RTOS kernel. */
-    rtos_initKernel();
+    /* Initialize the RTOS kernel. The global interrupt processing is resumed if it
+       succeeds. The step involves a configuration check. We must not startup the SW if the
+       check fails. */
+    if(!initOk || !rtos_initKernel())
+        while(true)
+            ;
 
     /* Installing more interrupts should be possible while the system is already running.
        We place the PIT timer initialization here to prove this statement. */
     del_delayMicroseconds(500000);
     installInterruptServiceRoutines();
-       
+
     /* The code down here becomes our idle task. It is executed when and only when no
        application task is running. */
 
+    /* Prepare the run of the idle task of process 2. */
+    static const prc_userTaskConfig_t taskIdlePID2Config = { .taskFct = taskIdlePID2
+                                                           , .tiTaskMax = 0
+                                                           , .PID = 2
+                                                           };
     while(true)
     {
-        checkAndIncrementTaskCnts(idTaskIdle);
+/// @todo Likely impossible for idle to use these services
+//        checkAndIncrementTaskCnts(idTaskIdle);
         testPCP(idTaskIdle);
         ++ mai_cntTaskIdle;
 
         /* Activate the non cyclic task. Note, the execution time of this task activation
            will by principle not be considered by the CPU load measurement started from the
            same task (the idle task). */
+/// @todo Here, we disregard the otherwise used critical section. This error is likely in simple RTOS, too
 #ifdef DEBUG
         bool bActivationAccepted =
 #endif
-        rtos_activateTask(idTaskNonCyclic);
+        rtos_OS_triggerEvent(idEvNonCyclic);
         assert(bActivationAccepted);
+
+        /* Run a kind of idle task in process 2. */
+        signed int resultIdle = rtos_OS_runTask( &taskIdlePID2Config
+                                               , /* taskParam */ mai_cntTaskIdle
+                                               );
+        assert(resultIdle == 3*(int)mai_cntTaskIdle);
 
         /* Compute the average CPU load. Note, this operation lasts about 1s and has a
            significant impact on the cycling speed of this infinite loop. Furthermore, it
@@ -1013,17 +1345,13 @@ void main(void)
            of the rest of the code in the idle loop. */
         mai_cpuLoad = gsl_getSystemLoad();
 
+/// @todo No printf accessible from OS process, does system call, move somewhere else
         /* In PRODUCTION compilation we print the inconsistencies found in the PCP test. */
         if(_sharedDataTasksIdleAnd1msAndCpuLoad.noErrors != 0)
         {
-            iprintf( "CAUTION: %u errors found in PCP self-test!\r\n"
-                   , _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors
-                   );
+//            iprintf( "CAUTION: %u errors found in PCP self-test!\r\n"
+//                   , _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors
+//                   );
         }
-#if 0
-        /* Test of return from main: After 10s */
-        if(mai_cntTask1ms >= 10000)
-            break;
-#endif
     }
 } /* End of main */

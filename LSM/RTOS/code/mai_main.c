@@ -6,7 +6,7 @@
  * state of the buttons on the evaluation board. On button press an according event task,
  * taskOnButtonDown, is activated.\n
  *   The event task taskOnButtonDown reports each button event by printing a message to the
- * serial COM channel. At the same time it increments the amount of CPU load by 10%, load
+ * serial COM channel. At the same time it increments the amount of CPU load by 10% load,
  * which is (artificially) produced by task taskCpuLoad. This is a cyclic task with a busy
  * wait loop.\n
  *   A cyclic 1000ms task toggles the second LED at a rate of 0.5 Hz.\n
