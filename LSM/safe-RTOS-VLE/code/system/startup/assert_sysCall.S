@@ -88,7 +88,7 @@ assert_scBscHdlr_assert_func:
     e_stb       r0, assert_assertionFired@l(r3)
 
     /* MSR[EE] = 0 is always granted on entry into a basic system call handler and all
-       which remains to do is entering an infinite loop. */
+       which remains is entering an infinite loop. */
     se_b        .
     
 /* End of assert_scBscHdlr_assert_func */

@@ -151,6 +151,8 @@ void mpu_initMPU(void)
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 0);
     ++ r;
 
+    /// @todo Offer a compile time switch to select hirarchical model, where PID i has write access to memory of PID j if i>=j
+    
     /* RAM access for process 1. */
 #if MPU_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
@@ -206,6 +208,64 @@ void mpu_initMPU(void)
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataP2End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 2);
+    ++ r;
+#endif
+    
+    /* RAM access for process 3. */
+#if MPU_DISARM_MPU == 1
+    extern uint8_t ld_ramStart[0], ld_ramEnd[0];
+    MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
+    MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_ramEnd-1; /* End address of region, including. */
+    MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
+    MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 3);
+    ++ r;
+#else
+    extern uint8_t ld_sdaP3Start[0], ld_sdaP3End[0];
+    MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sdaP3Start; /* Start address sdata + sbss */
+    MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sdaP3End-1; /* End address, including. */
+    MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
+    MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 3);
+    ++ r;
+    extern uint8_t ld_sda2P3Start[0], ld_sda2P3End[0];
+    MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sda2P3Start; /* Start address sdata2 + sbss2 */
+    MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sda2P3End-1; /* End address, including. */
+    MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
+    MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 3);
+    ++ r;
+    extern uint8_t ld_dataP3Start[0], ld_dataP3End[0];
+    MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_dataP3Start; /* Start address data + bss */
+    MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataP3End-1; /* End address, including. */
+    MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
+    MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 3);
+    ++ r;
+#endif
+    
+    /* RAM access for process 4. */
+#if MPU_DISARM_MPU == 1
+    extern uint8_t ld_ramStart[0], ld_ramEnd[0];
+    MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
+    MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_ramEnd-1; /* End address of region, including. */
+    MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
+    MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 4);
+    ++ r;
+#else
+    extern uint8_t ld_sdaP4Start[0], ld_sdaP4End[0];
+    MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sdaP4Start; /* Start address sdata + sbss */
+    MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sdaP4End-1; /* End address, including. */
+    MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
+    MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 4);
+    ++ r;
+    extern uint8_t ld_sda2P4Start[0], ld_sda2P4End[0];
+    MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sda2P4Start; /* Start address sdata2 + sbss2 */
+    MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sda2P4End-1; /* End address, including. */
+    MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
+    MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 4);
+    ++ r;
+    extern uint8_t ld_dataP4Start[0], ld_dataP4End[0];
+    MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_dataP4Start; /* Start address data + bss */
+    MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataP4End-1; /* End address, including. */
+    MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
+    MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 4);
     ++ r;
 #endif
     

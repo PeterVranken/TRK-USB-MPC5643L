@@ -9,7 +9,7 @@
 
 This sample implements an easy to reuse RTOS for the NXP MPC5643L. The
 sample started as a copy of sample "RTOS-VLE". The RTOS implementation has
-been reworked (new folder `code\system\RTOS`) and the main module
+been reworked (folder `code\system\RTOS`) and the main module
 `code\application\default\mai_main.c` has been modified in order to make
 use of some of the new features of the RTOS. The functionality is similar
 to sample "startup" with its blinking LEDs. Several tasks are running

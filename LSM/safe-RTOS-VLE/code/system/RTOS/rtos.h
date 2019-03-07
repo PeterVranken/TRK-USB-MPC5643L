@@ -82,6 +82,13 @@
     rtos_registerTask(). */
 #define RTOS_EVENT_ID_INIT_TASK     (UINT_MAX)
 
+/** An RTOS event can normally be triggered by user tasks belonging to a process of
+    sufficient privileges. See field \a minPIDToTriggerThisEvent of struct \a
+    rtos_eventDesc_t. If it should not be accessible even by the process of highest
+    priviledges than #PRC_EVENT_NOT_USER_TRIGGERABLE can be specified for \a
+    minPIDToTriggerThisEvent. */
+#define PRC_EVENT_NOT_USER_TRIGGERABLE  ((PRC_NO_PROCESSES)+1u)
+
 /** \cond Two nested macros are used to convert a constant expression to a string which can be
     used e.g. as part of some inline assembler code.\n
       If for example PI is defined to be (355/113) you could use STR(PI) instead of
@@ -161,7 +168,8 @@ typedef struct rtos_eventDesc_t
         permitted to trigger this event.\n
           The range of \a minPIDToTriggerThisEvent is 0 ... (#PRC_NO_PROCESSES+1). 0 and 1
         both mean, all processes may trigger the event, #PRC_NO_PROCESSES+1 means only OS code
-        can trigger the event. */
+        can trigger the event. #PRC_NO_PROCESSES+1 is available as
+        #PRC_EVENT_NOT_USER_TRIGGERABLE, too. */
     unsigned int minPIDToTriggerThisEvent;
 
 } rtos_eventDesc_t;

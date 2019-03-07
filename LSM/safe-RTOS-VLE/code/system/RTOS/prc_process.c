@@ -322,6 +322,7 @@ void prc_installINTCInterruptHandler( const prc_interruptServiceRoutine_t pInter
        need to disable them shortly to avoid inconsistent states (vector and priority). */
     uint32_t msr = ihw_enterCriticalSection();
 
+    assert(((uintptr_t)pInterruptHandler & 0x80000000u) == 0);
     ivr_INTCInterruptHandlerAry[vectorNum] = PRC_IRQ_HANDLER(pInterruptHandler, isPreemptable);
 
     /* Set the PSR Priority */

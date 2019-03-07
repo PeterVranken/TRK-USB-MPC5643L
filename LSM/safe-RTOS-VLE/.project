@@ -114,6 +114,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>.external_binary/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/basicTest</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>.external_binary/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/default</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -129,6 +134,11 @@
 			<location>C:/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/PRODUCTION/TRK-USB-MPC5643L-safe-RTOS-VLE.elf</location>
 		</link>
 		<link>
+			<name>.external_binary/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/basicTest/DEBUG</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>.external_binary/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/default/DEBUG</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -137,6 +147,11 @@
 			<name>.external_binary/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/default/PRODUCTION</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>.external_binary/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/basicTest/DEBUG/TRK-USB-MPC5643L-safe-RTOS-VLE.elf</name>
+			<type>1</type>
+			<location>C:/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/basicTest/DEBUG/TRK-USB-MPC5643L-safe-RTOS-VLE.elf</location>
 		</link>
 		<link>
 			<name>.external_binary/user/vranken/projects/TRK-USB-MPC5643L/trunk/LSM/safe-RTOS-VLE/bin/ppc/default/DEBUG/TRK-USB-MPC5643L-safe-RTOS-VLE.elf</name>

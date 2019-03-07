@@ -164,16 +164,17 @@
  * Local type definitions
  */
 
-/** The enumeration of all tasks; the values are the task IDs. Actually, the ID is provided
-    by the RTOS at runtime, when registering the task. However, it is guaranteed that the
-    IDs, which are dealt out by rtos_createEvent() form the series 0, 1, 2, ..., 7. So
-    we don't need to have a dynamic storage of the IDs; we define them as constants and
-    double-check by assertion that we got the correct, expected IDs. Note, this requires
-    that the order of registering the tasks follows the order here in the enumeration. */
+/** The enumeration of all events, tasks and priority, to have them as symbols in the
+    source code. Most relevant are the event IDs. Actually, these IDs are provided by the
+    RTOS at runtime, when creating the event. However, it is guaranteed that the IDs, which
+    are dealt out by rtos_createEvent() form the series 0, 1, 2, ..., 7. So we don't need
+    to have a dynamic storage of the IDs; we define them as constants and double-check by
+    assertion that we got the correct, expected IDs from rtos_createEvent(). Note, this
+    requires that the order of creating the events follows the order here in the
+    enumeration. */
 enum
 {
-    /** The ID of the registered application tasks. They occupy the index range starting
-        from zero. */
+    /** The ID of the created events. They occupy the index range starting from zero. */
     idEv1ms = 0
     , idEv3ms
     , idEv1s
@@ -1031,12 +1032,13 @@ static void installInterruptServiceRoutines(void)
  * Initialization task of process \a PID.
  *   @return
  * The function returns the Boolean descision, whether the initialization was alright and
- * the system can start up.
+ * the system can start up. "Not alright" is expressed by a negative number, which hinders
+ * the RTOS to startup.
  *   @param PID
  * The ID of the process, the task function is executed in.
  *   @remark
  * In this sample, we demonstrate that different processes' tasks can share the same task
- * function implementation. This is not meant a demonstration of the technical feasibility
+ * function implementation. This is meant a demonstration of the technical feasibility
  * but not of good practice; the implementation needs to use shared memory, which may break
  * a safety constraint, and it needs to consider the different privileges of the processes.
  */
@@ -1050,7 +1052,7 @@ static int32_t taskInitProcess(uint32_t PID)
     if(PID == 1)
         iprintf("taskInitPID%lu(): %u\r\n", PID, cnt_);
 
-    return cnt_ == PID;
+    return cnt_ == PID? 0: -1;
 
 } /* End of taskInitProcess */
 
@@ -1131,11 +1133,11 @@ void main(void)
     if(!rtos_registerTask(&taskConfig, RTOS_EVENT_ID_INIT_TASK))
         initOk = false;
 
-    /* Register the application tasks at the RTOS. Note, we do not really respect the ID,
-       which is assigned to the task by the RTOS API rtos_createEvent(). The returned
-       value is redundant. This technique requires that we register the task in the right
-       order and this requires in practice a double-check by assertion - later maintenance
-       errors are unavoidable otherwise. */
+    /* Create the events that trigger application tasks at the RTOS. Note, we do not really
+       respect the ID, which is assigned to the event by the RTOS API rtos_createEvent().
+       The returned value is redundant. This technique requires that we create the events
+       in the right order and this requires in practice a double-check by assertion - later
+       maintenance errors are unavoidable otherwise. */
 #ifdef DEBUG
     unsigned int idEvent =
 #endif

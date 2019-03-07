@@ -56,6 +56,11 @@
     execution). */
 #define PRC_SYSCALL_SUSPEND_PROCESS     9
 
+/** Helper for data initialization: Task time budget are internally represented in CPU
+    clock ticks. Using this macro one can specify it nore conveniently in Milliseconds. The
+    macro just converts its argument from Milliseconds to clock ticks. */
+#define PRC_TI_MS2TICKS(tiInMs) ((tiInMs)*120000u)
+
 
 /*
  * Global type definitions
@@ -96,6 +101,7 @@ typedef struct prc_userTaskConfig_t
     /** Time budget for the user task in ticks of TBL (i.e. 8.33ns). This budget is
         granted for each activation of the task. The budget relates to deadline monitoring,
         i.e. it is a world time budget, not an execution time budget.\n
+          Macro #PRC_TI_MS2TICKS can be used to state the time budget in Milliseconds.\n
           A value of zero means that deadline monitoring is disabled for the task.\n
           Note, this field doesn't care if \a userTask is NULL, i.e. if no user task is
         defined for the interrupt.\n

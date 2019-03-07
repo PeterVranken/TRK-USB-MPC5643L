@@ -25,10 +25,10 @@ ENTRY(sup_startUp)
      The stack size of an used process should be set here to zero. This will switch the
    process entirely off. */
 ld_heapSize  = 8192;
-ld_stackSizeOS = 4096;
-ld_stackSizeP1 = 4096;
-ld_stackSizeP2 = 4096;
-ld_stackSizeP3 = 1024;
+ld_stackSizeOS = 8092;
+ld_stackSizeP1 = 2048;
+ld_stackSizeP2 = 2048;
+ld_stackSizeP3 = 2048;
 ld_stackSizeP4 = 0;
 
 /* Definition of memory regions using absolute MPC5643L addresses. */

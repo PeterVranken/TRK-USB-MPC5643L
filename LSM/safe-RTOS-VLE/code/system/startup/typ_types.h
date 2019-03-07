@@ -59,6 +59,99 @@
 /** Place a piece of code or data objects into a sepcific linker section. */
 # define SECTION(sectionName)  __attribute__((section (#sectionName)))
 
+/** This abbreviating macro can be used to make the definition of simple, uninitialized
+    data objects, which need to be located in the operating system memory, put e.g. "int
+    BSS_OS(x);" instead of the more explicit "int x SECTION(.bss.OS.x);" into your source
+    code.\n
+      The macro cannot be applied to more complex definitions, e.g. with struct types or
+    function pointers. */
+# define BSS_OS(var)     var SECTION(.bss.OS.var)
+
+/** Helper for definition of simple, OS owned, initialized data objects. See #BSS_OS for
+    details. */
+# define DATA_OS(var)    var SECTION(.data.OS.var)
+
+/** Helper for definition of simple, OS owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SBSS_OS(var)    var SECTION(.sbss.OS.var)
+
+/** Helper for definition of simple, OS owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SDATA_OS(var)   var SECTION(.sdata.OS.var)
+
+/** Helper for definition of simple, process P1 owned, uninitialized data objects. See
+    #BSS_OS for details. */
+# define BSS_P1(var)     var SECTION(.bss.P1.var)
+
+/** Helper for definition of simple, process P1 owned, initialized data objects. See
+    #BSS_OS for details. */
+# define DATA_P1(var)    var SECTION(.data.P1.var)
+
+/** Helper for definition of simple, process P1 owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SBSS_P1(var)    var SECTION(.sbss.P1.var)
+
+/** Helper for definition of simple, process P1 owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SDATA_P1(var)   var SECTION(.sdata.P1.var)
+
+/** Helper for definition of simple, process P2 owned, uninitialized data objects. See
+    #BSS_OS for details. */
+# define BSS_P2(var)     var SECTION(.bss.P2.var)
+
+/** Helper for definition of simple, process P2 owned, initialized data objects. See
+    #BSS_OS for details. */
+# define DATA_P2(var)    var SECTION(.data.P2.var)
+
+/** Helper for definition of simple, process P2 owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SBSS_P2(var)    var SECTION(.sbss.P2.var)
+
+/** Helper for definition of simple, process P2 owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SDATA_P2(var)   var SECTION(.sdata.P2.var)
+
+/** Helper for definition of simple, process P3 owned, uninitialized data objects. See
+    #BSS_OS for details. */
+# define BSS_P3(var)     var SECTION(.bss.P3.var)
+
+/** Helper for definition of simple, process P3 owned, initialized data objects. See
+    #BSS_OS for details. */
+# define DATA_P3(var)    var SECTION(.data.P3.var)
+
+/** Helper for definition of simple, process P3 owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SBSS_P3(var)    var SECTION(.sbss.P3.var)
+
+/** Helper for definition of simple, process P3 owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SDATA_P3(var)   var SECTION(.sdata.P3.var)
+
+/** Helper for definition of simple, process P4 owned, uninitialized data objects. See
+    #BSS_OS for details. */
+# define BSS_P4(var)     var SECTION(.bss.P4.var)
+
+/** Helper for definition of simple, process P4 owned, initialized data objects. See
+    #BSS_OS for details. */
+# define DATA_P4(var)    var SECTION(.data.P4.var)
+
+/** Helper for definition of simple, process P4 owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SBSS_P4(var)    var SECTION(.sbss.P4.var)
+
+/** Helper for definition of simple, process P4 owned, initialized data objects with short
+    addressing mode. See #BSS_OS for details. */
+# define SDATA_P4(var)   var SECTION(.sdata.P4.var)
+
+/** Helper for definition of simple, shared, uninitialized data objects. See
+    #BSS_OS for details. */
+# define BSS_SHARED(var) var SECTION(.bss.Shared.var)
+
+/** Helper for definition of simple, process P4 owned, initialized data objects. See
+    #BSS_OS for details. */
+# define DATA_SHARED(var)   var SECTION(.data.Shared.var)
+
+
 #else
 # define ATTRIB_UNUSED
 # define ATTRIB_DBG_ONLY
