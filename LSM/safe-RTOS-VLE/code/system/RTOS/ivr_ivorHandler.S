@@ -333,7 +333,8 @@ ivr_isr_endIfPreemptable:
     se_beq      iv4_retToPreemptedCtxt  /* Return to other OS context. */
 
     mfspr       r4, SPR_TBL /* r4: Current time */
-    se_cmp      r3, r4      /* Compare: End time >= current time? Wraps only after 17s */
+    se_sub      r3, r4      /* r3: Remaining time budget */
+    se_cmpi     r3, 0       /* Compare: Budget >= 0? Wraps only after 17s */
     se_bge      iv4_retToPreemptedCtxt  /* Yes, end time >= current time, okay. */
     se_li       r3, IVR_CAUSE_TASK_ABBORTION_DEADLINE
     se_b        rut_endUserTaskByException
@@ -541,7 +542,7 @@ rut_noTimeBudget:
     se_mfar     r3, r8  /* 1st argument: PID. r4 still holds C code specified 2nd argument */
     se_rfi
 
-    .global     .ivr_terminateUserTask
+    .global     ivr_terminateUserTask
 ivr_terminateUserTask:
     se_mr       r4, r3  /* Return value of user function becomes argument of sys call */
     se_li       r3, 0   /* Still part of user task code: System call 0 to terminate/abort */
