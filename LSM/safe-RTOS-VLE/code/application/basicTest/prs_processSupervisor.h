@@ -42,6 +42,9 @@
  * Global data declarations
  */
 
+/** Counter for test cycles. */
+extern long unsigned int prs_cntTestCycles;
+
 
 /*
  * Global prototypes

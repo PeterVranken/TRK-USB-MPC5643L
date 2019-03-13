@@ -38,6 +38,7 @@
  *   ivr_ivor13Handler
  *   ivr_ivor14Handler
  *   ivr_ivor15Handler
+ *   ivr_ivor32Handler
  * Local functions
  */
 
@@ -81,8 +82,17 @@
 /** SPR index of Exception Syndrome Register. */
 #define SPR_ESR     62
 
+/** SPR index of Machine Check Save/Restore Register 0. */
+#define SPR_MCSRR0  570
+
+/** SPR index of Machine Check Save/Restore Register 1. */
+#define SPR_MCSRR1  571
+
 /** SPR index of Machine Check Syndrome Register. */
 #define SPR_MCSR    572
+
+/** SPR index of Machine Check Address Register. */
+#define SPR_MCAR    573
 
 /** SPR index of Time Base (lower) register. */
 #define SPR_TBL     284
@@ -116,7 +126,6 @@ ivr_INTCInterruptHandlerAry:
 
 
 
-
 /*
  * Function implementation
  */
@@ -135,38 +144,212 @@ ivr_INTCInterruptHandlerAry:
  *   @remark
  * Different to all other exceptions in our context, the MPU raised external bus error
  * exceptions are "imprecise". They occur not as part of execution of the failing
- * instruction but a few, however undefined number of instructions later. This makes them
- * resemble the asynchronous exceptions, e.g. IVOR #4. In our context, a normal, "precise"
- * exception is easy handled. We just abort the running task - by nature it the one, which
- * is pre-empted by the exception. For external bus errors it's a challenge to relate the
- * exception to the failing task.\n
+ * instruction but a few, however undefined number of instructions later (in all tests and
+ * experiments we saw no more than one instruction of delay). This makes them resemble the
+ * asynchronous exceptions, e.g. IVOR #4. In our context, a normal, "precise" exception is
+ * easy handled. We just abort the running task - by nature it the one, which is preempted
+ * by the exception. For external bus errors it's a challenge to relate the exception to
+ * the failing task.\n
  *   The idea: The switch from one task to another context is always initiated by an
  * exception, IVOR #4 or IVOR #8. These context switches are coherently connected to a
  * switch from user to supervisor mode. In the IVOR #1 handler we can inspect the execution
- * mode of the pre-empted context. If it is user mode then we have the simple situation
- * from the precise exceptions. If it is supervisor mode and if we are in the entry code of
+ * mode of the preempted context. If it is user mode then we have the simple situation from
+ * the precise exceptions. If it is supervisor mode and if we are in the entry code of
  * IVOR #4 or #8 then we know that the failing task belongs to the still set process ID. We
- * abort both, the begun IVOR handler and the task it has pre-empted. We may do so: The
- * IVOR #4 entry code has not yet touched the INTC and acknowledged the IRQ and so the
- * handler will be called immediately again after return from the aborted task. The system
- * call belongs to the code sequence of the anyway aborted task and any attempt to continue
- * or even repeat it would be a logical fault.
+ * abort both, the begun IVOR handler and the task it has preempted. We may do so: The IVOR
+ * #4 entry code has not yet touched the INTC and acknowledged the IRQ and so the handler
+ * will be called immediately again after return from the aborted task. The system call
+ * belongs to the code sequence of the anyway aborted task and any attempt to continue or
+ * even repeat it would be a logical fault.
  */
     .section    .text.ivor
     .global     ivr_ivor1Handler
     .p2align    4
 ivr_ivor1Handler:
-    /// @todo Catch nested MC exceptions and halt system in case
-
-    /* We don't need a preamble with storage or register contexts of pre-empted context: We
+    /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the pre-empted context: It
+         We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfspr       r0, 571     /* SPR 570 = MCSRR0 = address, SPR 571 = MCSRR1 = MSR */
+    mfspr       r0, SPR_MCSRR1
     se_btsti    r0, 17      /* Test bit "problem state" */
-    se_beq      .           /* assert(Problem state == user) */
-    /// @todo Globally store TBU/TBL, MCSR and MCAR for diagnosis and count occurances
+    se_bne      ivr1_isUserCodeIvor1Exception
+  
+    /* The SV bit may be set if we encounter a double exception. A double exception will
+       occur if a core detected failure is made at an MPU protected, unavailable address.
+         Examples: Exceution of a privileged instruction in process RAM (no execution rights
+       for RAM granted by MPU) or misaligned data access in RAM of other process.
+         The precise, synchronously appearing CPU exception is followed by an imprecise (CPU
+       external) exception from the MPU. In which case the Machine Check exception here has
+       interrupted the just beginning exception handler of the earlier exception from the
+       CPU. All of our anticipated exceptions lead to the same action, error counting and
+       task abort. Therefore we don't need special handling for the double exception and
+       proceed as usual. However, we want to recognize this situation in order to still have
+       a distinction of user code faults and faults in the "trusted" OS code: Normally, any
+       exception of SV code points to a severe fault in the operating system itself (kernel
+       or I/O driver).
+         If we recognize the later then we can halt the software execution and delegate the
+       problem to the next safety catch level: A watchdog will bring the system into the safe
+       state. Not recognizing the problem means opening a door to let the SW do unsafe
+       things.
+         The way we recognize the double exception is looking at the address, at which the MC
+       exception preempted. If it is the beginning of another IVOR exception then we decide
+       for double exception. Since the preempted exception is closer to the root cause of the
+       fault we resume the execution of that exception.
+         The imprecise MC exception can sometimes hit the beginning execution of an IVOR #4,
+       too. This is by chance and not a nested fault recognition. If we resumed the IVOR
+       handler in this case, too, then we would ignore a process fault and eventually return
+       to the failing task. Now, the decision is to really count an MC exception as failure
+       cause and abort the failing task. The begun IVOR #4 handler is not resumed. The
+       interrupt is still asserted and is taken by the CPU at next occasion. */
+     
+    /* Note, we don't make use of short addressing modes, neither for handler addresses nor
+       for counter variables, to keep code independent from location and to spare expensive
+       SDA RAM, respectively. There's no need for speed optimized code here, it'll normally
+       never be executed and even if it will rather save CPU execution time (by aborting a
+       task) than producing additional load. */
+
+    mfspr       r3, SPR_MCSRR0  /* Address, where this Machine Check interrupt preempted */
+    e_lis       r0, ivr_ivor4Handler@ha
+    e_add16i    r0, r0, ivr_ivor4Handler@l  /* r0: Address External Interrupt handler */
+    se_cmp      r0, r3          /* r3=SPR_MCSRR0 and r0 need to match to satisfy */
+    se_bne      ivr1_testForDblExc
+
+    /* IVOR #4 started handling an unknown, unrelated I/O interrupt when being preempted by
+       the imprecise IVOR #1 because of a fault. We let IVOR #1 handle the problem. The
+       IVOR #4 is not continued. The interrupt is still asserted and the CPU will return to
+       the IVOR #4 handler as soon as the fault handling proceeds to the point where
+       MSR[EE] returns to 1. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor4@ha
+    e_lwz       r0, ivr_cntIvor1PreemptsIvor4@l(r3)
+    se_addi     r0, 1   
+    e_stw       r0, ivr_cntIvor1PreemptsIvor4@l(r3)
+    se_b        ivr1_isUserCodeIvor1Exception
+
+ivr1_testForDblExc:
+    /* If we get here then we have a preemption of supervisor code, which may be a double
+       exception or a fault in the OS. If it is a double exception then the address of
+       preemption shall be at the beginning of an exception handler and that handler shall
+       have preempted user code. Both conditions need to be met to decide for user code
+       preemption. The common condition can be checked once and before we look for the
+       particular addresses. */
+    mfspr       r0, SPR_SRR1    /* MSR of task, which a potential other IVOR has preempted */
+    se_btsti    r0, 17          /* Test bit "problem state" */
+    se_beq      ivr_isOSCodeException /* It's already clear, it can't be a double exception */
+    
+ivr1_testIvor5:
+    e_lis       r0, ivr_ivor5Handler@ha
+    e_add16i    r0, r0, ivr_ivor5Handler@l  /* r0: Address Alignment Interrupt handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor6
+
+    /* IVOR #5 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #5. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor5@ha
+    e_lwz       r0, ivr_cntIvor1PreemptsIvor5@l(r3)
+    se_addi     r0, 1
+    e_stw       r0, ivr_cntIvor1PreemptsIvor5@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+    
+ivr1_testIvor6:
+    e_lis       r0, ivr_ivor6Handler@ha
+    e_add16i    r0, r0, ivr_ivor6Handler@l  /* r0: Address Program Interrupt handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor7
+
+    /* IVOR #6 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #6. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor6@ha
+    e_lwz       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
+    se_addi     r0, 1
+    e_stw       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+    
+ivr1_testIvor7:
+    e_lis       r0, ivr_ivor7Handler@ha
+    e_add16i    r0, r0, ivr_ivor7Handler@l  /* r0: Address Floating-point unavail handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor8
+
+    /* IVOR #7 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #7. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor7@ha
+    e_lwz       r0, ivr_cntIvor1PreemptsIvor7@l(r3)
+    se_addi     r0, 1
+    e_stw       r0, ivr_cntIvor1PreemptsIvor7@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+    
+ivr1_testIvor8:
+    e_lis       r0, ivr_ivor8Handler@ha
+    e_add16i    r0, r0, ivr_ivor8Handler@l  /* r0: Address System call handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor13
+
+    /* An IVOR #8 system call had started execution when being preempted by the imprecise
+       IVOR #1. IVOR #8 doesn't need to be proceeded, it surely belongs to the failing
+       process, which is aborted by the exception. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor8@ha
+    e_lwz       r0, ivr_cntIvor1PreemptsIvor8@l(r3)
+    se_addi     r0, 1
+    e_stw       r0, ivr_cntIvor1PreemptsIvor8@l(r3)
+    se_b        ivr1_isUserCodeIvor1Exception
+    
+    /// @todo IVOR #13 doesn't likely have a double exception. It should not come to an
+    // external bus cycle triggering the MPU. We saw double exceptions for IVOR #14, which
+    // may be explained by the I-cache initiating a bus cycle despite of the (synchronous)
+    // MMU exception.
+ivr1_testIvor13:
+    e_lis       r0, ivr_ivor13Handler@ha
+    e_add16i    r0, r0, ivr_ivor13Handler@l  /* r0: Address Floating-point unavail handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor14
+
+    /* IVOR #13 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #13. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor13@ha
+    e_lwz       r0, ivr_cntIvor1PreemptsIvor13@l(r3)
+    se_addi     r0, 1
+    e_stw       r0, ivr_cntIvor1PreemptsIvor13@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+    
+ivr1_testIvor14:
+    e_lis       r0, ivr_ivor14Handler@ha
+    e_add16i    r0, r0, ivr_ivor14Handler@l  /* r0: Address Floating-point unavail handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor32
+
+    /* IVOR #14 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #14. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor14@ha
+    e_lwz       r0, ivr_cntIvor1PreemptsIvor14@l(r3)
+    se_addi     r0, 1
+    e_stw       r0, ivr_cntIvor1PreemptsIvor14@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+    
+ivr1_testIvor32:
+    e_lis       r0, ivr_ivor32Handler@ha
+    e_add16i    r0, r0, ivr_ivor32Handler@l  /* r0: Address SPE Unavail Interrupt handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    
+    .global     ivr_isOSCodeException   /* Just to have it in the map file */
+ivr_isOSCodeException:
+    se_bne      .       /* Halt SW execution if it is an error in operating system itself */
+
+    /* IVOR #32 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #32. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor32@ha
+    e_lwz       r0, ivr_cntIvor1PreemptsIvor32@l(r3)
+    se_addi     r0, 1
+    e_stw       r0, ivr_cntIvor1PreemptsIvor32@l(r3)
+       
+ivr1_continuePreemptedIvor:
+    e_lis       r0, 0x32f0  /* 0x32efffff: Mask to reset anticipated exception syndromes */
+    se_subi     r0, 1
+    mtspr       SPR_MCSR, r0 /* SPR 572 = MCSR, MC syndrome register. Acknowledge exception. */
+    se_rfmci
+
+
+ivr1_isUserCodeIvor1Exception:
     e_lis       r0, 0x32f0  /* 0x32efffff: Mask to reset anticipated exception syndromes */
     se_subi     r0, 1
     mtspr       SPR_MCSR, r0 /* SPR 572 = MCSR, MC syndrome register. Acknowledge exception. */
@@ -316,7 +499,7 @@ ivr_isr_endIfPreemptable:
        SV mode. */
     mtspr       SPR_PID0, r0
     se_beq      iv4_retToPreemptedCtxt  /* CR0: Holds PID0!=0. 0: Return to other OS context */
-
+/// @todo Process state is a uint8_t. Need Byte access
     /* If we get here then we need to check the abort conditions of the otherwise resumed
        user task. Note, the evaluation could be done before entering the critical section,
        but the conditional branch would need to stay here inside. */
@@ -696,17 +879,17 @@ rut_endWithoutErr:
     .global     ivr_ivor5Handler
     .p2align    4
 ivr_ivor5Handler:
-    /* We don't need a preamble with storage or register contexts of pre-empted context: We
+    /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the pre-empted context: It
+         We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfspr       r0, SPR_SRR1    /* Load MSR of pre-empted process */
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_beq      .           /* assert(Problem state == user) */
     /// @todo Globally store TBU/TBL, ESR for diagnosis
-    e_lis       r3, 0xf7ff  /* 0x080000a0: Mask of possibly set ESR bits: VLEMI (26, 0x20), */
-    e_or2i      r3, 0xff5f  /* SPE (24, 0x80) ST (8, 0x08000000) */
+    e_lis       r3, 0xff7f  /* 0x008000a0: Mask of possibly set ESR bits: VLEMI (26, 0x20), */
+    e_or2i      r3, 0xff5f  /* SPE (24, 0x80) ST (8, 0x00800000) */
     mfspr       r0, SPR_ESR
     se_and      r0, r3
     mtspr       SPR_ESR, r0 /* SPR 62 = ESR, exception syndrome register. Acknowledge excep. */
@@ -729,12 +912,12 @@ ivr_ivor5Handler:
     .global     ivr_ivor6Handler
     .p2align    4
 ivr_ivor6Handler:
-    /* We don't need a preamble with storage or register contexts of pre-empted context: We
+    /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the pre-empted context: It
+         We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfspr       r0, SPR_SRR1    /* Load MSR of pre-empted process */
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_beq      .           /* assert(Problem state == user) */
     e_lis       r3, 0xf0fb  /* 0x0f040020: Mask of possibly set ESR bits */
@@ -763,12 +946,12 @@ ivr_ivor6Handler:
     .global     ivr_ivor7Handler
     .p2align    4
 ivr_ivor7Handler:
-    /* We don't need a preamble with storage or register contexts of pre-empted context: We
+    /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the pre-empted context: It
+         We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfspr       r0, SPR_SRR1    /* Load MSR of pre-empted process */
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_beq      .           /* assert(Problem state == user) */
     
@@ -1043,12 +1226,12 @@ ivr_systemCall:
     .global     ivr_ivor13Handler
     .p2align    4
 ivr_ivor13Handler:
-    /* We don't need a preamble with storage or register contexts of pre-empted context: We
+    /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the pre-empted context: It
+         We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfspr       r0, SPR_SRR1    /* Load MSR of pre-empted process */
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_beq      .           /* assert(Problem state == user) */
     e_li        r3, 0xffffff5f  /* 0x008000a0: Mask of possibly set ESR bits */
@@ -1077,12 +1260,12 @@ ivr_ivor13Handler:
     .global     ivr_ivor14Handler
     .p2align    4
 ivr_ivor14Handler:
-    /* We don't need a preamble with storage or register contexts of pre-empted context: We
+    /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the pre-empted context: It
+         We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfspr       r0, SPR_SRR1    /* Load MSR of pre-empted process */
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_beq      .           /* assert(Problem state == user) */
     mfspr       r0, SPR_ESR
@@ -1116,12 +1299,12 @@ ivr_ivor14Handler:
     .global     ivr_ivor15Handler
     .p2align    4
 ivr_ivor15Handler:
-    /* We don't need a preamble with storage or register contexts of pre-empted context: We
+    /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the pre-empted context: It
+         We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfcsrr1     r0          /* Load MSR of pre-empted process */
+    mfcsrr1     r0          /* Load MSR of preempted process */
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_beq      .           /* assert(Problem state == user) */
     
@@ -1146,12 +1329,12 @@ ivr_ivor15Handler:
     .global     ivr_ivor32Handler
     .p2align    4
 ivr_ivor32Handler:
-    /* We don't need a preamble with storage or register contexts of pre-empted context: We
+    /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the pre-empted context: It
+         We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfspr       r0, SPR_SRR1    /* Load MSR of pre-empted process */
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_beq      .           /* assert(Problem state == user) */
     mfspr       r0, SPR_ESR

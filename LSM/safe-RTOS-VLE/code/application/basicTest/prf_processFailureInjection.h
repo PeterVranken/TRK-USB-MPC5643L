@@ -32,6 +32,50 @@
  * Defines
  */
 
+/* All test cases can be enabled or disabled. The debugger cannot be used anymore if some
+   of the test cases are enabled and due to the frequent appearance of illegal instructions
+   in the code flow. Therefore it is important to have the possibility to selectively
+   disable those test cases during development. */
+#define PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR         1
+#define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR        0
+#define PRF_ENA_TC_PRF_KOF_NO_FAILURE                   1
+#define PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR              1
+#define PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR             1
+#define PRF_ENA_TC_PRF_KOF_CALL_OS_API                  1
+#define PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT    1
+#define PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA                1
+#define PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA        1
+#define PRF_ENA_TC_PRF_KOF_WRITE_ROM                    1
+#define PRF_ENA_TC_PRF_KOF_WRITE_PERIPHERAL             1
+#define PRF_ENA_TC_PRF_KOF_READ_PERIPHERAL              1
+#define PRF_ENA_TC_PRF_KOF_INFINITE_LOOP                1
+#define PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE             1
+#define PRF_ENA_TC_PRF_KOF_MISALIGNED_READ              1
+#define PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW               0
+#define PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM           0
+#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT                   0
+#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT          0
+#define PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU           1
+#define PRF_ENA_TC_PRF_KOF_READ_SPR                     1
+#define PRF_ENA_TC_PRF_KOF_WRITE_SPR                    1
+#define PRF_ENA_TC_PRF_KOF_WRITE_SVSP                   1
+#define PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS               1
+#define PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS_AND_WAIT      1
+#define PRF_ENA_TC_PRF_KOF_MMU_WRITE                    1
+#define PRF_ENA_TC_PRF_KOF_MMU_READ                     1
+#define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE                  1
+#define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2                1
+#define PRF_ENA_TC_PRF_KOF_TRAP                         0
+#define PRF_ENA_TC_PRF_KOF_SPE_INSTR                    0
+#define PRF_ENA_TC_PRF_KOF_BOOKE_FPU_INSTR              0
+#define PRF_ENA_TC_PRF_KOF_UNDEF_SYSCALL                0
+#define PRF_ENA_TC_PRF_KOF_RANDOM_WRITE                 0
+#define PRF_ENA_TC_PRF_KOF_RANDOM_READ                  0
+#define PRF_ENA_TC_PRF_KOF_RANDOM_JUMP                  0
+#define PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC            1
+#define PRF_ENA_TC_PRF_KOF_INVAILD_CRIT_SEC             0 /* Disregard priority boundaries */
+#define PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC               0 /* End task without ending a
+                                                             critical section */
 
 /*
  * Global type definitions
@@ -44,42 +88,146 @@ typedef struct prf_cmdFailure_t
     /** Which error? */
     enum prf_kindOfFailure_t
     {
-        prf_kof_jumpToResetVector
-        , prf_kof_jumpToIllegalInstr
-        , prf_kof_noFailure
-        , prf_kof_userTaskError
-        , prf_kof_privilegedInstr
-        , prf_kof_callOsAPI
-        , prf_kof_triggerUnavailableEvent
-        , prf_kof_writeOsData
-        , prf_kof_writeOtherProcData
-        , prf_kof_infiniteLoop
-        //, prf_kof_writeROM
-        //, prf_kof_writePeripheral
-        //, prf_kof_readPeripheral
-        //, prf_kof_misalignedWrite
-        //, prf_kof_misalignedRead
-        
-        , prf_kof_noFailureTypes    /** Total number of defined failure kinds */
-        
+#if PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR == 1
+        prf_kof_jumpToResetVector,                      /* 0 */
+#endif
+#if PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR == 1
+        prf_kof_jumpToIllegalInstr,
+#endif
+#if PRF_ENA_TC_PRF_KOF_NO_FAILURE == 1
+        prf_kof_noFailure,
+#else
+# error Test case "no failure" needs to be always enabled
+#endif
+#if PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR == 1
+        prf_kof_userTaskError,
+#endif
+#if PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR == 1
+        prf_kof_privilegedInstr,
+#endif
+#if PRF_ENA_TC_PRF_KOF_CALL_OS_API == 1
+        prf_kof_callOsAPI,
+#endif
+#if PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT == 1
+        prf_kof_triggerUnavailableEvent,
+#endif
+#if PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA == 1
+        prf_kof_writeOsData,
+#endif
+#if PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA == 1
+        prf_kof_writeOtherProcData,
+#endif
+#if PRF_ENA_TC_PRF_KOF_WRITE_ROM == 1
+        prf_kof_writeROM,
+#endif
+#if PRF_ENA_TC_PRF_KOF_WRITE_PERIPHERAL == 1
+        prf_kof_writePeripheral,                        /* 10 */
+#endif
+#if PRF_ENA_TC_PRF_KOF_READ_PERIPHERAL == 1
+        prf_kof_readPeripheral,
+#endif
+#if PRF_ENA_TC_PRF_KOF_INFINITE_LOOP == 1
+        prf_kof_infiniteLoop,
+#endif
+#if PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE == 1
+        prf_kof_misalignedWrite,
+#endif
+#if PRF_ENA_TC_PRF_KOF_MISALIGNED_READ == 1
+        prf_kof_misalignedRead,
+#endif
+#if PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW == 1
+        prf_kof_stackOverflow,
+#endif
+#if PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM == 1
+        prf_kof_stackClearBottom,
+#endif
+#if PRF_ENA_TC_PRF_KOF_SP_CORRUPT == 1
+        prf_kof_spCorrupt,
+#endif
+#if PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT == 1
+        prf_kof_spCorruptAndWait,
+#endif
+#if PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU == 1
+        prf_kof_privilegedAndMPU,
+#endif
+#if PRF_ENA_TC_PRF_KOF_READ_SPR == 1
+        prf_kof_readSPR,                                /* 20 */
+#endif
+#if PRF_ENA_TC_PRF_KOF_WRITE_SPR == 1
+        prf_kof_writeSPR,
+#endif
+#if PRF_ENA_TC_PRF_KOF_WRITE_SVSP == 1
+        prf_kof_writeSVSP,
+#endif
+#if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS == 1
+        prf_kof_clearSDAPtrs,
+#endif
+#if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS_AND_WAIT == 1
+        prf_kof_clearSDAPtrsAndWait,
+#endif
+#if PRF_ENA_TC_PRF_KOF_MMU_WRITE == 1
+        prf_kof_MMUWrite,
+#endif
+#if PRF_ENA_TC_PRF_KOF_MMU_READ == 1
+        prf_kof_MMURead,
+#endif
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE == 1
+        prf_kof_MMUExecute,
+#endif
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2 == 1
+        prf_kof_MMUExecute2,
+#endif
+#if PRF_ENA_TC_PRF_KOF_TRAP == 1
+        prf_kof_trap,
+#endif
+#if PRF_ENA_TC_PRF_KOF_SPE_INSTR == 1
+        prf_kof_SPEInstr,
+#endif
+#if PRF_ENA_TC_PRF_KOF_BOOKE_FPU_INSTR == 1
+        prf_kof_BookEFPUInstr,                          /* 30 */
+#endif
+#if PRF_ENA_TC_PRF_KOF_UNDEF_SYSCALL == 1
+        prf_kof_undefSysCall,
+#endif
+#if PRF_ENA_TC_PRF_KOF_RANDOM_WRITE == 1
+        prf_kof_randomWrite,        /** 500 times at once, to raise likelihood of bad hit */
+#endif
+#if PRF_ENA_TC_PRF_KOF_RANDOM_READ == 1
+        prf_kof_randomRead,         /** 500 times at once, to raise likelihood of bad hit */
+#endif
+#if PRF_ENA_TC_PRF_KOF_RANDOM_JUMP == 1
+        prf_kof_randomJump,
+#endif
+#if PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC == 1
+        prf_kof_mpuExcBeforeSc,
+#endif
+#if PRF_ENA_TC_PRF_KOF_INVAILD_CRIT_SEC == 1
+        prf_kof_invalidCritSec,
+#endif
+#if PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC == 1
+        prf_kof_leaveCritSec,
+#endif
+
+        prf_kof_noFailureTypes    /** Total number of defined failure kinds */
+
     } kindOfFailure;
-    
+
     /** This error to injected in which stack depth? */
     unsigned int noRecursionsBeforeFailure;
-    
+
     /** General purpose argument for test case. */
     uint32_t value;
-    
+
     /** General purpose pointer argument for test cases. */
     uint32_t address;
-    
+
     /** Expected number of process errors resulting from the failure. */
     unsigned int expectedNoProcessFailures;
-    
+
     /** Depending on the number of possibly affected tasks there may be an unsharpness in
         predicting the number of expected process errors. */
     unsigned int expectedNoProcessFailuresTolerance;
-    
+
     /** Expected value for test case result. */
     uint32_t expectedValue;
 

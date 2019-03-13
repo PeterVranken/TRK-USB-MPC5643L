@@ -37,9 +37,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #include "typ_types.h"
+#include "del_delay.h"
 #include "rtos.h"
 #include "gsl_systemLoad.h"
 #include "syc_systemConfiguration.h"
@@ -81,6 +83,24 @@ prf_cmdFailure_t DATA_SHARED(prf_cmdFailure) = { .kindOfFailure = prf_kof_noFail
 /** Task invocation counter. Here for task1ms. */
 static unsigned long SDATA_PRC_FAIL(_cntTask1ms) = 0;
 
+/** A non discarded, global variable, used as RHS of read operations, which must not be
+    optimzed out. */
+volatile uint32_t BSS_PRC_FAIL(prf_u32ReadDummy);
+    
+/** A tiny assembler function located in OS RAM area and implemented as C array of
+    instructions. We need to use the OS memory space for test case \a
+    prf_kof_spCorruptAndWait, or #PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT. */
+static uint32_t _fctPrivilegedInstrInOSRAM[] SECTION(.data.OS._fctPrivilegedInstrInOSRAM) =
+    { [0] = 0x7C008146  /* wrteei 1 */
+    , [1] = 0x00040000  /* se_blr; se_illegal */
+    };
+
+/* The assembler routine prepared in \a prf_fctPrivilegedInstrInOSRAM cannot be called
+   directly. The compiler tries branching there, which fails due to the distance ROM to RAM
+   of more than 20 Bit. We need to install a function pointer. */
+static void (* const _pFctPrivilegedInstrInOSRAM)(void) =
+                                        (void(*)(void))(&_fctPrivilegedInstrInOSRAM[0]);
+
 
 /*
  * Function implementation
@@ -93,56 +113,280 @@ static void injectError(void)
 {
     switch(prf_cmdFailure.kindOfFailure)
     {
+#if PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR == 1
+    case prf_kof_jumpToResetVector:
+        ((void (*)(void))0x00000010)();
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR == 1
+    case prf_kof_jumpToIllegalInstr:
+        ((void (*)(void))0x00000008)();
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_NO_FAILURE == 1
     case prf_kof_noFailure:
         /* Here, we can test the voluntary task termination for a deeply nested stack. */
         rtos_terminateTask(0);
         break;
+#endif
 
+#if PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR == 1
     case prf_kof_userTaskError:
         rtos_terminateTask(-1);
         break;
-
-    case prf_kof_jumpToResetVector:
-        ((void (*)(void))0x00000010)();
-        break;
-
-    case prf_kof_jumpToIllegalInstr:
-        /* This test case causes a problem with connected debugger: the illegal instruction
-           is considered a break point by the debugger and we get a break instead of a
-           continuating SW run. Without a debugger connected it's fine. */
-#ifndef DEBUG
-        ((void (*)(void))0x00000008)();
-#else
-        /* We compile a substitute to avoid disrupted execution with debugger. */
-        ((void (*)(void))0x00000010)();
 #endif
-        break;
 
+#if PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR == 1
     case prf_kof_privilegedInstr:
         asm volatile ("wrteei 1\n\t" ::: /* Clobbers */ "memory");
         break;
+#endif
         
+#if PRF_ENA_TC_PRF_KOF_CALL_OS_API == 1
     case prf_kof_callOsAPI:
         rtos_OS_suspendAllInterruptsByPriority(15);
         break;
+#endif
 
+#if PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT == 1
     case prf_kof_triggerUnavailableEvent:
         rtos_triggerEvent(syc_idEvTest);
         break;
+#endif
     
+#if PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA == 1
     case prf_kof_writeOsData:
+        *(uint32_t*)prf_cmdFailure.address = prf_cmdFailure.value;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA == 1
     case prf_kof_writeOtherProcData:
         *(uint32_t*)prf_cmdFailure.address = prf_cmdFailure.value;
         break;
+#endif
 
+#if PRF_ENA_TC_PRF_KOF_WRITE_ROM == 1
+    case prf_kof_writeROM:
+        *(uint32_t*)prf_cmdFailure.address = prf_cmdFailure.value;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_PERIPHERAL == 1
+    case prf_kof_writePeripheral:
+        *(uint32_t*)prf_cmdFailure.address = prf_cmdFailure.value;
+        break;
+#endif
+
+
+#if PRF_ENA_TC_PRF_KOF_READ_PERIPHERAL == 1
+    case prf_kof_readPeripheral:
+        prf_u32ReadDummy = *(uint32_t*)prf_cmdFailure.address;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INFINITE_LOOP == 1
     case prf_kof_infiniteLoop:
         while(true)
             ;
+#endif
+            
+#if PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE == 1
+    case prf_kof_misalignedWrite:
+        {
+            uint32_t regAry[4+1];
+            asm volatile ( /* AssemblerTemplate */
+                           "e_stmw  %%r28, 0(%0) /* This should be alright */\n\t"
+                           "e_stmw  %%r28, 2(%0) /* This is misaligned */\n\t"
+                         : /* OutputOperands */
+                         : /* InputOperands */ "r" (&regAry[0])
+                         : /* Clobbers */ "memory"
+                         );
+        }
+        break;
+#endif
+        
+#if PRF_ENA_TC_PRF_KOF_MISALIGNED_READ == 1
+    case prf_kof_misalignedRead:
+        {
+            uint32_t regAry[4+1] = {0, 1, 2, 3, 4};
+            asm volatile ( /* AssemblerTemplate */
+                           "e_lmw   %%r28, 0(%0) /* This should be alright */\n\t"
+                           "e_lmw   %%r28, 2(%0) /* This is misaligned */\n\t"
+                         : /* OutputOperands */
+                         : /* InputOperands */ "r" (&regAry[0])
+                         : /* Clobbers */ "r28", "r29", "r30", "r31", "memory"
+                         );
+        }
+        break;
+#endif
+        
+#if PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW == 1
+    case prf_kof_stackOverflow:
+        {
+            /* If we get here, the error should already have happened but code execution
+               should be still alright if we didn't exceed the stack to such an extend that
+               we tried to get into a neighboured processes area. It's unclear when it'll
+               take effect. */
+#ifdef DEBUG
+            extern uint8_t ld_stackStartP1[0];
+            uint8_t dummy;
+            assert(&dummy < ld_stackStartP1);
+#endif
+        }
+        break;
+#endif
+        
+#if PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM == 1
+    case prf_kof_stackClearBottom:
+        {
+#ifdef DEBUG
+            uint32_t varAtTopOfStack;
+#endif
+            extern uint8_t ld_stackEndP2[0];
+            /* Due to the recursion prior to entry into this function we should have room
+               enough to only write to a region above the current stack frame. */
+            assert((uintptr_t)&varAtTopOfStack + 100u + 100u < (uintptr_t)&ld_stackEndP2[0]);
+            memset(ld_stackEndP2-100u, 0x40, 100u);
+        }
+        break;
+#endif
+        
+#if PRF_ENA_TC_PRF_KOF_SP_CORRUPT == 1
+    case prf_kof_spCorrupt:
+        asm volatile ("e_la  %%r1, 28(%%r1) /* Just change the stack pointer a bit */\n\t"
+                     : /* OutputOperands */
+                     : /* InputOperands */
+                     : /* Clobbers */ "memory"
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT == 1
+    case prf_kof_spCorruptAndWait:
+        {
+            asm volatile ("\t.extern ld_stackEndP3\n\t"
+                          "e_lis %%r1, ld_stackEndP3@ha /* Try to continue with sp from */\n\t"
+                          "e_la  %%r1, ld_stackEndP3@l(%%r1) /* supervisor process */\n\t"
+                          "se_b  .  /* and wait for next preemption */\n\t"
+                         : /* OutputOperands */
+                         : /* InputOperands */
+                         : /* Clobbers */ "memory"
+                         );
+        }            
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU == 1
+    case prf_kof_privilegedAndMPU:
+        _pFctPrivilegedInstrInOSRAM();
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_READ_SPR == 1
+    case prf_kof_readSPR:
+        asm volatile ("mfspr  %%r0, 1015 /* SPR 1015: MMUCFG */\n\t"
+                     ::: /* Clobbers */ "r0"
+                     );
+        break;
+#endif
+#if PRF_ENA_TC_PRF_KOF_WRITE_SPR == 1
+    case prf_kof_writeSPR:
+        asm volatile ("se_li %%r0, 15\n\t"
+                      "mtspr 688, %%r0 /* SPR 688: TLB0CFG */\n\t"
+                     ::: /* Clobbers */ "r0"
+                     );
+        break;
+#endif
+#if PRF_ENA_TC_PRF_KOF_WRITE_SVSP == 1
+    case prf_kof_writeSVSP:
+        asm volatile ("se_li %%r0, 0\n\t"
+                      "mtspr 272, %%r0 /* SPR 272: SPRG0, holding frozen SV sp */\n\t"
+                     ::: /* Clobbers */ "r0"
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS == 1
+    case prf_kof_clearSDAPtrs:
+        asm volatile ("se_li    %%r2, 0\n\t"
+                      "neg      %%r13, %%r13\n\t"
+                     ::: /* Clobbers */ "r2", "r13"
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS_AND_WAIT == 1
+    case prf_kof_clearSDAPtrsAndWait:
+        asm volatile ("se_neg   %%r2\n\t"
+                      "sub      %%r13, %%r13, %%r2\n\t"
+                      "se_b   .\n\t"
+                     ::: /* Clobbers */ "r2", "r13"
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MMU_WRITE == 1
+    case prf_kof_MMUWrite:
+        /* Write to the address space before the RAM. Should lead to an MMU TBL miss
+           exception. */
+        *(volatile uint32_t*)(0x40000000 - sizeof(uint32_t)) = 0xff00a5a5;
+        break;
+#endif
+    
+#if PRF_ENA_TC_PRF_KOF_MMU_READ == 1
+    case prf_kof_MMURead:
+        {
+            /* Read from the address space before the RAM. Should lead to an MMU TBL miss
+               exception. */
+            volatile uint32_t dummy ATTRIB_UNUSED =
+                                        *(volatile uint32_t*)(0x40000000 - sizeof(uint32_t));
+        }
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE == 1
+    case prf_kof_MMUExecute:
+        /* The jump to an address before the RAM should lead to an MMU TBL miss
+           exception before it may/would come to an illegal instruction exception or else
+           because of the non existing programm code. */
+        ((void (*)(void))(0x40000000u - 2*sizeof(uint32_t)))();
+    break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2 == 1
+    case prf_kof_MMUExecute2:
+        /* The difference to PRF_ENA_TC_PRF_KOF_MMU_EXECUTE: Here we jump to an adress
+           further ahead of RAM such that the 64 Bit instruction read wouldn't touch the
+           RAM.
+             PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2 produces a single IVOR #14 exception, while
+           PRF_ENA_TC_PRF_KOF_MMU_EXECUTE produces a double exception, first the IVOR #14,
+           but immediately preempted by an imprecise, delayed machine check exception
+           raised by MPU. */
+        ((void (*)(void))(0x40000000u - 200*sizeof(uint32_t)))();
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC == 1
+    case prf_kof_mpuExcBeforeSc:
+        asm volatile (".extern  prc_processAry\n\t"
+                      "e_lis    %%r4, prc_processAry@ha\n\t"
+                      "e_la     %%r4, prc_processAry@l(%%r4)\n\t"
+                      "se_li    %%r3, 0         /* 0: System call terminate task */\n\t"
+                      "se_stw   %%r3, 0(%%r4)   /* Invalid instruction, MPU, IVOR #1 */\n\t"
+                      "se_sc\n\t"
+                     ::: /* Clobbers */ "r3", "r4"
+                     );
+        break;
+#endif
 
     default:
         assert(false);
     }
 } /* End of injectError */
+
 
 
 /* The next function needs to be compiled without optimization. The compiler will otherwise
@@ -192,6 +436,11 @@ int32_t prf_taskInjectError(uint32_t PID ATTRIB_UNUSED)
  */
 int32_t prf_task17ms(uint32_t PID ATTRIB_UNUSED)
 {
+    /* We stay for a while here in this routine to enlarge the chance of becoming
+       interrupted by the failure injecting task. Which means that this task's execution
+       can be harmed by the injected errors, too. That should be caught, too. */
+    del_delayMicroseconds(/* tiCpuInUs */ 1700);
+
     return 0;
     
 } /* End of prf_task17ms */

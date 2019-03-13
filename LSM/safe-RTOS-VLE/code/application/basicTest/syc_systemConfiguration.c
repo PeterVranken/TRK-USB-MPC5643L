@@ -394,7 +394,7 @@ void main(void)
        double-checks the system behavior. */
     if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidSupervisor
                                              , .userTaskFct = prs_taskCommandError
-                                             , .tiTaskMaxInUS = 0 /// @todo Adjust value
+                                             , .tiTaskMaxInUS = 1500
                                              }
                          , syc_idEvTest
                          )
@@ -414,7 +414,7 @@ void main(void)
     }
     if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidSupervisor
                                              , .userTaskFct = prs_taskEvaluateError
-                                             , .tiTaskMaxInUS = 0 /// @todo Adjust value
+                                             , .tiTaskMaxInUS = 1500
                                              }
                          , syc_idEvTest
                          )

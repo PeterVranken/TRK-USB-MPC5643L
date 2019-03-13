@@ -45,6 +45,7 @@
 #include "gsl_systemLoad.h"
 #include "tcx_testContext.h"
 #include "syc_systemConfiguration.h"
+#include "prs_processSupervisor.h"
 #include "prr_processReporting.h"
 
 
@@ -92,10 +93,10 @@ int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED)
              "  PID 1: %u Byte\r\n"
              "  PID 2: %u Byte\r\n"
              "  PID 3: %u Byte\r\n"
-             "Task activations (lost):\r\n"
+             "Event triggers (lost):\r\n"
+             "  idEvTest: %lu (%u)\r\n"
 #if 0
-             "  task1ms: %lu (%u)\r\n"
-             "  task3ms: %lu (%u)\r\n"
+             "  : %lu (%u)\r\n"
              "  task1s: %lu (%u)\r\n"
              "  taskNonCyclic: %lu (%u)\r\n"
              "  task17ms: %lu (%u)\r\n"
@@ -116,8 +117,8 @@ int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED)
            , rtos_getStackReserve(1)
            , rtos_getStackReserve(2)
            , rtos_getStackReserve(3)
+           , prs_cntTestCycles, rtos_getNoActivationLoss(syc_idEvTest)
 #if 0
-           , mai_cntTask1ms, rtos_getNoActivationLoss(idEv1ms)
            , mai_cntTask3ms, rtos_getNoActivationLoss(idEv3ms)
            , mai_cntTask1s, rtos_getNoActivationLoss(idEv1s)
            , mai_cntTaskNonCyclic, rtos_getNoActivationLoss(idEvNonCyclic)

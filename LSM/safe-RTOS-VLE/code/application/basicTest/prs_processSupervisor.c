@@ -81,7 +81,7 @@ typedef struct failureExpectation
  */
 
 /** Counter for test cycles. */
-static long unsigned int DATA_PRC_SV(_cntTestCycles) = 0;
+long unsigned int SDATA_PRC_SV(prs_cntTestCycles) = 0;
 
 /** Expected test result. Set by prs_taskCommandError and tested by prs_taskEvaluateError
     after run of failure injection task prf_taskInjectError. */
@@ -103,10 +103,10 @@ static failureExpectation_t DATA_PRC_SV(_failureExpectation);
 int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 {
     /* First cycles without any special action to prove basic operation of the software. */
-    if(_cntTestCycles < 100)
+    if(prs_cntTestCycles < 107)
     {
         /* At the beginning we should be error free. */
-        if(_cntTestCycles == 0)
+        if(prs_cntTestCycles == 0)
         {
             prf_cmdFailure = (prf_cmdFailure_t){ .kindOfFailure = prf_kof_noFailure
                                                  , .noRecursionsBeforeFailure = 0
@@ -119,9 +119,9 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         return 0;
     }
 
-    const unsigned int kindOfFailure = _cntTestCycles % (unsigned)prf_kof_noFailureTypes
-                     , stackDepth = _cntTestCycles & 64;
-    unsigned int noFailures = rtos_getNoTotalTaskFailure(syc_pidFailingTasks) + 1
+    const unsigned int kindOfFailure = prs_cntTestCycles % (unsigned)prf_kof_noFailureTypes;
+    unsigned int stackDepth = prs_cntTestCycles & 64
+               , noFailures = rtos_getNoTotalTaskFailure(syc_pidFailingTasks) + 1
                , tolerance = 2
                , expectedValue = 0;
     uint32_t value = 0
@@ -129,18 +129,38 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 
     switch(kindOfFailure)
     {
+#if PRF_ENA_TC_PRF_KOF_NO_FAILURE == 1
     case prf_kof_noFailure:
         noFailures -= 1;
         tolerance = 0;
         break;
+#endif
 
+#if PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR == 1
     case prf_kof_userTaskError:
         /* Voluntary task termination with error code must be reported as error but it
            still needs to be clean termination without a possibly harmfully affected
            other task. Tolerance is zero. */
         tolerance = 0;
         break;
+#endif
 
+#if PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR == 1
+    case prf_kof_privilegedInstr:
+        /* Test cases which cause an exception without any danger of destroying some still
+           accessible properties like process owned data don't need a tolerance in the
+           potential number of process failures. */
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT == 1
+    case prf_kof_triggerUnavailableEvent:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA == 1
     case prf_kof_writeOsData:
         /* We need to take an address, where we can be sure that no change from other side
            will happen so that we can later double check that the write attempt really
@@ -150,22 +170,165 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         address = (uint32_t)&prc_processAry[syc_pidSupervisor-1].cntTotalTaskFailure;
         tolerance = 0;
         break;
-        
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA == 1
     case prf_kof_writeOtherProcData:
-        expectedValue = _cntTestCycles;
+        expectedValue = prs_cntTestCycles;
         value = ~expectedValue;
-        address = (uint32_t)&_cntTestCycles;
+        address = (uint32_t)&prs_cntTestCycles;
         tolerance = 0;
         break;
-    
-    case prf_kof_privilegedInstr:
-    case prf_kof_triggerUnavailableEvent:
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_ROM == 1
+    case prf_kof_writeROM:
+        address = 0x00000100;
+        expectedValue = *(const uint32_t*)address;
+        value = ~expectedValue;
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_PERIPHERAL == 1
+    case prf_kof_writePeripheral:
+# define INTC_CPR_PRC0      (0xfff48000u+0x8)
+        address = INTC_CPR_PRC0;
+        value = 15;
+        tolerance = 0;
+        break;
+# undef INTC_CPR_PRC0
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_READ_PERIPHERAL == 1
+# define INTC_CPR_PRC0      (0xfff48000u+0x8)
+    case prf_kof_readPeripheral:
+        address = INTC_CPR_PRC0;
+        tolerance = 0;
+        break;
+# undef INTC_CPR_PRC0
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INFINITE_LOOP == 1
     case prf_kof_infiniteLoop:
-        /* Test cases which cause an exception without any danger of destroying some still
-           accessible properties like process owned data don't need a tolerance in the
-           potential number of process failures. */
         tolerance = 0;
         break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE == 1
+    case prf_kof_misalignedWrite:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MISALIGNED_READ == 1
+    case prf_kof_misalignedRead:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW == 1
+    case prf_kof_stackOverflow:
+        /* This test case should not flood the entire RAM. We try to keep the overflow
+           little. This makes the literal here a maintenance issue. The recursion consumes
+           24 Byte per stack frame (look for "nestStackInjectError:" in compiler artifact
+           prf_processFailureInjection.s) and the stack is configured to have 2048 Byte. */
+        stackDepth = 100;
+        noFailures -= 1;
+        tolerance = 3;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM == 1
+    case prf_kof_stackClearBottom:
+        stackDepth = 63;
+        noFailures -= 1;
+        tolerance = 3;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_SP_CORRUPT == 1
+    case prf_kof_spCorrupt:
+        if(stackDepth < 10)
+            stackDepth = 10;
+        noFailures -= 1;
+        tolerance = 3;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT == 1
+    case prf_kof_spCorruptAndWait:
+        if(stackDepth < 10)
+            stackDepth = 10;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU == 1
+    case prf_kof_privilegedAndMPU:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_READ_SPR == 1
+    case prf_kof_readSPR:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_SPR == 1
+    case prf_kof_writeSPR:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_SVSP == 1
+    case prf_kof_writeSVSP:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS == 1
+    case prf_kof_clearSDAPtrs:
+        noFailures -= 1;
+        tolerance = 3;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS_AND_WAIT == 1
+    case prf_kof_clearSDAPtrsAndWait:
+        tolerance = 2;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MMU_WRITE == 1
+    case prf_kof_MMUWrite:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MMU_READ == 1
+    case prf_kof_MMURead:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE == 1
+    case prf_kof_MMUExecute:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2 == 1
+    case prf_kof_MMUExecute2:
+        tolerance = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC == 1
+    case prf_kof_mpuExcBeforeSc:
+        tolerance = 0;
+        break;
+#endif
 
     default:
         /* Many test cases have the standard expectation: 1..3 reported process failures
@@ -212,11 +375,26 @@ int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
 
     switch(prf_cmdFailure.kindOfFailure)
     {
+#if PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA == 1
     case prf_kof_writeOsData:
+        if(_failureExpectation.expectedValue != *(const uint32_t*)prf_cmdFailure.address)
+            testOkThisTime = false;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA == 1
     case prf_kof_writeOtherProcData:
         if(_failureExpectation.expectedValue != *(const uint32_t*)prf_cmdFailure.address)
             testOkThisTime = false;
         break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WRITE_ROM == 1
+    case prf_kof_writeROM:
+        if(_failureExpectation.expectedValue != *(const uint32_t*)prf_cmdFailure.address)
+            testOkThisTime = false;
+        break;
+#endif
 
     default:
         /* Many test cases don't require additional attention. No action. */
@@ -232,7 +410,7 @@ int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
         assert(false);
     }
 
-    ++ _cntTestCycles;
+    ++ prs_cntTestCycles;
 
     /* PRODUCTION compilation: If we return a task error here then we will see a process
        error and the watchdog task will halt the further SW execution. */
