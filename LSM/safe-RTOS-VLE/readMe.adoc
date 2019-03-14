@@ -9,15 +9,34 @@
 
 This sample implements an easy to reuse RTOS for the NXP MPC5643L. The
 sample started as a copy of sample "RTOS-VLE". The RTOS implementation has
-been reworked (folder `code\system\RTOS`) and the main module
-`code\application\default\mai_main.c` has been modified in order to make
+been reworked (folder `code\system\RTOS`) with respect to the demands of
+safety-critical software. The concept of processes has been added with the
+intention to run applications of different criticality levels in different
+processes without fearing harmful interferences between them. Features:
+
+- Preemptive, priority controlled scheduling
+- Up to five processes (including kernel) with disjunct memory address
+  spaces and hierarchic privileges
+- Tasks belong to processes and share the process owned memories
+- Globally shared memory for communication purpose
+- Hardware memory protection to ensure integrity of process owned memories
+- Secured priority ceiling protocol for communication
+- Deadline monitoring and activation loss counters for avoidance of
+  blocking tasks
+- Exception handling to catch failures like use of privileged, illegal or
+  misaligned instructions or forbidden access to memory or I/O
+- Diagnostic API to gather information about failing processes and the
+  possibility to halt critical processes
+- I/O driver model for safe implementation of a complete operating system
+
+The RTOS itself is not a runnable piece of software. It requires some
+application code. The application file from the elder sample RTOS-VLE has
+been modified as `code\application\default\mai_main.c` in order to make
 use of some of the new features of the RTOS. The functionality is similar
 to sample "startup" with its blinking LEDs. Several tasks are running
 concurrently and the LEDs are driven by different tasks. Some progress
 information is printed to the serial output but much of the operation can
 be observed only in the debugger.
-
-More samples of the RTOS will follow soon.
 
 To see how the sample works you need to open a terminal software on your
 host machine. You can find a terminal as part of the CodeWarrior Eclipse
@@ -32,217 +51,289 @@ the sample code running on the evaluation board.
 
 Try pressing button SW3 on the evaluation board and see what happens.
 
+A more meaningful application of the RTOS can be found in
+`code\application\basicTest`.
+
 == The RTOS
 
-(Documentation down here has not been reworked yet.)
-
 The proposed RTOS is little exciting with respect to its functionality.
-The scheduler implements the Basic Conformance Class 1 (BCC1) of the
-OSEK/VDX standard and BCC2 with the exception of activation queuing.
+The scheduler implements the functionality of the Basic Conformance Class
+1 (BCC1) of the OSEK/VDX standard and of BCC2 with the exception of
+activation queuing.
 
-The scheduler offers an API to register periodic tasks and event tasks.
-The former are regularly activated by the RTOS system clock while the
-latter need to be explicitly activated by software with an offered API,
-from interrupt service routines (ISR) or other tasks.
+The scheduler offers an API to create events that can activate tasks. An
+event is either a regular timer event, triggered by the RTOS system clock,
+or a software triggered event. The latter can be triggered either from
+user code (if permission is granted) or from ISRs belonging to the
+operating system.
 
-All scheduling is strictly priority controlled. The activation of a task
-just makes it ready to run. At any time, the scheduler decides by
+The RTOS offers a pre-configured set of up to four processes. (The
+limitation to four is a hardware constraint and no virtualization by
+software has been shaped for sake of simplicity.) The operating system
+forms a fifth process. Tasks need to registered. The registration assigns
+them to one of the processes and associates them with one of the created
+events.
+
+All scheduling is strictly priority controlled. The triggering of an event
+makes all associated tasks ready to run. At any time, the scheduler decides by
 priority, which of the _ready_ tasks becomes the one and only _running_
 task. This may involve preemption of tasks.
 
-ISRs are installed and used as in the other samples, this is done with the
+ISRs can be installed similar to the other samples; this is done with the
 infrastructure offered by the startup code.
 
 For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
 lock API is offered that implements the priority ceiling protocol (PCP).
-The already known mechanisms from the startup code can however still be
-used. They permit to globally lock and resume all interrupts.
+It is secured so that safety tasks cannot be accidentally or purposely
+blocked.
 
-The use of the RTOS is further supported by some less essential diagnostic
-functions. They offer stack usage information, task overrun information
-and averaged CPU load information.
+The already known mechanisms from the startup code to suspend and resume
+all interrupts are still supported but they are no longer offered to
+application code, only the operating system may use them (i.e. mainly I/O
+driver implementation).
 
-What's much more exciting than functionality is the code size of the RTOS.
-The complete kernel (RTOS initialization with task registering and
-start of scheduler, the scheduler and the PCP implementation) requires no
-more than 209 lines of C code.
-  footnote:[Counted with https://github.com/AlDanial/cloc[cloc] in
-revision c9fb69f4ed4af39434fc53d485cce6210fcd14e5 of this project.]
-  All code has been counted, which was written for the RTOS in addition to
-the anyway needed startup code from the other samples.
-  footnote:[The footprint with respect to RAM and ROM consumption could even
-be lowered by replacing the runtime task configuration with application
-specific #define's and compile-time initialized constant data structures.
-This has not been done for sake of readability and ease of use of the
-RTOS.]
+The use of the RTOS is further supported by some diagnostic functions.
+They offer stack usage information, information about caught exceptions
+and averaged CPU load information. The diagnostics comes along with a new
+API to halt the execution of a process. Permission to use this API is
+granted only to what is considered the safety process or task.
 
-With this number of lines of code our RTOS is likely one of the shortest
-32 Bit RTOSs far and wide! The extreme conciseness of code has a single
-explanation: The MPC5643L actually implements the OSEK/VDX BCC standard by
-hardware and the required C code is no more than a thin wrapper layer
-around the hardware in order to make the hardware functionality available
-to the C-coded application software. This explanation is at the same time
-the reason, why an extension of the RTOS' functionality is not possible by
-nature: An implementation of e.g. the Extended Conformance Classes (ECC)
-of the OSEK/VDX standard would mean a complete software implementation of
-an according kernel.
+=== Differences to the ancestor RTOS
 
+The architecture of the RTOS is very simple and almost identical to its
+ancestor. This simplicity significantly supports the validation of the
+code in a safety-critical software development environment. The
+explanation is that both RTOSs build directly on the hardware capabilities
+of the MCU. Please look
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS-VLE#The-RTOS[here]
+for a detailed explanation of the kernel concept.
 
-=== The kernel operation
+The differences to the simple RTOS are:
 
-Like for an OSEK/VDX BCC system, a task is activated, executed and
-eventually terminated. The activation can be done periodically or event
-triggered. The event can be sent by another task or an ISR. A task can
-however not prematurely suspend and it doesn't know blocking states in
-which it waits for some event.
+* The safety concept
+* Any number of tasks can be associated with an event. The simple RTOS had
+  used a one-by-one relation between events and tasks. (Having more than
+  one task per event makes sense only in conjunction with the new process
+  concept)
+* The Book E instruction set is no longer supported
 
-The preemption of tasks is purely priority controlled. A task of higher
-priority, that is activated will immediately be executed (i.e. it becomes
-running) and the task running so far is preempted. The preempted task
-returns to state "ready". Toggling between the states "running" and
-"ready" is all what can happen with the tasks as long as they are alive.
-This leads to a simple hierarchical structure of possible preemptions, see
-figure <<figSchemeOfPreemptions>>.
-  footnote:[The picture has been downloaded at
-http://www.embeddedlinux.org.cn/rtconforembsys/5107final/images/other-0405_0.jpg
-on Nov 19, 2017.]
-  
-[[figSchemeOfPreemptions]]
-.Task preemption in a BCC kernel
-image::doc/taskSwitchesBCC.jpg[width="60%",align="center"]
+== The safety concept
 
-The hierarchical preemption scheme permits to have a single data stack. The
-information to push onto the stack in order to implement a context switch
-from one task to another task is just the same as in any simple, RTOS-free
-system, which makes use of interrupts. This explains, why the RTOS can be
-implemented as an extension of the anyway required startup code and why it
-doesn't require any assembler code.
+This sections aims at giving an overview on the safety concept. Technical
+details can be found in the manual of the RTOS (TBD).
 
-Although BCC means a significant reduction of complexity and functionality
-in comparison to a full featured real time kernel, the embedded practice
-mostly doesn't require more than this. The typical data flow paradigm of
-an industrial embbeded application is to have event triggered tasks, which
-serve the asynchronous I/O channels and strictly cyclic application tasks,
-which process the data and implement the control strategies. The
-communication between ISRs and tasks is done either by queues or by
-overwriting (last recent value supersedes earlier ones), that depents.
-It's a simple model, which has the advantage of being well understood,
-transparent and by nature free of dead locks. The latency times are higher
-than for consequently designed event controlled systems but they are
-predictable and have easy to determine upper bounds. Last but not least,
-software design can determine the upper bounds by choosing appropriate
-cycle times.
+A typical nowadays embedded project consists of a lot of code coming from
+various sources. There may be an Open Source Ethernet stack, an Open
+Source Web server plus self-made Web services, there may be an Open Source
+driver software for a high resolution LCD, a framework for GUIs plus a
+self-designed GUI, there need to the self-made system control software,
+possibly a file system for data logging on an SMD storage, the C
+libraries are used, and so on. All in all many hundred thousand lines of
+code.
 
-==== The operating system clock
+If the system can reach a state, which is potentially harmful to people or
+hardware, then it'll typically need some supervisory software, too, which
+has the only aim of avoiding such a state. Most typical, the supervisory
+software can be kept very lean. It may e.g. be sufficient to read a
+temperature sensor, check the temperature against a boundary and to
+control the coil of the main relays, which powers the system. If the
+temperature exceeds a limit or if the temperature reading is somehow
+implausible then the relay is switched off and the entire system
+unpowered. That's all. A few hundred lines of code will typically suffice
+for such a task.
 
-The RTOS is clocked by a 1 ms clock tick. This clock tick is the
-resolution of controlling the period of cyclic tasks.
+All the rest of the software is not safety relevant. A fault in this
+majority of code may lead to wrong system behavior, customer
+dissatisfaction, loss of money, frustration, etc. but will not endanger
+the safety of the system or the people using it.
 
-The clock is generated by the MCU's device PID0. This timer is not
-available to the application. If the application requires to use the other
-PID timers then the initialization needs to be done with care: There are
-common settings, which affect all PID timers. You need to align your
-initialization code with the RTOS kernel initialization.
+If we rate the safety goal higher than the rest then we have a significant
+gain in terms of development effort if we can ensure that the few hundred
+lines of supervisory code will surely work always well and even despite of
+potential failures of the rest of the code. Without the constraint
+"despite of" we had to ensure "working always well" for all the many
+hundred thousand lines of code.
 
-The change of the RTOS system clock (e.g. to save some system overhead in
-an application where a 10 ms clock tick suffices) is as easy as changing
-the counter reload register of the PID to another number of CPU clock
-cycles. There's no technical issue in doing so, but the RTOS documentation
-will become wrong wherever it mentions the unit of time designations.
+Using a safety-aware RTOS can be one means to ensure this. The supervisory
+code is put into a process of higher privileges and the hundred thousands
+of lines of other code are placed into a separate process with lower
+privileges. (Only) RTOS and supervisory code need to be carefully
+reviewed, tested, validated to guarantee the "working always well" of the
+supervisory code. Using a "normal" RTOS, where a fault in any part of the
+code can crash the entire software system, the effort for reviews, tests
+and validation needed to be extended to all of the many hundred thousand
+lines of code. The economic difference and the much higher risk of not
+discovering a fault are evident.
 
-==== Tasks and interrupts
+These basic considerations result in a single top-level requirement for
+our safe-RTOS:
 
-For this RTOS, ISRs and tasks are just the same. An application task is
-implemented as a software interrupt. Up to eight software interrupts are
-supported in hardware by the INTC and the application tasks are in fact
-the ISRs of these interrupts.
+- If the implementation of a task, which is meant the supervisory or
+  safety task, is itself free of faults then the RTOS shall guarantee that
+  this task is correctly and timely executed regardless of whatever
+  imaginable failures are made by any other task.
 
-The equivalence of ISRs and tasks distinguishes this RTOS from most others
-and it makes it even simpler in use. All API functions of the RTOS can be
-invoked from tasks and from ISRs. The priority relationship between ISRs
-and tasks is only a matter of software design; unlike for most RTOS, can
-a task share the priority with an interrupt or can it have a higher
-priority than an interrupt.
+This requirement serves at the same time as the definition of the term
+"safe", when used in the context of this RTOS. safe-RTOS promises no more
+than this requirement says. As a consequence, a software made with this
+RTOS is not necessarily safe and even if it is then the system using that
+software is still not necessarily safe. Here, we just deal with the tiny
+contribution an operating system kernel can make to a safe system.
 
-ISRs are installed using the known API from the startup code:
-`ihw_installINTCInterruptHandler()`, see
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc],
-section _Code architecture/API_, for details.
+All other technical requirements are derived from this one.
 
-A noticeable difference between ISRs and tasks is the option for ISRs to
-be started with inhibited interrupt handling by the CPU, while tasks are
-always started with enabled interrupt handling.
+=== Technical concept
 
-Additional application tasks, beyond the eight, can be implemented by the
-application itself. It can install any kind of interrupt source with a
-handler function. If the interrupt source is a cyclically firing timer
-device then the handler function becomes a new, cyclic task. For example,
-there are three PID timers left. The disadvantage of this trick is that
-each further task occupies an interrupt capable (timer) device.
+The basic idea of safe-RTOS is to organize all user tasks in groups of
+such, the processes. Each process has write-access to its own, disjunct
+RAM areas. (And to one additional shared area, which all process have write
+access to.) Writing to any other address of the address space is a
+privilege violation.
 
-==== Priority and sub-ordinated priority
+Reading RAM and ROM is known to be free of side-effects and can't do any
+harm to another process -- it's therefore generally permitted.
 
-The RTOS knows the priority range 0..15. 0 is the priority of the
-main execution thread (i.e. the idle task) and which must not be used for
-ISRs and tasks -- they would never be executed at all. 15 is the highest
-priority and it is used by the RTOS' scheduler. Priority 15 needs to be
-used with care: If an ISR or task is running on this level then it is in
-fact non preemptable -- not even by the scheduler -- , which will have a
-strong and harmful impact on the timing of all the other tasks unless its
-execution time is very short.
+Reading MCU registers (CPU supervisor registers and I/O registers) can
+have side-effects and is therefore generally forbidden. Any attempt to do
+so is considered a privilege violation.
 
-Due to the limited number of available priorities it'll be quite normal
-that some ISR and/or tasks will share the same priority level. This is not
-an issue but some considerations apply:
+Any attempt to write to a non-user MCU register (CPU supervisor register
+or I/O register) is considered a privilege violation.
 
-Preemption takes place only by higher priority; once a task or ISR is
-running it'll not be preempted by the others of same level. If two or more
-ISRs and/or tasks of same level become ready at the same time then they
-are executed sequentially, i.e. one after another. This introduces a kind
-of sub-ordinated priority, which determines the order of execution in this
-situation. This sub-ordinated priority is hard-wired in the MCU and
-there's no software handle to change it. The interrupt number, which is an
-argument to the call to `ihw_installINTCInterruptHandler()`, is the
-inverted priority; the higher the interrupt number, the lower this
-sub-ordinated priority.
+API functions that control the behavior of other tasks or processes are
+restricted to the use of certain processes. Any attempt of another process
+to make use of such an API is a privilege violation. The most prominent
+example is the API to halt the execution of a process.
 
-The software interrupts have the lowest number of all interrupts. This
-leads to a kind of priority inversion: If an ISR and a task become ready
-at the same time than the task wins the race -- this is contrary to what
-most RTOS would decide. If it should matter, assign a higher priority to
-the ISR than to the task. 
+Any privilege violation is punished by immediate abortion of the causing
+task and in particular before the according instruction can have a
+side-effect on not-owned RAM or CPU or I/O registers. The abortion is
+counted with cause in the global process data.
 
-For tasks of same priority, the order of registration at the RTOS kernel
-decides the sub-ordinated priority. Tasks registered first get a lower
-task ID and have the higher sub-ordinated priority.
+The kernel will never do more than immediately aborting a failing task.
+It'll not take any decision like: "Enough is enough, we are going to shut
+down." However, it offers the mechanisms to implement such decisions in a
+particular task.
 
-What does "become ready at the same time" mean? This can be as easy as two
-cyclic tasks that become due at the same nominal operating system clock
-tick. For interrupts, which can occur at virtually any CPU clock tick it's
-less evident. They are coincidental not only if they occur in the very
-same CPU clock tick but also when they occur in the same time span in
-which the CPU handling of interrupts of their level is inhibited. While
-"in the same CPU clock tick" is nearly negligible unlikely, is the latter
-condition frequently fulfilled. Not only during execution of critical
-sections but during execution of ISRS and/or tasks of higher priority,
-too. Therefore, the impact of the sub-ordinated priority can not generally
-be neglected.
+The implementation of recognizing privilege violations before they can
+harm is founded on the memory management unit (MMU) in the CPU, the memory
+protection unit of the CPU-external buses and the CPU's exception
+mechanism. It's impossible for a user task to change the behavior of the
+MPU as its registers are in the address space it itself protects. It is
+impossible for user code to change the behavior of MMU or CPU exception
+handling; these settings are held in CPU supervisor registers, which
+cannot be accessed without an immediately punished privilege violation.
 
-==== Availability of software interrupts to the application
+Note, the execution of code in ROM is basically not restricted. A task may
+even call operating system code routines -- until the executed code would
+have a side-effect on not-owned RAM or on supervisor or I/O registers
+(which it'll normally have very soon). Then a privilege violation is
+detected and the task is aborted.
 
-The RTOS uses the software interrupts in the order 0, 1, 2, ..., 7. If the
-application registers less than eight tasks then the remaining software
-interrupts with the highest indexes are not used at all by the kernel and
-the application may use them.
+=== Self-diagnosis of the kernel
 
+The RTOS offers an all-embracing concept for recognizing failures of the
+user tasks and for hindering these failures from doing any harm. By
+principle, the kernel can't offer such a concept for its own
+implementation, too. Nonetheless, there is a thin layer of self-diagnosis
+and protection against kernel implementation faults. The exception
+handlers inspect the exception throwing context to prove that this context
+belongs to the user task code. According to our concept this will always
+be the case - except for implementation errors in the kernel (or in an
+added I/O driver, see below) or, less likely but possible, a sporadic
+hardware fault, e.g. caused by local chip overtemperature or cosmic
+radiation. In which case the kernel simply stops working. Halting the
+software execution can be considered not breaking the safety concept of
+the system; there will be an external (i.e. CPU unrelated) device which
+permanently checks the alive status of the software running on the CPU and
+this device will ensure the transition of the system into the safe state.
 
-=== Book E versus VLE
+Note, in contrast to faults caught in the user tasks this mechanism can
+not guarantee that the failure has not yet done some harm before being
+recognized.
 
-The RTOS implementation is not specific to one of the instruction sets.
-Here, the build scripts of the sample compile it for the VLE instruction
-set. The RTOS source code and folder `code\serial` is identical only the
-startup code in folder `startup` has been taken from the other sample
-`startup-VLE`.
+=== Kernel vs. Operating System
+
+safe-RTOS implements an operating system kernel but not an operating
+system (OS). Additional code has to be added to make it an OS. The
+majority of this code will be the configuration and setup of processes
+and tasks and I/O device drivers.
+
+The implementation of such drivers needs to make use of privileged
+instructions and needs to access the I/O address space, which both is not
+allowed in user tasks. The safety concept can hence not be limited to the
+RTOS. The considerations made for the RTOS and its implementation need to
+be considered for the I/O driver implementation, too. The concept is that
+the RTOS is not limited to the source code that implements it but it also
+has an abstract layer: It comes along with a binding set of design rules,
+how to implement an I/O driver. These rules are called the "driver model".
+Any programmer of an I/O driver, who disregards only a single rule will
+break the entire safety concept and the RTOS implementation can't help it.
+
+safe-RTOS's driver model specifies three "conformance classes", basic,
+simple and full. They offer a trade off between driver performance in
+terms of CPU load and ease of programming. The by far leanest "basic"
+implementation needs to be done in assembler, the other two classes can be
+implemented in C.
+
+Note, adding an I/O driver to the RTOS is not only a matter of obeying the
+rules from the driver model. Any kind of programming error can break the
+safety concept, too. Much of the I/O driver code is executed in the kernel
+process and implementation faults can crash the entire software system
+like it generally is for all code in a "normal" RTOS. The organization of
+the development work needs to take care by planning and implementing
+according quality assurance measures. (Organizational measures, which will
+necessarily include the published source code of the RTOS itself.)
+
+=== Architecture of application code
+
+Provided all I/O drivers are implemented fully compliant with the driver
+model and they have been successfully validated then we have a safe
+operating system but still not a safe software. A further constraint is
+that the application software makes correct use of the offered mechanisms.
+
+The supervisory code shall be put into the process with highest
+privileges. It can be that the outlined concept is implemented in a
+recursive way and the supervisory code is in turn split into two
+criticality levels, with a very lean watchdog functionality on top.
+("Sub-ordinated main part of supervisory code still alive and
+functioning?") In which case the watchdog would have highest privileges
+followed by the main part of the supervisory code and both having higher
+privileges as the supervised functional code.
+
+The highest privileged safety code will run on a priority level, which cannot
+be preempted by tasks belonging to processes of lower privileges and which
+cannot be blocked by these tasks using the offered APIs for mutual
+exclusion of tasks. (With other words, a task with low privileges cannot
+shape a critical section with the task of highest privileges.)
+
+The supervisory code will make use of the diagnostics APIs to see if the
+functional code is executing well. It can in case halt the execution of
+the failing process or otherwise ensure that the system doesn't leave the
+safe operation state.
+
+The RTOS mechanisms guarantee that faults in the user code cannot do any
+harm -- but this relates only to the definition of "harm" in the RTOS
+context: OS configuration, I/O configuration or state, memory of other
+processes, execution of their tasks can't be touched. The same mechanisms
+can not hinder the user task code from doing all kind of things, which are not
+harmful in this sense but still harmful to the system under control. Not
+allowing this is of course a top-level requirement of the aimed software.
+It needs to be tackled mainly by the architecture of the software. Here's
+a single example:
+
+Commonly, the functional code in the software computes I/O commands, which
+go to the I/O drivers and control the connected actuators - which can mean
+a lot of harm if giving wrong commands. By application design it can be
+easily ensured that a functional task runs first, followed by a
+supervisory task and finally the OS owned I/O driver task executes. In
+such an architecture the supervisory code would be put in the position to
+double-check the I/O control commands - and override them if advisable -
+before these commands are executed by the finally running I/O task.
+
+This is just meant a simple example. The point is that the RTOS only
+offers the mechanisms to design a safe software but it can not undertake
+for software safety.
 
 == Tools
 
@@ -275,7 +366,7 @@ script for their native shell.
 Flashing and debugging is always done using the NXP CodeWarrior Eclipse
 IDE, which is available for free download. If you are going to run the
 application build from Eclipse, too, then the same environmental settings
-as decribed above for a shell based build need to be done for Eclipse. The
+as described above for a shell based build need to be done for Eclipse. The
 easiest way to do so is starting Eclipse from a shell, that has executed
 the script `setEnv.ps1` prior to opening Eclipse.
 
@@ -306,164 +397,92 @@ reused for other projects, not only for a tiny "Hello World" with a few
 source files. It supports a number of options (targets); get an overview
 by typing:
  
-    cd <projectRoot>/LSM/RTOS
+    cd <projectRoot>/LSM/safe-RTOS-VLE
     mingw32-make help
 
 The main makefile `GNUmakefile` has been configured for the build of
-sample "RTOS". Type:
+sample "safe-RTOS-VLE" but the kernel can't be linked into a runnable
+binary without an application. You need to specify the source code path of
+a safe-RTOS application on the command line of make. Set variable APP to
+do so. Possible applications can be found as the children of folder
+`<projectRoot>/LSM/safe-RTOS-VLE/code/applications`. Type
+("code/application/default/" is just an example):
 
-    mingw32-make -s build 
-    mingw32-make -s build CONFIG=PRODUCTION
+    mingw32-make -s build APP=code/application/default/
+    mingw32-make -s build APP=code/application/default/ CONFIG=PRODUCTION
+    mingw32-make -s build APP=code/application/default/
+    mingw32-make -s build APP=code/application/default/ CONFIG=PRODUCTION
 
-to produce the flashable files `bin\ppc\DEBUG\TRK-USB-MPC5643L-RTOS.elf`
-and `bin\ppc\PRODUCTION\TRK-USB-MPC5643L-RTOS.elf`.
+to produce the flashable files
+`bin\ppc\default\DEBUG\TRK-USB-MPC5643L-safe-RTOS-VLE.elf`,
+`bin\ppc\default\PRODUCTION\TRK-USB-MPC5643L-safe-RTOS-VLE.elf`,
+`bin\ppc\default\DEBUG\TRK-USB-MPC5643L-safe-RTOS-VLE.elf`,
+and
+`bin\ppc\default\PRODUCTION\TRK-USB-MPC5643L-safe-RTOS-VLE.elf`.
 
-NOTE: The makefile requires the MinGW port of the make processor. The Cygwin
-port will fail with obscure, misleading error messages. It's safe to use
-the `make.exe` from the compiler installation archive. The makefile is
-designed to run on different host systems but has been tested with Windows
-7 only.
+To get more information, type:
+
+    mingw32-make help
+
+NOTE: The makefile requires the MinGW port of the make processor. The
+Cygwin port will fail with obscure, misleading error messages. It's safe
+to use the `make.exe` from the compiler installation archive but
+explicitly typing `mingw32-make` will avoid any problem.
+
+The makefile is designed to run on different host systems but has been
+tested with Windows 7 only.
+
+Note, the Eclipse project configuration in the root folder of this sample
+supports the build of only a sub-set of the possible configurations.
+Safe-RTOS can be compiled with a few sample applications only, each of them
+in DEBUG and PRODUCTION compilation and for either instruction set. To
+build the other samples with Eclipse you would have to duplicate the
+existing build configurations and adapt the make command lines in the
+build settings according to the explanations and examples above.
 
 === Flashing and debugging
 
 The sample code can be flashed and debugged with the CodeWarrior IDE.
 
-To flash the `*.elf` file, open the CodeWarrior IDE, go to the menu, click
-"Window/Show View/Other/Debug/Debugger Shell". In the debugger shell
-window, type:
+To flash the `*.elf` file of a safe-RTOS application like `default`, open the
+CodeWarrior IDE, go to the menu, click "Window/Show
+View/Other/Debug/Debugger Shell". In the debugger shell window, type for
+example:
 
     cd <rootFolderOfSample>/makefile/debugger
+    set APP default
     source flashDEBUG.tcl
     
 or
 
+    set APP default
     source flashPRODUCTION.tcl
 
+(Setting TCL variable APP doesn't need to be repeated prior to every
+repeated flashing.)
+
 The debugger is started by a click on the black triangle next to the blue
-icon "bug", then click "Debug Configurations.../CodeWarrior/Debug RTOS
-(DEBUG)". Confirm and start the debugger with a last click on button
-"Debug".
+icon "bug", then click "Debug Configurations.../CodeWarrior/safe-RTOS-VLE
+(default, DEBUG)". Confirm and start the debugger with a last click on 
+button "Debug".
+
+(Or select the according debug configuration for another safe-RTOS
+application.)
 
 You can find more details on using the CodeWarrior IDE at
 https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 
 == Code architecture
 
-This sample builds on the basic sample "startup-VLE" located in a sibling folder. 
-"RTOS" is compiled for the VLE instruction set. All build settings
-and the software architecture are identical to "startup-VLE". Please refer to
+This sample builds on the other sample "RTOS-VLE" located in a sibling
+folder. "safe-RTOS-VLE" is compiled for the VLE instruction set. The build
+settings are identical to "startup-VLE". Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc]
 for details.
 
-=== API
+=== Book E versus VLE
 
-The RTOS offers an API for using it. This API is an extension to the
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
-offered by the startup code] and which is still required, too. This
-section outlines, which functions are available and how to use them.
-Detailed information is found as
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/RTOS/code/RTOS/rtos.c[source
-code] comments.
-
-==== Registering a task
-
-Tasks are not created dynamically, on demand, but they are registered at
-the RTOS once before the scheduler is started. The registration of a task
-specifies the task function, which is either cyclically activated or on software
-demand, the priority, the cycle time as a number of Milliseconds and the
-time of first activation:
-
-    #include "rtos.h"
-    unsigned int rtos_registerTask( const rtos_taskDesc_t *pTaskDesc
-                                  , unsigned int tiFirstActivationInMs
-                                  );
-
-The returned task IDs form a sequence of numbers 0, 1, 2, ... in the order
-of registration calls. The ID is required as input to some other API
-functions that relate to a specific task.
-
-==== Registering an ISR
-
-This function from the startup API lets your application define a handler
-for all needed interrupt sources.
-
-    #include "ihw_initMcuCoreHW.h"
-    void ihw_installINTCInterruptHandler( void (*interruptHandler)(void)
-                                        , unsigned short vectorNum
-                                        , unsigned char psrPriority
-                                        , bool isPreemptable
-                                        );
-
-==== Start of kernel
-
-The scheduler of the RTOS is started with a simple API call. All required
-tasks have been registered before:
-
-    #include "rtos.h"
-    void rtos_initKernel(void);
-
-The tasks are running after return from the function and the code behind this
-function call becomes the idle task.
-
-==== Activate a task by software
-
-Non cyclic tasks can be activated on event, e.g. from a true ISR to let
-the task evaluate and process the data it has fetched from a device
-(interrupt deferring):
-
-    #include "rtos.h"
-    bool rtos_activateTask(unsigned int idTask);
-
-An activation can fail if the activated task is still ready, if it has not
-yet completed the previous activation.
-
-==== Mutual exclusion of tasks by priority ceiling protocol
-
-A cheap method of inhibiting other tasks from accessing same shared
-resources (mostly data objects in RAM) at the same time is the priority
-ceiling protocol. The currently running task is temporarily given a new,
-higher priority and all other tasks of same or lower priority will surely
-not become running. There's a function to raise and another one to restore
-the original priority:
-
-    #include "rtos.h"
-    uint32_t rtos_suspendAllInterruptsByPriority
-                  (unsigned int suspendUpToThisPriority)
-
-    void rtos_resumeAllInterruptsByPriority
-                  (uint32_t resumeDownToThisPriority)
-
-The source code comments of these functions explains them much more in
-detail.
-
-See API of startup code for more functions for mutual exclusion.
-
-==== Diagnosis: Average CPU load
-
-A function is available to estimate the current system load. The function
-is continuously called from the idle task and consumes most of the time,
-which is left to the idle task.
-
-    #include "gsl_systemLoad.h"
-    unsigned int gsl_getSystemLoad(void);
-
-The load is returned in tens of percent.
-
-==== Diagnosis: Counter for failed activations
-
-All failed activations of a task are counted.
-
-    #include "rtos.h"
-    unsigned int rtos_getNoActivationLoss(unsigned int idTask);
-
-==== Diagnosis: Stack usage
-
-A diagnostic function can compute the amount of stack space, which has
-never been used since system startup. This can help at development time to
-save RAM. The number of never used bytes is returned:
-
-    #include "rtos.h"
-    unsigned int rtos_getStackReserve(void);
+Only VLE code is supported.
 
 == Known issues
 
@@ -476,9 +495,5 @@ high priority, leaves this high priority level set in the INTC_CPR_PRC0,
 so that effectively no interrupts (including itself) are handled any more.
 Only the code of the idle task is executed any longer.
 
-This effect can be observed with other samples, too. It had not been found
-before as observing the current priority level from the debugger had been
-done intensively only when putting the RTOS code to operation.
-
 Workaround: Don't open the view of the INTC0 in the debugger when
-debugging an RTOS application. Then the INTC and the code work fine.
+debugging a safe-RTOS application. Then the INTC and the code work fine.
