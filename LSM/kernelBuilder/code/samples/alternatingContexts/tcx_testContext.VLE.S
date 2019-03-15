@@ -156,7 +156,7 @@ fillRegisters:
 /**
  *   @func testRegisters
  * Compare all accessible registers with the value in r3. Any deviation is reported as an
- * error. Error reporting is done by entering an infinit loop.
+ * error. Error reporting is done by entering an infinite loop.
  */
     .section .text
     .globl  tcx_testFailed

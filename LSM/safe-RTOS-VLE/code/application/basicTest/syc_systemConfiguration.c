@@ -21,13 +21,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
+ *   main
+ * Local functions
  *   taskInitProcess
  *   isrPit1
  *   isrPit2
  *   isrPit3
  *   installInterruptServiceRoutines
- *   main
- * Local functions
  */
 
 /*
@@ -73,7 +73,7 @@ enum
     , prioEv17ms = 2       /// Used for low priority task in failure process
     
     , prioISRPit1 = 4   /// Directly starts high priority task in failure process
-    , prioISRPit2 = 13  /// Triggers event syc_idEvPIT2
+    , prioISRPit2 = (RTOS_KERNEL_PRIORITY+1)  /// Triggers event syc_idEvPIT2
     , prioISRPit3 = 15  /// An asynchronous, unrelated ISR
 };
  

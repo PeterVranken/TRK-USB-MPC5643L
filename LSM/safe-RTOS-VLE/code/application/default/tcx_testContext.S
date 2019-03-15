@@ -81,8 +81,8 @@ tcx_waitTimePerCycleInUS:
  *   @func fillRegisters
  * Fill all accessible registers with the value in r3.
  */
-    .section .text
-    .balign  2
+    .section    .text
+    .balign     2
 
 #define SIZE_OF_STACKFRAME  0
 

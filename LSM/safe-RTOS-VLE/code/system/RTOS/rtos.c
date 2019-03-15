@@ -110,6 +110,7 @@
  *   rtos_initKernel
  *   rtos_OS_triggerEvent
  *   rtos_scFlHdlr_triggerEvent
+ *   rtos_scFlHdlr_runTask
  *   rtos_getNoActivationLoss
  *   rtos_getStackReserve
  * Module inline interface
@@ -1091,13 +1092,13 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
        &&  pidOfCallingTask > pUserTaskConfig->PID
       )
     {
-        /* We forbid recursive use of this system call not because it would be is
-           technically not possible but to avoid an overflow of the supervisor stack. Each
-           creation of a user task puts a stack frame on the SV stack. We cannnot detect a
-           recursion but we can hinder the SV stack overflow by making the current
-           context's priority a gate for further use of this function: The next invokation
-           needs to appear at higher level. This will limit the number of stack frames
-           similar as this is generally the case for interrupts.
+        /* We forbid recursive use of this system call not because it would be technically
+           not possible but to avoid an overflow of the supervisor stack. Each creation of
+           a user task puts a stack frame on the SV stack. We cannnot detect a recursion
+           but we can hinder the SV stack overflow by making the current context's priority
+           a gate for further use of this function: The next invokation needs to appear at
+           higher level. This will limit the number of stack frames similar as this is
+           generally the case for interrupts.
              Note, a user task can circumvent the no-recursion rule by abusing the priority
            ceiling protocol to increment the level by one in each recursion. This is
            technically alright and doesn't impose a risk. The number of available PCP
@@ -1119,7 +1120,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
         
         if(isEnabled)
         {
-            /* All preconitions fulfilled, lock is set, run the task. */
+            /* All preconditions fulfilled, lock is set, run the task. */
             const int32_t taskResult = ivr_runUserTask(pUserTaskConfig, taskParam);
             
             /* Restore the pre-requisite for future use of this system call. */

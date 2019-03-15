@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "typ_types.h"
 #include "ivr_ivorHandler.h"
 
 
@@ -175,5 +176,36 @@ void prc_installINTCInterruptHandler( prc_interruptServiceRoutine_t interruptSer
 
 /** Initialize the data structure with all process descriptors. */
 bool prc_initProcesses(bool isProcessConfiguredAry[1+PRC_NO_PROCESSES]);
+
+
+/*
+ * Inline functions
+ */
+
+/**
+ * Kernel function to suspend a process. All currently running tasks belonging to the process
+ * are aborted and the process is stopped forever (i.e. there won't be further task starts
+ * or I/O driver callback invocations).
+ *   @param PID
+ * The ID of the process to suspend in the range 1..4. Checked by assertion.
+ *   @remark
+ * Tasks of the suspended process can continue running for a short while until their abort
+ * conditions are checked the next time. The likelihood of such a continuation is little
+ * and the duration is in the magnitude of a Millisecond.
+ *   @remark
+ * This function must be called from the OS context only. Any attempt to use it in user
+ * code will lead to a privileged exception.
+ */
+static inline void rtos_OS_suspendProcess(uint32_t PID)
+{
+    /* The process array has no entry for the kernel process. An index offset by one
+       results. */
+    -- PID;
+    
+    assert(PID < sizeOfAry(prc_processAry));
+    prc_processAry[PID].state = 0;
+
+} /* End of rtos_OS_suspendProcess */
+
 
 #endif  /* PRC_PROCESS_INCLUDED */

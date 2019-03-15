@@ -33,8 +33,8 @@
  *   sio_scFlHdlr_writeSerial
  *   sio_writeSerial (inline)
  *   sio_OS_writeSerial
- *   sio_getChar
- *   sio_getLine
+ *   sio_OS_getChar
+ *   sio_OS_getLine
  * Local functions
  *   initDMA
  *   initLINFlex
@@ -757,7 +757,7 @@ unsigned int sio_scFlHdlr_writeSerial( uint32_t PID ATTRIB_UNUSED
  *   @param noBytes
  * The number of bytes to send. For a C string, this will mostly be \a strlen(msg).
  *   @remark
- * This function must be called by trusted code in supervisor mode only. It blongs to the
+ * This function must be called by trusted code in supervisor mode only. It belongs to the
  * sphere of trusted code itself.
  */
 unsigned int sio_OS_writeSerial( const char *msg
@@ -884,8 +884,11 @@ unsigned int sio_OS_writeSerial( const char *msg
  * The return of EOF does not mean that the stream has been closed. It's just a matter of
  * having no input data temporarily. On reception of the more characters the function will
  * continue to return them.
+ *   @remark
+ * This function must be called by trusted code in supervisor mode only. It belongs to the
+ * sphere of trusted code itself.
  */
-signed int sio_getChar(void)
+signed int sio_OS_getChar(void)
 {
     signed int c;
     
@@ -922,7 +925,7 @@ signed int sio_getChar(void)
 
     return c;
 
-} /* End of sio_getChar */
+} /* End of sio_OS_getChar */
 
 
 
@@ -979,8 +982,11 @@ signed int sio_getChar(void)
  * particular, you must not try to reset the counter prior to a read operation in order to
  * establish such a relation. Your application will just know that there are some garbled
  * messages.
+ *   @remark
+ * This function must be called by trusted code in supervisor mode only. It belongs to the
+ * sphere of trusted code itself.
  */
-char *sio_getLine(char str[], unsigned int sizeOfStr)
+char *sio_OS_getLine(char str[], unsigned int sizeOfStr)
 {
     if(sizeOfStr == 0)
     {
@@ -1115,6 +1121,6 @@ char *sio_getLine(char str[], unsigned int sizeOfStr)
 
     return result;
 
-} /* End of sio_getLine */
+} /* End of sio_OS_getLine */
 
 

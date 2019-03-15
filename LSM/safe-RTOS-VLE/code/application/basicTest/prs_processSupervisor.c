@@ -121,8 +121,9 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 
     const unsigned int kindOfFailure = prs_cntTestCycles % (unsigned)prf_kof_noFailureTypes;
     unsigned int stackDepth = prs_cntTestCycles & 64
-               , noFailures = rtos_getNoTotalTaskFailure(syc_pidFailingTasks) + 1
-               , tolerance = 2
+               , minNoExpectedFailures = 1 /* Default: Immediate failure of injecting task */ 
+               , maxNoExpectedFailures = 3 /* Tolerance: The two other tasks of the process
+                                              may easily fail, too. */
                , expectedValue = 0;
     uint32_t value = 0
            , address = 0;
@@ -131,8 +132,8 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
     {
 #if PRF_ENA_TC_PRF_KOF_NO_FAILURE == 1
     case prf_kof_noFailure:
-        noFailures -= 1;
-        tolerance = 0;
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 0;
         break;
 #endif
 
@@ -141,7 +142,7 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         /* Voluntary task termination with error code must be reported as error but it
            still needs to be clean termination without a possibly harmfully affected
            other task. Tolerance is zero. */
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
@@ -150,13 +151,13 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         /* Test cases which cause an exception without any danger of destroying some still
            accessible properties like process owned data don't need a tolerance in the
            potential number of process failures. */
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT == 1
     case prf_kof_triggerUnavailableEvent:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
@@ -168,7 +169,7 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         expectedValue = prc_processAry[syc_pidSupervisor-1].cntTotalTaskFailure;
         value = ~expectedValue;
         address = (uint32_t)&prc_processAry[syc_pidSupervisor-1].cntTotalTaskFailure;
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
@@ -177,7 +178,7 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         expectedValue = prs_cntTestCycles;
         value = ~expectedValue;
         address = (uint32_t)&prs_cntTestCycles;
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
@@ -186,7 +187,7 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         address = 0x00000100;
         expectedValue = *(const uint32_t*)address;
         value = ~expectedValue;
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
@@ -195,7 +196,7 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 # define INTC_CPR_PRC0      (0xfff48000u+0x8)
         address = INTC_CPR_PRC0;
         value = 15;
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 # undef INTC_CPR_PRC0
 #endif
@@ -204,26 +205,26 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 # define INTC_CPR_PRC0      (0xfff48000u+0x8)
     case prf_kof_readPeripheral:
         address = INTC_CPR_PRC0;
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 # undef INTC_CPR_PRC0
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_INFINITE_LOOP == 1
     case prf_kof_infiniteLoop:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE == 1
     case prf_kof_misalignedWrite:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_MISALIGNED_READ == 1
     case prf_kof_misalignedRead:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
@@ -234,16 +235,16 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
            24 Byte per stack frame (look for "nestStackInjectError:" in compiler artifact
            prf_processFailureInjection.s) and the stack is configured to have 2048 Byte. */
         stackDepth = 100;
-        noFailures -= 1;
-        tolerance = 3;
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 3;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM == 1
     case prf_kof_stackClearBottom:
         stackDepth = 63;
-        noFailures -= 1;
-        tolerance = 3;
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 3;
         break;
 #endif
 
@@ -251,8 +252,8 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
     case prf_kof_spCorrupt:
         if(stackDepth < 10)
             stackDepth = 10;
-        noFailures -= 1;
-        tolerance = 3;
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 3;
         break;
 #endif
 
@@ -265,69 +266,157 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 
 #if PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU == 1
     case prf_kof_privilegedAndMPU:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_READ_SPR == 1
     case prf_kof_readSPR:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_WRITE_SPR == 1
     case prf_kof_writeSPR:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_WRITE_SVSP == 1
     case prf_kof_writeSVSP:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS == 1
     case prf_kof_clearSDAPtrs:
-        noFailures -= 1;
-        tolerance = 3;
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 3;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS_AND_WAIT == 1
     case prf_kof_clearSDAPtrsAndWait:
-        tolerance = 2;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_MMU_WRITE == 1
     case prf_kof_MMUWrite:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_MMU_READ == 1
     case prf_kof_MMURead:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE == 1
     case prf_kof_MMUExecute:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2 == 1
     case prf_kof_MMUExecute2:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_TRAP == 1
+    case prf_kof_trap:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_TLB_INSTR == 1
+    case prf_kof_tlbInstr:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_SPE_INSTR == 1
+    case prf_kof_SPEInstr:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_BOOKE_FPU_INSTR == 1
+    case prf_kof_BookEFPUInstr:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_DCACHE_INSTR == 1
+    case prf_kof_dCacheInstr:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_UNDEF_SYS_CALL == 1
+    case prf_kof_undefSysCall:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_RANDOM_WRITE == 1
+    case prf_kof_randomWrite:        /** 500 times at once, to raise likelihood of bad hit */
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 3;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_RANDOM_READ == 1
+    case prf_kof_randomRead:         /** 500 times at once, to raise likelihood of bad hit */
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_RANDOM_JUMP == 1
+    case prf_kof_randomJump:
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 3;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC == 1
     case prf_kof_mpuExcBeforeSc:
-        tolerance = 0;
+        maxNoExpectedFailures = 1;
         break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INVALID_CRIT_SEC == 1
+    case prf_kof_invalidCritSec:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC == 1
+    case prf_kof_leaveCritSec:
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 0;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_OS_RUN_TASK == 1
+    case prf_kof_invokeRtosOsRunTask:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INVOKE_IVR_SYSTEM_CALL_BAD_ARGUMENT == 1
+    case prf_kof_invokeIvrSystemCallBadArgument:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_SYSTEM_CALL_ALL_ARGUMENTS_OKAY == 1
+    case prf_kof_systemCallAllArgumentsOkay:
+        minNoExpectedFailures = 0;
+        maxNoExpectedFailures = 0;
 #endif
 
     default:
@@ -344,8 +433,11 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
                                          , .expectedValue = expectedValue
                                        };
     _failureExpectation = (failureExpectation_t)
-                          { .expectedNoProcessFailures = noFailures
-                            , .expectedNoProcessFailuresTolerance = tolerance
+                          { .expectedNoProcessFailures =
+                                            rtos_getNoTotalTaskFailure(syc_pidFailingTasks)
+                                            + minNoExpectedFailures
+                            , .expectedNoProcessFailuresTolerance = maxNoExpectedFailures
+                                                                    - minNoExpectedFailures
                             , .expectedValue = expectedValue
                           };
     return 0;
@@ -438,6 +530,8 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
 {
     /// @todo Stack check every Millisend costs about 15% CPU load. We don't need to do
     // this so often: Pi stacks are any way protected and OS could be checked every 100ms
+    /// @todo Add SW alive counters in all processes/tasks and add a need-to-change
+    // condition here
     bool isOk = rtos_getNoActivationLoss(syc_idEvTest) == 0
                 &&  rtos_getNoActivationLoss(syc_idEvPIT2) == 0
                 &&  rtos_getNoTotalTaskFailure(syc_pidSupervisor) == 0
@@ -446,12 +540,21 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
                 &&  rtos_getStackReserve(syc_pidReporting) >= 512
                 &&  rtos_getStackReserve(/* PID */ 0 /* OS */) >= 3096;
 
-    /* In PRODUCTION compilation we can't halt the system using the assert macro. We turn
-       on the red LED to indicate a problem and enter an infinite loop. Since the watchdog
-       has the highest user task priority this means effectively halting the software
-       execution. Just some interrupts without further effect will remain. */
-    if(!isOk)
+    if(isOk)
     {
+#define TI_BLINK_IN_MS  750u
+#define CNT_STEP    ((int16_t)((float)(UINT16_MAX)/(TI_BLINK_IN_MS) + 0.5f))
+        static int16_t SDATA_PRC_SV(cnt_) = 0;
+        lbd_setLED(lbd_led_D4_grn, /* isOn */ (cnt_+=CNT_STEP) >= 0);
+#undef CNT_STEP
+#undef TI_BLINK_IN_MS
+    }
+    else
+    {
+        /* In PRODUCTION compilation we can't halt the system using the assert macro. We turn
+           on the red LED to indicate a problem and enter an infinite loop. Since the watchdog
+           has the highest user task priority this means effectively halting the software
+           execution. Just some interrupts without further effect will remain. */
         lbd_setLED(lbd_led_D4_grn, /* isOn */ false);
         lbd_setLED(lbd_led_D4_red, /* isOn */ true);
         while(true)

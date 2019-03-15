@@ -1,7 +1,8 @@
 /**
  * @file mai_main.c
- * The main entry point of the C code. In this sample it configures and runs the RTOS.
- * Some tasks are registered that implement blinking LEDs and more.\n
+ * The main entry point of the C code, which implements sample application "default" of the
+ * RTOS. The code found here configures and runs the RTOS. Some tasks are registered that
+ * implement blinking LEDs and more.\n
  *   A cyclic 1ms task controls one LED such that it blinks at 1 Hz. The task reads the
  * state of the buttons on the evaluation board. On button press an according event task,
  * taskOnButtonDown, is activated.\n
@@ -11,8 +12,8 @@
  * wait loop.\n
  *   A cyclic 1000ms task toggles the second LED at a rate of 0.5 Hz.\n
  *   An event task taskNonCyclic is activated by several other tasks under different
- * conditions. It can be observed that the activation sometime succeeds and sometime fails
- * - depending on these conditions.\n
+ * conditions. It can be observed that the activation sometime succeeds and sometime fails.
+ * Below it's explained why.\n
  *   The regular 1s task is used to report the system state, CPU load, stack usage and task
  * overrun events (more precise: failed activations).\n
  *   The idle task measures the CPU load.\n
@@ -33,10 +34,17 @@
  *   Occasional activation losses can be reported for task taskNonCyclic. It can be
  * preempted by task task17ms and this task activates task taskNonCyclic. If it tries to
  * do, while it has preempted task taskNonCyclic, the activation is not possible.\n
- *   The code runs a permanent test of the different offered mechanisms of mutual exclusion
- * of tasks that access some shared data objects. A recognized failure is reported by
- * assertion, which will halt the code execution (in DEBUG compilation only). Everything is
- * fine as long as the LEDs continue blinking.
+ *   The code runs a permanent test of the offered mechanism for mutual exclusion of tasks
+ * that access some shared data objects. A recognized failure is reported by assertion,
+ * which will halt the code execution (in DEBUG compilation only). Everything is fine as
+ * long as the LEDs continue blinking.
+ *
+ * CAUTION: This safe-RTOS application only is a migration of the demo software from the
+ * ancestor implementation of the RTOS, which didn't have the safety mechanisms. The
+ * migrated application doesn't aim at demonstrating the design of a true safe application.
+ * The major issue is that there's no clear visual separation of code belonging in the
+ * spheres of a) an operating system, b) the functional application code and c) some
+ * supervisory safety code.
  *
  * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -112,23 +120,31 @@
     switch is set to 1. */
 #define TASKS_PRODUCE_GROUND_LOAD   0
 
-/** The test of the priority ceiling protocol counts recognized errors, which are reproted
-    by console output and to the debugger. Alternatively and by setting this macro to 1,
-    the software execution can be halted on recognition of the first error. The no longer
-    blinking LEDs would indicate the problem. */
-#define HALT_ON_PCP_TEST_FAILURE    1
-
 /** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
     for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
       Here, for getting the resource, i.e. for entering a critical section of code. */
-#define GetResource(resource)                                                               \
-            { uint32_t priorityLevelSoFar = rtos_suspendAllInterruptsByPriority             \
-                                                (/* suspendUpToThisPriority */ (resource));
+#define GetResource(idTask, resource)                                                       \
+            {   uint32_t priorityLevelSoFar;                                                \
+                if((idTask) <= lastUserTaskId)                                              \
+                {                                                                           \
+                    priorityLevelSoFar = rtos_suspendAllInterruptsByPriority                \
+                                                (/* suspendUpToThisPriority */ (resource)); \
+                }                                                                           \
+                else                                                                        \
+                {                                                                           \
+                    priorityLevelSoFar = rtos_OS_suspendAllInterruptsByPriority             \
+                                                (/* suspendUpToThisPriority */ (resource)); \
+                }
 
 /** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
     for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
       Here, for returning the resource, i.e. for leaving a critical section of code. */
-#define ReleaseResource() rtos_resumeAllInterruptsByPriority(priorityLevelSoFar); }
+#define ReleaseResource(idTask)                                                             \
+                if((idTask) <= lastUserTaskId)                                              \
+                    rtos_resumeAllInterruptsByPriority(priorityLevelSoFar);                 \
+                else                                                                        \
+                    rtos_OS_resumeAllInterruptsByPriority(priorityLevelSoFar);              \
+            }
 
 /** The task counter array is accessed by all tasks. Here it is modelled as an OSEK/VDX
     like resource to be used with #GetResource and #ReleaseResource. */
@@ -141,14 +157,6 @@
                              MAXP(prioTask1s,MAXP(prioTaskNonCyclic, \
                              MAXP(prioTask17ms,MAXP(prioTaskOnButtonDown, \
                              prioTaskCpuLoad)))))))
-
-/** The priority level to set for the activation of task taskNonCyclic. The call of
-    rtos_activateTask(task) is not reentrant; if several tasks want to activate one and the
-    same task then this call needs to be placed into a critical section. The macro is named
-    such that the code resembles the resource API from the OSEK/VDX standard. */
-#define RESOURCE_ACTIVATE_TASK_NON_CYCLIC \
-                            (MAXP(prioTask1ms,MAXP(prioTask17ms, \
-                             MAXP(prioTaskOs1ms,prioTaskIdle))))
 
 /** The priority level to set for the atomic operations done in function testPCP(). The
     macro is named such that the code resembles the resource API from the OSEK/VDX
@@ -184,7 +192,8 @@ enum
     , idEvCpuLoad
 
     /** In this sample, we have a one by one relation between events and tasks for most
-        tasks. We duplicate the event IDs to have task IDs, too. */
+        tasks. We duplicate the event IDs to have task IDs, too. This is a remnant from the
+        elder RTOS, where we had a strict one-by-one relation between events and tasks. */
     , idTask1ms          = idEv1ms
     , idTask3ms          = idEv3ms
     , idTask1s           = idEv1s
@@ -192,6 +201,13 @@ enum
     , idTask17ms         = idEv17ms
     , idTaskOnButtonDown = idEvOnButtonDown
     , idTaskCpuLoad      = idEvCpuLoad
+
+    /** Some derived enumeration values permit making the distinction between user and OS
+        tasks by ID. */
+    , tmpIdTask1
+    , lastUserTaskId = tmpIdTask1 - 1
+    , firstOsTaskId
+    , tmpIdTask2 = firstOsTaskId - 1
 
     , idTaskOs1ms
 
@@ -223,9 +239,10 @@ enum
 };
 
 
-/** The RTOS uses constant task priorities, which are defined here. (The concept and
-    architecture of the RTOS allows dynamic changeing of a task's priority at runtime, but
-    we didn't provide an API for that yet; where are the use cases?) */
+/** The RTOS uses constant task priorities, which are defined here.\n
+      Note, this is a remnant from the elder RTOS. Now, priority is a property of an event
+    rather than of a task. A task implicitly inherits the priority of the event it is
+    associated with. */
 enum
 {
     prioTask1ms = 2
@@ -235,8 +252,9 @@ enum
     , prioTask17ms = 4
     , prioTaskOnButtonDown = 1
     , prioTaskCpuLoad = 1
+
     , prioTaskOs1ms = prioTask1ms /* same event, cannot have other prio */
-    , prioTaskIdle = 0
+    , prioTaskIdle = 0            /* Prio 0 is implicit, cannot be chosen explicitly */
 
     , prioISRPit1 = 5
     , prioISRPit2 = 6
@@ -244,7 +262,12 @@ enum
 };
 
 
-/** In the RTOS a task belongs to a process. The releationship is defined here. */
+/** In safe-RTOS a task belongs to a process, characterized by the PID, 1..4. The
+    relationship is defined here.\n
+      Note, this is a remnant from the elder RTOS, where no process concept existed. Nearly
+    all tasks belong to the one and only user process. We just added a single OS task.\n
+      Note, a process needs to be configured in the linker script (actually: assignment of
+    stack space) before it can be used. */
 enum
 {
     pidTask1ms = 1
@@ -254,9 +277,10 @@ enum
     , pidTask17ms = 1
     , pidTaskOnButtonDown = 1
     , pidTaskCpuLoad = 1
-    , pidTaskOs1ms = 0
+    , pidTaskOs1ms = 0  /* A kernel or operating system task, e.g. to implement a polling
+                           I/O driver. */
     , pidOnButtonChangeCallback = 1
-    , pidTaskIdle = 0
+    , pidTaskIdle = 0   /* PID 0 is implicit, idle belongs to kernel, kernel always is PID 0 */
 };
 
 
@@ -313,7 +337,7 @@ unsigned int mai_cpuLoad SECTION(.data.OS) = 1000;
 static unsigned int _cpuLoadInPercent SECTION(.sdata.P1) = 0;
 
 /** Test of priority ceiling protocol. A sub-set of tasks, whereof non of highest priority
-    in use, share this data object. Is has redundant fields so that a sharing conflict can
+    in use, share this data object. It has redundant fields so that a sharing conflict can
     be recognized. Try compiling the code with bad resource definition and see if the
     problem is reported (in DEBUG compilation by assertion, too). */
 static volatile struct sharedDataTasksIdleAnd1msAndCpuLoad_t
@@ -360,41 +384,37 @@ static volatile struct sharedDataTasksIdleAnd1msAndCpuLoad_t
 static void checkAndIncrementTaskCnts(unsigned int idTask)
 {
     /* Increment task related counter and shared counter in an atomic operation. */
-    assert(idTask < sizeOfAry(_cntTaskAry));
-    GetResource(RESOURCE_CNT_TASK_ARY);
+    GetResource(idTask, RESOURCE_CNT_TASK_ARY);
     {
+        assert(idTask < sizeOfAry(_cntTaskAry));
         ++ _cntTaskAry[idTask];
         ++ _cntAllTasks;
     }
-    ReleaseResource();
+    ReleaseResource(idTask);
 
     /* Get all task counters and the common counter in an atomic operation. */
     unsigned long long cntTaskAryCpy[noExecutionContexts]
                      , cntAllTasksCpy;
     _Static_assert(sizeof(_cntTaskAry) == sizeof(cntTaskAryCpy), "Bad data definition");
-    GetResource(RESOURCE_CNT_TASK_ARY);
+    GetResource(idTask, RESOURCE_CNT_TASK_ARY);
     {
         memcpy(&cntTaskAryCpy[0], (void*)&_cntTaskAry[0], sizeof(cntTaskAryCpy));
         cntAllTasksCpy = _cntAllTasks;
     }
-    ReleaseResource();
+    ReleaseResource(idTask);
 
     /* Check consistency of got data. */
-/// @todo Neither assert nor an endless loop will halt the SW
     unsigned int u;
     for(u=0; u<noExecutionContexts; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
 #ifdef DEBUG
     assert(cntAllTasksCpy == 0);
 #else
-    /* PRODUCTION compilation: Code execution is halted, LEDs stop blinking as indication
-       of a severe problem. */
-    if(cntAllTasksCpy != 0)
-    {
-        ihw_suspendAllInterrupts();
-        while(true)
-            ;
-    }
+    /* PRODUCTION compilation: Code execution can be halted only by the OS process. We
+       leave this to the idle task.
+         Note, incrementing the error count to make the idle task recognize the problem
+       is not safe, we don't have a critical section for this object and the given task. */
+    ++ _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors;
 #endif
 } /* End of checkAndIncrementTaskCnts. */
 
@@ -438,31 +458,24 @@ static bool testPCP_checkDataConsistency()
  */
 static void testPCP(unsigned int idTask)
 {
-    /* The safe RTOS doesn't offer an idle task to the user code. The idle task belongs
-       to the OS context and needs to use the OS variant of the PCP. */
-    #define GetResource_OS(resource) \
-        { uint32_t priorityLevelSoFar = rtos_OS_suspendAllInterruptsByPriority          \
-                                            (/* suspendUpToThisPriority */ (resource));
-    #define ReleaseResource_OS() rtos_OS_resumeAllInterruptsByPriority(priorityLevelSoFar); }
-
     /* Increment task related counter and shared counter in an atomic operation. */
     if(idTask == idTaskIdle)
     {
-        GetResource_OS(RESOURCE_TEST_PCP);
+        GetResource(idTaskIdle, RESOURCE_TEST_PCP);
         {
             ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskIdle;
             ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal;
         }
-        ReleaseResource_OS();
+        ReleaseResource(idTaskIdle);
     }
     else if(idTask == idTaskCpuLoad)
     {
-        GetResource(RESOURCE_TEST_PCP);
+        GetResource(idTaskCpuLoad, RESOURCE_TEST_PCP);
         {
             ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTaskCpuLoad;
             ++ _sharedDataTasksIdleAnd1msAndCpuLoad.cntTotal;
         }
-        ReleaseResource();
+        ReleaseResource(idTaskCpuLoad);
     }
     else if(idTask == idTask1ms)
     {
@@ -483,51 +496,30 @@ static void testPCP(unsigned int idTask)
 #ifdef DEBUG
         assert(false);
 # else
-        ihw_suspendAllInterrupts();
-        while(true)
-            ;
+        /* PRODUCTION compilation: Code execution can be halted only by the OS process. We
+           leave this to the idle task.
+             Note, incrementing the error count to make the idle task recognize the problem
+           is not safe, we don't have a critical section for the given task. */
+        ++ _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors;
 #endif
     }
 
     /* Validate the consistency of the redundant data in an atomic operation. */
     bool bOkay;
-    if(idTask == idTaskIdle)
+    GetResource(idTask, RESOURCE_TEST_PCP);
     {
-        GetResource_OS(RESOURCE_TEST_PCP);
-        {
-            bOkay = testPCP_checkDataConsistency();
-        }
-        ReleaseResource_OS();
+        bOkay = testPCP_checkDataConsistency();
     }
-    else
-    {
-        GetResource(RESOURCE_TEST_PCP);
-        {
-            bOkay = testPCP_checkDataConsistency();
-        }
-        ReleaseResource();
-    }
+    ReleaseResource(idTask);
 
-/// @todo Can't work yet. We need to observe the global error counter instead
-#if 0
-    if(!bOkay)
-    {
-        /* On desire, the application is halted. This makes the error observable
-           without connected terminal. */
-#if HALT_ON_PCP_TEST_FAILURE == 1
-# ifdef DEBUG
-        assert(false);
-# else
-        ihw_suspendAllInterrupts();
-        while(true)
-            ;
-# endif
+#ifdef DEBUG
+    assert(bOkay);
+#else
+    /* PRODUCTION compilation: Code execution can be halted only by the OS process. Not
+       all of the errors will become visible by LED. */
+    if(idTask >= firstOsTaskId  &&  !bOkay)
+        rtos_OS_suspendProcess(/* PID */ 1);
 #endif
-    }
-#endif
-
-#undef GetResource_OS
-#undef ReleaseResource_OS
 } /* End of testPCP. */
 
 
@@ -544,8 +536,7 @@ static void testPCP(unsigned int idTask)
  */
 static void isrPit1(void)
 {
-/// @todo Like in testPCP we need a differentiation between OS and user task. ISR is OS
-//    checkAndIncrementTaskCnts(idISRPit1);
+    checkAndIncrementTaskCnts(idISRPit1);
     ++ mai_cntISRPit1;
 
     /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
@@ -607,6 +598,9 @@ static void isrPit3(void)
  */
 static int32_t taskOs1ms(void)
 {
+    /* The I/O driver for the buttons is run from the OS task with priority
+       prioTaskOs1ms = 2. The driver code and the callback onButtonChangeCallback it may
+       invoke inherit this priority. */
     lbd_task1ms();
 
     return 0;
@@ -616,7 +610,9 @@ static int32_t taskOs1ms(void)
 
 /**
  * Notification callback from the button and LED I/O driver (lbd) in case of a button state
- * change.
+ * change.\n
+ *   Note, the button driver is run in the context of task taskOs1ms. Driver and this
+ * callback inherit the priority of that task, which is prioTaskOs1ms = 2.
  *   @param PID
  * A user task or callback gets the process ID as first argument.
  *   @param buttonState
@@ -635,22 +631,13 @@ static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_UNUSED, uint8_t button
         _ledTask1ms = (cntButtonPress_ & 0x2) != 0? lbd_led_D4_red: lbd_led_D4_grn;
 
         /* Activate the non cyclic task a second time. The priority of the activated
-           task is higher than of this activating task so the first activation should
-           have been processed meanwhile and this one should be accepted, too.
-             Note, activating one and the same task from different contexts requires a
-           critical section. */
-        /// @todo Check: Statement about critical section should no longer hold. Remove resource
+           task (3) is higher than of this activating callback (2) so any earlier
+           activation should have been processed meanwhile and this one should be accepted,
+           too. */ 
 #ifdef DEBUG
-        bool bActivationAccepted;
+        bool bActivationAccepted =
 #endif
-        GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
-        {
-#ifdef DEBUG
-            bActivationAccepted =
-#endif
-            rtos_triggerEvent(idEvNonCyclic);
-        }
-        ReleaseResource();
+        rtos_triggerEvent(idEvNonCyclic);
         assert(bActivationAccepted);
 
         /* Activate our button down event task. The activation will normally succeed
@@ -690,14 +677,8 @@ static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
     /* Activate the non cyclic task.
          Note, the non cyclic task is of higher priority than this task and it'll be
        executed immediately, preempting this task. The second activation below, on button
-       down must not lead to an activation loss.
-         Note, activating one and the same task from different contexts requires a critical
-       section. */
-    GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
-    {
-        rtos_triggerEvent(idEvNonCyclic);
-    }
-    ReleaseResource();
+       down must not lead to an activation loss. */
+    rtos_triggerEvent(idEvNonCyclic);
 
 #if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
@@ -856,18 +837,9 @@ static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
 
     /* This task has a higher priority than the software triggered, non cyclic task. Since
        the latter one is often active we have a significant likelihood of a failing
-       activation from here -- always if we preempted the non cyclic task.
-         Note, activating one and the same task from different contexts requires a critical
-       section. This task had got the high application task priority so that the explicit
-       Get/ReleaseResource could be omitted. Doing so would however break the possibility
-       to play with the sample code and to arbitrarily change the priorities in the
-       heading part of this file. */
-    GetResource(RESOURCE_ACTIVATE_TASK_NON_CYCLIC);
-    {
-        if(!rtos_triggerEvent(idEvNonCyclic))
-            ++ mai_cntActivationLossTaskNonCyclic;
-    }
-    ReleaseResource();
+       activation from here -- always if we preempted the non cyclic task. */
+    if(!rtos_triggerEvent(idEvNonCyclic))
+        ++ mai_cntActivationLossTaskNonCyclic;
 
 #if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
@@ -984,20 +956,16 @@ static void installInterruptServiceRoutines(void)
 
     /* Install the ISRs now that all timers are stopped.
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
-    assert(((uintptr_t)isrPit1 & 0x80000000) == 0);
     prc_installINTCInterruptHandler( &isrPit1
                                    , /* vectorNum */ 60
                                    , /* psrPriority */ prioISRPit1
                                    , /* isPreemptable */ true
                                    );
-
-    assert(((uintptr_t)isrPit2 & 0x80000000) == 0);
     prc_installINTCInterruptHandler( &isrPit2
                                    , /* vectorNum */ 61
                                    , /* psrPriority */ prioISRPit2
                                    , /* isPreemptable */ true
                                    );
-    assert(((uintptr_t)isrPit3 & 0x80000000) == 0);
     prc_installINTCInterruptHandler( &isrPit3
                                    , /* vectorNum */ 127
                                    , /* psrPriority */ prioISRPit3
@@ -1320,15 +1288,13 @@ void main(void)
                                                            };
     while(true)
     {
-/// @todo Likely impossible for idle to use these services
-//        checkAndIncrementTaskCnts(idTaskIdle);
+        checkAndIncrementTaskCnts(idTaskIdle);
         testPCP(idTaskIdle);
         ++ mai_cntTaskIdle;
 
         /* Activate the non cyclic task. Note, the execution time of this task activation
            will by principle not be considered by the CPU load measurement started from the
            same task (the idle task). */
-/// @todo Here, we disregard the otherwise used critical section. This error is likely in simple RTOS, too
 #ifdef DEBUG
         bool bActivationAccepted =
 #endif
@@ -1347,13 +1313,9 @@ void main(void)
            of the rest of the code in the idle loop. */
         mai_cpuLoad = gsl_getSystemLoad();
 
-/// @todo No printf accessible from OS process, does system call, move somewhere else
-        /* In PRODUCTION compilation we print the inconsistencies found in the PCP test. */
+        /* In PRODUCTION compilation we halt the software execution if errors where found
+           in the data consistency tests. */
         if(_sharedDataTasksIdleAnd1msAndCpuLoad.noErrors != 0)
-        {
-//            iprintf( "CAUTION: %u errors found in PCP self-test!\r\n"
-//                   , _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors
-//                   );
-        }
+            rtos_OS_suspendProcess(/* PID */ 1);
     }
 } /* End of main */

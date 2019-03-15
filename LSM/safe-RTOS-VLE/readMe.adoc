@@ -14,20 +14,20 @@ safety-critical software. The concept of processes has been added with the
 intention to run applications of different criticality levels in different
 processes without fearing harmful interferences between them. Features:
 
-- Preemptive, priority controlled scheduling
-- Up to five processes (including kernel) with disjunct memory address
+* Preemptive, priority controlled scheduling
+* Up to five processes (including kernel) with disjunct memory address
   spaces and hierarchic privileges
-- Tasks belong to processes and share the process owned memories
-- Globally shared memory for communication purpose
-- Hardware memory protection to ensure integrity of process owned memories
-- Secured priority ceiling protocol for communication
-- Deadline monitoring and activation loss counters for avoidance of
+* Tasks belong to processes and share the process owned memories
+* Globally shared memory for communication purpose
+* Hardware memory protection to ensure integrity of process owned memories
+* Secured priority ceiling protocol for communication
+* Deadline monitoring and activation loss counters for avoidance of
   blocking tasks
-- Exception handling to catch failures like use of privileged, illegal or
+* Exception handling to catch failures like use of privileged, illegal or
   misaligned instructions or forbidden access to memory or I/O
-- Diagnostic API to gather information about failing processes and the
+* Diagnostic API to gather information about failing processes and the
   possibility to halt critical processes
-- I/O driver model for safe implementation of a complete operating system
+* I/O driver model for safe implementation of a complete operating system
 
 The RTOS itself is not a runnable piece of software. It requires some
 application code. The application file from the elder sample RTOS-VLE has
@@ -64,32 +64,34 @@ activation queuing.
 The scheduler offers an API to create events that can activate tasks. An
 event is either a regular timer event, triggered by the RTOS system clock,
 or a software triggered event. The latter can be triggered either from
-user code (if permission is granted) or from ISRs belonging to the
+user code (if it has sufficient privileges) or from ISRs belonging to the
 operating system.
 
 The RTOS offers a pre-configured set of up to four processes. (The
-limitation to four is a hardware constraint and no virtualization by
-software has been shaped for sake of simplicity.) The operating system
-forms a fifth process. Tasks need to registered. The registration assigns
-them to one of the processes and associates them with one of the created
-events.
+limitation to four is a hardware constraint and for sake of simplicity no
+virtualization by software has been shaped.) The operating system forms a
+fifth process. The operating system startup code will register the needed
+tasks. The registration assigns them to one of the processes and
+associates them with one of the created events.
 
 All scheduling is strictly priority controlled. The triggering of an event
-makes all associated tasks ready to run. At any time, the scheduler decides by
-priority, which of the _ready_ tasks becomes the one and only _running_
-task. This may involve preemption of tasks.
+makes all associated tasks ready to run. This is called task activation.
+At any time, the scheduler decides by priority, which of the _ready_ tasks
+becomes the one and only _running_ task. This may involve preemption of
+tasks.
 
-ISRs can be installed similar to the other samples; this is done with the
-infrastructure offered by the startup code.
+The operating system startup code can install needed interrupt service
+routines (ISR). The API offered for this purpose is similar to the other
+samples.
 
 For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
 lock API is offered that implements the priority ceiling protocol (PCP).
-It is secured so that safety tasks cannot be accidentally or purposely
-blocked.
+It is secured so that supervisory tasks cannot be accidentally or
+purposely blocked.
 
-The already known mechanisms from the startup code to suspend and resume
+The mechanisms already known from the other samples to suspend and resume
 all interrupts are still supported but they are no longer offered to
-application code, only the operating system may use them (i.e. mainly I/O
+application code, only the operating system may use them (mainly for I/O
 driver implementation).
 
 The use of the RTOS is further supported by some diagnostic functions.
@@ -120,7 +122,7 @@ The differences to the simple RTOS are:
 == The safety concept
 
 This sections aims at giving an overview on the safety concept. Technical
-details can be found in the manual of the RTOS (TBD).
+details can be found in the manual of the RTOS (TODO).
 
 A typical nowadays embedded project consists of a lot of code coming from
 various sources. There may be an Open Source Ethernet stack, an Open
@@ -168,10 +170,10 @@ discovering a fault are evident.
 These basic considerations result in a single top-level requirement for
 our safe-RTOS:
 
-- If the implementation of a task, which is meant the supervisory or
+* If the implementation of a task, which is meant the supervisory or
   safety task, is itself free of faults then the RTOS shall guarantee that
   this task is correctly and timely executed regardless of whatever
-  imaginable failures are made by any other task.
+  imaginable failures are made by any other process.
 
 This requirement serves at the same time as the definition of the term
 "safe", when used in the context of this RTOS. safe-RTOS promises no more
@@ -210,10 +212,15 @@ task and in particular before the according instruction can have a
 side-effect on not-owned RAM or CPU or I/O registers. The abortion is
 counted with cause in the global process data.
 
+The abortion of a task has no impact on future activations. The same task
+will be activated again as soon as the event is triggered again, which the
+task is associated with. If the task has a static error then it may easily
+end up with an endless cycle of task activations and task abortions.
+
 The kernel will never do more than immediately aborting a failing task.
-It'll not take any decision like: "Enough is enough, we are going to shut
-down." However, it offers the mechanisms to implement such decisions in a
-particular task.
+It'll not take any decision like: "Enough is enough, we are going to stop
+that." Instead, it offers the mechanisms to implement such decisions in a
+particular, supervisory task.
 
 The implementation of recognizing privilege violations before they can
 harm is founded on the memory management unit (MMU) in the CPU, the memory
@@ -224,7 +231,7 @@ impossible for user code to change the behavior of MMU or CPU exception
 handling; these settings are held in CPU supervisor registers, which
 cannot be accessed without an immediately punished privilege violation.
 
-Note, the execution of code in ROM is basically not restricted. A task may
+Note, the execution of code in ROM is generally not restricted. A task may
 even call operating system code routines -- until the executed code would
 have a side-effect on not-owned RAM or on supervisor or I/O registers
 (which it'll normally have very soon). Then a privilege violation is
@@ -239,14 +246,16 @@ implementation, too. Nonetheless, there is a thin layer of self-diagnosis
 and protection against kernel implementation faults. The exception
 handlers inspect the exception throwing context to prove that this context
 belongs to the user task code. According to our concept this will always
-be the case - except for implementation errors in the kernel (or in an
-added I/O driver, see below) or, less likely but possible, a sporadic
-hardware fault, e.g. caused by local chip overtemperature or cosmic
-radiation. In which case the kernel simply stops working. Halting the
-software execution can be considered not breaking the safety concept of
-the system; there will be an external (i.e. CPU unrelated) device which
-permanently checks the alive status of the software running on the CPU and
-this device will ensure the transition of the system into the safe state.
+be the case -- except for implementation errors in the kernel itself (or in
+an added I/O driver, see below) or, less likely but possible, because of a
+sporadic hardware fault, e.g. caused by local chip overtemperature or
+cosmic radiation. In which case the kernel simply stops working.
+
+Halting the software execution can be considered not breaking the safety
+concept of the system; in a safe system, there will always be an external
+(i.e. CPU unrelated) device which permanently checks the alive status of
+the software running on the CPU and this device will ensure the transition
+of the system into the safe state.
 
 Note, in contrast to faults caught in the user tasks this mechanism can
 not guarantee that the failure has not yet done some harm before being
@@ -257,7 +266,7 @@ recognized.
 safe-RTOS implements an operating system kernel but not an operating
 system (OS). Additional code has to be added to make it an OS. The
 majority of this code will be the configuration and setup of processes
-and tasks and I/O device drivers.
+and tasks and a set of I/O device drivers.
 
 The implementation of such drivers needs to make use of privileged
 instructions and needs to access the I/O address space, which both is not
@@ -265,7 +274,7 @@ allowed in user tasks. The safety concept can hence not be limited to the
 RTOS. The considerations made for the RTOS and its implementation need to
 be considered for the I/O driver implementation, too. The concept is that
 the RTOS is not limited to the source code that implements it but it also
-has an abstract layer: It comes along with a binding set of design rules,
+has an abstract layer: It comes along with a binding set of design rules
 how to implement an I/O driver. These rules are called the "driver model".
 Any programmer of an I/O driver, who disregards only a single rule will
 break the entire safety concept and the RTOS implementation can't help it.
@@ -276,8 +285,8 @@ terms of CPU load and ease of programming. The by far leanest "basic"
 implementation needs to be done in assembler, the other two classes can be
 implemented in C.
 
-Note, adding an I/O driver to the RTOS is not only a matter of obeying the
-rules from the driver model. Any kind of programming error can break the
+Note, adding an I/O driver to the RTOS is not only a matter of complying
+with the driver model. Any programming error can potentially break the
 safety concept, too. Much of the I/O driver code is executed in the kernel
 process and implementation faults can crash the entire software system
 like it generally is for all code in a "normal" RTOS. The organization of
@@ -323,12 +332,12 @@ It needs to be tackled mainly by the architecture of the software. Here's
 a single example:
 
 Commonly, the functional code in the software computes I/O commands, which
-go to the I/O drivers and control the connected actuators - which can mean
+go to the I/O drivers and control the connected actuators -- which can mean
 a lot of harm if giving wrong commands. By application design it can be
 easily ensured that a functional task runs first, followed by a
 supervisory task and finally the OS owned I/O driver task executes. In
 such an architecture the supervisory code would be put in the position to
-double-check the I/O control commands - and override them if advisable -
+double-check the I/O control commands -- and override them if advisable --
 before these commands are executed by the finally running I/O task.
 
 This is just meant a simple example. The point is that the RTOS only
@@ -486,7 +495,9 @@ Only VLE code is supported.
 
 == Known issues
 
-Debugger: If the view shows the INTC0 register set then the debugger
+1. The manual of the RTOS has not yet been written.
+
+2. Debugger: If the view shows the INTC0 register set then the debugger
 harmfully affects program execution and the RTOS fails: The write to
 INTC_EOIR_PRC0, which normally restores the current priority level
 INTC_CPR_PRC0, now fails to do so. The complete interrupt handling fails
@@ -494,6 +505,6 @@ from now on. Mostly the effect is that the OS tick interrupt, which has a
 high priority, leaves this high priority level set in the INTC_CPR_PRC0,
 so that effectively no interrupts (including itself) are handled any more.
 Only the code of the idle task is executed any longer.
-
++
 Workaround: Don't open the view of the INTC0 in the debugger when
 debugging a safe-RTOS application. Then the INTC and the code work fine.

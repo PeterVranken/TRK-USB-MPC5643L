@@ -2,7 +2,7 @@
 #define TCX_TESTCONTEXT_INCLUDED
 /**
  * @file tcx_testContext.h
- * Definition of global interface of module tcx_testContext.c
+ * Definition of global interface of module tcx_testContext.S
  *
  * Copyright (C) 2018-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *

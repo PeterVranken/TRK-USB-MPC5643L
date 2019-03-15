@@ -443,7 +443,7 @@ bool prc_initProcesses(bool isProcessConfiguredAry[1+PRC_NO_PROCESSES])
 void prc_scSmplHdlr_suspendProcess(uint32_t pidOfCallingTask, uint32_t PID)
 {
     if(PID != 0  &&  pidOfCallingTask > PID)
-        prc_processAry[PID].state = 0;
+        rtos_OS_suspendProcess(PID);
     else
     {
         /* The calling process doesn't have enough privileges to suspend the aimed process.

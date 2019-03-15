@@ -124,6 +124,7 @@ extern volatile unsigned long long syc_cntISRPit3;
  * Global prototypes
  */
 
-
+/** Entry point into C code. */
+void main(void);
 
 #endif  /* SYC_SYSTEMCONFIGURATION_INCLUDED */

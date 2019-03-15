@@ -369,6 +369,83 @@ static void injectError(void)
         break;
 #endif
 
+#if PRF_ENA_TC_PRF_KOF_TRAP == 1
+    case prf_kof_trap:
+        asm volatile ("twne %%r2, %%r2 /* Must not be trapped */\n\t"
+                      "tweq %%r2, %%r2 /* Should be trapped, IVOR #6 */\n\t"
+                     ::: /* Clobbers */ 
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_TLB_INSTR == 1
+    case prf_kof_tlbInstr:
+        asm volatile ("tlbivax %%r2, %%r13\n\t"
+                     ::: /* Clobbers */ 
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_SPE_INSTR == 1
+    case prf_kof_SPEInstr:
+        asm volatile ("brinc  %%r0, %%r2, %%r13 /* This SPE instruction is permitted */\n\t"
+                      "efsadd %%r0, %%r2, %%r13 /* Float instr. are permitted */\n\t"
+                      "evmra %%r0, %%r2     /* 64 Bit SPE instructions are illegal */\n\t"
+                     ::: /* Clobbers */ "r0"
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_BOOKE_FPU_INSTR == 1
+    case prf_kof_BookEFPUInstr:
+        /* frsp is recognized and correct encoded by the GNU assembler but not disassembled
+           by the P&E debugger in CodeWarrior. Consequently, we don't see an IVOR #7 as
+           aimed by this test case but an IVOR #6, for an illegal instruction. */
+        asm volatile ("frsp 2, 3\n\t"
+                     ::: /* Clobbers */ "cr1"
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_DCACHE_INSTR == 1
+    case prf_kof_dCacheInstr:
+        {
+            /* The instruction dcbz is basically permitted but we don't have a D-cache. */
+            uint32_t dummy;
+            asm volatile ("dcbtst  0, %%r0, %0 /* Executed without exception */\n\t"
+                          "dcbz    %%r0, %0 /* Fails because of missing cache, IVOR #5 */\n\t"
+                         : /* OutputOperands */
+                         : /* InputOperands */ "r" (&dummy)
+                         : /* Clobbers */ "memory"
+                         );
+        }
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_UNDEF_SYS_CALL == 1
+    case prf_kof_undefSysCall:
+        rtos_systemCall(999, 1, 2 ,3, 4, 5, 6, 7, 8);
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_RANDOM_WRITE == 1
+    case prf_kof_randomWrite:
+# error Test case not yet implemented
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_RANDOM_READ == 1
+    case prf_kof_randomRead:
+# error Test case not yet implemented
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_RANDOM_JUMP == 1
+    case prf_kof_randomJump:
+# error Test case not yet implemented
+        break;
+#endif
+
 #if PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC == 1
     case prf_kof_mpuExcBeforeSc:
         asm volatile (".extern  prc_processAry\n\t"
@@ -379,6 +456,51 @@ static void injectError(void)
                       "se_sc\n\t"
                      ::: /* Clobbers */ "r3", "r4"
                      );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INVALID_CRIT_SEC == 1
+    case prf_kof_invalidCritSec:
+# error Test case not yet implemented
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC == 1
+    case prf_kof_leaveCritSec:
+# error Test case not yet implemented
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_OS_RUN_TASK == 1
+    case prf_kof_invokeRtosOsRunTask:
+# error Test case not yet implemented
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INVOKE_IVR_SYSTEM_CALL_BAD_ARGUMENT == 1
+    case prf_kof_invokeIvrSystemCallBadArgument:
+# error Test case not yet implemented
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_SYSTEM_CALL_ALL_ARGUMENTS_OKAY == 1
+    case prf_kof_systemCallAllArgumentsOkay:
+        {
+            const uint8_t u8_4 = 4;
+            static int16_t SDATA_PRC_FAIL(i16_cnt) = 0;
+# error Test case not yet implemented. Implement special system call first
+            int32_t result = rtos_systemCall( PRF_SYSCALL_TEST_ALL_ARGS
+                                            , 1u
+                                            , -2i
+                                            , 3.14f
+                                            , u8_4
+                                            , 'x'
+                                            , &main
+                                            , i16_cnt
+                                            );
+            assert((uint32_t)result == ((uint32_t)~i16_cnt & 0xffffu));
+            ++ i16_cnt;
+        }
         break;
 #endif
 
