@@ -362,14 +362,14 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_RANDOM_WRITE == 1
-    case prf_kof_randomWrite:        /** 500 times at once, to raise likelihood of bad hit */
+    case prf_kof_randomWrite:
         minNoExpectedFailures = 0;
         maxNoExpectedFailures = 3;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_RANDOM_READ == 1
-    case prf_kof_randomRead:         /** 500 times at once, to raise likelihood of bad hit */
+    case prf_kof_randomRead:
         minNoExpectedFailures = 0;
         maxNoExpectedFailures = 1;
         break;

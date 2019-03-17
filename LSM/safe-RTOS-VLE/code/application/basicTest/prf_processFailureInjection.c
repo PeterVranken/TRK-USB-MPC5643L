@@ -26,6 +26,7 @@
  *   prf_task17ms
  *   prf_task1ms
  * Local functions
+ *   random
  *   injectError
  */
 
@@ -105,6 +106,37 @@ static void (* const _pFctPrivilegedInstrInOSRAM)(void) =
 /*
  * Function implementation
  */
+
+/**
+ * Compute a random number in the range 0..#RAND_MAX.
+ *   @return
+ * Get the random number.
+ *   @remark
+ * The implementation of the function founds on a task call in another process, which makes
+ * it quite expensive in terms of CPU load. Do not use it frequently.
+ */
+static uint32_t random(void)
+{
+    /* We cannot use the C lib (rand()) from this process, which is not the least
+       privileged process. We abuse the reporting process to run the function. This
+       requires that the called function doesn't return a negative result - which is
+       normally the case for rand().
+         The flipside is that the most signficant bit of the returned number shall never be
+       set.
+         Note, the C lib function is invoked with two arguments in r3 (PID) and r4
+       (taskParam=0). This is a result from the improper function pointer type cast made
+       here, but doesn't harm. This is just a test software, not a product. */
+    const prc_userTaskConfig_t userTaskConfig = { .taskFct = (prc_taskFct_t)rand
+                                                  , .tiTaskMax = 0
+                                                  , .PID = 1
+                                                };
+    int32_t resultCLibCall = rtos_runTask(&userTaskConfig, /* taskParam */ 0 /* Not used */);
+    assert(resultCLibCall > 0);
+    return (uint32_t)resultCLibCall;
+
+} /* End of random */
+
+
 
 /**
  * Implementation of the intentionally produced failures.
@@ -430,19 +462,119 @@ static void injectError(void)
 
 #if PRF_ENA_TC_PRF_KOF_RANDOM_WRITE == 1
     case prf_kof_randomWrite:
-# error Test case not yet implemented
+        {
+            unsigned int u;
+            for(u=0; u<500; ++u)
+            {
+                /* We have three interesting address areas to write to, ROM: 0, 2^20 Byte,
+                   RAM: 0x40000000, 2^17 Byte, peripheral: 0xf0000000, 2^28 Byte. We use 2
+                   Bit from the random number to select tone of the three blocks and use
+                   n+1 Bit for the address in the block, where n is the number of
+                   physically available bits, so that that we have both, potentially
+                   forbidden physically available memory or unequipped memory. */
+#if RAND_MAX < 0x7fffffff
+# error Number of available random bits too little
+#endif
+                uint32_t address = random()
+                       , area = (address & 0x60000000) >> 29
+                       , word = random();
+                switch(area)
+                {
+                case 0:
+                    /* ROM */
+                    *(volatile uint32_t*)(0x00000000 + (address & 0x1fffff)) = word;
+                    break;
+                    
+                case 1:
+                    /* RAM */
+                    *(volatile uint32_t*)(0x40000000 + (address & 0x3ffff)) = word;
+                    break;
+                
+                case 2:
+                case 3:
+                    /* Peripherals */
+                    *(volatile uint32_t*)(0xf0000000 + (address & 0x0fffffff)) = word;
+                    break;
+
+                default:
+                    assert(false);
+                }
+            } /* End for(Several write attempts, until first exception) */                
+        }
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_RANDOM_READ == 1
     case prf_kof_randomRead:
-# error Test case not yet implemented
+        {
+            unsigned int u;
+            volatile unsigned int u32Dummy ATTRIB_UNUSED;
+            for(u=0; u<500; ++u)
+            {
+                /* Random address is identical to test case prf_kof_randomWrite. */
+                uint32_t address = random()
+                       , area = (address & 0x60000000) >> 29;
+                switch(area)
+                {
+                case 0:
+                    /* ROM */
+                    u32Dummy = *(volatile uint32_t*)(0x00000000 + (address & 0x1fffff));
+                    break;
+                    
+                case 1:
+                    /* RAM */
+                    u32Dummy = *(volatile uint32_t*)(0x40000000 + (address & 0x3ffff));
+                    break;
+                
+                case 2:
+                case 3:
+                    /* Peripherals */
+                    u32Dummy = *(volatile uint32_t*)(0xf0000000 + (address & 0x0fffffff));
+                    break;
+
+                default:
+                    assert(false);
+                }
+            } /* End for(Several read attempts, until first exception) */                
+        }
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_RANDOM_JUMP == 1
     case prf_kof_randomJump:
-# error Test case not yet implemented
+        {
+            unsigned int u;
+            for(u=0; u<500; ++u)
+            {
+                /* Random address is identical to test case prf_kof_randomWrite. */
+                uint32_t address = random()
+                       , area = (address & 0x60000000) >> 29;
+                switch(area)
+                {
+                case 0:
+                    /* ROM */
+                    address = 0x00000000 + (address & 0x1fffff);
+                    break;
+                    
+                case 1:
+                    /* RAM */
+                    address = 0x40000000 + (address & 0x3ffff);
+                    break;
+                
+                case 2:
+                case 3:
+                    /* Peripherals */
+                    address = 0xf0000000 + (address & 0x0fffffff);
+                    break;
+
+                default:
+                    assert(false);
+                }
+                
+                ((void (*)(void))address)();
+
+            } /* End for(Several read attempts, until first exception) */                
+        }
         break;
 #endif
 

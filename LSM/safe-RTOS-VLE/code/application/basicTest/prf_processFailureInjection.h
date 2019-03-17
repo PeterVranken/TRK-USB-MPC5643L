@@ -37,24 +37,24 @@
    in the code flow. Therefore it is important to have the possibility to selectively
    disable those test cases during development. */
 #define PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR                 1
-#define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR                1//0
-#define PRF_ENA_TC_PRF_KOF_NO_FAILURE                           1//1
-#define PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR                      1//1
-#define PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR                     1//1
-#define PRF_ENA_TC_PRF_KOF_CALL_OS_API                          1//1
-#define PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT            1//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA                        1//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA                1//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_ROM                            1//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_PERIPHERAL                     1//1
-#define PRF_ENA_TC_PRF_KOF_READ_PERIPHERAL                      1//1
-#define PRF_ENA_TC_PRF_KOF_INFINITE_LOOP                        1//1
-#define PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE                     1//1
-#define PRF_ENA_TC_PRF_KOF_MISALIGNED_READ                      1//1
-#define PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW                       1//0
-#define PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM                   1//0
-#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT                           1//0
-#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT                  1//0
+#define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR                0
+#define PRF_ENA_TC_PRF_KOF_NO_FAILURE                           1
+#define PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR                      1
+#define PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR                     1
+#define PRF_ENA_TC_PRF_KOF_CALL_OS_API                          1
+#define PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT            1
+#define PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA                        1
+#define PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA                1
+#define PRF_ENA_TC_PRF_KOF_WRITE_ROM                            1
+#define PRF_ENA_TC_PRF_KOF_WRITE_PERIPHERAL                     1
+#define PRF_ENA_TC_PRF_KOF_READ_PERIPHERAL                      1
+#define PRF_ENA_TC_PRF_KOF_INFINITE_LOOP                        1
+#define PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE                     1
+#define PRF_ENA_TC_PRF_KOF_MISALIGNED_READ                      1
+#define PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW                       0
+#define PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM                   0
+#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT                           0
+#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT                  0
 #define PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU                   1
 #define PRF_ENA_TC_PRF_KOF_READ_SPR                             1
 #define PRF_ENA_TC_PRF_KOF_WRITE_SPR                            1
@@ -71,9 +71,9 @@
 #define PRF_ENA_TC_PRF_KOF_BOOKE_FPU_INSTR                      1
 #define PRF_ENA_TC_PRF_KOF_DCACHE_INSTR                         1
 #define PRF_ENA_TC_PRF_KOF_UNDEF_SYS_CALL                       1
-#define PRF_ENA_TC_PRF_KOF_RANDOM_WRITE                         0
-#define PRF_ENA_TC_PRF_KOF_RANDOM_READ                          0
-#define PRF_ENA_TC_PRF_KOF_RANDOM_JUMP                          0
+#define PRF_ENA_TC_PRF_KOF_RANDOM_WRITE                         1
+#define PRF_ENA_TC_PRF_KOF_RANDOM_READ                          1
+#define PRF_ENA_TC_PRF_KOF_RANDOM_JUMP                          1
 #define PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC                    1
 #define PRF_ENA_TC_PRF_KOF_INVALID_CRIT_SEC                     0 /* Disregard priority
                                                                      boundaries */
