@@ -1088,6 +1088,12 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
                               , uintptr_t taskParam
                               )
 {
+    /// @todo Offering this ystem call makes by principal all processes vulnerable, which
+    // do not have highest privileges: A failing, straying process can always hit some ROM
+    // code executing the system call with arbitrary register contents, which can then lead
+    // to errors in a otherwise correct process. This is not only theory but has been
+    // proven by random test cases. Let's have a somehow configurable min-PID for this
+    // service.
     if(sc_checkUserCodeReadPtr(pUserTaskConfig, sizeof(prc_userTaskConfig_t))
        &&  pidOfCallingTask > pUserTaskConfig->PID
       )

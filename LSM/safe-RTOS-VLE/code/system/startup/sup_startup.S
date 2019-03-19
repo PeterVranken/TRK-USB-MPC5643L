@@ -440,11 +440,12 @@ initExceptionHandlers:
     e_or2i      r3, ivr_ivor1Handler@l
     mtspr       401, r3     /* IVOR1 Machine check (non-maskable interrupt) */
 
-    e_lis       r3, sup_IVOR2trap@h
-    e_or2i      r3, sup_IVOR2trap@l
+    e_lis       r3, ivr_ivor2Handler@h
+    e_or2i      r3, ivr_ivor2Handler@l
     mtspr       402, r3     /* IVOR2 Data storage */
-    e_lis       r3, sup_IVOR3trap@h
-    e_or2i      r3, sup_IVOR3trap@l
+    
+    e_lis       r3, ivr_ivor3Handler@h
+    e_or2i      r3, ivr_ivor3Handler@l
     mtspr       403, r3     /* IVOR3 Instruction storage */
 
     e_lis       r3, ivr_ivor4Handler@h
@@ -554,6 +555,7 @@ sup_IVOR2trap:
     se_b        sup_IVOR2trap   /* Data Storage interrupt handler */
 
 
+#if 0
 /**
  *   @func sup_IVOR3trap
  * Exception handler IVOR3 for the Instruction Storage interrupt. This trap is taken if
@@ -563,10 +565,12 @@ sup_IVOR2trap:
     .p2align    4
 sup_IVOR3trap:
     se_b        sup_IVOR3trap   /* Instruction Storage interrupt handler */
+#endif
 
 
 /* Note, there's no default IVOR4 trap since we always install a real trap handler for the
    inevitable external interrupt handling. */
+
 
 #if 0
 /**

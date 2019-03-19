@@ -44,8 +44,10 @@
  * Data definitions
  */
  
-/** A Boolean flag, which indicates, whether an assertion has fired since reset. */
-volatile bool assert_assertionFired SECTION(.data.OS.assert_assertionFired) = false;
+/** The number of passed assert macros with \a false condition. If the assert function is
+    configured to halt the SW in case (see #ASSERT_FAILURE_BEHAVIOR) then it becomes a
+    Boolean flag, which indicates, whether an assertion has fired since reset. */
+volatile uint32_t assert_noOccurances SECTION(.data.OS.assert_noOccurances) = 0;
 
 /** If an assertion has fired: The name of the causing source file. Otherwise NULL. */
 volatile const char *assert_fileName SECTION(.data.OS.assert_fileName) = NULL;
@@ -58,6 +60,9 @@ volatile signed int assert_line SECTION(.data.OS.assert_line) = -1;
  
 /** If an assertion has fired: The failing condition. Otherwise NULL. */
 volatile const char *assert_expression SECTION(.data.OS.assert_expression) = NULL;
+
+/** If an assertion has fired: The failing process. Otherwise 0xff. */
+volatile uint8_t assert_PID SECTION(.data.OS.assert_PID) = 0xff;
 
 
 /*

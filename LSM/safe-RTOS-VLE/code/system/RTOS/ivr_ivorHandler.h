@@ -46,9 +46,9 @@
 #define IVR_CAUSE_TASK_ABBORTION_MACHINE_CHECK      1 /* IVOR #1, Machine check, mostly memory
                                                          protection */
 #define IVR_CAUSE_TASK_ABBORTION_DEADLINE           2 /* Task exceeded deadline */
-#define IVR_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG   3 /* Task referred to invalid system
-                                                         call */ 
-#define IVR_CAUSE_TASK_ABBORTION_USER_ABORT         4 /* User code returned error code */
+#define IVR_CAUSE_TASK_ABBORTION_DI_STORAGE         3 /* IVOR #2/#3, MMU storage error */
+#define IVR_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG   4 /* Task referred to invalid system
+                                                         call */
 #define IVR_CAUSE_TASK_ABBORTION_ALIGNMENT          5 /* IVOR #5, Alignment */
 #define IVR_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT  6 /* IVOR #6, mostly illegal instruction */
 #define IVR_CAUSE_TASK_ABBORTION_FPU_UNAVAIL        7 /* IVOR #7, Book E FPU instructions */
@@ -56,6 +56,7 @@
 #define IVR_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION    9 /* IVOR #14, TBL instr access mismatch */
 #define IVR_CAUSE_TASK_ABBORTION_TRAP              10 /* IVOR #15, trap and debug events */
 #define IVR_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION   11 /* IVOR #32, use of SPE instruction */
+#define IVR_CAUSE_TASK_ABBORTION_USER_ABORT        12 /* User code returned error code */
 
 /* Define the offsets of fields in struct prc_userTaskDesc_t. */
 #define SIZE_OF_TASK_DESC       4

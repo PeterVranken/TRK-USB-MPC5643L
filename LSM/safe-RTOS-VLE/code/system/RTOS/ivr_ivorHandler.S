@@ -24,6 +24,8 @@
  */
 /* Module interface
  *   ivr_ivor1Handler
+ *   ivr_ivor2Handler
+ *   ivr_ivor3Handler
  *   ivr_ivor4Handler
  *   ivr_runInitTask
  *   ivr_runUserTask
@@ -221,11 +223,13 @@ ivr_ivor1Handler:
        the IVOR #4 handler as soon as the fault handling proceeds to the point where
        MSR[EE] returns to 1. */
     e_lis       r3, ivr_cntIvor1PreemptsIvor4@ha
-    e_lwz       r0, ivr_cntIvor1PreemptsIvor4@l(r3)
-    se_addi     r0, 1   
-    e_stw       r0, ivr_cntIvor1PreemptsIvor4@l(r3)
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor4@l(r3)
+    e_cmpl16i   r0, 0xffff
     se_b        ivr1_isUserCodeIvor1Exception
-
+    se_addi     r0, 1   
+    e_sth       r0, ivr_cntIvor1PreemptsIvor4@l(r3)
+    se_b        ivr1_isUserCodeIvor1Exception
+    
 ivr1_testForDblExc:
     /* If we get here then we have a preemption of supervisor code, which may be a double
        exception or a fault in the OS. If it is a double exception then the address of
@@ -237,6 +241,38 @@ ivr1_testForDblExc:
     se_btsti    r0, 17          /* Test bit "problem state" */
     se_beq      ivr_isOSCodeException /* It's already clear, it can't be a double exception */
     
+ivr1_testIvor2:
+    e_lis       r0, ivr_ivor2Handler@ha
+    e_add16i    r0, r0, ivr_ivor2Handler@l  /* r0: Address Alignment Interrupt handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor3
+
+    /* IVOR #2 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #2. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor2@ha
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor2@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
+    se_addi     r0, 1
+    e_sth       r0, ivr_cntIvor1PreemptsIvor2@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+    
+ivr1_testIvor3:
+    e_lis       r0, ivr_ivor3Handler@ha
+    e_add16i    r0, r0, ivr_ivor3Handler@l  /* r0: Address Alignment Interrupt handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor5
+
+    /* IVOR #3 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #3. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor3@ha
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor3@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
+    se_addi     r0, 1
+    e_sth       r0, ivr_cntIvor1PreemptsIvor3@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+
 ivr1_testIvor5:
     e_lis       r0, ivr_ivor5Handler@ha
     e_add16i    r0, r0, ivr_ivor5Handler@l  /* r0: Address Alignment Interrupt handler */
@@ -246,11 +282,17 @@ ivr1_testIvor5:
     /* IVOR #5 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #5. */
     e_lis       r3, ivr_cntIvor1PreemptsIvor5@ha
-    e_lwz       r0, ivr_cntIvor1PreemptsIvor5@l(r3)
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor5@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_stw       r0, ivr_cntIvor1PreemptsIvor5@l(r3)
+    e_sth       r0, ivr_cntIvor1PreemptsIvor5@l(r3)
     se_b        ivr1_continuePreemptedIvor
     
+    .global     ivr_isOSCodeException   /* Just to have it in the map file */
+ivr_isOSCodeException:
+    se_bne      .       /* Halt SW execution if it is an error in operating system itself */
+
 ivr1_testIvor6:
     e_lis       r0, ivr_ivor6Handler@ha
     e_add16i    r0, r0, ivr_ivor6Handler@l  /* r0: Address Program Interrupt handler */
@@ -260,11 +302,13 @@ ivr1_testIvor6:
     /* IVOR #6 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #6. */
     e_lis       r3, ivr_cntIvor1PreemptsIvor6@ha
-    e_lwz       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_stw       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
+    e_sth       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
     se_b        ivr1_continuePreemptedIvor
-    
+
 ivr1_testIvor7:
     e_lis       r0, ivr_ivor7Handler@ha
     e_add16i    r0, r0, ivr_ivor7Handler@l  /* r0: Address Floating-point unavail handler */
@@ -274,80 +318,17 @@ ivr1_testIvor7:
     /* IVOR #7 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #7. */
     e_lis       r3, ivr_cntIvor1PreemptsIvor7@ha
-    e_lwz       r0, ivr_cntIvor1PreemptsIvor7@l(r3)
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor7@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_stw       r0, ivr_cntIvor1PreemptsIvor7@l(r3)
-    se_b        ivr1_continuePreemptedIvor
-    
-ivr1_testIvor8:
-    e_lis       r0, ivr_ivor8Handler@ha
-    e_add16i    r0, r0, ivr_ivor8Handler@l  /* r0: Address System call handler */
-    se_cmp      r0, r3          /* Both need to match to satisfy */
-    se_bne      ivr1_testIvor13
+    e_sth       r0, ivr_cntIvor1PreemptsIvor7@l(r3)
 
-    /* An IVOR #8 system call had started execution when being preempted by the imprecise
-       IVOR #1. IVOR #8 doesn't need to be proceeded, it surely belongs to the failing
-       process, which is aborted by the exception. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor8@ha
-    e_lwz       r0, ivr_cntIvor1PreemptsIvor8@l(r3)
-    se_addi     r0, 1
-    e_stw       r0, ivr_cntIvor1PreemptsIvor8@l(r3)
-    se_b        ivr1_isUserCodeIvor1Exception
-    
-    /// @todo IVOR #13 doesn't likely have a double exception. It should not come to an
-    // external bus cycle triggering the MPU. We saw double exceptions for IVOR #14, which
-    // may be explained by the I-cache initiating a bus cycle despite of the (synchronous)
-    // MMU exception.
-ivr1_testIvor13:
-    e_lis       r0, ivr_ivor13Handler@ha
-    e_add16i    r0, r0, ivr_ivor13Handler@l  /* r0: Address Floating-point unavail handler */
-    se_cmp      r0, r3          /* Both need to match to satisfy */
-    se_bne      ivr1_testIvor14
-
-    /* IVOR #13 started handling the ECU exception when being preempted by the imprecise
-       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #13. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor13@ha
-    e_lwz       r0, ivr_cntIvor1PreemptsIvor13@l(r3)
-    se_addi     r0, 1
-    e_stw       r0, ivr_cntIvor1PreemptsIvor13@l(r3)
-    se_b        ivr1_continuePreemptedIvor
-    
-ivr1_testIvor14:
-    e_lis       r0, ivr_ivor14Handler@ha
-    e_add16i    r0, r0, ivr_ivor14Handler@l  /* r0: Address Floating-point unavail handler */
-    se_cmp      r0, r3          /* Both need to match to satisfy */
-    se_bne      ivr1_testIvor32
-
-    /* IVOR #14 started handling the ECU exception when being preempted by the imprecise
-       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #14. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor14@ha
-    e_lwz       r0, ivr_cntIvor1PreemptsIvor14@l(r3)
-    se_addi     r0, 1
-    e_stw       r0, ivr_cntIvor1PreemptsIvor14@l(r3)
-    se_b        ivr1_continuePreemptedIvor
-    
-ivr1_testIvor32:
-    e_lis       r0, ivr_ivor32Handler@ha
-    e_add16i    r0, r0, ivr_ivor32Handler@l  /* r0: Address SPE Unavail Interrupt handler */
-    se_cmp      r0, r3          /* Both need to match to satisfy */
-    
-    .global     ivr_isOSCodeException   /* Just to have it in the map file */
-ivr_isOSCodeException:
-    se_bne      .       /* Halt SW execution if it is an error in operating system itself */
-
-    /* IVOR #32 started handling the ECU exception when being preempted by the imprecise
-       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #32. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor32@ha
-    e_lwz       r0, ivr_cntIvor1PreemptsIvor32@l(r3)
-    se_addi     r0, 1
-    e_stw       r0, ivr_cntIvor1PreemptsIvor32@l(r3)
-       
 ivr1_continuePreemptedIvor:
     e_lis       r0, 0x32f0  /* 0x32efffff: Mask to reset anticipated exception syndromes */
     se_subi     r0, 1
     mtspr       SPR_MCSR, r0 /* SPR 572 = MCSR, MC syndrome register. Acknowledge exception. */
     se_rfmci
-
 
 ivr1_isUserCodeIvor1Exception:
     e_lis       r0, 0x32f0  /* 0x32efffff: Mask to reset anticipated exception syndromes */
@@ -358,25 +339,172 @@ ivr1_isUserCodeIvor1Exception:
     se_li       r3, IVR_CAUSE_TASK_ABBORTION_MACHINE_CHECK
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
+ivr1_testIvor8:
+    e_lis       r0, ivr_ivor8Handler@ha
+    e_add16i    r0, r0, ivr_ivor8Handler@l  /* r0: Address System call handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor13
+
+    /* An IVOR #8 system call had started execution when being preempted by the imprecise
+       IVOR #1. IVOR #8 doesn't need to be proceeded, it surely belongs to the failing
+       process, which is aborted by the exception. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor8@ha
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor8@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_isUserCodeIvor1Exception
+    se_addi     r0, 1
+    e_sth       r0, ivr_cntIvor1PreemptsIvor8@l(r3)
+    se_b        ivr1_isUserCodeIvor1Exception
+    
+ivr1_testIvor13:
+    e_lis       r0, ivr_ivor13Handler@ha
+    e_add16i    r0, r0, ivr_ivor13Handler@l  /* r0: Address Floating-point unavail handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor14
+
+    /* IVOR #13 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #13. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor13@ha
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor13@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
+    se_addi     r0, 1
+    e_sth       r0, ivr_cntIvor1PreemptsIvor13@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+
+ivr1_testIvor14:
+    e_lis       r0, ivr_ivor14Handler@ha
+    e_add16i    r0, r0, ivr_ivor14Handler@l  /* r0: Address Floating-point unavail handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor15
+
+    /* IVOR #14 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #14. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor14@ha
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor14@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
+    se_addi     r0, 1
+    e_sth       r0, ivr_cntIvor1PreemptsIvor14@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+
+ivr1_testIvor15:
+    e_lis       r0, ivr_ivor15Handler@ha
+    e_add16i    r0, r0, ivr_ivor15Handler@l  /* r0: Address Floating-point unavail handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr1_testIvor32
+
+    /* IVOR #15 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #15. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor15@ha
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor15@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
+    se_addi     r0, 1
+    e_sth       r0, ivr_cntIvor1PreemptsIvor15@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+
+ivr1_testIvor32:
+    e_lis       r0, ivr_ivor32Handler@ha
+    e_add16i    r0, r0, ivr_ivor32Handler@l  /* r0: Address SPE Unavail Interrupt handler */
+    se_cmp      r0, r3          /* Both need to match to satisfy */
+    se_bne      ivr_isOSCodeException
+    
+    /* IVOR #32 started handling the ECU exception when being preempted by the imprecise
+       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #32. */
+    e_lis       r3, ivr_cntIvor1PreemptsIvor32@ha
+    e_lhz       r0, ivr_cntIvor1PreemptsIvor32@l(r3)
+    e_cmpl16i   r0, 0xffff
+    se_beq      ivr1_continuePreemptedIvor
+    se_addi     r0, 1
+    e_sth       r0, ivr_cntIvor1PreemptsIvor32@l(r3)
+    se_b        ivr1_continuePreemptedIvor
+
 /* End of ivr_ivor1Handler */
 
 
-/** An IVOR #2 handler, Data Storage, is not required. This exception cannot be caused by
-    faulty user code. Bad system configuration is needed, which is in the sphere of the OS
-    code. See CRM, 5.1.2, Table 5-3, p. 164:
-    - Access control.
-    - Byte ordering due to misaligned access across page boundary to pages with mismatched
-      E bits
-    - Cache locking exception */
+/**
+ *   @func ivr_ivor2Handler
+ * This is the interrupt handler for the MCU trap #2, Instruction Storage Interrupt. See Core
+ * RM, 5.7.4, p. 181. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 164):
+ *  - Access control.
+ *  - Byte ordering due to misaligned access across page boundary to pages with mismatched
+ *    E bits
+ *  - Cache locking exception
+ *   Most likely, this exception cannot be caused by faulty user code and due to the chosen
+ * system configuration, which is in the sphere of the OS code and unaccessible by user
+ * code. We don't have any Book E pages defined and cache locking is not available to user
+ * code. However, and because of the observed, also unexpected IVOR #3 exception, we better
+ * have this handler available.
+ */
+    .section    .text.ivor
+    .global     ivr_ivor2Handler
+    .p2align    4
+ivr_ivor2Handler:
+    /* We don't need a preamble with storage or register contexts of preempted context: We
+       are anyway going to abort the execution of that context.
+         We must not rely on any register content as got from the preempted context: It
+       can be corrupted as effect of the fault, which let to the exception. This holds in
+       particular for the EABI registers r2 and r13 and the stack pointer. */
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
+    se_btsti    r0, 17      /* Test bit "problem state" */
+    se_beq      .           /* assert(Problem state == user) */
+    mfspr       r0, SPR_ESR
+    e_lis       r3, 0xff4d  /* 0x00b200a0: Mask of possibly set ESR bits */
+    e_or2i      r3, 0xff5f
+    se_and      r0, r3
+    mtspr       SPR_ESR, r0 /* SPR 62 = ESR, exception syndrome register. Acknowledge excep. */
     
-/** An IVOR #3 handler, Instruction Storage, is not required. This exception cannot be
-    caused by faulty user code. Bad system configuration is needed, which is in the sphere
-    of the OS code. See CRM, 5.1.2, Table 5-3, p. 164:
-    - Access control.
-    - Byte ordering due to misaligned instruction across page boundary to pages with
-      mismatched VLE bits, or access to page with VLE set, and E indicating little-endian.
-    - Misaligned Instruction fetch due to a change of flow to an odd half-word instruction
-      boundary on a Power ISA (non-VLE) instruction page */
+    /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
+    
+    se_li       r3, IVR_CAUSE_TASK_ABBORTION_DI_STORAGE
+    e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
+
+/* End of ivr_ivor2Handler */
+
+
+
+
+
+/**
+ *   @func ivr_ivor3Handler
+ * This is the interrupt handler for the MCU trap #3, Instruction Storage Interrupt. See Core
+ * RM, 5.7.4, p. 181. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 164):
+ *  - Access control.
+ *  - Byte ordering due to misaligned instruction across page boundary to pages with
+ *    mismatched VLE bits, or access to page with VLE set, and E indicating little-endian.
+ *  - Misaligned Instruction fetch due to a change of flow to an odd half-word instruction
+ *    boundary on a Power ISA (non-VLE) instruction page
+ *   We don't have any Book E pages defined but the exception has been observed when trying
+ * to execute peripheral address space.
+ */
+    .section    .text.ivor
+    .global     ivr_ivor3Handler
+    .p2align    4
+ivr_ivor3Handler:
+    /* We don't need a preamble with storage or register contexts of preempted context: We
+       are anyway going to abort the execution of that context.
+         We must not rely on any register content as got from the preempted context: It
+       can be corrupted as effect of the fault, which let to the exception. This holds in
+       particular for the EABI registers r2 and r13 and the stack pointer. */
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
+    se_btsti    r0, 17      /* Test bit "problem state" */
+    se_beq      .           /* assert(Problem state == user) */
+    mfspr       r0, SPR_ESR
+    se_bclri    r0, 14      /* 0x00020022: Mask of possibly set ESR bits */
+    se_bclri    r0, 26
+    se_bclri    r0, 30
+    mtspr       SPR_ESR, r0 /* SPR 62 = ESR, exception syndrome register. Acknowledge excep. */
+    
+    /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
+    
+    se_li       r3, IVR_CAUSE_TASK_ABBORTION_DI_STORAGE
+    e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
+
+/* End of ivr_ivor3Handler */
+
+
+
 
 
 /**
@@ -768,7 +896,6 @@ ivr_scBscHdlr_sysCallUndefined:
 rut_endUserTaskByException:
     /* If an exception jumps here, it'll have loaded r3 with its ID, the cause of
        termination. */
-    /// @todo Why does it load r3 instead of directly r4?
     mfspr       sp, SPR_G0_SVSP     /* Restore SV sp */
 
     /* In case of unexpected task termination, runUsertask returns the negative errorCode.
@@ -797,7 +924,7 @@ rut_saturateCnt:
     se_beq      rut_saturateTotalCnt   /* Avoid wrapping around of failure counter */
     se_stw      r5, O_PDESC_CNTTOT(r6)
 rut_saturateTotalCnt:
-    
+
 rut_endWithoutErr:
     mfspr       r2, SPR_G2_SDA2     /* Repair possibly destroyed .sdata2 base in r2 */
     mfspr       r13, SPR_G1_SDA     /* Repair possibly destroyed .sdata base in r13 */
@@ -887,7 +1014,6 @@ ivr_ivor5Handler:
     mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_beq      .           /* assert(Problem state == user) */
-    /// @todo Globally store TBU/TBL, ESR for diagnosis
     e_lis       r3, 0xff7f  /* 0x008000a0: Mask of possibly set ESR bits: VLEMI (26, 0x20), */
     e_or2i      r3, 0xff5f  /* SPE (24, 0x80) ST (8, 0x00800000) */
     mfspr       r0, SPR_ESR
@@ -1132,10 +1258,11 @@ ivr8_startFullHandler:
          Note: r3 holds the system call result and must not be altered. */
     wrteei      0
     
-    /** Here, we could test the process status. A full sys call handler permits preemtion,
-        therefore a task of higher priority could have run meanwhile and stopped the
-        process of the here ending system call. Similarly, we could check for task deadline
-        exceedance. The information is found sp-relative in the parent stack frame.
+    /** Here, we could test the process status. A full system call handler permits
+        preemtion, therefore a task of higher priority could have run meanwhile and stopped
+        the process of the here ending system call. Similarly, we could check for task
+        deadline exceedance. The information is found sp-relative in the parent stack
+        frame.
           @todo Decide, whether this is required for safety or whether we can wait for the
         next IVOR #4 preemption to check for process termination.
           @todo Remarks in prc_scSmplHdlr_suspendProcess and rtos_suspendProcess point to
@@ -1281,7 +1408,7 @@ ivr_ivor14Handler:
 
 
 
-/// @todo Likely misunderstood: The trap instruction goes into IVOR #6. Comment this function and consider undoing the changes on HID0 and IVOR table in sup_startup.S
+/// @todo Likely misunderstood: The trap instruction goes into IVOR #6. Consider comment this function and undoing the changes on HID0 and IVOR table in sup_startup.S
 /**
  *   @func ivr_ivor15Handler
  * This is the interrupt handler for the MCU trap #15, Debug Interrupt. See Core

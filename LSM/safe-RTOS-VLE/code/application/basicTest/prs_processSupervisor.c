@@ -454,8 +454,16 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
+uint32_t SDATA_PRC_SV(prs_tmpCntCalls) = 0
+       , SDATA_PRC_SV(prs_tmpBreakAtCntCalls) = 0xffffffff;
+
 int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
 {
+    if(prs_tmpCntCalls == prs_tmpBreakAtCntCalls)
+        prs_tmpCntCalls = 0;
+    else
+        ++ prs_tmpCntCalls;
+
     /** @todo Long lasting test could run into the saturation of the failure counter. We
         must not interpret this unexpected behavior. */
     const unsigned int noFailures = rtos_getNoTotalTaskFailure(syc_pidFailingTasks);
@@ -532,6 +540,7 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
     // this so often: Pi stacks are any way protected and OS could be checked every 100ms
     /// @todo Add SW alive counters in all processes/tasks and add a need-to-change
     // condition here
+#if 0
     bool isOk = rtos_getNoActivationLoss(syc_idEvTest) == 0
                 &&  rtos_getNoActivationLoss(syc_idEvPIT2) == 0
                 &&  rtos_getNoTotalTaskFailure(syc_pidSupervisor) == 0
@@ -539,6 +548,29 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
                 &&  rtos_getStackReserve(syc_pidSupervisor) >= 512
                 &&  rtos_getStackReserve(syc_pidReporting) >= 512
                 &&  rtos_getStackReserve(/* PID */ 0 /* OS */) >= 3096;
+#else
+    static uint32_t SDATA_P3(noActLossEvTest_) = 0;
+    static uint32_t SDATA_P3(noActLossEvPIT2_) = 0;
+    static uint32_t SDATA_P3(noTaskFailSV) = 0;
+    static uint32_t SDATA_P3(noTaskFailRep) = 0;
+    static uint32_t SDATA_P3(stackResSV) = 0;
+    static uint32_t SDATA_P3(stackResRep) = 0;
+    static uint32_t SDATA_P3(stackResOS) = 0;
+    noActLossEvTest_ = rtos_getNoActivationLoss(syc_idEvTest);
+    noActLossEvPIT2_ = rtos_getNoActivationLoss(syc_idEvPIT2);
+    noTaskFailSV = rtos_getNoTotalTaskFailure(syc_pidSupervisor);
+    noTaskFailRep = rtos_getNoTotalTaskFailure(syc_pidReporting);
+    stackResSV = rtos_getStackReserve(syc_pidSupervisor);
+    stackResRep = rtos_getStackReserve(syc_pidReporting);
+    stackResOS = rtos_getStackReserve(/* PID */ 0 /* OS */);
+    bool isOk = noActLossEvTest_ == 0
+                &&  noActLossEvPIT2_ == 0
+                &&  noTaskFailSV == 0
+                &&  noTaskFailRep == 0
+                &&  stackResSV >= 512
+                &&  stackResRep >= 512
+                &&  stackResOS >= 3096;
+#endif
 
     if(isOk)
     {
@@ -548,6 +580,13 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
         lbd_setLED(lbd_led_D4_grn, /* isOn */ (cnt_+=CNT_STEP) >= 0);
 #undef CNT_STEP
 #undef TI_BLINK_IN_MS
+
+        /* The LED driver is not protected in the sense that it grants different privileges
+           to different processes. This makes it available to a failing, straying task. We
+           indeed see occasional LED switch commands due to arbitrary code execution in the
+           failing failure injection task. We correct the LED status regularly to maintain
+           the signaling effect of the LED. */
+        lbd_setLED(lbd_led_D4_red, /* isOn */ false);
     }
     else
     {

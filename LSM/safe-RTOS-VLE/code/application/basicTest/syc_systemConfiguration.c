@@ -404,7 +404,7 @@ void main(void)
     }
     if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidFailingTasks
                                              , .userTaskFct = prf_taskInjectError
-                                             , .tiTaskMaxInUS = 5000
+                                             , .tiTaskMaxInUS = 2500
                                              }
                          , syc_idEvTest
                          )

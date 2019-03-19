@@ -117,6 +117,16 @@ static void (* const _pFctPrivilegedInstrInOSRAM)(void) =
  */
 static uint32_t random(void)
 {
+#if 1
+    /* This simple implementation of rand() taken from
+       https://code.woboq.org/userspace/glibc/stdlib/random_r.c.html, downloaded on Mar 18,
+       2019. */
+    static uint32_t state[1] SECTION(.sdata.P2.state) = {[0] = 1u};
+    int32_t val = ((state[0] * 1103515245U) + 12345U) & 0x7fffffff;
+    state[0] = (uint32_t)val;
+    
+    return (uint32_t)val;
+#else
     /* We cannot use the C lib (rand()) from this process, which is not the least
        privileged process. We abuse the reporting process to run the function. This
        requires that the called function doesn't return a negative result - which is
@@ -133,7 +143,7 @@ static uint32_t random(void)
     int32_t resultCLibCall = rtos_runTask(&userTaskConfig, /* taskParam */ 0 /* Not used */);
     assert(resultCLibCall > 0);
     return (uint32_t)resultCLibCall;
-
+#endif
 } /* End of random */
 
 
@@ -543,6 +553,10 @@ static void injectError(void)
 #if PRF_ENA_TC_PRF_KOF_RANDOM_JUMP == 1
     case prf_kof_randomJump:
         {
+            /* A call of arbitrary code will lead to an exception with high likelihood.
+               However, we can hit harmless code, too, and safely return here. The loop is
+               not meant a repetition of the test case but aims at letting it virtually
+               always produce a failure. */
             unsigned int u;
             for(u=0; u<500; ++u)
             {
@@ -552,16 +566,16 @@ static void injectError(void)
                 switch(area)
                 {
                 case 0:
+                case 1:
                     /* ROM */
                     address = 0x00000000 + (address & 0x1fffff);
                     break;
                     
-                case 1:
+                case 2:
                     /* RAM */
                     address = 0x40000000 + (address & 0x3ffff);
                     break;
                 
-                case 2:
                 case 3:
                     /* Peripherals */
                     address = 0xf0000000 + (address & 0x0fffffff);
@@ -570,10 +584,20 @@ static void injectError(void)
                 default:
                     assert(false);
                 }
-                
+#ifdef DEBUG
+                /* The debugger can't be hindered from stopping at instruction se_illegal
+                   (0x0000), which unfortunately appears often as memory pattern at
+                   arbitrary addresses. This makes debugging of code containing this test
+                   case almost impossible. We cannot avoid it but can reduce the likelihood
+                   by rejecting addresses where we already see an se_illegal as first
+                   instruction (e.g. zeroized bss sections). Safely catching illegal
+                   instructions is anyway captured by another test case. */
+                if(*(const uint16_t*)address == 0x0000)
+                    continue;
+#endif
                 ((void (*)(void))address)();
 
-            } /* End for(Several read attempts, until first exception) */                
+            } /* End for(Several attempts to execute arbitary code, until first exception) */
         }
         break;
 #endif
@@ -721,9 +745,9 @@ int32_t prf_task1ms(uint32_t PID ATTRIB_UNUSED, uint32_t taskParam)
     ++ _cntTask1ms;
     
     /* Normally, taskParam (counts of starts of this task) and local counter will always
-       match. But since this task belongs to the failing proces ther are potential crashes
-       of this task, too, and we can see a mismatch. We report them as task error and they
-       will be counted as further process errors. */
+       match. But since this task belongs to the failing process there are potential
+       crashes of this task, too, and we can see a mismatch. We report them as task error
+       and they will be counted as further process errors. */
     if(taskParam != cnt_++)
     {
         cnt_ = taskParam+1;
