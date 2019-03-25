@@ -20,7 +20,8 @@ processes without fearing harmful interferences between them. Features:
 * Tasks belong to processes and share the process owned memories
 * Globally shared memory for communication purpose
 * Hardware memory protection to ensure integrity of process owned memories
-* Secured priority ceiling protocol for communication
+* Secured priority ceiling protocol for communication purpose
+* Inter-process function calls for communication purpose
 * Deadline monitoring and activation loss counters for avoidance of
   blocking tasks
 * Exception handling to catch failures like use of privileged, illegal or
@@ -128,7 +129,7 @@ A typical nowadays embedded project consists of a lot of code coming from
 various sources. There may be an Open Source Ethernet stack, an Open
 Source Web server plus self-made Web services, there may be an Open Source
 driver software for a high resolution LCD, a framework for GUIs plus a
-self-designed GUI, there need to the self-made system control software,
+self-designed GUI, there needs to be the self-made system control software,
 possibly a file system for data logging on an SMD storage, the C
 libraries are used, and so on. All in all many hundred thousand lines of
 code.
@@ -141,7 +142,7 @@ temperature sensor, check the temperature against a boundary and to
 control the coil of the main relays, which powers the system. If the
 temperature exceeds a limit or if the temperature reading is somehow
 implausible then the relay is switched off and the entire system
-unpowered. That's all. A few hundred lines of code will typically suffice
+unpowered. That's all. A few hundred lines of code can already suffice
 for such a task.
 
 All the rest of the software is not safety relevant. A fault in this
@@ -188,16 +189,16 @@ All other technical requirements are derived from this one.
 
 The basic idea of safe-RTOS is to organize all user tasks in groups of
 such, the processes. Each process has write-access to its own, disjunct
-RAM areas. (And to one additional shared area, which all process have write
-access to.) Writing to any other address of the address space is a
+RAM areas. (And to one additional shared area, which all processes have
+write access to.) Writing to any other address of the address space is a
 privilege violation.
 
 Reading RAM and ROM is known to be free of side-effects and can't do any
 harm to another process -- it's therefore generally permitted.
 
-Reading MCU registers (CPU supervisor registers and I/O registers) can
-have side-effects and is therefore generally forbidden. Any attempt to do
-so is considered a privilege violation.
+Reading non-user MCU registers (CPU supervisor registers and I/O
+registers) can have side-effects and is therefore generally forbidden. Any
+attempt to do so is considered a privilege violation.
 
 Any attempt to write to a non-user MCU register (CPU supervisor register
 or I/O register) is considered a privilege violation.
@@ -281,9 +282,9 @@ break the entire safety concept and the RTOS implementation can't help it.
 
 safe-RTOS's driver model specifies three "conformance classes", basic,
 simple and full. They offer a trade off between driver performance in
-terms of CPU load and ease of programming. The by far leanest "basic"
-implementation needs to be done in assembler, the other two classes can be
-implemented in C.
+terms of CPU load and attainable behavior and ease of programming. The by
+far leanest and most powerful "basic" implementation needs to be done in
+assembler, the other two classes can be implemented in C.
 
 Note, adding an I/O driver to the RTOS is not only a matter of complying
 with the driver model. Any programming error can potentially break the
@@ -495,7 +496,7 @@ Only VLE code is supported.
 
 == Known issues
 
-1. The manual of the RTOS has not yet been written.
+1. The manual of the RTOS has not been written yet.
 
 2. Debugger: If the view shows the INTC0 register set then the debugger
 harmfully affects program execution and the RTOS fails: The write to

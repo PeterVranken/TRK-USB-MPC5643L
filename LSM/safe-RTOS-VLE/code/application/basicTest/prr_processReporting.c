@@ -25,6 +25,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
+ *   prr_taskReportWatchdogStatus
+ *   prr_taskReportFailure
  *   prr_taskReporting
  *   prr_taskTestContextSwitches
  * Local functions
@@ -75,6 +77,77 @@ uint64_t SDATA_PRC_REPORT(prr_tiMaxDurationPrintf) = 0;
 /*
  * Function implementation
  */
+
+
+/**
+ * Task function, which is regularly activated by the watchdog task. Used to print the
+ * current status.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
+ *   @param pStatusInfo
+ * An object with status information to print by reference. The reporting task has only
+ * read access to the data.
+ */
+int32_t prr_taskReportWatchdogStatus( uint32_t PID ATTRIB_UNUSED
+                                    , const prr_testStatus_t *pStatusInfo
+                                    )
+{
+    printf( "prr_taskReportWatchdogStatus: %lu test cycles successfully done\r\n"
+          , pStatusInfo->noTestCycles
+          );
+    return 0;
+    
+} /* End of prr_taskReportWatchdogStatus */
+
+
+
+/**
+ * Task function, which is activated once by the watchdog task on entry into the halted
+ * state. Used to print the error information as last action.
+ *   @return
+ * If the task function returns a negative value then the task execution is counted as
+ * error in the process.
+ *   @param PID
+ * A user task function gets the process ID as first argument.
+ *   @param pFailureInfo
+ * An object with error information to print by reference. The reporting task has only
+ * read access to the data.
+ *   @remark
+ * In this sample application, the watchdog task enters an infinite loop in case of a
+ * recognized error. Therefore, the serial output will not safely be able to print the
+ * information if its interrupt level is not higher than the priority of the watchdog task.
+ */
+int32_t prr_taskReportFailure( uint32_t PID ATTRIB_UNUSED
+                             , const prr_failureStatus_t *pFailureInfo
+                             )
+{
+    printf( "prr_taskReportFailure: Watchdog is about to halt the software after %lu"
+            " test cycles!\r\n"
+            "  noActLossEvTest: %lu\r\n"
+            "  noActLossEvPIT2: %lu\r\n"
+            "  noTaskFailSV: %lu\r\n"
+            "  noTaskFailRep: %lu\r\n"
+            "  stackResSV: %lu\r\n"
+            "  stackResRep: %lu\r\n"
+            "  stackResOS: %lu\r\n"
+          , pFailureInfo->noTestCycles
+          , pFailureInfo->noActLossEvTest
+          , pFailureInfo->noActLossEvPIT2
+          , pFailureInfo->noTaskFailSV
+          , pFailureInfo->noTaskFailRep
+          , pFailureInfo->stackResSV
+          , pFailureInfo->stackResRep
+          , pFailureInfo->stackResOS
+          );
+
+    return 0;
+    
+} /* End of prr_taskReportFailure */
+
+
 
 /**
  * Task function, cyclically activated every about 1000 ms. Used to print status

@@ -89,14 +89,6 @@
     minPIDToTriggerThisEvent. */
 #define PRC_EVENT_NOT_USER_TRIGGERABLE  ((PRC_NO_PROCESSES)+1u)
 
-/** \cond Two nested macros are used to convert a constant expression to a string which can be
-    used e.g. as part of some inline assembler code.\n
-      If for example PI is defined to be (355/113) you could use STR(PI) instead of
-    "(355/113)" in the source code. ARG2STR is not called directly. */
-#define ARG2STR(x) #x
-#define STR(x) ARG2STR(x)
-/** \endcond */
-
 
 /**
  * System call wrapper; entry point into operating system function for user code.\n
@@ -239,11 +231,11 @@ unsigned int rtos_createEvent(const rtos_eventDesc_t *pEventDesc);
 /** Task registration. */
 bool rtos_registerTask(const rtos_taskDesc_t *pTaskDesc, unsigned int idEvent);
 
+/** Grant permissions for using the service rtos_runTask() to particular processes. */
+void rtos_grantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID);
+
 /** Kernel initialization. */
 bool rtos_initKernel(void);
-
-/** The operating system's scheduler function. */
-void rtos_onOsTimerTick(void);
 
 /** Software triggered task activation. Can be called from OS context (incl. interrupts). */
 bool rtos_OS_triggerEvent(unsigned int idTask);

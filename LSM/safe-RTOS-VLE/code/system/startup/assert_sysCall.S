@@ -51,10 +51,13 @@
 
 /** Traditional behavior of assert: The SW execution is halted at the first occurrence of an
     assert macro with \a false condition.\n
-      Caution: If this mode is chosen then the entire fault handling system of the RTOS is
-    by principle non-trustable. There's a significant chance that the software halts because
-    of a failure, which is not an assert statement and which would be safely caught and
-    handled with other behavior # of assert. See #ASSERT_FAILURE_BEHAVIOR, too. */
+      This behavior can be chosen if software is functionally tested, which is expected to
+    be error free.\n
+      This behavior must not be used if the software's failure handling is tested, e.g. by
+    purposely injected errors. If this behavior is chosen then the fault handling system of
+    the RTOS is by principle non-trustable. There's a significant chance that the software
+    halts because of unintended entry of a straying task into the assert system call.\n
+      See #ASSERT_FAILURE_BEHAVIOR, too. */
 #define ASSERT_FAILURE_BEHAVIOR_HALT_SW                             1
 
 /** "Safe" behavior of assert: The occurrence of assert macros with \a false condition is
@@ -63,7 +66,7 @@
     placed in operating system code but continued behind the assert macro if it is placed
     in user task code.\n
       Note: This behavior can be used with SW compilations, which are to be used for
-    testing of the failure handling capabilities of the RTOS. */
+    testing of the software's failure handling capabilities. */
 #define ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST         2
 
 /** "Safe" behavior of assert: The occurrence of assert macros with \a false condition is
@@ -72,7 +75,7 @@
     in operating system code but continued behind the assert macro if it is placed in user
     task code.\n
       Note: This behavior can be used with SW compilations, which are to be used for
-    testing of the failure handling capabilities of the RTOS. */
+    testing of the software's failure handling capabilities. */
 #define ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_LAST          3
 
 
@@ -160,10 +163,15 @@ ass_saturateOcc:
     e_stw       r6, assert_funcName@l(r3)
     e_lis       r3, assert_expression@ha
     e_stw       r7, assert_expression@l(r3)
+ass_noUpdErrInfo:
     mfspr       r0, SPR_PID0    /* PID is not changed prior to entry in basic handler */
     e_lis       r3, assert_PID@ha
-    e_stb       r0, assert_PID@l(r3)
-ass_noUpdErrInfo:
+    e_lbz       r4, assert_PID@l(r3)    /* r4: PID stored so far, can initially be 0xff */
+    se_extsb    r4                      /* r4: PID so far as int32_t, range [-1 .. 4] */
+    se_cmp      r3, r4                  /* Signed compare with PID from this assertion */
+    se_ble      ass_noUpdPID            /* Don't store if not greater */
+    e_stb       r0, assert_PID@l(r3)    /* Store new greatest seen PID. */
+ass_noUpdPID:
 
     /* For testability of failure handling of SW, we must not halt a user task. We inspect
        the machine status of the calling context if testability is requested. */
@@ -178,7 +186,9 @@ ass_noUpdErrInfo:
 
     /* MSR[EE] = 0 is always granted on entry into a basic system call handler and all
        which remains is entering an infinite loop. */
-    se_b        .
+    .extern     assert_infiniteLoopAfterCaughtError /* Just to have it in the map file. */
+assert_infiniteLoopAfterCaughtError:
+    se_b        assert_infiniteLoopAfterCaughtError
 
     /* Return to the user task, which had made the system call. */
 ass_contUserTask:

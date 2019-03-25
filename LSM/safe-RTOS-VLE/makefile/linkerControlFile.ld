@@ -24,10 +24,10 @@ ENTRY(sup_startUp)
    operations, the actual sizes may become a bit larger.
      The stack size of an used process should be set here to zero. This will switch the
    process entirely off. */
-ld_heapSize  = 8192;
+ld_heapSize  = 8k;
 ld_stackSizeOS = 8k;
 ld_stackSizeP1 = 2k;
-ld_stackSizeP2 = 3k;
+ld_stackSizeP2 = 2k;
 ld_stackSizeP3 = 2k;
 ld_stackSizeP4 = 0;
 
@@ -35,8 +35,8 @@ ld_stackSizeP4 = 0;
 MEMORY
 {
     /* First 16 KB are used as boot sector. It's recomended by NXP to place all initial
-       code into this sector until and including the MPU configuration. Safe code execution
-       is guaranteed by the BAM and prior to the true MPU configuration only for this
+       code into this sector until and including the MMU configuration. Safe code execution
+       is guaranteed by the BAM and prior to the true MMU configuration only for this
        sector.
          Note, it would be adequate to define a dedicated memory segment for the BAM data
        in order to explicitly state the absolute addresses of BAM data and start of
@@ -88,7 +88,7 @@ SECTIONS
         INPUT_SECTION_FLAGS (SHF_PPC_VLE)
 
         /* All the MPU trap handlers need to be in the same 64k page. The boot sector
-           defines the empty dummy handlers for unused traps. Implemented, real handlers
+           defines the empty dummy handlers for unused traps. Implemented, true handlers
            should be located in or close to the boot sector to have them still in the same
            64k page as the dummies. We provide a dedicated section for this purpose, which
            is placed first after the boot sector. */
@@ -290,16 +290,6 @@ SECTIONS
         . = ALIGN(32);
         ld_dataP2End = ABSOLUTE(.);
 
-        /* @todo Double-check and document. These sections come from the compiler or C lib */
-        *(.got2)
-        *(.got2.*)
-        *(.tm_clone_table)
-        *(.tm_clone_table.*)
-        *(.jcr)
-        *(.jcr.*)
-        *(.rela.data)
-        *(.rela.data.*)
-
         /* Data sections for process 1. The implementation of the process either assigns its
            data objects explicitly to the sections we filter for here or the source files
            have the syllable _P1_ in their name. */
@@ -331,6 +321,16 @@ SECTIONS
         *(.data.*)
         *(.bss)
         *(.bss.*)
+
+        /* @todo Double-check and document. These sections come from the compiler or C lib */
+        *(.got2)
+        *(.got2.*)
+        *(.tm_clone_table)
+        *(.tm_clone_table.*)
+        *(.jcr)
+        *(.jcr.*)
+        *(.rela.data)
+        *(.rela.data.*)
 
         /* The heap area for the C library needs to be in the area of process 1, too, if we
            want it to use the C library. */

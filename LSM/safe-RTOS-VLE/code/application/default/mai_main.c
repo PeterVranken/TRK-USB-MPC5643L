@@ -1302,7 +1302,8 @@ void main(void)
         assert(bActivationAccepted);
 
         /* Run a kind of idle task in process 2. */
-        signed int resultIdle = rtos_OS_runTask( &taskIdlePID2Config
+        signed int resultIdle ATTRIB_DBG_ONLY =
+                                rtos_OS_runTask( &taskIdlePID2Config
                                                , /* taskParam */ mai_cntTaskIdle
                                                );
         assert(resultIdle == 3*(int)mai_cntTaskIdle);

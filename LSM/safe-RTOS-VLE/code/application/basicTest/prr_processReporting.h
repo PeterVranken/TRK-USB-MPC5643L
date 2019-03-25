@@ -37,6 +37,44 @@
  * Global type definitions
  */
 
+/** Status information object as printed by prr_taskReportWatchdogStatus(). */
+typedef struct prr_testStatus_t
+{
+    /** No test cycles so far. */
+    long unsigned int noTestCycles;
+    
+} prr_testStatus_t;
+
+/** Failure information object as printed by prr_taskReportFailure(). */
+typedef struct prr_failureStatus_t
+{
+    /** No test cycles so far. */
+    long unsigned int noTestCycles;
+    
+    /** No lost activations of syc_idEvTest. */
+    uint32_t noActLossEvTest;
+    
+    /** No lost activations of syc_idEvPIT2. */
+    uint32_t noActLossEvPIT2;
+    
+    /** No task failures reported for process syc_pidSupervisor. */
+    uint32_t noTaskFailSV;
+    
+    /** No task failures reported for process syc_pidReporting. */
+    uint32_t noTaskFailRep;
+    
+    /** Stack reserve of process syc_pidSupervisor in Byte. */
+    uint32_t stackResSV;
+    
+    /** Stack reserve of process syc_pidReporting in Byte. */
+    uint32_t stackResRep;
+    
+    /** Stack reserve of kernel process in Byte. */
+    uint32_t stackResOS;
+    
+} prr_failureStatus_t;
+
+
 
 /*
  * Global data declarations
@@ -46,6 +84,14 @@
 /*
  * Global prototypes
  */
+
+/** Task function, which is regularly activated to print the current status. */
+int32_t prr_taskReportWatchdogStatus(uint32_t PID, const prr_testStatus_t *pStatusInfo);
+
+/** Task function, which is activated on entry into the halted state to print error info. */
+int32_t prr_taskReportFailure( uint32_t PID ATTRIB_UNUSED
+                             , const prr_failureStatus_t *pFailureInfo
+                             );
 
 /** User task doing some regular status reporting via serial output. */
 int32_t prr_taskReporting(uint32_t PID);

@@ -111,7 +111,7 @@ void mpu_initMPU(void)
        generally set to "all PID bits matter".) */
     #define WORD3(pid)  (((pid)<<24) | 0x00000001u)
     
-    /* We consider the entired flash ROM, as far as used in this sample, as one memory
+    /* We consider the entire flash ROM, as far as used in this sample, as one memory
        region. We use linker defined symbols to find the boundaries. They need to be
        aligned compatible with the constraints of the MPU. This is checked by assertion. */
     extern uint8_t ld_romStart[0], ld_romEnd[0];

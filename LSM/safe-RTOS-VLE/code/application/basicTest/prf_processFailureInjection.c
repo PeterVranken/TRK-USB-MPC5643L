@@ -46,6 +46,7 @@
 #include "rtos.h"
 #include "gsl_systemLoad.h"
 #include "syc_systemConfiguration.h"
+#include "prr_processReporting.h"
 #include "prf_processFailureInjection.h"
 
 
@@ -117,7 +118,6 @@ static void (* const _pFctPrivilegedInstrInOSRAM)(void) =
  */
 static uint32_t random(void)
 {
-#if 1
     /* This simple implementation of rand() taken from
        https://code.woboq.org/userspace/glibc/stdlib/random_r.c.html, downloaded on Mar 18,
        2019. */
@@ -126,24 +126,7 @@ static uint32_t random(void)
     state[0] = (uint32_t)val;
     
     return (uint32_t)val;
-#else
-    /* We cannot use the C lib (rand()) from this process, which is not the least
-       privileged process. We abuse the reporting process to run the function. This
-       requires that the called function doesn't return a negative result - which is
-       normally the case for rand().
-         The flipside is that the most signficant bit of the returned number shall never be
-       set.
-         Note, the C lib function is invoked with two arguments in r3 (PID) and r4
-       (taskParam=0). This is a result from the improper function pointer type cast made
-       here, but doesn't harm. This is just a test software, not a product. */
-    const prc_userTaskConfig_t userTaskConfig = { .taskFct = (prc_taskFct_t)rand
-                                                  , .tiTaskMax = 0
-                                                  , .PID = 1
-                                                };
-    int32_t resultCLibCall = rtos_runTask(&userTaskConfig, /* taskParam */ 0 /* Not used */);
-    assert(resultCLibCall > 0);
-    return (uint32_t)resultCLibCall;
-#endif
+
 } /* End of random */
 
 
@@ -478,7 +461,7 @@ static void injectError(void)
             {
                 /* We have three interesting address areas to write to, ROM: 0, 2^20 Byte,
                    RAM: 0x40000000, 2^17 Byte, peripheral: 0xf0000000, 2^28 Byte. We use 2
-                   Bit from the random number to select tone of the three blocks and use
+                   Bit from the random number to select one of the three blocks and use
                    n+1 Bit for the address in the block, where n is the number of
                    physically available bits, so that that we have both, potentially
                    forbidden physically available memory or unequipped memory. */
@@ -597,7 +580,7 @@ static void injectError(void)
 #endif
                 ((void (*)(void))address)();
 
-            } /* End for(Several attempts to execute arbitary code, until first exception) */
+            } /* End for(Several attempts to execute arbitrary code, until first exception) */
         }
         break;
 #endif
@@ -629,7 +612,48 @@ static void injectError(void)
 
 #if PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_OS_RUN_TASK == 1
     case prf_kof_invokeRtosOsRunTask:
-# error Test case not yet implemented
+        {
+            /* Try running a task in the reporting process using the generally forbidden OS
+               API. */
+            const prr_testStatus_t capturedStatus = { .noTestCycles = 0xfffffffeu };
+            const prc_userTaskConfig_t userTaskConfig =  
+                                    { .taskFct = (prc_taskFct_t)prr_taskReportWatchdogStatus
+                                      , .tiTaskMax = 0
+                                      , .PID = syc_pidReporting
+                                    };
+            int32_t result ATTRIB_DBG_ONLY =
+                                rtos_OS_runTask( &userTaskConfig
+                                               , /* taskParam */ (uint32_t)&capturedStatus
+                                               );
+            assert(result >= 0);
+        }
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_RUN_TASK_NO_PERMIT == 1
+    case prf_kof_invokeRtosRunTaskWithoutPermission:
+        {
+            /* Try running a task in the reporting process. */
+            if((random() & 0xf) == 0)
+            {
+                /*  A variant of the test case is first trying to manipulate the permission
+                    vector. */
+/// @todo _runTask_permissions is basically static. Undo manipulation after test
+                extern uint16_t _runTask_permissions;
+                _runTask_permissions = 0xffff;
+            }
+            const prr_testStatus_t capturedStatus = { .noTestCycles = 0xffffffffu };
+            const prc_userTaskConfig_t userTaskConfig =  
+                                    { .taskFct = (prc_taskFct_t)prr_taskReportWatchdogStatus
+                                      , .tiTaskMax = 0
+                                      , .PID = syc_pidReporting
+                                    };
+            int32_t result ATTRIB_DBG_ONLY =
+                                rtos_runTask( &userTaskConfig
+                                            , /* taskParam */ (uint32_t)&capturedStatus
+                                            );
+            assert(result >= 0);
+        }
         break;
 #endif
 
@@ -656,6 +680,36 @@ static void injectError(void)
                                             );
             assert((uint32_t)result == ((uint32_t)~i16_cnt & 0xffffu));
             ++ i16_cnt;
+        }
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_WAIT_INSTR == 1
+    case prf_kof_waitInstr:
+        asm volatile (".global  prf_testCaseWaitInstr\n"
+                      "prf_testCaseWaitInstr:\n\t"
+                      "wait\n\t"
+                     :::
+                     );
+        break;
+#endif
+
+#if PRF_ENA_TC_PRF_KOF_ENA_FPU_EXC == 1
+    case prf_kof_enableFpuExceptions:
+        {
+            /* SPEFSCR is user accessible. User may enable all FPU exceptions! */
+            const uint32_t configSPEFSCR = 0x0000003f;
+            asm volatile (".global  prf_testCaseEnableFpuExceptions\n"
+                          "prf_testCaseEnableFpuExceptions:\n\t"
+                          "mtspr    512, %0     /* SPR 512: SPEFSCR */\n\t"
+                         : /* OutputOperands */
+                         : /* InputOperands */ "r" (configSPEFSCR)
+                         : /* Clobbers */
+                         );
+            
+            /* Let's now provoke an exception. */
+            volatile float d = 0.0f
+                         , x ATTRIB_UNUSED = 1.0f / d;
         }
         break;
 #endif

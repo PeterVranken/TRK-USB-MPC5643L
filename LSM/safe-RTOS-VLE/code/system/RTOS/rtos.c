@@ -107,6 +107,7 @@
 /* Module interface
  *   rtos_createEvent
  *   rtos_registerTask
+ *   rtos_grantPermissionRunTask
  *   rtos_initKernel
  *   rtos_OS_triggerEvent
  *   rtos_scFlHdlr_triggerEvent
@@ -296,6 +297,21 @@ static unsigned long _tiOsStep SECTION(.sdata.OS._tiStepOs) = 0;
 /** RTOS sytem time in Milliseconds since start of kernel. */
 static unsigned long _tiOs SECTION(.sdata.OS._tiOs) = (unsigned long)-1;
 
+/** The option for inter-process communication to let a task of process A run a task in
+    process B (system call rtos_runTask) is potentially harmful, as the started task can
+    destroy on behalf of process A all data structures of the other process B. It's of
+    course not generally permittable. A all-embracing privilege rule cannot be defined
+    because of the different use cases of the mechanism. Therefore, we have an explicit
+    table of grante permissions, which can be configured at startup time as an element of
+    the operating code initialization.\n
+      The bits of the word correspond to the 16 possible combinations of four possible
+    caller processes in four possible target processes. */
+#if PRC_NO_PROCESSES == 4
+/// @todo static commented out for testing purpose. Undo after test
+/*static*/ uint16_t SDATA_OS(_runTask_permissions) = 0;
+#else
+# error Implementation depends on four being the number of processes
+#endif
 
 /*
  * Function implementation
@@ -691,6 +707,68 @@ bool rtos_registerTask(const rtos_taskDesc_t *pTaskDescAPI, unsigned int idEvent
 
 
 /**
+ * Operating system initialization function: Grant permissions for using the service
+ * rtos_runTask to particular processes. By default, the use of that service is not
+ * allowed.\n
+ *   By principle, offering service rtos_runTask makes all processes vulnerable, which are
+ * allowed as target for the service. A failing, straying process can always hit some ROM
+ * code executing the system call with arbitrary register contents, which can then lead to
+ * errors in an otherwise correct process. This does not generally break the safety
+ * concept, the potentially harmed process can for example be anyway supervised.
+ * Consequently, we can offer the service at least on demand. A call of this function
+ * enables the service for a particular pair of calling process and targeted process.
+ *   @param pidOfCallingTask
+ * The tasks belonging to process with PID \a pidOfCallingTask are granted permission to
+ * run a task in another process. The range is 1 .. #PRC_NO_PROCESSES, which is
+ * double-checked by assertion. 
+ *   @param targetPID
+ * The tasks started with service rtos_runTask() may be run in process with PID \a
+ * targetPID. The range is 1 .. maxPIDInUse-1, which is double-checked later.\n
+ *   \a pidOfCallingTask and \a targetPID must not be identical, which is double-checked by
+ * assertion. 
+ *   @remark
+ * It would break the safety concept if we permitted the process with highest privileges to
+ * become the target of the service. This is double-checked not here (when it is not yet
+ * defined, which particular process that will be) but as part of the RTOS startup
+ * procedure; a bad configuration can therefore lead to a later reported run-time error.
+ *   @remark
+ * This function must be called from the OS context only. It is intended for use in the
+ * operating system initialization phase. It is not reentrant. The function needs to be
+ * called prior to rtos_initKernel().
+ */
+void rtos_grantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID)
+{
+    assert(pidOfCallingTask >= 1  &&  pidOfCallingTask <= 4
+           &&  targetPID >= 1  &&  targetPID <= 4
+          );
+
+    /* It may be useful to grant process A the right to run a task in process A. This
+       effectively implements a try/catch mechanism. The run task function has the option
+       to abort its action at however deeply nested function invocation and using
+       rtos_terminateTask(). Control returns to the call of rtos_runTask and the caller
+       gets a negative response code as indication (otherwise a positive value computed by
+       the called function). The called function belongs to the same process and its
+       potential failures can of course harm the calling task, too. This does not break
+       our safety concept, but nonetheless, offering a kind of try/catch could easily be
+       misunderstood as a kind of full-flavored run-time protection, similar to what we
+       have between processes. This potential misunderstanding makes the use of such a
+       try/catch untransparent and therefore unsafe. Hence, we do not allow it here. */
+    assert(targetPID != pidOfCallingTask);
+    
+    /* Caution, the code here depends on macro PRC_NO_PROCESSES being four and needs to be
+       consistent with the implementation of rtos_scFlHdlr_runTask(). */
+#if PRC_NO_PROCESSES != 4
+# error Implementation requires the number of processes to be four
+#endif
+    const unsigned int idxCalledPrc = targetPID - 1u;
+    const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
+    _runTask_permissions |= mask;
+
+} /* End of rtos_grantPermissionRunTask */
+
+
+
+/**
  * Initialization and start of the RTOS kernel.\n
  *   The function initializes a hardware device to produce a regular clock tick and
  * connects the OS schedule function onOsTimerTick() with the interrupt raised by this
@@ -710,6 +788,9 @@ bool rtos_registerTask(const rtos_taskDesc_t *pTaskDescAPI, unsigned int idEvent
  *   @param
  * All application tasks need to be registered before invoking this function, see
  * rtos_registerTask().
+ *   @remark
+ * This function must be called from the OS context only. The call of this function will
+ * end the operating system initialization phase.
  */
 bool rtos_initKernel(void)
 {
@@ -758,6 +839,18 @@ bool rtos_initKernel(void)
         } /* for(All possibly used processes) */
     }
 
+    /* Now knowing, which is the process with highest privileges we can double-check the
+       permissions granted for using the service rtos_runTask(). It must not be possible to
+       run a task in the process with highest privileges. */
+    if(isConfigOk)
+    {
+        /* Caution: Maintenance of this code is required consistently with
+           rtos_grantPermissionRunTask() and rtos_scFlHdlr_runTask(). */
+        assert(maxPIDInUse >= 1  &&  maxPIDInUse <= 4);
+        const uint16_t mask = 0x1111 << (maxPIDInUse-1);
+        isConfigOk = (_runTask_permissions & mask) == 0;
+    }
+    
     /* We could check if a process, an init task is registered for, has a least one runtime
        task. However, it is not harmful if not and there might be pathologic applications,
        which solely consist of I/O driver callbacks. */
@@ -942,18 +1035,18 @@ bool rtos_initKernel(void)
  * Trigger an event to activate all associated tasks. A event, which had been registered
  * with cycle time zero is normally not executed. It needs to be triggered with this
  * function in order to make its associated tasks run once, i.e. to make its task functions
- * exceuted once as result of this call.\n
+ * executed once as result of this call.\n
  *   This function can be called from any task or ISR. However, if the calling task belongs
  * to the set of tasks associated with \a idEvent, then it'll have no effect but an
  * accounted activation loss; an event can be re-triggered only after all associated
- * activations have been completed. There is no activation queuing. The function returns \a
+ * activations have been completed. There is no activation queueing. The function returns \a
  * false in this case.\n
  *   Note, the system respects the priorities of the activated tasks. If a task of priority
  * higher than the activating task is activated by the triggered event then the activating
  * task is immediately preempted to the advantage of the activated task. Otherwise the
  * activated task is chained and executed after the activating task.
  *   @return
- * There is no activation queuing. If the aimed event is not yet done with processing its
+ * There is no activation queueing. If the aimed event is not yet done with processing its
  * previous triggering then the attempt is rejected. The function returns \a false and the
  * activation loss counter of the event is incremented. (See rtos_getNoActivationLoss().)
  *   @param idEvent
@@ -962,7 +1055,7 @@ bool rtos_initKernel(void)
  *   @remark
  * The function is indented to start a non cyclic task by application software trigger but
  * can be applied to cyclic tasks, too. In which case the task function of the cyclic task
- * would be invoked once addtionally. Note, that an event activation loss is not unlikely in
+ * would be invoked once additionally. Note, that an event activation loss is not unlikely in
  * this case; the cyclic task may currently be busy.
  *   @remark
  * It is not forbidden but useless to let a task activate itself by triggering the event it
@@ -1052,8 +1145,6 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
 } /* End of rtos_scFlHdlr_triggerEvent */
 
 
-
-
 /**
  * System call handler implementation to create and run a task in another process. Find
  * more details in rtos_OS_runTask().\n
@@ -1063,9 +1154,10 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
  * resumed when the task function ends - be it gracefully or by exception/abortion.\n
  *   The started task inherits the priority of the calling user task. It can be preempted
  * only by contexts of higher priority.\n
- *   The function requires sufficient privileges. The invoking task needs to belong to a
- * process with an ID greater then the target process. The task cannot be started in the OS
- * context.\n
+ *   The function requires sufficient privileges. By default the use of this function is
+ * forbidden. The operating system startup code can however use
+ * rtos_OS_grantPermissionRunTask() to enable particular pairs of calling and target
+ * process for this service. The task can generally not be started in the OS context.\n
  *   The function cannot be used recursively. The created task cannot in turn make use of
  * rtos_runTask().
  *   @return
@@ -1088,15 +1180,27 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
                               , uintptr_t taskParam
                               )
 {
-    /// @todo Offering this ystem call makes by principal all processes vulnerable, which
-    // do not have highest privileges: A failing, straying process can always hit some ROM
-    // code executing the system call with arbitrary register contents, which can then lead
-    // to errors in a otherwise correct process. This is not only theory but has been
-    // proven by random test cases. Let's have a somehow configurable min-PID for this
-    // service.
-    if(sc_checkUserCodeReadPtr(pUserTaskConfig, sizeof(prc_userTaskConfig_t))
-       &&  pidOfCallingTask > pUserTaskConfig->PID
-      )
+    if(!sc_checkUserCodeReadPtr(pUserTaskConfig, sizeof(prc_userTaskConfig_t)))
+    {
+        /* User code passed in an invalid pointer. We must not even touch the contents.
+             Note, the next function won't return. */
+        ivr_systemCallBadArgument();
+    }
+
+    /* This code depends on specific number of processes, we need a check. The
+       implementation requires consistent maintenance with other function
+       rtos_grantPermissionRunTask() */
+#if PRC_NO_PROCESSES != 4
+# error Implementation requires the number of processes to be four
+#endif
+
+    /* Now we can check the index of the target process. */
+    const unsigned int idxCalledPrc = pUserTaskConfig->PID - 1u;
+    if(idxCalledPrc > 3)
+        ivr_systemCallBadArgument();
+    
+    const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
+    if((_runTask_permissions & mask) != 0)
     {
         /* We forbid recursive use of this system call not because it would be technically
            not possible but to avoid an overflow of the supervisor stack. Each creation of
@@ -1110,7 +1214,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
            technically alright and doesn't impose a risk. The number of available PCP
            levels is strictly limited and so is then the number of possible recursions. The
            SV stack is protected. */
-        static uint32_t minPriorityLevel_ SECTION(.sdata.OS.minPriorityLevel_) = 0;
+        static uint32_t SDATA_OS(minPriorityLevel_) = 0;
         
         uint32_t currentLevel = INTC.CPR_PRC0.R
                , minPriorityLevelOnEntry;

@@ -285,6 +285,7 @@ su_waitForever:
  */
 zeroizeRegisters:
 
+    /// @todo The GPR can be cleared without SPE using slw #32
     /* Set the MSR[SPE] bit so code can use "evmergelo" instruction. */
     e_lis       r1, 0
     e_or2is     r1, 0x0200
@@ -497,11 +498,12 @@ initExceptionHandlers:
     e_or2i      r3, ivr_ivor32Handler@l
     mtspr       528, r3      /* IVOR32 SPE unavailable */
     
-    e_lis       r3, sup_IVOR33trap@h
-    e_or2i      r3, sup_IVOR33trap@l
+    e_lis       r3, ivr_ivor33And34Handler@h
+    e_or2i      r3, ivr_ivor33And34Handler@l
     mtspr       529, r3      /* IVOR33 SPE data exception */
-    e_lis       r3, sup_IVOR34trap@h
-    e_or2i      r3, sup_IVOR34trap@l
+    
+    e_lis       r3, ivr_ivor33And34Handler@h
+    e_or2i      r3, ivr_ivor33And34Handler@l
     mtspr       530, r3      /* IVOR34 SPE round exception */
 
     /* The IVOR handlers require to restore the SDA pointers in r2 and r13 since they could
@@ -708,6 +710,7 @@ sup_IVOR32trap:
 #endif
 
 
+#if 0
 /**
  *   @func sup_IVOR33trap
  * Exception handler IVOR33 for the SPE data exception interrupt.
@@ -716,8 +719,10 @@ sup_IVOR32trap:
     .p2align    4
 sup_IVOR33trap:
     se_b        sup_IVOR33trap   /* SPE data exception */
+#endif
 
 
+#if 0
 /**
  *   @func sup_IVOR34trap
  * Exception handler IVOR34 for the SPE round exception interrupt.
@@ -726,6 +731,7 @@ sup_IVOR33trap:
     .p2align    4
 sup_IVOR34trap:
     se_b        sup_IVOR34trap   /* SPE round exception */
+#endif
 
 /* End of IVOR exception handlers 0..15 and 32..24 */
 

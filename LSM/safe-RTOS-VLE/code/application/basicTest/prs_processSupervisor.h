@@ -43,7 +43,7 @@
  */
 
 /** Counter for test cycles. */
-extern long unsigned int prs_cntTestCycles;
+extern volatile long unsigned int prs_cntTestCycles;
 
 
 /*

@@ -61,8 +61,10 @@ volatile signed int assert_line SECTION(.data.OS.assert_line) = -1;
 /** If an assertion has fired: The failing condition. Otherwise NULL. */
 volatile const char *assert_expression SECTION(.data.OS.assert_expression) = NULL;
 
-/** If an assertion has fired: The failing process. Otherwise 0xff. */
-volatile uint8_t assert_PID SECTION(.data.OS.assert_PID) = 0xff;
+/** If at least one assertion has fired: The maximum PID of all failing processes so far.
+    With other words, the ID of the process with highest privileges, which had failed so
+    far. The value is -1 as long as no assertion had fired at all. */
+volatile int8_t assert_PID SECTION(.data.OS.assert_PID) = -1;
 
 
 /*

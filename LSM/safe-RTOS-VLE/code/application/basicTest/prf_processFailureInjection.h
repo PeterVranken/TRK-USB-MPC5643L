@@ -36,54 +36,58 @@
    of the test cases are enabled and due to the frequent appearance of illegal instructions
    in the code flow. Therefore it is important to have the possibility to selectively
    disable those test cases during development. */
-#define PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR                 0//1
-#define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR                0//0
-#define PRF_ENA_TC_PRF_KOF_NO_FAILURE                           1//1
-#define PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR                      0//1
-#define PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR                     0//1
-#define PRF_ENA_TC_PRF_KOF_CALL_OS_API                          0//1
-#define PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT            0//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA                        0//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA                0//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_ROM                            0//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_PERIPHERAL                     0//1
-#define PRF_ENA_TC_PRF_KOF_READ_PERIPHERAL                      0//1
-#define PRF_ENA_TC_PRF_KOF_INFINITE_LOOP                        0//1
-#define PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE                     0//1
-#define PRF_ENA_TC_PRF_KOF_MISALIGNED_READ                      0//1
-#define PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW                       0//0
-#define PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM                   0//0
-#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT                           0//0
-#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT                  0//0
-#define PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU                   0//1
-#define PRF_ENA_TC_PRF_KOF_READ_SPR                             0//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_SPR                            0//1
-#define PRF_ENA_TC_PRF_KOF_WRITE_SVSP                           0//1
-#define PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS                       0//1
-#define PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS_AND_WAIT              0//1
-#define PRF_ENA_TC_PRF_KOF_MMU_WRITE                            0//1
-#define PRF_ENA_TC_PRF_KOF_MMU_READ                             0//1
-#define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE                          0//1
-#define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2                        0//1
-#define PRF_ENA_TC_PRF_KOF_TRAP                                 0//1
-#define PRF_ENA_TC_PRF_KOF_TLB_INSTR                            0//1
-#define PRF_ENA_TC_PRF_KOF_SPE_INSTR                            0//1
-#define PRF_ENA_TC_PRF_KOF_BOOKE_FPU_INSTR                      0//1
-#define PRF_ENA_TC_PRF_KOF_DCACHE_INSTR                         0//1
-#define PRF_ENA_TC_PRF_KOF_UNDEF_SYS_CALL                       0//1
-#define PRF_ENA_TC_PRF_KOF_RANDOM_WRITE                         0//1
-#define PRF_ENA_TC_PRF_KOF_RANDOM_READ                          0//1
-#define PRF_ENA_TC_PRF_KOF_RANDOM_JUMP                          1//1
-#define PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC                    0//1
+#define PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR                 1
+#define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR                0
+#define PRF_ENA_TC_PRF_KOF_NO_FAILURE                           1
+#define PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR                      1
+#define PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR                     1
+#define PRF_ENA_TC_PRF_KOF_CALL_OS_API                          1
+#define PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT            1
+#define PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA                        1
+#define PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA                1
+#define PRF_ENA_TC_PRF_KOF_WRITE_ROM                            1
+#define PRF_ENA_TC_PRF_KOF_WRITE_PERIPHERAL                     1
+#define PRF_ENA_TC_PRF_KOF_READ_PERIPHERAL                      1
+#define PRF_ENA_TC_PRF_KOF_INFINITE_LOOP                        1
+#define PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE                     1
+#define PRF_ENA_TC_PRF_KOF_MISALIGNED_READ                      1
+#define PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW                       0
+#define PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM                   0
+#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT                           0
+#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT                  0
+#define PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU                   1
+#define PRF_ENA_TC_PRF_KOF_READ_SPR                             1
+#define PRF_ENA_TC_PRF_KOF_WRITE_SPR                            1
+#define PRF_ENA_TC_PRF_KOF_WRITE_SVSP                           1
+#define PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS                       1
+#define PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS_AND_WAIT              1
+#define PRF_ENA_TC_PRF_KOF_MMU_WRITE                            1
+#define PRF_ENA_TC_PRF_KOF_MMU_READ                             1
+#define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE                          1
+#define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2                        1
+#define PRF_ENA_TC_PRF_KOF_TRAP                                 1
+#define PRF_ENA_TC_PRF_KOF_TLB_INSTR                            1
+#define PRF_ENA_TC_PRF_KOF_SPE_INSTR                            1
+#define PRF_ENA_TC_PRF_KOF_BOOKE_FPU_INSTR                      1
+#define PRF_ENA_TC_PRF_KOF_DCACHE_INSTR                         1
+#define PRF_ENA_TC_PRF_KOF_UNDEF_SYS_CALL                       1
+#define PRF_ENA_TC_PRF_KOF_RANDOM_WRITE                         1
+#define PRF_ENA_TC_PRF_KOF_RANDOM_READ                          1
+#define PRF_ENA_TC_PRF_KOF_RANDOM_JUMP                          0
+#define PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC                    1
 #define PRF_ENA_TC_PRF_KOF_INVALID_CRIT_SEC                     0 /* Disregard priority
                                                                      boundaries */
 #define PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC                       0 /* End task without ending a
                                                                      critical section */
-#define PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_OS_RUN_TASK              0
+#define PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_OS_RUN_TASK              1
+#define PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_RUN_TASK_NO_PERMIT       1
 #define PRF_ENA_TC_PRF_KOF_INVOKE_IVR_SYSTEM_CALL_BAD_ARGUMENT  0
 #define PRF_ENA_TC_PRF_KOF_SYSTEM_CALL_ALL_ARGUMENTS_OKAY       0 /* No failure, are all
                                                                      possible 7 args okay? */
-/// @todo Add wait instruction as test case, check debug instructions
+#define PRF_ENA_TC_PRF_KOF_WAIT_INSTR                           1
+#define PRF_ENA_TC_PRF_KOF_ENA_FPU_EXC                          1
+
+/// @todo Check debug instructions and potentially add a test case
 
 /*
  * Global type definitions
@@ -224,11 +228,20 @@ typedef struct prf_cmdFailure_t
 #if PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_OS_RUN_TASK == 1
         prf_kof_invokeRtosOsRunTask,
 #endif
+#if PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_RUN_TASK_NO_PERMIT == 1
+        prf_kof_invokeRtosRunTaskWithoutPermission,
+#endif
 #if PRF_ENA_TC_PRF_KOF_INVOKE_IVR_SYSTEM_CALL_BAD_ARGUMENT == 1
         prf_kof_invokeIvrSystemCallBadArgument,
 #endif
 #if PRF_ENA_TC_PRF_KOF_SYSTEM_CALL_ALL_ARGUMENTS_OKAY == 1
         prf_kof_systemCallAllArgumentsOkay,
+#endif
+#if PRF_ENA_TC_PRF_KOF_WAIT_INSTR == 1
+        prf_kof_waitInstr,
+#endif
+#if PRF_ENA_TC_PRF_KOF_ENA_FPU_EXC == 1
+        prf_kof_enableFpuExceptions,
 #endif
 
         prf_kof_noFailureTypes    /** Total number of defined failure kinds */

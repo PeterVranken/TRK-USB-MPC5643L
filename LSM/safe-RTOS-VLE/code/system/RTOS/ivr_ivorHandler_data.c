@@ -109,6 +109,11 @@ uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor15) = 0;
     maximum. */
 uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor32) = 0; 
 
+/** Reporting of double exceptions: A counter for MC exceptions, which preempted one of the
+    CPU FPU exception handlers, IVOR #33 or IVOR #34. The counter is saturated at its
+    implementation maximum. */
+uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor33Or34) = 0;
+
 
 /*
  * Function implementation

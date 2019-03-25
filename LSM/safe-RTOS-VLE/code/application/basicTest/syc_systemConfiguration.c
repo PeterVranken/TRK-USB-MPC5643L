@@ -454,6 +454,13 @@ void main(void)
         initOk = false;
     }
 
+    /* The watchdog uses the reporting process, which owns the C library and can do a
+       printf, to regularly print a progress message. We need to grant the required
+       permissions. */
+    rtos_grantPermissionRunTask( /* pidOfCallingTask */ syc_pidSupervisor
+                               , /* targetPID */ syc_pidReporting
+                               );
+    
     /* Initialize the RTOS kernel. The global interrupt processing is resumed if it
        succeeds. The step involves a configuration check. We must not startup the SW if the
        check fails. */
