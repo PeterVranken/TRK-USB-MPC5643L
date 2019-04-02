@@ -298,20 +298,21 @@ static unsigned long _tiOsStep SECTION(.sdata.OS._tiStepOs) = 0;
 static unsigned long _tiOs SECTION(.sdata.OS._tiOs) = (unsigned long)-1;
 
 /** The option for inter-process communication to let a task of process A run a task in
-    process B (system call rtos_runTask) is potentially harmful, as the started task can
+    process B (system call rtos_runTask()) is potentially harmful, as the started task can
     destroy on behalf of process A all data structures of the other process B. It's of
-    course not generally permittable. A all-embracing privilege rule cannot be defined
+    course not generally permittable. An all-embracing privilege rule cannot be defined
     because of the different use cases of the mechanism. Therefore, we have an explicit
-    table of grante permissions, which can be configured at startup time as an element of
-    the operating code initialization.\n
+    table of granted permissions, which can be configured at startup time as an element of
+    the operating system initialization code.\n
       The bits of the word correspond to the 16 possible combinations of four possible
-    caller processes in four possible target processes. */
+    caller processes in four possible target processes.
+      By default, no permission is granted. */
 #if PRC_NO_PROCESSES == 4
-/// @todo static commented out for testing purpose. Undo after test
-/*static*/ uint16_t SDATA_OS(_runTask_permissions) = 0;
+static uint16_t SDATA_OS(_runTask_permissions) = 0;
 #else
 # error Implementation depends on four being the number of processes
 #endif
+
 
 /*
  * Function implementation
@@ -713,8 +714,9 @@ bool rtos_registerTask(const rtos_taskDesc_t *pTaskDescAPI, unsigned int idEvent
  *   By principle, offering service rtos_runTask makes all processes vulnerable, which are
  * allowed as target for the service. A failing, straying process can always hit some ROM
  * code executing the system call with arbitrary register contents, which can then lead to
- * errors in an otherwise correct process. This does not generally break the safety
- * concept, the potentially harmed process can for example be anyway supervised.
+ * errors in an otherwise correct process.\n
+ *   This does not generally break the safety concept, the potentially harmed process can
+ * for example be anyway supervised by another, unaccessible supervisory process.
  * Consequently, we can offer the service at least on demand. A call of this function
  * enables the service for a particular pair of calling process and targeted process.
  *   @param pidOfCallingTask
@@ -738,8 +740,10 @@ bool rtos_registerTask(const rtos_taskDesc_t *pTaskDescAPI, unsigned int idEvent
  */
 void rtos_grantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID)
 {
+    /* targetPID <= 3: Necessary but not sufficient to double-check
+       "targetPID <= maxPIDInUse-1". */
     assert(pidOfCallingTask >= 1  &&  pidOfCallingTask <= 4
-           &&  targetPID >= 1  &&  targetPID <= 4
+           &&  targetPID >= 1  &&  targetPID <= 3
           );
 
     /* It may be useful to grant process A the right to run a task in process A. This

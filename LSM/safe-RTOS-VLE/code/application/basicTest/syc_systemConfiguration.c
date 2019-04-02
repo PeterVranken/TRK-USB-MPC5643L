@@ -63,22 +63,6 @@
  * Local type definitions
  */
  
-/** The priority of all events. */
-enum
-{
-    prioEvReporting = 1 /// Slow clock for printing results to the console
-    , prioEvTest = 3       /// Used for failure task and the controlling supervisor tasks
-    , prioEvTestCtxSw = 2  /// Used to drive independent test of context switching
-    , prioEvPIT2 = (RTOS_KERNEL_PRIORITY-1) /// Used for high priority watchdog
-    , prioEv17ms = 2       /// Used for low priority task in failure process
-    
-    , prioISRPit1 = 4   /// Directly starts high priority task in failure process
-    , prioISRPit2 = (RTOS_KERNEL_PRIORITY+1)  /// Triggers event syc_idEvPIT2
-    , prioISRPit3 = 15  /// An asynchronous, unrelated ISR
-};
- 
- 
-
 /*
  * Local prototypes
  */
@@ -132,7 +116,7 @@ static int32_t taskInitProcess(uint32_t PID)
 /**
  * A regularly triggered interrupt handler for the timer PIT1. The handler starts a user
  * task, which belongs to the failing process. In this process it has the highest priority.
- * The ISR must not be affected by the failures occuring in that process.
+ * The ISR must not be affected by the failures occurring in that process.
  *   @remark
  * This is a normal interrupt running in the kernel context (supervisor mode, no MPU
  * restrictions).
@@ -220,17 +204,17 @@ static void installInterruptServiceRoutines(void)
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
     prc_installINTCInterruptHandler( &isrPit1
                                    , /* vectorNum */ 60
-                                   , /* psrPriority */ prioISRPit1
+                                   , /* psrPriority */ syc_prioISRPit1
                                    , /* isPreemptable */ true
                                    );
     prc_installINTCInterruptHandler( &isrPit2
                                    , /* vectorNum */ 61
-                                   , /* psrPriority */ prioISRPit2
+                                   , /* psrPriority */ syc_prioISRPit2
                                    , /* isPreemptable */ true
                                    );
     prc_installINTCInterruptHandler( &isrPit3
                                    , /* vectorNum */ 127
-                                   , /* psrPriority */ prioISRPit3
+                                   , /* psrPriority */ syc_prioISRPit3
                                    , /* isPreemptable */ true
                                    );
 
@@ -315,7 +299,7 @@ void main(void)
 #endif
     rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 997 /* about 1s but prime to others */
                                         , .tiFirstActivationInMs = 19
-                                        , .priority = prioEvReporting
+                                        , .priority = syc_prioEvReporting
                                         , .minPIDToTriggerThisEvent =
                                                                 PRC_EVENT_NOT_USER_TRIGGERABLE
                                         }
@@ -327,7 +311,7 @@ void main(void)
 #endif
     rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 10
                                         , .tiFirstActivationInMs = 0
-                                        , .priority = prioEvTest
+                                        , .priority = syc_prioEvTest
                                         , .minPIDToTriggerThisEvent =
                                                                 PRC_EVENT_NOT_USER_TRIGGERABLE
                                         }
@@ -339,7 +323,7 @@ void main(void)
 #endif
     rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 11
                                         , .tiFirstActivationInMs = 0
-                                        , .priority = prioEvTestCtxSw
+                                        , .priority = syc_prioEvTestCtxSw
                                         , .minPIDToTriggerThisEvent =
                                                                 PRC_EVENT_NOT_USER_TRIGGERABLE
                                         }
@@ -351,7 +335,7 @@ void main(void)
 #endif
     rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 0
                                         , .tiFirstActivationInMs = 0
-                                        , .priority = prioEvPIT2
+                                        , .priority = syc_prioEvPIT2
                                         , .minPIDToTriggerThisEvent =
                                                                 PRC_EVENT_NOT_USER_TRIGGERABLE
                                         }
@@ -363,7 +347,7 @@ void main(void)
 #endif
     rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 17
                                         , .tiFirstActivationInMs = 0
-                                        , .priority = prioEv17ms
+                                        , .priority = syc_prioEv17ms
                                         , .minPIDToTriggerThisEvent =
                                                                 PRC_EVENT_NOT_USER_TRIGGERABLE
                                         }
@@ -460,6 +444,12 @@ void main(void)
     rtos_grantPermissionRunTask( /* pidOfCallingTask */ syc_pidSupervisor
                                , /* targetPID */ syc_pidReporting
                                );
+    
+    /* The watchdog uses service rtos_suspendProcess() if it recognizes an error. We need
+       to grant the required permissions. */
+    rtos_grantPermissionSuspendProcess( /* pidOfCallingTask */ syc_pidSupervisor
+                                      , /* targetPID */ syc_pidFailingTasks
+                                      );
     
     /* Initialize the RTOS kernel. The global interrupt processing is resumed if it
        succeeds. The step involves a configuration check. We must not startup the SW if the

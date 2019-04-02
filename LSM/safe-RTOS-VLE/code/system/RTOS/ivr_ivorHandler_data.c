@@ -57,62 +57,62 @@
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #2 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor2) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor2) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #3 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor3) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor3) = 0;
 
 /** The IVOR #1 counts the number of occurances of the rare situation, when it preempts a
     coincidentally starting IVOR #4 handler. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor4) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor4) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #5 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor5) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor5) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #6 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor6) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor6) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #7 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor7) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor7) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #8 system call.The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor8) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor8) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #13 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor13) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor13) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #14 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor14) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor14) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #15 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor15) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor15) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #32 CPU exception. The counter is saturated at its implementation
     maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor32) = 0; 
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor32) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted one of the
     CPU FPU exception handlers, IVOR #33 or IVOR #34. The counter is saturated at its
     implementation maximum. */
-uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor33Or34) = 0;
+volatile uint16_t DATA_OS(ivr_cntIvor1PreemptsIvor33Or34) = 0;
 
 
 /*

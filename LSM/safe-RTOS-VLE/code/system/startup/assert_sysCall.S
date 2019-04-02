@@ -60,6 +60,16 @@
       See #ASSERT_FAILURE_BEHAVIOR, too. */
 #define ASSERT_FAILURE_BEHAVIOR_HALT_SW                             1
 
+/// @todo We can't continue after an assert macro: The function i sconsidered _Noreturn by
+// the compiler. We need to re-define the behavior, e.g. store_and_wait. wait != halt: We
+// spin in an endless loop but only in problem state and with MSR[EE]=1 so that scheduler
+// and deadline monitoring are still operational. The failing task won't proceed (just wait
+// for its deadline failure abort) and the chance to catch this in a debugger is quite
+// high.
+//   Change impact on code is little but we have to rename and re-doc the macros.
+//   todoc: In typical situations, the macro exposes the traditional behavior: If placed in
+// SV code, if placed in supervisor task (has highest prio)
+
 /** "Safe" behavior of assert: The occurrence of assert macros with \a false condition is
     counted. The assert information is stored only for the very first occurrence of an
     assert macro with \a false condition. The SW execution is halted if the assert macro is

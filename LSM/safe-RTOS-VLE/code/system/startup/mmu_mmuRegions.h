@@ -8,7 +8,7 @@
  * This is not a C header file but an include file that is read by assembly code. Only
  * ordinary preprocessor constructs must be used.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -47,9 +47,8 @@
 # endif
 #endif
 
-/* TODO DPM: The size of the SRAM is 64k instead of 128k and the macro to set the page
-   address requires another mask (one more bit). An and additional table entry is
-   required. */
+/* DPM: The size of the SRAM is 64k instead of 128k and the macro to set the page address
+   requires another mask (one more bit). And an additional table entry is required. */
 
 
 /* Down here come some defines for assembling the MMU assist register MASM0. */
@@ -141,9 +140,9 @@
     table entries. The value is constant and evaluated at compile time.
       @param a The address of the memory area; used for both effective and physical
     address; there's no translation involved. */
-#define MMU_MAS3_FLASH(a)  (((a) & 0xfff00000)                                  \
-                            | SUP_MMU_TBL_SR | SUP_MMU_TBL_SW | SUP_MMU_TBL_SX  \
-                            | SUP_MMU_TBL_UR | SUP_MMU_TBL_UW | SUP_MMU_TBL_UX  \
+#define MMU_MAS3_FLASH(a)  (((a) & 0xfff00000)                  \
+                            | SUP_MMU_TBL_SR  | SUP_MMU_TBL_SX  \
+                            | SUP_MMU_TBL_UR  | SUP_MMU_TBL_UX  \
                            )
 
 /** Use this macro to compose the value of MMU assist register MAS3 for the SRAM related
@@ -162,7 +161,6 @@
     address; there's no translation involved. */
 #define MMU_MAS3_PERIPHERALS(a) (((a) & 0xfffff000)                 \
                                  | SUP_MMU_TBL_SR | SUP_MMU_TBL_SW  \
-                                 | SUP_MMU_TBL_UR | SUP_MMU_TBL_UW  \
                                 )
 
 /* 1MB at 0x0 (flash ROM) */
@@ -173,7 +171,7 @@
 
 /* 1MB at 0x0 (flash ROM). This is  nearly a copy of the definition of entry 0. It uses
    however the other table entry 1 and the other address space.
-     Reason: This table entry is use temporarily in order to avoid overlapping region
+     Reason: This table entry is used temporarily in order to avoid overlapping region
    definitions at any time during initialization. */
 #define MMU_TLB1_TMP_ENTRY1_MAS0 MMU_MAS0(/* idxTblEntry */ 1)
 #define MMU_TLB1_TMP_ENTRY1_MAS1 (MMU_MAS1_FLASH & ~SUP_MMU_TBL_TS(0) | SUP_MMU_TBL_TS(1))

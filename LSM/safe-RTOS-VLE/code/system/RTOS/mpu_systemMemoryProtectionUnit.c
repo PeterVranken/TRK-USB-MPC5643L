@@ -121,7 +121,10 @@ void mpu_initMPU(void)
     
     /* All used flash ROM.
          All masters and processes (i.e. user mode code) get full read and execute rights.
-       Write access is forbidden in order to detect programming errors. */
+       Write access is forbidden in order to detect programming errors.
+         Note, all start and end addresses have a granularity of 32 Byte. By hardware, the
+       least significant five bits of a start address are set to zero and to all ones for
+       an end address. This requires according alignment operations in the linker script. */
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_romStart; /* Start address of region, 31.6.4.1 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_romEnd-1; /* End address of region, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b001101); /* S: RX, U: RX, PID: - */
@@ -136,6 +139,7 @@ void mpu_initMPU(void)
        script, they need to be aligned compatible with the constraints of the MPU. This is
        checked by assertion. */
     extern uint8_t ld_memRamStart[0], ld_ramEnd[0];
+    assert(((uintptr_t)ld_memRamStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_memRamStart; /* Start address of region, 31.6.4.1 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_ramEnd-1; /* End address of region, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b000100); /* S: RWX, U: R, PID: d.c. */
@@ -156,6 +160,7 @@ void mpu_initMPU(void)
     /* RAM access for process 1. */
 #if MPU_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
+    assert(((uintptr_t)ld_ramStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_ramEnd-1; /* End address of region, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
@@ -163,18 +168,21 @@ void mpu_initMPU(void)
     ++ r;
 #else
     extern uint8_t ld_sdaP1Start[0], ld_sdaP1End[0];
+    assert(((uintptr_t)ld_sdaP1Start & 0x1f) == 0  &&  ((uintptr_t)ld_sdaP1End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sdaP1Start; /* Start address sdata + sbss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sdaP1End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 1);
     ++ r;
     extern uint8_t ld_sda2P1Start[0], ld_sda2P1End[0];
+    assert(((uintptr_t)ld_sda2P1Start & 0x1f) == 0  &&  ((uintptr_t)ld_sda2P1End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sda2P1Start; /* Start address sdata2 + sbss2 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sda2P1End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 1);
     ++ r;
     extern uint8_t ld_dataP1Start[0], ld_dataP1End[0];
+    assert(((uintptr_t)ld_dataP1Start & 0x1f) == 0  &&  ((uintptr_t)ld_dataP1End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_dataP1Start; /* Start address data + bss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataP1End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
@@ -185,6 +193,7 @@ void mpu_initMPU(void)
     /* RAM access for process 2. */
 #if MPU_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
+    assert(((uintptr_t)ld_ramStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_ramEnd-1; /* End address of region, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
@@ -192,18 +201,21 @@ void mpu_initMPU(void)
     ++ r;
 #else
     extern uint8_t ld_sdaP2Start[0], ld_sdaP2End[0];
+    assert(((uintptr_t)ld_sdaP2Start & 0x1f) == 0  &&  ((uintptr_t)ld_sdaP2End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sdaP2Start; /* Start address sdata + sbss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sdaP2End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 2);
     ++ r;
     extern uint8_t ld_sda2P2Start[0], ld_sda2P2End[0];
+    assert(((uintptr_t)ld_sda2P2Start & 0x1f) == 0  &&  ((uintptr_t)ld_sda2P2End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sda2P2Start; /* Start address sdata2 + sbss2 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sda2P2End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 2);
     ++ r;
     extern uint8_t ld_dataP2Start[0], ld_dataP2End[0];
+    assert(((uintptr_t)ld_dataP2Start & 0x1f) == 0  &&  ((uintptr_t)ld_dataP2End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_dataP2Start; /* Start address data + bss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataP2End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
@@ -214,6 +226,7 @@ void mpu_initMPU(void)
     /* RAM access for process 3. */
 #if MPU_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
+    assert(((uintptr_t)ld_ramStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_ramEnd-1; /* End address of region, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
@@ -221,18 +234,21 @@ void mpu_initMPU(void)
     ++ r;
 #else
     extern uint8_t ld_sdaP3Start[0], ld_sdaP3End[0];
+    assert(((uintptr_t)ld_sdaP3Start & 0x1f) == 0  &&  ((uintptr_t)ld_sdaP3End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sdaP3Start; /* Start address sdata + sbss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sdaP3End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 3);
     ++ r;
     extern uint8_t ld_sda2P3Start[0], ld_sda2P3End[0];
+    assert(((uintptr_t)ld_sda2P3Start & 0x1f) == 0  &&  ((uintptr_t)ld_sda2P3End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sda2P3Start; /* Start address sdata2 + sbss2 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sda2P3End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 3);
     ++ r;
     extern uint8_t ld_dataP3Start[0], ld_dataP3End[0];
+    assert(((uintptr_t)ld_dataP3Start & 0x1f) == 0  &&  ((uintptr_t)ld_dataP3End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_dataP3Start; /* Start address data + bss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataP3End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
@@ -243,6 +259,7 @@ void mpu_initMPU(void)
     /* RAM access for process 4. */
 #if MPU_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
+    assert(((uintptr_t)ld_ramStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_ramEnd-1; /* End address of region, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
@@ -250,18 +267,21 @@ void mpu_initMPU(void)
     ++ r;
 #else
     extern uint8_t ld_sdaP4Start[0], ld_sdaP4End[0];
+    assert(((uintptr_t)ld_sdaP4Start & 0x1f) == 0  &&  ((uintptr_t)ld_sdaP4End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sdaP4Start; /* Start address sdata + sbss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sdaP4End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 4);
     ++ r;
     extern uint8_t ld_sda2P4Start[0], ld_sda2P4End[0];
+    assert(((uintptr_t)ld_sda2P4Start & 0x1f) == 0  &&  ((uintptr_t)ld_sda2P4End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_sda2P4Start; /* Start address sdata2 + sbss2 */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_sda2P4End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 4);
     ++ r;
     extern uint8_t ld_dataP4Start[0], ld_dataP4End[0];
+    assert(((uintptr_t)ld_dataP4Start & 0x1f) == 0  &&  ((uintptr_t)ld_dataP4End & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_dataP4Start; /* Start address data + bss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataP4End-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b111111); /* S: d.c., U: RXW, PID: yes */
@@ -270,7 +290,10 @@ void mpu_initMPU(void)
 #endif
     
     /* A shared memory area. ALl processes can write. */
-    extern uint8_t ld_dataSharedEnd[0], ld_dataSharedStart[0];
+    extern uint8_t ld_dataSharedStart[0], ld_dataSharedEnd[0];
+    assert(((uintptr_t)ld_dataSharedStart & 0x1f) == 0
+           &&  ((uintptr_t)ld_dataSharedEnd & 0x1f) == 0
+          );
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_dataSharedStart; /* Start address data + bss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataSharedEnd-1; /* End address, including. */
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b011111); /* S: d.c., U: RXW, PID: no */

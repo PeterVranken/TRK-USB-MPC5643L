@@ -40,7 +40,9 @@
     according definition in the C code. */
 #define PCP_KERNEL_PRIORITY        12
 
-/** Index of implemented system call for setting a user context's current priority. */
+/** Index of implemented system call for setting a user context's current priority. The
+    system call is wrapped in the inline function rtos_suspendAllInterruptsByPriority().
+    Please refer to this function for details. */
 #define PCP_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY  1
 
 

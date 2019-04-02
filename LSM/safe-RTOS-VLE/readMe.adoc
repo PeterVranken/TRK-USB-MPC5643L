@@ -254,7 +254,7 @@ cosmic radiation. In which case the kernel simply stops working.
 
 Halting the software execution can be considered not breaking the safety
 concept of the system; in a safe system, there will always be an external
-(i.e. CPU unrelated) device which permanently checks the alive status of
+(i.e. CPU unrelated) device, which permanently checks the alive status of
 the software running on the CPU and this device will ensure the transition
 of the system into the safe state.
 

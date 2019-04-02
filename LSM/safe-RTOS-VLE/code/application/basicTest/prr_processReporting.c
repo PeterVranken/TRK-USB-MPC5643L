@@ -95,7 +95,7 @@ int32_t prr_taskReportWatchdogStatus( uint32_t PID ATTRIB_UNUSED
                                     , const prr_testStatus_t *pStatusInfo
                                     )
 {
-    printf( "prr_taskReportWatchdogStatus: %lu test cycles successfully done\r\n"
+    printf( "prr_taskReportWatchdogStatus: %lu test cases successfully run\r\n"
           , pStatusInfo->noTestCycles
           );
     return 0;
@@ -125,7 +125,7 @@ int32_t prr_taskReportFailure( uint32_t PID ATTRIB_UNUSED
                              )
 {
     printf( "prr_taskReportFailure: Watchdog is about to halt the software after %lu"
-            " test cycles!\r\n"
+            " test cases!\r\n"
             "  noActLossEvTest: %lu\r\n"
             "  noActLossEvPIT2: %lu\r\n"
             "  noTaskFailSV: %lu\r\n"
@@ -168,14 +168,6 @@ int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED)
              "  PID 3: %u Byte\r\n"
              "Event triggers (lost):\r\n"
              "  idEvTest: %lu (%u)\r\n"
-#if 0
-             "  : %lu (%u)\r\n"
-             "  task1s: %lu (%u)\r\n"
-             "  taskNonCyclic: %lu (%u)\r\n"
-             "  task17ms: %lu (%u)\r\n"
-             "  taskOnButtonDown: %lu (%u)\r\n"
-             "  taskCpuLoad: %lu (%u)\r\n"
-#endif
              "  isrPit3: %llu (N/A)\r\n"
              "Process errors:\r\n"
              "  Total PID 1: %u\r\n"
@@ -191,14 +183,6 @@ int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED)
            , rtos_getStackReserve(2)
            , rtos_getStackReserve(3)
            , prs_cntTestCycles, rtos_getNoActivationLoss(syc_idEvTest)
-#if 0
-           , mai_cntTask3ms, rtos_getNoActivationLoss(idEv3ms)
-           , mai_cntTask1s, rtos_getNoActivationLoss(idEv1s)
-           , mai_cntTaskNonCyclic, rtos_getNoActivationLoss(idEvNonCyclic)
-           , mai_cntTask17ms, rtos_getNoActivationLoss(idEv17ms)
-           , mai_cntTaskOnButtonDown, rtos_getNoActivationLoss(idEvOnButtonDown)
-           , mai_cntTaskCpuLoad, rtos_getNoActivationLoss(idEvCpuLoad)
-#endif
            , syc_cntISRPit3
            , rtos_getNoTotalTaskFailure(/* PID */ 1)
            , rtos_getNoTaskFailure(/* PID */ 1, IVR_CAUSE_TASK_ABBORTION_DEADLINE)
@@ -216,6 +200,7 @@ int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED)
     return 0;
     
 } /* End of prr_taskReporting */
+
 
 
 /**

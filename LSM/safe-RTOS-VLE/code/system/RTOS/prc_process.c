@@ -21,7 +21,11 @@
  *   prc_initINTCInterruptController
  *   prc_installINTCInterruptHandler
  *   prc_dummyINTCInterruptHandler
+ *   prc_grantPermissionSuspendProcess
  *   prc_scSmplHdlr_suspendProcess
+ * Module inline interface
+ *   rtos_OS_suspendProcess
+ *   rtos_isProcessSuspended
  * Local functions
  */
 
@@ -166,6 +170,23 @@ prc_processDesc_t prc_processAry[PRC_NO_PROCESSES] SECTION(.data.OS.prc_processA
               , .cntTaskFailureAry = {[0 ... (IVR_NO_CAUSES_TASK_ABORTION-1)] = 0}
             }
 };
+
+
+/** The option to let a task of process A suspend process B (system call
+    rtos_suspendProcess()) is potentially harmful, as a safety relevant supervisory task
+    could be hindered from running. This is of course not generally permittable. An
+    all-embracing privilege rule cannot be defined because of the different use cases of
+    the mechanism. Therefore, we have an explicit table of granted permissions, which can
+    be configured at startup time as an element of the operating system initialization
+    code.\n
+      The bits of the word correspond to the 16 possible combinations of four possible
+    caller processes in four possible target processes.
+      By default, no permission is granted. */
+#if PRC_NO_PROCESSES == 4
+static uint16_t SDATA_OS(_suspendProcess_permissions) = 0;
+#else
+# error Implementation depends on four being the number of processes
+#endif
 
 
 /*
@@ -369,7 +390,8 @@ bool prc_initProcesses(bool isProcessConfiguredAry[1+PRC_NO_PROCESSES])
                                                            , [2] = ld_stackEndP3
                                                            , [3] = ld_stackEndP4
                                                            };
-    unsigned int idxP;
+    unsigned int idxP
+               , maxPIDInUse = 0;
     for(idxP=0; idxP<PRC_NO_PROCESSES; ++idxP)
     {
         /* Disable the process by default. */
@@ -398,6 +420,10 @@ bool prc_initProcesses(bool isProcessConfiguredAry[1+PRC_NO_PROCESSES])
                 
                 /* Stack alright, process may be used. */
                 isProcessConfiguredAry[idxP+1] = true;
+                
+                /* Keep track of the highest PID in use. */
+                if(idxP+1 > maxPIDInUse)
+                    maxPIDInUse = idxP+1;
             }
             else
                 isConfigOk = false;
@@ -412,9 +438,69 @@ bool prc_initProcesses(bool isProcessConfiguredAry[1+PRC_NO_PROCESSES])
               );
     } /* End for(All processes) */
 
+    if(isConfigOk)
+    {
+        /* Caution: Maintenance of this code is required consistently with
+           rtos_grantPermissionSuspendProcess() and prc_scSmplHdlr_suspendProcess(). */
+        assert(maxPIDInUse >= 1  &&  maxPIDInUse <= 4);
+        const uint16_t mask = 0x1111 << (maxPIDInUse-1);
+        isConfigOk = (_suspendProcess_permissions & mask) == 0;
+    }
+    
     return isConfigOk;
 
 } /* End of prc_initProcesses */
+
+
+
+/**
+ * Operating system initialization function: Grant permissions for using the service
+ * rtos_suspendProcess to particular processes. By default, the use of that service is not
+ * allowed.\n
+ *   By principle, offering service rtos_suspendProcess makes all processes vulnerable,
+ * which are allowed as target for the service. A failing, straying process can always hit
+ * some ROM code executing the system call with arbitrary register contents, which can then
+ * lead to immediate task abortion in and suspension of an otherwise correct process.\n
+ *   This does not generally break the safety concept, the potentially harmed process can
+ * for example be anyway supervised by another, non-suspendable supervisory process.
+ * Consequently, we can offer the service at least on demand. A call of this function
+ * enables the service for a particular pair of calling process and targeted process.
+ *   @param pidOfCallingTask
+ * The tasks belonging to process with PID \a pidOfCallingTask are granted permission to
+ * suspend another process. The range is 1 .. #PRC_NO_PROCESSES, which is double-checked by
+ * assertion.
+ *   @param targetPID
+ * The process with PID \a targetPID is suspended. The range is 1 .. maxPIDInUse-1, which is
+ * double-checked later.
+ *   @remark
+ * It would break the safety concept if we permitted the process with highest privileges to
+ * become the target of the service. This is double-checked not here (when it is not yet
+ * defined, which particular process that will be) but as part of the RTOS startup
+ * procedure; a bad configuration can therefore lead to a later reported run-time error.
+ *   @remark
+ * This function must be called from the OS context only. It is intended for use in the
+ * operating system initialization phase. It is not reentrant. The function needs to be
+ * called prior to rtos_initKernel().
+ */
+void prc_grantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID)
+{
+    /* targetPID <= 3: Necessary but not sufficient to double-check
+       "targetPID <= maxPIDInUse-1". */
+    assert(pidOfCallingTask >= 1  &&  pidOfCallingTask <= 4
+           &&  targetPID >= 1  &&  targetPID <= 3
+          );
+
+    /* Caution, the code here depends on macro PRC_NO_PROCESSES being four and needs to be
+       consistent with the implementation of prc_scSmplHdlr_suspendProcess(). */
+#if PRC_NO_PROCESSES != 4
+# error Implementation requires the number of processes to be four
+#endif
+    const unsigned int idxCalledPrc = targetPID - 1u;
+    const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
+    _suspendProcess_permissions |= mask;
+
+} /* End of prc_grantPermissionSuspendProcess */
+
 
 
 /**
@@ -442,7 +528,20 @@ bool prc_initProcesses(bool isProcessConfiguredAry[1+PRC_NO_PROCESSES])
  */
 void prc_scSmplHdlr_suspendProcess(uint32_t pidOfCallingTask, uint32_t PID)
 {
-    if(PID != 0  &&  pidOfCallingTask > PID)
+    /* This code depends on specific number of processes, we need a check. The
+       implementation requires consistent maintenance with other function
+       prc_grantPermissionSuspendProcess() */
+#if PRC_NO_PROCESSES != 4
+# error Implementation requires the number of processes to be four
+#endif
+
+    /* Now we can check the index of the target process. */
+    const unsigned int idxCalledPrc = PID - 1u;
+    if(idxCalledPrc > 3)
+        ivr_systemCallBadArgument();
+    
+    const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
+    if((_suspendProcess_permissions & mask) != 0)
         rtos_OS_suspendProcess(PID);
     else
     {

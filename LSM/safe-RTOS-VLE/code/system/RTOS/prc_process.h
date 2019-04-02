@@ -177,10 +177,15 @@ void prc_installINTCInterruptHandler( prc_interruptServiceRoutine_t interruptSer
 /** Initialize the data structure with all process descriptors. */
 bool prc_initProcesses(bool isProcessConfiguredAry[1+PRC_NO_PROCESSES]);
 
+/** Grant permission to particular processes for using the service rtos_suspendProcess(). */
+void prc_grantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID);
+
 
 /*
  * Inline functions
  */
+
+/// @todo We have different styles of having all user APIs in the name space rtos_*. Here, we hurt the rule that the symbol prefix needs to match the file name prefix at other location we use a #define to make a correctly named function appear in the desired name space
 
 /**
  * Kernel function to suspend a process. All currently running tasks belonging to the process
@@ -206,6 +211,28 @@ static inline void rtos_OS_suspendProcess(uint32_t PID)
     prc_processAry[PID].state = 0;
 
 } /* End of rtos_OS_suspendProcess */
+
+
+
+/**
+ * Kernel function to read the suspend status of a process. This function is a simple
+ * counterpart to rtos_OS_suspendProcess(). It will return \a true after the other function
+ * had been called for the given process ID or if the process is not at all in use.
+ *   @param PID
+ * The ID of the queried process in the range 1..4. Checked by assertion.
+ *   @remark
+ * This function can be called from OS and user context.
+ */
+static inline bool rtos_isProcessSuspended(uint32_t PID)
+{
+    /* The process array has no entry for the kernel process. An index offset by one
+       results. */
+    -- PID;
+    
+    assert(PID < sizeOfAry(prc_processAry));
+    return prc_processAry[PID].state == 0;
+
+} /* End of rtos_isProcessSuspended */
 
 
 #endif  /* PRC_PROCESS_INCLUDED */

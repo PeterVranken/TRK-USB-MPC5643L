@@ -32,12 +32,25 @@
  * Defines
  */
 
+/** Some test cases hinder the code from debugging. The likelihood of hitting an se_illegal
+    instruction is high when executing code at arbitrary locations. This instruction make
+    the debugger unconditionally break and program flow is impossible.\n
+      This switch enables code debugging. If the switch is set to 1 then all those test
+    cases are switched off, which disable debugging. This switch overrides the otherwise
+    made selection of test cases. */
+#ifdef DEBUG
+# define PRF_DISABLE_ALL_TEST_CASES_THAT_DISABLE_DEBUGGING       1
+#else
+# define PRF_DISABLE_ALL_TEST_CASES_THAT_DISABLE_DEBUGGING       0
+#endif
+  
+
 /* All test cases can be enabled or disabled. The debugger cannot be used anymore if some
    of the test cases are enabled and due to the frequent appearance of illegal instructions
    in the code flow. Therefore it is important to have the possibility to selectively
    disable those test cases during development. */
 #define PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR                 1
-#define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR                0
+#define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR                1
 #define PRF_ENA_TC_PRF_KOF_NO_FAILURE                           1
 #define PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR                      1
 #define PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR                     1
@@ -51,10 +64,10 @@
 #define PRF_ENA_TC_PRF_KOF_INFINITE_LOOP                        1
 #define PRF_ENA_TC_PRF_KOF_MISALIGNED_WRITE                     1
 #define PRF_ENA_TC_PRF_KOF_MISALIGNED_READ                      1
-#define PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW                       0
-#define PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM                   0
-#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT                           0
-#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT                  0
+#define PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW                       1
+#define PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM                   1
+#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT                           1
+#define PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT                  1
 #define PRF_ENA_TC_PRF_KOF_PRIVILEGED_AND_MPU                   1
 #define PRF_ENA_TC_PRF_KOF_READ_SPR                             1
 #define PRF_ENA_TC_PRF_KOF_WRITE_SPR                            1
@@ -65,6 +78,7 @@
 #define PRF_ENA_TC_PRF_KOF_MMU_READ                             1
 #define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE                          1
 #define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2                        1
+#define PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_PERIPHERAL               1
 #define PRF_ENA_TC_PRF_KOF_TRAP                                 1
 #define PRF_ENA_TC_PRF_KOF_TLB_INSTR                            1
 #define PRF_ENA_TC_PRF_KOF_SPE_INSTR                            1
@@ -73,21 +87,35 @@
 #define PRF_ENA_TC_PRF_KOF_UNDEF_SYS_CALL                       1
 #define PRF_ENA_TC_PRF_KOF_RANDOM_WRITE                         1
 #define PRF_ENA_TC_PRF_KOF_RANDOM_READ                          1
-#define PRF_ENA_TC_PRF_KOF_RANDOM_JUMP                          0
+#define PRF_ENA_TC_PRF_KOF_RANDOM_JUMP                          1
 #define PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC                    1
-#define PRF_ENA_TC_PRF_KOF_INVALID_CRIT_SEC                     0 /* Disregard priority
-                                                                     boundaries */
-#define PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC                       0 /* End task without ending a
-                                                                     critical section */
+#define PRF_ENA_TC_PRF_KOF_INVALID_CRIT_SEC                     1
+#define PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC                       1
 #define PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_OS_RUN_TASK              1
 #define PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_RUN_TASK_NO_PERMIT       1
-#define PRF_ENA_TC_PRF_KOF_INVOKE_IVR_SYSTEM_CALL_BAD_ARGUMENT  0
+#define PRF_ENA_TC_PRF_KOF_INVOKE_IVR_SYSTEM_CALL_BAD_ARGUMENT  1
 #define PRF_ENA_TC_PRF_KOF_SYSTEM_CALL_ALL_ARGUMENTS_OKAY       0 /* No failure, are all
                                                                      possible 7 args okay? */
 #define PRF_ENA_TC_PRF_KOF_WAIT_INSTR                           1
 #define PRF_ENA_TC_PRF_KOF_ENA_FPU_EXC                          1
 
 /// @todo Check debug instructions and potentially add a test case
+
+#if PRF_DISABLE_ALL_TEST_CASES_THAT_DISABLE_DEBUGGING == 1
+# undef PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR
+# define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR               0
+# undef PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW
+# define PRF_ENA_TC_PRF_KOF_STACK_OVERFLOW                      0
+# undef PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM
+# define PRF_ENA_TC_PRF_KOF_STACK_CLEAR_BOTTOM                  0
+# undef PRF_ENA_TC_PRF_KOF_SP_CORRUPT
+# define PRF_ENA_TC_PRF_KOF_SP_CORRUPT                          0
+# undef PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT
+# define PRF_ENA_TC_PRF_KOF_SP_CORRUPT_AND_WAIT                 0
+# undef PRF_ENA_TC_PRF_KOF_RANDOM_JUMP
+# define PRF_ENA_TC_PRF_KOF_RANDOM_JUMP                         0
+#endif
+
 
 /*
  * Global type definitions
@@ -188,6 +216,9 @@ typedef struct prf_cmdFailure_t
 #endif
 #if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_2 == 1
         prf_kof_MMUExecute2,
+#endif
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_PERIPHERAL == 1
+        prf_kof_MMUExecutePeripheral,
 #endif
 #if PRF_ENA_TC_PRF_KOF_TRAP == 1
         prf_kof_trap,

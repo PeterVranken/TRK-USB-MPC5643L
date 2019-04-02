@@ -80,14 +80,16 @@ volatile int8_t assert_PID SECTION(.data.OS.assert_PID) = -1;
 void _EXFUN(__assert_func, (const char *fileName, int line, const char *funcName, const char *expression))
 {
     /* The actual implementation of the assert function is a system call. This makes the
-       assert macro usable in OS and user contexts. The next function will never return.
-       The implementation of the function spins in an inifinite loop. In a development
-       environment this give the opportunity to investigate the cause of the problem in the
-       debugger. On a true device it would normally cause a watchdog reset. */
+       assert macro usable in OS and user contexts. Whether the next function returns or
+       not depends on the chosen behavior of the assert function. See
+       #ASSERT_FAILURE_BEHAVIOR for details. */
     ivr_systemCall(ASSERT_SYSCALL_ASSERT_FUNC, fileName, line, funcName, expression);
     
-    /* The infinite loop will never be reached, the system call doesn't return. We place it
-       here only to avoid the compiler warning about a _Noreturn function returning. */
+/// @todo Remove this obsolete loop or make it dependent on the chosen behavior. What shall we do with the _Noreturn?
+    /* We place the infinite loop here to avoid the compiler warning about a _Noreturn
+       function returning. A user task may block but if it has been started with deadline
+       monitoring then the system is not blocked. (And anyway not the tasks of higher
+       priority.) */
     while(true)
         ;
         

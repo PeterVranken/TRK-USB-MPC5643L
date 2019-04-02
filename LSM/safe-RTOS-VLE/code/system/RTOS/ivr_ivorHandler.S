@@ -249,7 +249,7 @@ ivr1_testForDblExc:
 
 ivr1_testIvor2:
     e_lis       r0, ivr_ivor2Handler@ha
-    e_add16i    r0, r0, ivr_ivor2Handler@l  /* r0: Address Alignment Interrupt handler */
+    e_add16i    r0, r0, ivr_ivor2Handler@l  /* r0: Address Instruction Storage IRQ handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor3
 
@@ -265,7 +265,7 @@ ivr1_testIvor2:
 
 ivr1_testIvor3:
     e_lis       r0, ivr_ivor3Handler@ha
-    e_add16i    r0, r0, ivr_ivor3Handler@l  /* r0: Address Alignment Interrupt handler */
+    e_add16i    r0, r0, ivr_ivor3Handler@l  /* r0: Address Instruction Storage IRQ handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor5
 
@@ -311,9 +311,18 @@ ivr1_testIvor6:
     e_sth       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
+ivr1_isUserCodeIvor1Exception:
+    e_lis       r0, 0x32f0  /* 0x32efffff: Mask to reset anticipated exception syndromes */
+    se_subi     r0, 1
+    mtspr       SPR_MCSR, r0 /* SPR 572 = MCSR, MC syndrome register. Acknowledge exception. */
+    e_li        r0, 0x1000  /* Reload MSR: CE=EE=0 but ME=1 */
+    mtmsr       r0
+    se_li       r3, IVR_CAUSE_TASK_ABBORTION_MACHINE_CHECK
+    e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
+
     .global     ivr_isOSCodeException   /* Just to have it in the map file */
 ivr_isOSCodeException:
-    se_bne      .       /* Halt SW execution if it is an error in operating system itself */
+    se_bne      .   /* Halt SW execution if it is a non-interpretable preemption of SV code */
 
 ivr1_testIvor7:
     e_lis       r0, ivr_ivor7Handler@ha
@@ -336,15 +345,6 @@ ivr1_continuePreemptedIvor:
     mtspr       SPR_MCSR, r0 /* SPR 572 = MCSR, MC syndrome register. Acknowledge exception. */
     se_rfmci
 
-ivr1_isUserCodeIvor1Exception:
-    e_lis       r0, 0x32f0  /* 0x32efffff: Mask to reset anticipated exception syndromes */
-    se_subi     r0, 1
-    mtspr       SPR_MCSR, r0 /* SPR 572 = MCSR, MC syndrome register. Acknowledge exception. */
-    e_li        r0, 0x1000  /* Reload MSR: CE=EE=0 but ME=1 */
-    mtmsr       r0
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_MACHINE_CHECK
-    e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
-
 ivr1_testIvor8:
     e_lis       r0, ivr_ivor8Handler@ha
     e_add16i    r0, r0, ivr_ivor8Handler@l  /* r0: Address System call handler */
@@ -364,7 +364,7 @@ ivr1_testIvor8:
 
 ivr1_testIvor13:
     e_lis       r0, ivr_ivor13Handler@ha
-    e_add16i    r0, r0, ivr_ivor13Handler@l  /* r0: Address Floating-point unavail handler */
+    e_add16i    r0, r0, ivr_ivor13Handler@l  /* r0: Address Data TLB Error Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor14
 
@@ -380,7 +380,7 @@ ivr1_testIvor13:
 
 ivr1_testIvor14:
     e_lis       r0, ivr_ivor14Handler@ha
-    e_add16i    r0, r0, ivr_ivor14Handler@l  /* r0: Address Floating-point unavail handler */
+    e_add16i    r0, r0, ivr_ivor14Handler@l  /* r0: Address Data TLB Error Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor15
 
@@ -396,7 +396,7 @@ ivr1_testIvor14:
 
 ivr1_testIvor15:
     e_lis       r0, ivr_ivor15Handler@ha
-    e_add16i    r0, r0, ivr_ivor15Handler@l  /* r0: Address Floating-point unavail handler */
+    e_add16i    r0, r0, ivr_ivor15Handler@l  /* r0: Address Debug Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor32
 
@@ -428,9 +428,9 @@ ivr1_testIvor32:
 
 ivr1_testIvor33Or34:
     e_lis       r0, ivr_ivor33And34Handler@ha
-    e_add16i    r0, r0, ivr_ivor33And34Handler@l  /* r0: Address Alignment Interrupt handler */
+    e_add16i    r0, r0, ivr_ivor33And34Handler@l  /* r0: Address EFP Data Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
-    se_bne      ivr_isOSCodeException
+    e_bne       ivr_isOSCodeException
 
     /* An IVOR #33 or #34 had started handling the FPU execution when being preempted by
        the imprecise IVOR #1. The FPU exception must not be proceeded, it surely belongs to
@@ -439,10 +439,10 @@ ivr1_testIvor33Or34:
     e_lis       r3, ivr_cntIvor1PreemptsIvor33Or34@ha
     e_lhz       r0, ivr_cntIvor1PreemptsIvor33Or34@l(r3)
     e_cmpl16i   r0, 0xffff
-    se_b        ivr1_isUserCodeIvor1Exception
+    e_b         ivr1_isUserCodeIvor1Exception
     se_addi     r0, 1
     e_sth       r0, ivr_cntIvor1PreemptsIvor33Or34@l(r3)
-    se_b        ivr1_isUserCodeIvor1Exception
+    e_b         ivr1_isUserCodeIvor1Exception
 
 /* End of ivr_ivor1Handler */
 

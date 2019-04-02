@@ -112,6 +112,16 @@
 #define /*uint32_t*/ rtos_systemCall(/*uint32_t*/ idxSysCall, ...) \
                                                 ivr_systemCall(idxSysCall, __VA_ARGS__)
 
+/**
+ * Wrapper for the call of function void prc_grantPermissionSuspendProcess(unsigned int
+ * pidOfCallingTask, unsigned int targetPID) in order to have the function in the name
+ * space rtos_*. See prc_grantPermissionSuspendProcess() for details.
+ */
+#define /*void*/ rtos_grantPermissionSuspendProcess( /*unsigned int*/ pidOfCallingTask  \
+                                                   , /*unsigned int*/ targetPID         \
+                                                   )                                    \
+                            prc_grantPermissionSuspendProcess(pidOfCallingTask, targetPID)
+
 /** System call index of function rtos_triggerEvent(), offered by this module. */
 #define RTOS_SYSCALL_TRIGGER_EVENT  5
 
@@ -194,14 +204,14 @@ typedef struct rtos_taskDesc_t
               If a process init task returns a negative value then the system won't
             startup. */
         int32_t (*userTaskFct)(uint32_t PID);
-        
+
         /** An event can have a task associated, which is used for the operating system. It
             is run as a normal function call, without supervision. The return value is
             meaningful only if the task is an initialization task: If the return value is
             negative then the system won't startup. */
         int32_t (*osTaskFct)(void);
     };
-    
+
     /** Time budget for the user task in Microseconds. This budget is granted for each
         activation of the task. The budget relates to deadline monitoring, i.e. it is a
         world time budget, not an execution time budget.\n
@@ -231,7 +241,7 @@ unsigned int rtos_createEvent(const rtos_eventDesc_t *pEventDesc);
 /** Task registration. */
 bool rtos_registerTask(const rtos_taskDesc_t *pTaskDesc, unsigned int idEvent);
 
-/** Grant permissions for using the service rtos_runTask() to particular processes. */
+/** Grant permission to particular processes for using the service rtos_runTask(). */
 void rtos_grantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID);
 
 /** Kernel initialization. */

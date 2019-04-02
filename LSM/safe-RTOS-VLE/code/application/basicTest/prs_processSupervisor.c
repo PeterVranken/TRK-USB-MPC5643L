@@ -326,6 +326,12 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         break;
 #endif
 
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_PERIPHERAL == 1
+    case prf_kof_MMUExecutePeripheral:
+        maxNoExpectedFailures = 1;
+        break;
+#endif
+
 #if PRF_ENA_TC_PRF_KOF_TRAP == 1
     case prf_kof_trap:
         maxNoExpectedFailures = 1;
@@ -391,6 +397,7 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 
 #if PRF_ENA_TC_PRF_KOF_INVALID_CRIT_SEC == 1
     case prf_kof_invalidCritSec:
+        minNoExpectedFailures = 1;
         maxNoExpectedFailures = 1;
         break;
 #endif
@@ -412,6 +419,7 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 
 #if PRF_ENA_TC_PRF_KOF_INVOKE_IVR_SYSTEM_CALL_BAD_ARGUMENT == 1
     case prf_kof_invokeIvrSystemCallBadArgument:
+        minNoExpectedFailures = 0;
         maxNoExpectedFailures = 1;
         break;
 #endif
@@ -554,10 +562,16 @@ int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
  */
 int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
 {
+    const bool isPrcFailingTasksSuspended = rtos_isProcessSuspended(syc_pidFailingTasks);
+    
     /// @todo Stack check every Millisend costs about 15% CPU load. We don't need to do
-    // this so often: Pi stacks are any way protected and OS could be checked every 100ms
+    // this so often: Pi stacks are anyway protected and OS could be checked every 100ms
     /// @todo Add SW alive counters in all processes/tasks and add a need-to-change
     // condition here
+    
+    /* The status variables don't need to be checked any more after suspending the failure
+       injection process after the first failure. However, we continue to do so for sake of
+       easier debugging in case of a problem. */
     prr_failureStatus_t status;
     status.noActLossEvTest = rtos_getNoActivationLoss(syc_idEvTest);
     status.noActLossEvPIT2 = rtos_getNoActivationLoss(syc_idEvPIT2);
@@ -566,71 +580,81 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
     status.stackResSV = rtos_getStackReserve(syc_pidSupervisor);
     status.stackResRep = rtos_getStackReserve(syc_pidReporting);
     status.stackResOS = rtos_getStackReserve(/* PID */ 0 /* OS */);
-    bool isOk = status.noActLossEvTest == 0
-                &&  status.noActLossEvPIT2 == 0
-                &&  status.noTaskFailSV == 0
-                &&  status.noTaskFailRep == 0
-                &&  status.stackResSV >= 512
-                &&  status.stackResRep >= 512
-                &&  status.stackResOS >= 3096;
-
-    if(isOk)
-    {
+    
 #define TI_BLINK_IN_MS  750u
 #define CNT_STEP    ((int16_t)((float)(UINT16_MAX)/(TI_BLINK_IN_MS) + 0.5f))
-        static int16_t SDATA_PRC_SV(cnt_) = 0;
-        lbd_setLED(lbd_led_D4_grn, /* isOn */ (cnt_+=CNT_STEP) >= 0);
+    static int16_t SDATA_PRC_SV(cnt_) = 0;
 
-        /* The LED driver is not protected in the sense that it grants different privileges
-           to different processes. This makes it available to a failing, straying task. We
-           indeed see occasional LED switch commands due to arbitrary code execution in the
-           failing failure injection task. We correct the LED status regularly to maintain
-           the signaling effect of the LED. */
-        lbd_setLED(lbd_led_D4_red, /* isOn */ false);
-        
-        if((uint16_t)cnt_ < (uint16_t)CNT_STEP)
+    if(!isPrcFailingTasksSuspended)
+    {
+        bool isOk = status.noActLossEvTest == 0
+                    &&  status.noActLossEvPIT2 == 0
+                    &&  status.noTaskFailSV == 0
+                    &&  status.noTaskFailRep == 0
+                    &&  status.stackResSV >= 512
+                    &&  status.stackResRep >= 512
+                    &&  status.stackResOS >= 3096;
+
+        if(isOk)
         {
-            /* Run a task in the reporting process to let it print some regular progress and
-               status information. */
-            const prr_testStatus_t testStatus = { .noTestCycles = prs_cntTestCycles };
-            const prc_userTaskConfig_t userTaskConfig =  
+            if((uint16_t)cnt_ < (uint16_t)CNT_STEP)
+            {
+                /* Run a task in the reporting process to let it print some regular
+                   progress and status information. */
+                const prr_testStatus_t testStatus = { .noTestCycles = prs_cntTestCycles };
+                const prc_userTaskConfig_t userTaskConfig =  
                                     { .taskFct = (prc_taskFct_t)prr_taskReportWatchdogStatus
                                       , .tiTaskMax = PRC_TI_MS2TICKS(3)
                                       , .PID = syc_pidReporting
                                     };
-            int32_t result ATTRIB_DBG_ONLY =
-                                rtos_runTask( &userTaskConfig
-                                            , /* taskParam */ (uint32_t)&testStatus
-                                            );
-            assert(result >= 0);
+                int32_t result ATTRIB_DBG_ONLY =
+                                    rtos_runTask( &userTaskConfig
+                                                , /* taskParam */ (uint32_t)&testStatus
+                                                );
+                assert(result >= 0);
+            }
         }
-#undef CNT_STEP
+        else
+        {
+            /* Run a task once in the reporting process to let it print the conditions,
+               which caused the software halt. */
+            status.noTestCycles = prs_cntTestCycles;
+            const prc_userTaskConfig_t userTaskConfig =  
+                                    { .taskFct = (prc_taskFct_t)prr_taskReportFailure
+                                      , .tiTaskMax = PRC_TI_MS2TICKS(5)
+                                      , .PID = syc_pidReporting
+                                    };
+            int32_t result ATTRIB_DBG_ONLY =
+                            rtos_runTask( &userTaskConfig
+                                        , /* taskParam */ (uint32_t)&status
+                                        );
+            assert(result >= 0);
+
+            /* Suspend our failure injection process. The RTOS and the rest of the
+               application software continue running. */
+            rtos_suspendProcess(syc_pidFailingTasks);
+        }
+    } /* End if(Failure injection process suspended or still alive?) */
+
+    /* Let the LED blink in the color, which indicates the health of the failure
+       injection process. */
+    const bool isLedOn = cnt_ >= 0;
+    lbd_setLED(isPrcFailingTasksSuspended? lbd_led_D4_red: lbd_led_D4_grn, isLedOn);
+
+    /* The LED driver is not protected in the sense that it grants different privileges
+       to different processes. This makes it available to a failing, straying task. We
+       indeed see occasional LED switch commands due to arbitrary code execution in the
+       failing failure injection task. We correct the LED status regularly to maintain
+       the signaling effect of the LED. */
+    lbd_setLED( isPrcFailingTasksSuspended? lbd_led_D4_grn: lbd_led_D4_red
+              , /* isOn */ false
+              );
+
+    /* Advance counter such that it wrapps around in the wanted time span. */
+    cnt_ += CNT_STEP;
+
 #undef TI_BLINK_IN_MS
-    }
-    else
-    {
-        /* Run a task in the reporting process to let it print the conditions, which caused
-           the software halt. */
-        status.noTestCycles = prs_cntTestCycles;
-        const prc_userTaskConfig_t userTaskConfig =  
-                                { .taskFct = (prc_taskFct_t)prr_taskReportFailure
-                                  , .tiTaskMax = PRC_TI_MS2TICKS(5)
-                                  , .PID = syc_pidReporting
-                                };
-        int32_t result ATTRIB_DBG_ONLY = rtos_runTask( &userTaskConfig
-                                                     , /* taskParam */ (uint32_t)&status
-                                                     );
-        assert(result >= 0);
-        
-        /* In PRODUCTION compilation we can't halt the system using the assert macro. We turn
-           on the red LED to indicate a problem and enter an infinite loop. Since the watchdog
-           has the highest user task priority this means effectively halting the software
-           execution. Just some interrupts without further effect will remain. */
-        lbd_setLED(lbd_led_D4_grn, /* isOn */ false);
-        lbd_setLED(lbd_led_D4_red, /* isOn */ true);
-        while(true)
-            ;
-    }
+#undef CNT_STEP
 
     return 0;
 

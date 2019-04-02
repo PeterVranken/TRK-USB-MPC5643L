@@ -146,6 +146,12 @@ SECTIONS
         
     } >memData AT>memFlash
 
+    /* @todo Since we anyway need to have a 5 Bit alignment for nearly all
+       symbols ld_* it would be more transparent and less error prone if
+       we already aligned the output sections accordingly and/or put an
+       align operation in front of the first symbol definition in an
+       output section */
+
     .bss (NOLOAD) : ALIGN(4)
     {
         ld_ramStart = ABSOLUTE(.); /* INTC vector table is not contained. */

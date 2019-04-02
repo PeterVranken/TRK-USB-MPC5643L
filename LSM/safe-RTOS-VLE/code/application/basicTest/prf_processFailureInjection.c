@@ -47,6 +47,7 @@
 #include "gsl_systemLoad.h"
 #include "syc_systemConfiguration.h"
 #include "prr_processReporting.h"
+#include "prs_processSupervisor.h"
 #include "prf_processFailureInjection.h"
 
 
@@ -394,6 +395,15 @@ static void injectError(void)
         break;
 #endif
 
+#if PRF_ENA_TC_PRF_KOF_MMU_EXECUTE_PERIPHERAL == 1
+    case prf_kof_MMUExecutePeripheral:
+        /** Address of interrupt controller INTC0 in memory map. */
+        #define INTC0   0xfff48000
+        ((void (*)(uint32_t))INTC0)(999);
+        #undef INTC0
+        break;
+#endif
+
 #if PRF_ENA_TC_PRF_KOF_TRAP == 1
     case prf_kof_trap:
         asm volatile ("twne %%r2, %%r2 /* Must not be trapped */\n\t"
@@ -600,13 +610,43 @@ static void injectError(void)
 
 #if PRF_ENA_TC_PRF_KOF_INVALID_CRIT_SEC == 1
     case prf_kof_invalidCritSec:
-# error Test case not yet implemented
+        {
+            uint32_t prioLvlBefore ATTRIB_DBG_ONLY =
+                                rtos_suspendAllInterruptsByPriority
+                                        (/* suspendUpToThisPriority */ RTOS_KERNEL_PRIORITY-2);
+            assert(prioLvlBefore == syc_prioEvTest);
+            prioLvlBefore = rtos_suspendAllInterruptsByPriority
+                                        (/* suspendUpToThisPriority */ syc_prioEvTest);
+            assert(prioLvlBefore == RTOS_KERNEL_PRIORITY-2);
+            
+            /* This call needs to fail: We demand the values beyond the permitted limits. */
+            rtos_suspendAllInterruptsByPriority
+                                (/* suspendUpToThisPriority */
+                                 (prs_cntTestCycles/prf_kof_noFailureTypes & 1) != 0
+                                 ? RTOS_KERNEL_PRIORITY - 1
+                                 : syc_prioEvTest - 1
+                                );
+            assert(false);
+        }
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC == 1
     case prf_kof_leaveCritSec:
-# error Test case not yet implemented
+        {
+            uint32_t prioLvlBefore ATTRIB_DBG_ONLY =
+                                rtos_suspendAllInterruptsByPriority
+                                        (/* suspendUpToThisPriority */ syc_prioISRPit1);
+            assert(prioLvlBefore == syc_prioEvTest);
+            prioLvlBefore = rtos_suspendAllInterruptsByPriority
+                                        (/* suspendUpToThisPriority */ RTOS_KERNEL_PRIORITY-2);
+            assert(prioLvlBefore == syc_prioISRPit1);
+
+            /* Leaving this task with strongest possible lock of other tasks must not
+               hinder the test supervisor task to continue with the test evaluation and
+               further test cases. However, this situation is not punished with a task
+               abort or process error. */
+        }
         break;
 #endif
 
@@ -633,15 +673,6 @@ static void injectError(void)
 #if PRF_ENA_TC_PRF_KOF_INVOKE_RTOS_RUN_TASK_NO_PERMIT == 1
     case prf_kof_invokeRtosRunTaskWithoutPermission:
         {
-            /* Try running a task in the reporting process. */
-            if((random() & 0xf) == 0)
-            {
-                /*  A variant of the test case is first trying to manipulate the permission
-                    vector. */
-/// @todo _runTask_permissions is basically static. Undo manipulation after test
-                extern uint16_t _runTask_permissions;
-                _runTask_permissions = 0xffff;
-            }
             const prr_testStatus_t capturedStatus = { .noTestCycles = 0xffffffffu };
             const prc_userTaskConfig_t userTaskConfig =  
                                     { .taskFct = (prc_taskFct_t)prr_taskReportWatchdogStatus
@@ -659,7 +690,19 @@ static void injectError(void)
 
 #if PRF_ENA_TC_PRF_KOF_INVOKE_IVR_SYSTEM_CALL_BAD_ARGUMENT == 1
     case prf_kof_invokeIvrSystemCallBadArgument:
-# error Test case not yet implemented
+        {
+            const uint8_t u8_4 = 4;
+            static uint8_t SDATA_PRC_FAIL(u8_cnt) = 0;
+            ++ u8_cnt;
+            rtos_systemCall( (unsigned)u8_cnt
+                           , 1u
+                           , -2i
+                           , 3.14f
+                           , u8_4
+                           , 'x'
+                           , &main
+                           );
+        }
         break;
 #endif
 
@@ -788,7 +831,7 @@ int32_t prf_task17ms(uint32_t PID ATTRIB_UNUSED)
  *   @param PID
  * A user task function gets the process ID as first argument.
  *   @param taskParam
- * Different to "normal" RTOS scheduled user tasks may directly started tasks have a task
+ * Different to "normal", RTOS scheduled user tasks may a directly started task have a
  * parameter. In this test we just apply it for a consistency check.
  *   
  */
