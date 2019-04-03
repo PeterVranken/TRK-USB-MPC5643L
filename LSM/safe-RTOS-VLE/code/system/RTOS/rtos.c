@@ -428,7 +428,7 @@ static inline void checkEventDue(void)
                 // the due time. Some limitation code is required to make this safe.
                 // Alternatively, we can implement a queue length of one by acknowledging
                 // the IRQ flag on entry into the SW IRQ handler: The next SW IRQ can be
-                // requested while the proveious one is still being handled.
+                // requested while the previous one is still being handled.
                 pEvent->tiDue += pEvent->tiCycleInMs;
 
             } /* End if(Event is due?) */
@@ -984,7 +984,7 @@ bool rtos_initKernel(void)
                 int32_t resultInit;
                 if(_initTaskCfgAry[idxP].PID == 0)
                 {
-                    /* OS initailization function: It is a normal sub-function code; we are
+                    /* OS initialization function: It is a normal sub-function code; we are
                        here in the OS context. */
                     resultInit = ((int32_t (*)(void))_initTaskCfgAry[idxP].taskFct)();
                 }
@@ -997,9 +997,8 @@ bool rtos_initKernel(void)
             else
             {
                 /* An initialization task must not be registered for a process, which is not
-                   configurated. */
-                /// @todo Didn't we check this above? Use assert instead
-                isConfigOk = false;
+                   configured. This had been checked above and we can never get here. */
+                assert(false);
             }
         } /* End if(Init task configured for process?) */
     } /* End for(All possible processes) */
@@ -1026,7 +1025,7 @@ bool rtos_initKernel(void)
 
     /* @todo Shall we offer idle tasks per process? If so, we cannot leave the routine but
        would need to enter an infinite loop - and had to offer such a function for OS, too.
-       For consistency reason this would require an init function for OS, too. */
+       For consistency reasons this would require an init function for OS, too. */
 
     return isConfigOk;
 

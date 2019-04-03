@@ -43,6 +43,8 @@
  *   registerInterrupts
  */
 
+/// @todo Adopt the significant improvements of this module from the other project DEVKIT-MPC5748G/startup
+
 /*
  * Include files
  */

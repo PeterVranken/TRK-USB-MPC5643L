@@ -395,6 +395,11 @@ ivr1_testIvor14:
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor15:
+    /// @todo A double exception with IVOR #15 won't be recognized correctly. We have
+    // checked SRR1 for user code preemption first but IVOR #15 uses CSRR1. On the other
+    // hand have we never been able to provoke any IVOR #15 let alone a double one. Shall
+    // we really make the CSRR/SRR distinction here? Or drop the entire #15 handler? (See
+    // other todo at IVOR #15 handler, too)
     e_lis       r0, ivr_ivor15Handler@ha
     e_add16i    r0, r0, ivr_ivor15Handler@l  /* r0: Address Debug Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
@@ -1537,8 +1542,6 @@ ivr_ivor32Handler:
  * "assert(problem state == user)" since even operating system code could run an FPU
  * instruction after some user code had enabled the exceptions.
  */
-/// @todo IVOR #1 needs to recognize double exceptions. Additional complexity: Only for
-// these two it must not look at the problem state of the preempted context
     .section    .text.ivor
     .global     ivr_ivor33And34Handler
     .p2align    4

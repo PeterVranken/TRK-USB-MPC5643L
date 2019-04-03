@@ -2,22 +2,54 @@
  * @file mpu_systemMemoryProtectionUnit.c
  * Configuration and initialization of the Memory Protection Unit (MPU). The
  * configuration is chosen static in this sample. The initially chosen configuration is
- * never changed during run-time. Furthermore, the configuration is most simple; the only
- * requirement to fulfill is to make initial SW development as easy as possible and to
- * support inter-core communication.\n
- *   To simplify development, all cores get unrestricted access to all address space,
- * memory and I/O.\n
- *   To support inter-core communication there is an uncached memory area. Many inter-core
- * communication patterns are based on shared memory and while all memory id basically
- * shared in this sample is only the uncached memory easily and safely usable. (Otherwise
- * special techniques need to be applied to let a core look behind its cache into the main
- * memory.) The only - minor- speciality of the configuration is the use of a memory
- * section for the uncached area. There's no need to consider particular address spaces or
- * obey size boundaries, just declare your data as uncached where appropriate and the
- * linker will put it together.\n
- *   In particular and despite of the module name, there is no memory protection implemented
- * here. If an application needs to have protected memory areas then it will need to change
- * the chosen configuration.
+ * never changed during run-time.\n
+ *   The configuration uses a descriptor for all ROM, which is occupied by the compiled
+ * code: All processes have read and execution access. Write access, although it can't do
+ * any harm is forbidden: According run-time failure reporting will point to define
+ * implementation errors.\n
+ *   The configuration has one descriptor for all RAM, which is occupied by the compiled
+ * code. All processes have read access and only the OS process has write and execute
+ * access, too.\n
+ *   The configuration has one descriptor for the entire peripheral address space. The OS
+ * process has read and write access.\n
+ *   Each of the four user processes has three descriptors, all of them for RAM write and
+ * execute access. There's a descriptor for the initialized data and bss, one for the small
+ * data and bss and one for the small data 2 and bss 2.\n
+ *   The configuration has one descriptor for a chunk of memory, which all user processes
+ * have read and write access to. This memory is meant for inter-process communication and
+ * must evidently never be used to hold data, which is essential for the health of a
+ * process and in particular for the process, that implements supervisory safety tasks.\n
+ *   The static configuration of the MPU is the explanation for the fixed number of four
+ * supported processes (#PRC_NO_PROCESSES). We need three descriptors per user process at
+ * least three for the OS (including user ROM) and have 16 descriptors available.
+ *
+ * CAUTION: The mentioned memory chunks or areas are puzzled by the linker. The MPU
+ * configuration makes no hard coded assumptions about memory arrangement and distribution
+ * or addresses and sizes of the chunks. It reads address and length of the memory chunks
+ * from linker provided symbols. Insofar do we have a very tight relationship between the
+ * implementation of this module and the linker script, which must be obeyed when doing
+ * maintenance work at either side.
+ *
+ * Alternative configurations, which may find their use case and do not break the safety
+ * concept:
+ *   - The OS process doesn't necessarily need execution access for RAM. There
+ * are typically driver implementation patterns, which require RAM execution rights, but it
+ * is mostly about initialization and could be done prior to calling the MPU configuration.
+ *   - The user processes won't normally need execution rights for their RAM
+ *   - It is possible to let a process with higher privileges have access to the memories
+ * of all processes with lower privileges. Below, it is explained how to do this
+ *   - If the number of processes is reduced (a safety concept requires two processes at
+ * minimum) then each process could have up to six descriptors. This would enable a
+ * configuration with disjunct data and bss chunks so that the waste of data image ROM
+ * disappears, which the current configuration has (see linker script for details)
+ *   - The shared memory section can be disabled if not required for the inter-process
+ * communication
+ *   - A difficult topic is the placing of the small data 2 and bss 2 sections. It is
+ * possible to locate them into the ROM. This is likely not fully compliant with the EABI
+ * but for all normal embedded applications alright. In which case we had four free
+ * descriptors and could implement two more processes. A similar concept for increasing the
+ * number of processes would be entirely switching off the short addressing modes. This is a
+ * matter of the compiler command line
  *
  * Copyright (C) 2018-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -155,8 +187,15 @@ void mpu_initMPU(void)
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 0);
     ++ r;
 
-    /// @todo Offer a compile time switch to select hirarchical model, where PID i has write access to memory of PID j if i>=j
-    
+    /* It would be very easy to offer a compile time switch to select a hirarchical memory
+       access model, where process with ID i has write access to the memory of process with
+       ID j if i>=j. This will require just a few alternative lines of code here. All
+       processes would use ld_sdaP1Start, ld_sda2P1Start and ld_dataP1Start instaed of
+       ld_sdaPiStart, ld_sda2PiStart and ld_dataPiStart, respectively, in their
+       descriptors.
+         The reason not to do so is the huge amount of additional testing, which would be
+       required. */
+       
     /* RAM access for process 1. */
 #if MPU_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];

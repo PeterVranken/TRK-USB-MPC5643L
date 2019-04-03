@@ -480,22 +480,18 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-uint32_t SDATA_PRC_SV(prs_tmpCntCalls) = 0
-       , SDATA_PRC_SV(prs_tmpBreakAtCntCalls) = 0xffffffff;
-
 int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
 {
-    if(prs_tmpCntCalls == prs_tmpBreakAtCntCalls)
-        prs_tmpCntCalls = 0;
-    else
-        ++ prs_tmpCntCalls;
-
-    /** @todo Long lasting test could run into the saturation of the failure counter. We
-        must not interpret this unexpected behavior. */
+    /** A long lasting test could theoretically run into the saturation of the failure
+        counter. We must not report this as an error. On the other hand it doesn't make
+        much sense to continue. There's no true solution for this dilemma but taking the given
+        timing of the application we would reach this point after more than 200 days - and
+        ignore it. */ 
     const unsigned int noFailures = rtos_getNoTotalTaskFailure(syc_pidFailingTasks);
 
     bool testOkThisTime =
-            noFailures >= _failureExpectation.expectedNoProcessFailures
+            noFailures != 0xffffffff
+            &&  noFailures >= _failureExpectation.expectedNoProcessFailures
             &&  noFailures <= _failureExpectation.expectedNoProcessFailures
                               + _failureExpectation.expectedNoProcessFailuresTolerance;
 
@@ -564,7 +560,7 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
 {
     const bool isPrcFailingTasksSuspended = rtos_isProcessSuspended(syc_pidFailingTasks);
     
-    /// @todo Stack check every Millisend costs about 15% CPU load. We don't need to do
+    /// @todo Stack check every Millisecond costs about 15% CPU load. We don't need to do
     // this so often: Pi stacks are anyway protected and OS could be checked every 100ms
     /// @todo Add SW alive counters in all processes/tasks and add a need-to-change
     // condition here

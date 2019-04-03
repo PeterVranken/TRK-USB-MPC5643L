@@ -27,7 +27,7 @@
  */
 
 #ifdef __STDC_VERSION__
-//# include "prc_process.h"
+  /* Place #include statements here, which are only read by C source files. */
 #endif
 
 #include "sc_systemCall.h"
