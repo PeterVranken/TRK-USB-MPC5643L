@@ -407,15 +407,19 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
     unsigned int u;
     for(u=0; u<noExecutionContexts; ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
+    if(cntAllTasksCpy != 0)
+    {
 #ifdef DEBUG
-    assert(cntAllTasksCpy == 0);
+        assert(false);
 #else
-    /* PRODUCTION compilation: Code execution can be halted only by the OS process. We
-       leave this to the idle task.
-         Note, incrementing the error count to make the idle task recognize the problem
-       is not safe, we don't have a critical section for this object and the given task. */
-    ++ _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors;
+        /* PRODUCTION compilation: Code execution can be halted only by the OS process. We
+           leave this to the idle task.
+             Note, incrementing the error count to make the idle task recognize the problem
+           is not safe, we don't have a critical section for this object and the given
+           task. */
+        ++ _sharedDataTasksIdleAnd1msAndCpuLoad.noErrors;
 #endif
+    }
 } /* End of checkAndIncrementTaskCnts. */
 
 
@@ -446,6 +450,7 @@ static bool testPCP_checkDataConsistency()
         return true;
 
 } /* End of testPCP_checkDataConsistency */
+
 
 
 /**
@@ -521,7 +526,6 @@ static void testPCP(unsigned int idTask)
         rtos_OS_suspendProcess(/* PID */ 1);
 #endif
 } /* End of testPCP. */
-
 
 
 /**
