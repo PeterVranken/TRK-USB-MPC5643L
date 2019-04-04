@@ -1,9 +1,15 @@
 = Sample "safe-RTOS" (VLE) - A simple RTOS with safety support for MPC5643L
-:Author:    Peter Vranken 
-:Email:     mailto:Peter_Vranken@Yahoo.de
-:toc:       left
-:xrefstyle: short
+:Author:            Peter Vranken 
+:Email:             mailto:Peter_Vranken@Yahoo.de
+:toc:               left
+:xrefstyle:         short
 :numbered:
+:icons:             font
+:caution-caption:   :fire:
+:important-caption: :exclamation:
+:note-caption:      :paperclip:
+:tip-caption:       :bulb:
+:warning-caption:   :warning:
 
 == About this sample
 

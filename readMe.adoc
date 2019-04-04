@@ -125,5 +125,5 @@ and Installation].
 * The code and scripts are documented by source code comments
 * Most relevant documentation about the evaluation board and the
   microcontroller has been collected in folder
-  https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/doc[`doc`]
+  https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/doc[doc]
   and much, much more can be found in the Internet
