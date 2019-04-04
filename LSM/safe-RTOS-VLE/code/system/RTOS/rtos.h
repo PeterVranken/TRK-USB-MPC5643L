@@ -71,11 +71,13 @@
     is a compile time configuration setting and there are no constraints in changing it
     besides the ammout of reserved RAM space for the resulting table size.\n
       The configured limit applies to the tasks registered with rtos_registerTask() only;
-    callbacks from I/O driver, which are much of a user task, too, are not couted here. */
+    callbacks from I/O driver, which are much of a user task, too, are not counted here. */
 #define RTOS_MAX_NO_USER_TASKS      20
 
 /** Deadline monitoring for tasks is supported up to a task maximum execution time of this
-    number of Microseconds: (2^31-1)*T_c/1e-6, T_c is 120e6 (CPU clock rate). */
+    number of Microseconds: (2^31-1)*T_c/1e-6, T_c is 120e6 (CPU clock rate).
+      The macro denotes a technical limitation. It is not a configurable item and must not
+    be changed. */
 #define RTOS_TI_DEADLINE_MAX_IN_US  17895697
 
 /** A pseudo event ID. Used to register a process initialization task in the API
@@ -85,7 +87,7 @@
 /** An RTOS event can normally be triggered by user tasks belonging to a process of
     sufficient privileges. See field \a minPIDToTriggerThisEvent of struct \a
     rtos_eventDesc_t. If it should not be accessible even by the process of highest
-    priviledges than #PRC_EVENT_NOT_USER_TRIGGERABLE can be specified for \a
+    privileges than #PRC_EVENT_NOT_USER_TRIGGERABLE can be specified for \a
     minPIDToTriggerThisEvent. */
 #define PRC_EVENT_NOT_USER_TRIGGERABLE  ((PRC_NO_PROCESSES)+1u)
 
@@ -134,7 +136,7 @@
  */
 
 /** User visible description of an event. An object of this type is used by the client code
-    of the RTOS to create an event. (It is not used at runtime in the kernel, see event_t
+    of the RTOS to create an event. (It is not used at runtime in the kernel, see eventDesc_t
     instead.) */
 typedef struct rtos_eventDesc_t
 {
@@ -338,18 +340,19 @@ static inline int32_t rtos_runTask( const prc_userTaskConfig_t *pUserTaskConfig
 
 
 /**
- * Abort the calling task immediately. A user task may use this system call at any time and
- * from any nested sub-routine. The task execution is immediately aborted. The function
+ * End/abort the calling task immediately. A user task may use this system call at any time
+ * and from any nested sub-routine. The task execution is immediately aborted. The function
  * does not return.
  *   @param taskReturnValue
  * The task can return a value to its initiator, i.e. to the context who had applied
- * ivr_runUserTask() or ivr_runInitTask() to create the task. The value is signed and
- * (only) the sign is meanigful to the assembly code to create/abort a task:\n
- *   Requesting task abortion is considered an error and counted in the owning process if
- * the returned value is negative. In this case, the calling context won't receive the
+ * ivr_runUserTask() or ivr_runInitTask() or rtos_runTask() to create the task. The value
+ * is signed and (only) the sign is meaningful to the assembly code to create/abort a
+ * task:\n
+ *   The requested task abortion is considered an error and counted in the owning process
+ * if the returned value is negative. In this case, the calling context won't receive the
  * value but the error code #IVR_CAUSE_TASK_ABBORTION_USER_ABORT.\n
- *   Requesting task abortion is not considered an error if \a taskReturnValue is greater
- * or equal to zero. The value is propagated to the task creating context.
+ *   The requested task abortion is not considered an error if \a taskReturnValue is
+ * greater or equal to zero. The value is propagated to the task creating context.
  *   @remark
  * This function must be called from the user task context only. Any attempt to use it from
  * OS code will lead to a crash.
@@ -365,21 +368,22 @@ static inline _Noreturn void rtos_terminateTask(int32_t taskReturnValue)
 /**
  * Priority ceiling protocol, partial interrupt lock: All interrupts up to the specified
  * priority level won't be handled by the CPU. This function is intended for implementing
- * mutual exclusion of sub-sets of tasks; the use of
- *   - ihw_enterCriticalSection() and
- *   - ihw_leaveCriticalSection()
- * or
- *   - ihw_suspendAllInterrupts() and
- *   - ihw_resumeAllInterrupts()
+ * mutual exclusion of sub-sets of tasks.\n
+ *   Note, the use of\n
+ *   - ihw_enterCriticalSection() and\n
+ *   - ihw_leaveCriticalSection()\n
+ * or\n
+ *   - ihw_suspendAllInterrupts() and\n
+ *   - ihw_resumeAllInterrupts()\n
  * locks all interrupt processing and no other task (or interrupt handler) can become
  * active while the task is inside the critical section code. Using this function is much
  * better: Call it with the highest priority of all tasks, which should be locked, i.e. which
- * compete for the critical section to protect. This may still lock other, not competing
- * tasks, but at least all non competing tasks of higher priority will still be served (and
- * this will likely include most interrupt handlers).\n
- *   To leave the critical section, call the counterpart function
- * rtos_resumeAllInterruptsByPriority(), which restores the original interrupt/task
- * priority level.
+ * compete for the resource or critical section to protect. This may still lock other, not
+ * competing tasks, but at least all non competing tasks of higher priority will still be
+ * served (and this will likely include most interrupt handlers).\n
+ *   To release the protected resource or to leave the critical section, call the
+ * counterpart function rtos_resumeAllInterruptsByPriority(), which restores the original
+ * interrupt/task priority level.
  *   @return
  * The priority level at entry into this function (and into the critical section) is
  * returned. This level needs to be restored on exit from the critical section using
@@ -626,7 +630,8 @@ static inline bool rtos_triggerEvent(unsigned int idEvent)
  * Get total number of errors counted for process \a PID.
  *   @param PID
  * The ID of the queried process in the range 1 .. PRC_NO_PROCESSES. An out of range PID
- * will always yield UINT_MAX.
+ * will always yield UINT_MAX and an assertion fires in DEBUG compilation. An unused
+ * process has no errors.
  *   @remark
  * This function can be called from both, a user task or the OS context.
  */
@@ -635,8 +640,10 @@ static inline unsigned int rtos_getNoTotalTaskFailure(unsigned int PID)
     if(--PID < PRC_NO_PROCESSES)
         return prc_processAry[PID].cntTotalTaskFailure;
     else
+    {
+        assert(false);
         return UINT_MAX;
-
+    }
 } /* End of rtos_getNoTotalTaskFailure */
 
 
@@ -648,7 +655,8 @@ static inline unsigned int rtos_getNoTotalTaskFailure(unsigned int PID)
  * Get total number of errors of category \a kindOfErr counted for process \a PID.
  *   @param PID
  * The ID of the queried process in the range 1 .. PRC_NO_PROCESSES. An out of range PID
- * will always yield UINT_MAX.
+ * will always yield UINT_MAX and an assertion fires in DEBUG compilation. An unused
+ * process has no errors.
  *   @param kindOfErr
  * The category of the error. See file ivr_ivorHandler.h,
  * #IVR_CAUSE_TASK_ABBORTION_MACHINE_CHECK and following, for the enumerated error causes.
@@ -664,8 +672,10 @@ static inline unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int 
         return prc_processAry[PID].cntTaskFailureAry[kindOfErr];
     }
     else
+    {
+        assert(false);
         return UINT_MAX;
-
+    }
 } /* End of rtos_getNoTaskFailure */
 
 

@@ -106,6 +106,15 @@ pcp_scBscHdlr_suspendAllInterruptsByPriority:
     e_lwz       r3, INTC_CPR_PRC0@l(r5) /* r3: Current prio value, before change. For return */
     e_stw       r4, INTC_CPR_PRC0@l(r5) /* Store checked, demanded priority in INTC */
 
+    /* Note, there can still be a last interrupt of priority less than or equal to the new
+       value of CPR. This happens occasionally when the interrupt has asserted, while we
+       were inside the critical section. Incrementing CPR does not un-assert an already
+       asserted interrupt. Normally, an isync instruction after the store to CPR ensures
+       that this last interrupt has completed prior to the execution of the first code
+       inside the critical section. Here, we omit the isync; the rfi at the end of the
+       routine has as strong synchronization capabilities, see EREF 2.0, 4.5.4.5 Context
+       Synchronization, p. 228. See https://community.nxp.com/message/993795 for more. */
+       
     /* Restore the user stack pointer and return to the user task. */
     se_mr       sp, r0
     se_rfi

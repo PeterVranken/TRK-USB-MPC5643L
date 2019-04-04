@@ -286,10 +286,11 @@ static unsigned int _noEvents SECTION(.sdata.OS._noEvents) = 0;
 
 /** Time increment of one tick of the RTOS system clock. It is set at kernel initialization
     time to the configured period time of the system clock in Milliseconds
-    (#RTOS_CLOCK_TICK_IN_MS). This way the unit of all time designations in the RTOS API always
-    stay Milliseconds despite of the actually chosen clock rate. (An application of the
-    RTOS can reduce the clock rate to the lowest possible value in order to save overhead.)
-    The normal settings are a clock rate of 1 kHz and #RTOS_CLOCK_TICK_IN_MS=1.\n
+    (#RTOS_CLOCK_TICK_IN_MS). This way the unit of all time designations in the RTOS API
+    always stays Milliseconds despite of the actually chosen clock rate. (An application of
+    the RTOS can reduce the clock rate to the lowest possible value in order to save
+    overhead.) The normal settings are a clock rate of 1 kHz and
+    #RTOS_CLOCK_TICK_IN_MS=1.\n
       The variable is initially set to zero to hold the scheduler during RTOS
     initialization. */
 static unsigned long _tiOsStep SECTION(.sdata.OS._tiStepOs) = 0;
@@ -543,7 +544,7 @@ unsigned int rtos_createEvent(const rtos_eventDesc_t *pEventDesc)
         if(pEventDesc->tiFirstActivationInMs != 0)
             return (unsigned int)-1;
     }
-
+    
     /* The full 32 Bit range is avoided for time designations in order to have safe and
        unambiguous before and after decisions in a cyclic time model.
          Furthermore, no task must have the initial due time of 0xffffffff in order to not
