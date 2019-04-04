@@ -440,7 +440,7 @@ To get more information, type:
 
     mingw32-make help
 
-NOTE: The makefile requires the MinGW port of the make processor. The
+WARNING: The makefile requires the MinGW port of the make processor. The
 Cygwin port will fail with obscure, misleading error messages. It's safe
 to use the `make.exe` from the compiler installation archive but
 explicitly typing `mingw32-make` will avoid any problem.
