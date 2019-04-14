@@ -70,7 +70,7 @@ if {[info exists APP]  &&  $APP!=""  &&  [info exists INSTR]  &&  ($INSTR=="BOOK
 
     # Protect the flash contents of the device again. Uncomment it if suitable. (During
     # development it is not essential to have the protection.)
-    #cmdwin::fl::protect all on
+    cmdwin::fl::protect all on
     
     # Reset of device to start the flashed application is unfortunately not supported for
     # the MPC5643L.
