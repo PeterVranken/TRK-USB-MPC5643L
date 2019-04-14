@@ -1,9 +1,19 @@
 // See https://isis.apache.org/guides/dg/resources/asciidoc-writers-guide.pdf
 = TRK-USB-MPC5643L -- Open Source Toolchain Support for a low-cost PowerPC Evaluation Board
-:Author:    Peter Vranken
-:Email:     mailto:Peter_Vranken@Yahoo.de
-:Revision:  1
-:toc:       left
+:Author:            Peter Vranken
+:Email:             mailto:Peter_Vranken@Yahoo.de
+:toc:               left
+//:toclevels:         3
+//:numbered:
+//:xrefstyle:         short
+//:sectanchors:       // Have URLs for chapters (http://.../#section-name)
+:icons:             font
+:caution-caption:   :fire:
+:important-caption: :exclamation:
+:note-caption:      :paperclip:
+:tip-caption:       :bulb:
+:warning-caption:   :warning:
+
 
 == Introduction
 
@@ -45,7 +55,8 @@ The configuration for this project is:
 |Host|Windows 7
 |C compiler|https://drive.google.com/open?id=0B_3zBh2c7LroNEFIOVlJcUVKRWc[MinGW-powerpc-eabivle-4.9.4]
 |Unix tools|http://www.cygwin.com/[Cygwin]
-|Flash tool|https://www.nxp.com/pages/codewarrior-for-mcus-eclipse-ide-coldfire.-56800-e-dsc-kinetis.-nxp-56xx-rs08-s08-s12z-v10.7:CW-MCU10?tab=Design_Tools_Tab[NXP CodeWarrior 10.7]
+|Flash tool|https://www.nxp.com/pages/codewarrior-for-mcus-eclipse-ide-coldfire.-56800-e-dsc-kinetis.-nxp-56xx-rs08-s08-s12z-v10.7:CW-MCU10?tab=Design_Tools_Tab[NXP CodeWarrior 10.7]footnote:[Check page https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation#CodeWarrior[Tools
+and Installation] for notes on downloading and using more recent versions of CodeWarrior]
 |Debugger|(same as flash tool)
 |=======
 
