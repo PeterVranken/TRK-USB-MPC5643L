@@ -1,8 +1,8 @@
-#ifndef MPU_SYSTEMMEMORYPROTECTIONUNIT_INCLUDED
-#define MPU_SYSTEMMEMORYPROTECTIONUNIT_INCLUDED
+#ifndef RTOS_SYSTEMMEMORYPROTECTIONUNIT_INCLUDED
+#define RTOS_SYSTEMMEMORYPROTECTIONUNIT_INCLUDED
 /**
- * @file mpu_systemMemoryProtectionUnit.h
- * Definition of global interface of module mpu_systemMemoryProtectionUnit.c
+ * @file rtos_systemMemoryProtectionUnit.h
+ * Definition of global interface of module rtos_systemMemoryProtectionUnit.c
  *
  * Copyright (C) 2018-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -45,6 +45,12 @@
  */
 
 /** Configure and initialize the memory protection unit, MPU. */
-void mpu_initMPU(void);
+void rtos_initMPU(void);
 
-#endif  /* MPU_SYSTEMMEMORYPROTECTIONUNIT_INCLUDED */
+
+/*
+ * Global static inline functions
+ */
+
+
+#endif  /* RTOS_SYSTEMMEMORYPROTECTIONUNIT_INCLUDED */

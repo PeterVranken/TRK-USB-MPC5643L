@@ -172,7 +172,7 @@ static void injectError(void)
         
 #if PRF_ENA_TC_PRF_KOF_CALL_OS_API == 1
     case prf_kof_callOsAPI:
-        rtos_OS_suspendAllInterruptsByPriority(15);
+        rtos_osSuspendAllInterruptsByPriority(15);
         break;
 #endif
 
@@ -597,9 +597,9 @@ static void injectError(void)
 
 #if PRF_ENA_TC_PRF_KOF_MPU_EXC_BEFORE_SC == 1
     case prf_kof_mpuExcBeforeSc:
-        asm volatile (".extern  prc_processAry\n\t"
-                      "e_lis    %%r4, prc_processAry@ha\n\t"
-                      "e_la     %%r4, prc_processAry@l(%%r4)\n\t"
+        asm volatile (".extern  rtos_processAry\n\t"
+                      "e_lis    %%r4, rtos_processAry@ha\n\t"
+                      "e_la     %%r4, rtos_processAry@l(%%r4)\n\t"
                       "se_li    %%r3, 0         /* 0: System call terminate task */\n\t"
                       "se_stw   %%r3, 0(%%r4)   /* Invalid instruction, MPU, IVOR #1 */\n\t"
                       "se_sc\n\t"
@@ -656,15 +656,15 @@ static void injectError(void)
             /* Try running a task in the reporting process using the generally forbidden OS
                API. */
             const prr_testStatus_t capturedStatus = { .noTestCycles = 0xfffffffeu };
-            const prc_userTaskConfig_t userTaskConfig =  
-                                    { .taskFct = (prc_taskFct_t)prr_taskReportWatchdogStatus
-                                      , .tiTaskMax = 0
+            const rtos_taskDesc_t userTaskConfig =  
+                                    { .addrTaskFct = (uintptr_t)prr_taskReportWatchdogStatus
                                       , .PID = syc_pidReporting
+                                      , .tiTaskMax = 0
                                     };
             int32_t result ATTRIB_DBG_ONLY =
-                                rtos_OS_runTask( &userTaskConfig
-                                               , /* taskParam */ (uint32_t)&capturedStatus
-                                               );
+                                rtos_osRunTask( &userTaskConfig
+                                              , /* taskParam */ (uint32_t)&capturedStatus
+                                              );
             assert(result >= 0);
         }
         break;
@@ -674,10 +674,10 @@ static void injectError(void)
     case prf_kof_invokeRtosRunTaskWithoutPermission:
         {
             const prr_testStatus_t capturedStatus = { .noTestCycles = 0xffffffffu };
-            const prc_userTaskConfig_t userTaskConfig =  
-                                    { .taskFct = (prc_taskFct_t)prr_taskReportWatchdogStatus
-                                      , .tiTaskMax = 0
+            const rtos_taskDesc_t userTaskConfig =  
+                                    { .addrTaskFct = (uintptr_t)prr_taskReportWatchdogStatus
                                       , .PID = syc_pidReporting
+                                      , .tiTaskMax = 0
                                     };
             int32_t result ATTRIB_DBG_ONLY =
                                 rtos_runTask( &userTaskConfig

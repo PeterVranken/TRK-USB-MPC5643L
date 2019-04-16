@@ -77,7 +77,7 @@
 
 /** The IDs of the processes in use. Note, the chosen number is the privledge level at the
     same time; the higher the number the higher the privileges. The permitted range is 1 ...
-    #PRC_NO_PROCESSES. */
+    #RTOS_NO_PROCESSES. */
 enum
 {
     syc_pidReporting = 1 /// Unaffected, parallel running tasks for reporting and normal tests
@@ -91,11 +91,11 @@ enum
 
 /** The enumeration of all events; the values are the event IDs. Actually, the ID is
     provided by the RTOS at runtime, when creating the event. However, it is guaranteed
-    that the IDs, which are dealt out by rtos_createEvent() form the series 0, 1, 2, ...,
-    7. So we don't need to have a dynamic storage of the IDs; we define them as constants
-    and double-check by assertion that we got the correct, expected IDs from
-    rtos_createEvent(). Note, this requires that the order of creating the events follows
-    the order here in the enumeration. */
+    that the IDs, which are dealt out by rtos_osCreateEvent() form the series 0, 1, 2,
+    ..., 7. So we don't need to have a dynamic storage of the IDs; we define them as
+    constants and double-check by assertion that we got the correct, expected IDs from
+    rtos_osCreateEvent(). Note, this requires that the order of creating the events
+    follows the order here in the enumeration. */
 enum
 {
     syc_idEvReporting = 0   /// Slow clock for printing results to the console

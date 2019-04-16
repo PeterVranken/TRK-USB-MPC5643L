@@ -1,8 +1,8 @@
-#ifndef IVR_IVORHANDLER_INCLUDED
-#define IVR_IVORHANDLER_INCLUDED
+#ifndef RTOS_IVORHANDLER_INCLUDED
+#define RTOS_IVORHANDLER_INCLUDED
 /**
- * @file ivr_ivorHandler.h
- * Part of definition of global interface of module ivr_ivorHandler.S.\n
+ * @file rtos_ivorHandler.h
+ * Part of definition of global interface of module rtos_ivorHandler.S.\n
  *   This file contains all global difinitions, which are used by the assembler
  * implementation. The file is shared between C and assembler code.
  *
@@ -30,7 +30,7 @@
   /* Place #include statements here, which are only read by C source files. */
 #endif
 
-#include "sc_systemCall.h"
+#include "rtos_systemCall.h"
 
 
 /*
@@ -38,52 +38,51 @@
  */
 
 /** The number of different causes of non graceful task terminations. */
-#define IVR_NO_CAUSES_TASK_ABORTION 13
+#define RTOS_NO_CAUSES_TASK_ABORTION 13
 
 /* The enumeration of casues of task termination. */
-/// @todo Move this into rtos.h, the user level header file
-#define IVR_CAUSE_TASK_ABBORTION_PROCESS_ABORT      0 /* Process abort from user/scheduler */
-#define IVR_CAUSE_TASK_ABBORTION_MACHINE_CHECK      1 /* IVOR #1, Machine check, mostly memory
+#define RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT      0 /* Process abort from user/scheduler */
+#define RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK      1 /* IVOR #1, Machine check, mostly memory
                                                          protection */
-#define IVR_CAUSE_TASK_ABBORTION_DEADLINE           2 /* Task exceeded deadline */
-#define IVR_CAUSE_TASK_ABBORTION_DI_STORAGE         3 /* IVOR #2/#3, MMU storage error */
-#define IVR_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG   4 /* Task referred to invalid system
+#define RTOS_CAUSE_TASK_ABBORTION_DEADLINE           2 /* Task exceeded deadline */
+#define RTOS_CAUSE_TASK_ABBORTION_DI_STORAGE         3 /* IVOR #2/#3, MMU storage error */
+#define RTOS_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG   4 /* Task referred to invalid system
                                                          call */
-#define IVR_CAUSE_TASK_ABBORTION_ALIGNMENT          5 /* IVOR #5, Alignment */
-#define IVR_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT  6 /* IVOR #6, mostly illegal instruction */
-#define IVR_CAUSE_TASK_ABBORTION_FPU_UNAVAIL        7 /* IVOR #7, Book E FPU instructions */
-#define IVR_CAUSE_TASK_ABBORTION_TBL_DATA           8 /* IVOR #13, TBL data access mismatch */
-#define IVR_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION    9 /* IVOR #14, TBL instr access mismatch */
-#define IVR_CAUSE_TASK_ABBORTION_TRAP              10 /* IVOR #15, trap and debug events */
-#define IVR_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION   11 /* IVOR #32, use of SPE instruction */
-#define IVR_CAUSE_TASK_ABBORTION_USER_ABORT        12 /* User code returned error code */
+#define RTOS_CAUSE_TASK_ABBORTION_ALIGNMENT          5 /* IVOR #5, Alignment */
+#define RTOS_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT  6 /* IVOR #6, mostly illegal instruction */
+#define RTOS_CAUSE_TASK_ABBORTION_FPU_UNAVAIL        7 /* IVOR #7, Book E FPU instructions */
+#define RTOS_CAUSE_TASK_ABBORTION_TBL_DATA           8 /* IVOR #13, TBL data access mismatch */
+#define RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION    9 /* IVOR #14, TBL instr access mismatch */
+#define RTOS_CAUSE_TASK_ABBORTION_TRAP              10 /* IVOR #15, trap and debug events */
+#define RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION   11 /* IVOR #32, use of SPE instruction */
+#define RTOS_CAUSE_TASK_ABBORTION_USER_ABORT        12 /* User code returned error code */
 
-/* Define the offsets of fields in struct prc_userTaskDesc_t. */
+/* Define the offsets of fields in struct rtos_userTaskDesc_t. */
 #define SIZE_OF_TASK_DESC       4
 #define O_TDESC_ti              0
 
-/* Define the offsets of fields in struct prc_userTaskConfig_t. */
+/* Define the offsets of fields in struct rtos_taskDesc_t. */
 #define SIZE_OF_TASK_CONF       12
 #define O_TCONF_pFct            0
 #define O_TCONF_tiMax           4
 #define O_TCONF_pid             8
 
-/* Define the offsets of fields in struct prc_processDesc_t. */
-#define SIZE_OF_PROCESS_DESC    (12+(IVR_NO_CAUSES_TASK_ABORTION)*4)
+/* Define the offsets of fields in struct processDesc_t. */
+#define SIZE_OF_PROCESS_DESC    (12+(RTOS_NO_CAUSES_TASK_ABORTION)*4)
 #define O_PDESC_USP             0
 #define O_PDESC_ST              4
 #define O_PDESC_CNTTOT          8
 #define O_PDESC_CNTTARY         12
 
-/* Define the field offsets and enumeration values in struct sc_systemCallDesc_t. */
+/* Define the field offsets and enumeration values in struct systemCallDesc_t. */
 #define SIZE_OF_SC_DESC         8
 #define O_SCDESC_sr             0
 #define O_SCDESC_confCls        4
-#define E_SCDESC_basicHdlr      SC_HDLR_CONF_CLASS_BASIC 
-#define E_SCDESC_simpleHdlr     SC_HDLR_CONF_CLASS_SIMPLE
-#define E_SCDESC_fullHdlr       SC_HDLR_CONF_CLASS_FULL
+#define E_SCDESC_basicHdlr      RTOS_HDLR_CONF_CLASS_BASIC 
+#define E_SCDESC_simpleHdlr     RTOS_HDLR_CONF_CLASS_SIMPLE
+#define E_SCDESC_fullHdlr       RTOS_HDLR_CONF_CLASS_FULL
 
-/* Define the offsets of the stack frame of function ivr_runUserTask. Note the minimum
+/* Define the offsets of the stack frame of function rtos_runUserTask. Note the minimum
    offset of 8 due to the storage of stack pointer and link register.
      The pointer to this stack frame is globally stored and used from different code
    locations to implement exceptions and task termination. Therefore we define it globally. */
@@ -97,7 +96,7 @@
 
 /** The index of the offered system call to terminate a user task. Note, this is not a
     configurable switch. Task termination needs to be system call zero. */
-#define IVR_SYSCALL_SUSPEND_TERMINATE_TASK  0
+#define RTOS_SYSCALL_SUSPEND_TERMINATE_TASK  0
 
 /** SPR index of SPRG0. We use it for temporary storage of the SV stack pointer. It is
     possible to hold it in RAM, too, using the SPR is just to have more concise code for
@@ -120,7 +119,7 @@
  * Global type definitions
  */
 
-struct prc_userTaskConfig_t;
+struct rtos_taskDesc_t;
 
 
 /*
@@ -136,38 +135,40 @@ struct prc_userTaskConfig_t;
     task termination and counted error. Must be used solely from within the implementation
     of a system call and only if the abortion is due to a clear fault in the calling user
     code. */
-_Noreturn void ivr_systemCallBadArgument(void);
+_Noreturn void rtos_systemCallBadArgument(void);
 
 /** C signature for doing a system call. Note, the signature doesn't ... @TODOC */
-uint32_t ivr_systemCall(uint32_t idxSysCall, ...);
+uint32_t rtos_systemCall(uint32_t idxSysCall, ...);
 
 /** C signature to execute a process init function. Must be called from OS context only.
-    Basically identical to ivr_runUserTask() but disregards the process status. It will
-    create and run the task even if the process did not start yet. */
-int32_t ivr_runInitTask(const struct prc_userTaskConfig_t *pUserTaskConfig);
+    Basically identical to rtos_runUserTask() but disregards the process status. It will
+    create and run the task even if the process did not start yet.
+      @remark The assembly code is such that it would pass a further argument as task param
+    to the init function. Just by uncommenting the second argument it would work. We have
+    the function argument commented as there's currently no use case for it and it saves us
+    from loading a dummy value into register GPR4 at the calling code location. */
+int32_t rtos_runInitTask(const struct rtos_taskDesc_t *pUserTaskConfig);
 
 /** C signature to call a C function in a user process context. Must be called from OS
     context only.
       @return
     The created task may return a (positive) value. If it is aborted because of failures
-    ivr_runUserTask() returns #IVR_CAUSE_TASK_ABBORTION_USER_ABORT.
+    rtos_runUserTask() returns #RTOS_CAUSE_TASK_ABBORTION_USER_ABORT.
       @param pUserTaskConfig
     Descriptor of the created task. Mainly function pointer and ID of process to start the
     task in.
       @param taskParam
-    A value meaningless to ivr_runUserTask(), only propagated to the invoked task
+    A value meaningless to rtos_runUserTask(), only propagated to the invoked task
     function. */
-int32_t ivr_runUserTask( const struct prc_userTaskConfig_t *pUserTaskConfig
-                       , uint32_t taskParam
-                       );
+int32_t rtos_runUserTask(const struct rtos_taskDesc_t *pUserTaskConfig, uint32_t taskParam);
 
 /** C signature to terminate a user task. Can be called from any nested sub-routine in the
     user task.
       @param taskReturnValue
-    If positive, the value is returned to the task creation function ivr_runUserTask(). If
-    negative, ivr_runUserTask() receives #IVR_CAUSE_TASK_ABBORTION_USER_ABORT and an error
+    If positive, the value is returned to the task creation function rtos_runUserTask(). If
+    negative, rtos_runUserTask() receives #RTOS_CAUSE_TASK_ABBORTION_USER_ABORT and an error
     is counted in the process. */
-_Noreturn void ivr_terminateUserTask(int32_t taskReturnValue);
+_Noreturn void rtos_terminateUserTask(int32_t taskReturnValue);
 
 #endif  /* For C code compilation only */
-#endif  /* IVR_IVORHANDLER_INCLUDED */
+#endif  /* RTOS_IVORHANDLER_INCLUDED */

@@ -1,10 +1,10 @@
-#ifndef IHW_INITMCUCOREHW_INCLUDED
-#define IHW_INITMCUCOREHW_INCLUDED
+#ifndef RTOS_EXTERNALINTERRUPT_INCLUDED
+#define RTOS_EXTERNALINTERRUPT_INCLUDED
 /**
- * @file ihw_initMcuCoreHW.h
- * Definition of global interface of module ihw_initMcuCoreHW.c
+ * @file rtos_externalInterrupt.h
+ * Definition of global interface of module rtos_externalInterrupt.c
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -19,9 +19,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-/* Module interface
- *   ihw_initMcuCoreHW
- */
 
 /*
  * Include files
@@ -29,8 +26,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "typ_types.h"
 
 
 /*
@@ -49,14 +44,18 @@
 
 
 /*
- * Global inline functions
- */
-
-/*
  * Global prototypes
  */
 
-/** Init core HW of MCU so that it can be safely operated. */
-void ihw_initMcuCoreHW(void);
+/** Initialize the interrupt controller INTC. */
+void rtos_initINTCInterruptController(void);
 
-#endif  /* IHW_INITMCUCOREHW_INCLUDED */
+/** Install an interrupt service for a given I/O device. */
+/// @todo Make function disappear and have a ROM table as for system calls
+void rtos_installInterruptHandler( rtos_interruptServiceRoutine_t interruptServiceRoutine
+                                 , unsigned int vectorNum
+                                 , unsigned int psrPriority
+                                 , bool isPreemptable
+                                 );
+
+#endif  /* RTOS_EXTERNALINTERRUPT_INCLUDED */

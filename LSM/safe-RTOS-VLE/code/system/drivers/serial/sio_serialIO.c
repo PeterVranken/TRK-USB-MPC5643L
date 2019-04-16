@@ -58,10 +58,9 @@
 
 #include "MPC5643L.h"
 #include "typ_types.h"
-#include "prc_process.h"
 #include "sio_serialIO_defSysCalls.h"
-#include "ivr_ivorHandler.h"
-#include "ihw_initMcuCoreHW.h"
+#include "rtos_ivorHandler.h"
+#include "rtos.h"
 
 
 
@@ -644,16 +643,16 @@ static void registerInterrupts(void)
 
     /* Register our IRQ handlers. Priority is chosen low for output DMA since we serve a
        slow data channel, which even has a four Byte queue inside. */
-    prc_installINTCInterruptHandler( &dmaTransferCompleteInterrupt
-                                   , /* vectorNum */ IDX_DMA_IRQ
-                                   , /* psrPriority */ INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT
-                                   , /* isPreemptable */ true
-                                   );
-    prc_installINTCInterruptHandler( &linFlexRxInterrupt
-                                   , /* vectorNum */ IDX_LINFLEX_RX_IRQ
-                                   , /* psrPriority */ INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT
-                                   , /* isPreemptable */ true
-                                   );
+    rtos_installInterruptHandler( &dmaTransferCompleteInterrupt
+                                , /* vectorNum */ IDX_DMA_IRQ
+                                , /* psrPriority */ INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT
+                                , /* isPreemptable */ true
+                                );
+    rtos_installInterruptHandler( &linFlexRxInterrupt
+                                , /* vectorNum */ IDX_LINFLEX_RX_IRQ
+                                , /* psrPriority */ INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT
+                                , /* isPreemptable */ true
+                                );
 #undef IDX_DMA_IRQ 
 #undef IDX_LINFLEX_RX_IRQ
 } /* End of registerInterrupts */
@@ -732,7 +731,7 @@ unsigned int sio_scFlHdlr_writeSerial( uint32_t PID ATTRIB_UNUSED
         /* The user specified memory region is not entirely inside the permitted,
            accessible range. This is a severe user code error, which is handeld with an
            exception, task abort and counted error. */
-        ivr_systemCallBadArgument();
+        rtos_systemCallBadArgument();
     }
     
     /* After checking the potentially bad user input we may delegate it to the "normal"
@@ -766,7 +765,7 @@ unsigned int sio_OS_writeSerial( const char *msg
                                , unsigned int noBytes
                                )
 {
-    uint32_t msr = ihw_enterCriticalSection();
+    uint32_t msr = rtos_osEnterCriticalSection();
     {
         /* Note, most buffer addresses or indexes in this section of the code are
            understood as cyclic, i.e. modulo the buffer size. This is indicated by an M as
@@ -866,7 +865,7 @@ unsigned int sio_OS_writeSerial( const char *msg
         }
 #undef MODULO
     }
-    ihw_leaveCriticalSection(msr);
+    rtos_osLeaveCriticalSection(msr);
     
     /* noBytes is saturated to buffer size-1 and can't overflow in conversion to signed. */
     return noBytes;
@@ -896,7 +895,7 @@ signed int sio_OS_getChar(void)
     
     /* Reading the ring buffer is done in a critical section to ensure mutual exclusion
        with the it filling interrupt. */
-    uint32_t msr = ihw_enterCriticalSection();
+    uint32_t msr = rtos_osEnterCriticalSection();
     {
         /* Check for buffer empty. */
         if(_pRdSerialInRingBuf != _pWrSerialInRingBuf)
@@ -923,7 +922,7 @@ signed int sio_OS_getChar(void)
             c = -1;
         }
     }
-    ihw_leaveCriticalSection(msr);
+    rtos_osLeaveCriticalSection(msr);
 
     return c;
 
@@ -1006,7 +1005,7 @@ char *sio_OS_getLine(char str[], unsigned int sizeOfStr)
 
     /* Reading the ring buffer is done in a critical section to ensure mutual exclusion
        with the it filling interrupt. */
-    uint32_t msr = ihw_enterCriticalSection();
+    uint32_t msr = rtos_osEnterCriticalSection();
     {
         volatile uint8_t * pRd = _pRdSerialInRingBuf;
 
@@ -1119,7 +1118,7 @@ char *sio_OS_getLine(char str[], unsigned int sizeOfStr)
             *pWrApp = '\0';
         }
     }
-    ihw_leaveCriticalSection(msr);
+    rtos_osLeaveCriticalSection(msr);
 
     return result;
 

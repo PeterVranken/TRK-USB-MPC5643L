@@ -1,8 +1,8 @@
-#ifndef PRC_PROCESS_DEFSYSCALLS_INCLUDED
-#define PRC_PROCESS_DEFSYSCALLS_INCLUDED
+#ifndef RTOS_PROCESS_DEFSYSCALLS_INCLUDED
+#define RTOS_PROCESS_DEFSYSCALLS_INCLUDED
 /**
- * @file prc_process_defSysCalls.h
- * Definition of global interface of module prc_process_defSysCalls.c
+ * @file rtos_process_defSysCalls.h
+ * Definition of global interface of module rtos_process_defSysCalls.c
  *
  * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -27,27 +27,26 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "prc_process.h"
+#include "rtos.h"
+#include "rtos_process.h"
 
 
 /*
  * Defines
  */
 
-#ifndef SC_SYSCALL_TABLE_ENTRY_0009
-# if PRC_SYSCALL_SUSPEND_PROCESS != 9
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0009
+# if RTOS_SYSCALL_SUSPEND_PROCESS != 9
 #  error Inconsistent definition of system call
 # endif
-# define SC_SYSCALL_TABLE_ENTRY_0009                                    \
-            { .addressOfFct = (uint32_t)prc_scSmplHdlr_suspendProcess   \
-            , .conformanceClass = SC_HDLR_CONF_CLASS_SIMPLE             \
-            }
+# define RTOS_SYSCALL_TABLE_ENTRY_0009  \
+                    RTOS_SC_TABLE_ENTRY(rtos_scSmplHdlr_suspendProcess, SIMPLE)
 #else
 # error System call 0009 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    make the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define SC_SYSCALL_TABLE_ENTRY_0009    SC_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0009    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 
@@ -69,6 +68,6 @@
 /* System call implementation to suspend a process: Abort the running tasks belonging to
    the given process and stop that process forever (i.e. no further task or I/O driver
    callback execution). */
-void prc_scSmplHdlr_suspendProcess(uint32_t callingPid, uint32_t PID);
+void rtos_scSmplHdlr_suspendProcess(uint32_t callingPid, uint32_t PID);
 
-#endif  /* PRC_PROCESS_DEFSYSCALLS_INCLUDED */
+#endif  /* RTOS_PROCESS_DEFSYSCALLS_INCLUDED */

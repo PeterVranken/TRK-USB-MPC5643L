@@ -1,5 +1,5 @@
 /**
- * @file ivr_ivorHandler.S
+ * @file rtos_ivorHandler.S
  * VLE assembler implementation of IVOR exception handlers for, in the first place the IVOR
  * #4 handler for external interrupts handled by the INTC.\n
  *   Used for MPC5643L in Lockstep Mode (LSM). The code has been designed for use with GCC
@@ -23,25 +23,25 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   ivr_ivor1Handler
- *   ivr_ivor2Handler
- *   ivr_ivor3Handler
- *   ivr_ivor4Handler
- *   ivr_runInitTask
- *   ivr_runUserTask
- *   ivr_terminateUserTask
- *   ivr_scBscHdlr_terminateUserTask
- *   ivr_systemCallBadArgument
- *   ivr_scBscHdlr_sysCallUndefined
- *   ivr_ivor5Handler
- *   ivr_ivor6Handler
- *   ivr_ivor8Handler
- *   ivr_systemCall
- *   ivr_ivor13Handler
- *   ivr_ivor14Handler
- *   ivr_ivor15Handler
- *   ivr_ivor32Handler
- *   ivr_ivor33And34Handler
+ *   rtos_ivor1Handler
+ *   rtos_ivor2Handler
+ *   rtos_ivor3Handler
+ *   rtos_ivor4Handler
+ *   rtos_runInitTask
+ *   rtos_runUserTask
+ *   rtos_terminateUserTask
+ *   rtos_scBscHdlr_terminateUserTask
+ *   rtos_systemCallBadArgument
+ *   rtos_scBscHdlr_sysCallUndefined
+ *   rtos_ivor5Handler
+ *   rtos_ivor6Handler
+ *   rtos_ivor8Handler
+ *   rtos_systemCall
+ *   rtos_ivor13Handler
+ *   rtos_ivor14Handler
+ *   rtos_ivor15Handler
+ *   rtos_ivor32Handler
+ *   rtos_ivor33And34Handler
  * Local functions
  */
 
@@ -53,8 +53,8 @@
  * Include files
  */
 
-#include "sc_systemCall.h"
-#include "ivr_ivorHandler.h"
+#include "rtos_systemCall.h"
+#include "rtos_ivorHandler.h"
 
 
 /*
@@ -117,18 +117,18 @@
     in the assembler code, where we have better control of the required alignment
     constraints. */
     .section    .INTCInterruptServiceAry, "a"
-    .extern     prc_dummyINTCInterruptHandler
-    .global     ivr_INTCInterruptHandlerAry
+    .extern     rtos_dummyINTCInterruptHandler
+    .global     rtos_INTCInterruptHandlerAry
     .p2align    11  /* 11 Bit alignment required by INTC hardware. The statement makes the
                        implementation safe but does not say anything about efficient memory
                        allocation. To avoid a big waste of memory the section allocation in
                        the linker file should be made on an according memory address, too. */
-ivr_INTCInterruptHandlerAry:
+rtos_INTCInterruptHandlerAry:
     .rept       256
-    .dc.l       prc_dummyINTCInterruptHandler
+    .dc.l       rtos_dummyINTCInterruptHandler
     .endr
 
-/* End of ivr_INTCInterruptHandlerAry */
+/* End of rtos_INTCInterruptHandlerAry */
 
 
 
@@ -141,7 +141,7 @@ ivr_INTCInterruptHandlerAry:
     164. */
 
 /**
- *   @func ivr_ivor1Handler
+ *   @func rtos_ivor1Handler
  * This is the interrupt handler for the MCU trap #1, Machine Check. See Core RM, 5.1.2,
  * Table 5-2, p.162ff for the association of exception types to chosen IVOR handler and
  * Core RM, 5.7.7, p. 184, for this particular handler. In the context of this software,
@@ -169,9 +169,9 @@ ivr_INTCInterruptHandlerAry:
  * even repeat it would be a logical fault.
  */
     .section    .text.ivor
-    .global     ivr_ivor1Handler
+    .global     rtos_ivor1Handler
     .p2align    4
-ivr_ivor1Handler:
+rtos_ivor1Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -216,8 +216,8 @@ ivr_ivor1Handler:
        task) than producing additional load. */
 
     mfspr       r3, SPR_MCSRR0  /* Address, where this Machine Check interrupt preempted */
-    e_lis       r0, ivr_ivor4Handler@ha
-    e_add16i    r0, r0, ivr_ivor4Handler@l  /* r0: Address External Interrupt handler */
+    e_lis       r0, rtos_ivor4Handler@ha
+    e_add16i    r0, r0, rtos_ivor4Handler@l  /* r0: Address External Interrupt handler */
     se_cmp      r0, r3          /* r3=SPR_MCSRR0 and r0 need to match to satisfy */
     se_bne      ivr1_testForDblExc
 
@@ -226,12 +226,12 @@ ivr_ivor1Handler:
        IVOR #4 is not continued. The interrupt is still asserted and the CPU will return to
        the IVOR #4 handler as soon as the fault handling proceeds to the point where
        MSR[EE] returns to 1. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor4@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor4@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor4@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor4@l(r3)
     e_cmpl16i   r0, 0xffff
     se_b        ivr1_isUserCodeIvor1Exception
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor4@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor4@l(r3)
     se_b        ivr1_isUserCodeIvor1Exception
 
 ivr1_testForDblExc:
@@ -245,70 +245,70 @@ ivr1_testForDblExc:
 
     mfspr       r0, SPR_SRR1    /* MSR of task, which a potential other IVOR has preempted */
     se_btsti    r0, 17          /* Test bit "problem state" */
-    se_beq      ivr_isOSCodeException /* It's already clear, it can't be a double exception */
-
+    se_beq      rtos_ivr1_isOSCodeException /* It's already clear, it can't be a double
+                                               exception */
 ivr1_testIvor2:
-    e_lis       r0, ivr_ivor2Handler@ha
-    e_add16i    r0, r0, ivr_ivor2Handler@l  /* r0: Address Instruction Storage IRQ handler */
+    e_lis       r0, rtos_ivor2Handler@ha
+    e_add16i    r0, r0, rtos_ivor2Handler@l  /* r0: Address Instruction Storage IRQ handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor3
 
     /* IVOR #2 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #2. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor2@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor2@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor2@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor2@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor2@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor2@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor3:
-    e_lis       r0, ivr_ivor3Handler@ha
-    e_add16i    r0, r0, ivr_ivor3Handler@l  /* r0: Address Instruction Storage IRQ handler */
+    e_lis       r0, rtos_ivor3Handler@ha
+    e_add16i    r0, r0, rtos_ivor3Handler@l  /* r0: Address Instruction Storage IRQ handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor5
 
     /* IVOR #3 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #3. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor3@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor3@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor3@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor3@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor3@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor3@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor5:
-    e_lis       r0, ivr_ivor5Handler@ha
-    e_add16i    r0, r0, ivr_ivor5Handler@l  /* r0: Address Alignment Interrupt handler */
+    e_lis       r0, rtos_ivor5Handler@ha
+    e_add16i    r0, r0, rtos_ivor5Handler@l  /* r0: Address Alignment Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor6
 
     /* IVOR #5 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #5. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor5@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor5@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor5@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor5@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor5@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor5@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor6:
-    e_lis       r0, ivr_ivor6Handler@ha
-    e_add16i    r0, r0, ivr_ivor6Handler@l  /* r0: Address Program Interrupt handler */
+    e_lis       r0, rtos_ivor6Handler@ha
+    e_add16i    r0, r0, rtos_ivor6Handler@l  /* r0: Address Program Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor7
 
     /* IVOR #6 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #6. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor6@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor6@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor6@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor6@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor6@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_isUserCodeIvor1Exception:
@@ -317,27 +317,27 @@ ivr1_isUserCodeIvor1Exception:
     mtspr       SPR_MCSR, r0 /* SPR 572 = MCSR, MC syndrome register. Acknowledge exception. */
     e_li        r0, 0x1000  /* Reload MSR: CE=EE=0 but ME=1 */
     mtmsr       r0
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_MACHINE_CHECK
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-    .global     ivr_isOSCodeException   /* Just to have it in the map file */
-ivr_isOSCodeException:
+    .global     rtos_ivr1_isOSCodeException   /* Just to have it in the map file */
+rtos_ivr1_isOSCodeException:
     se_bne      .   /* Halt SW execution if it is a non-interpretable preemption of SV code */
 
 ivr1_testIvor7:
-    e_lis       r0, ivr_ivor7Handler@ha
-    e_add16i    r0, r0, ivr_ivor7Handler@l  /* r0: Address Floating-point unavail handler */
+    e_lis       r0, rtos_ivor7Handler@ha
+    e_add16i    r0, r0, rtos_ivor7Handler@l  /* r0: Address Floating-point unavail handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor8
 
     /* IVOR #7 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #7. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor7@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor7@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor7@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor7@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor7@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor7@l(r3)
 
 ivr1_continuePreemptedIvor:
     e_lis       r0, 0x32f0  /* 0x32efffff: Mask to reset anticipated exception syndromes */
@@ -346,52 +346,52 @@ ivr1_continuePreemptedIvor:
     se_rfmci
 
 ivr1_testIvor8:
-    e_lis       r0, ivr_ivor8Handler@ha
-    e_add16i    r0, r0, ivr_ivor8Handler@l  /* r0: Address System call handler */
+    e_lis       r0, rtos_ivor8Handler@ha
+    e_add16i    r0, r0, rtos_ivor8Handler@l  /* r0: Address System call handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor13
 
     /* An IVOR #8 system call had started execution when being preempted by the imprecise
        IVOR #1. IVOR #8 doesn't need to be proceeded, it surely belongs to the failing
        task, which is aborted by the exception. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor8@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor8@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor8@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor8@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_isUserCodeIvor1Exception
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor8@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor8@l(r3)
     se_b        ivr1_isUserCodeIvor1Exception
 
 ivr1_testIvor13:
-    e_lis       r0, ivr_ivor13Handler@ha
-    e_add16i    r0, r0, ivr_ivor13Handler@l  /* r0: Address Data TLB Error Interrupt handler */
+    e_lis       r0, rtos_ivor13Handler@ha
+    e_add16i    r0, r0, rtos_ivor13Handler@l  /* r0: Address Data TLB Error Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor14
 
     /* IVOR #13 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #13. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor13@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor13@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor13@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor13@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor13@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor13@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor14:
-    e_lis       r0, ivr_ivor14Handler@ha
-    e_add16i    r0, r0, ivr_ivor14Handler@l  /* r0: Address Data TLB Error Interrupt handler */
+    e_lis       r0, rtos_ivor14Handler@ha
+    e_add16i    r0, r0, rtos_ivor14Handler@l  /* r0: Address Data TLB Error Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor15
 
     /* IVOR #14 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #14. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor14@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor14@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor14@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor14@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor14@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor14@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor15:
@@ -400,60 +400,60 @@ ivr1_testIvor15:
     // hand have we never been able to provoke any IVOR #15 let alone a double one. Shall
     // we really make the CSRR/SRR distinction here? Or drop the entire #15 handler? (See
     // other todo at IVOR #15 handler, too)
-    e_lis       r0, ivr_ivor15Handler@ha
-    e_add16i    r0, r0, ivr_ivor15Handler@l  /* r0: Address Debug Interrupt handler */
+    e_lis       r0, rtos_ivor15Handler@ha
+    e_add16i    r0, r0, rtos_ivor15Handler@l  /* r0: Address Debug Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor32
 
     /* IVOR #15 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #15. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor15@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor15@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor15@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor15@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor15@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor15@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor32:
-    e_lis       r0, ivr_ivor32Handler@ha
-    e_add16i    r0, r0, ivr_ivor32Handler@l  /* r0: Address SPE Unavail Interrupt handler */
+    e_lis       r0, rtos_ivor32Handler@ha
+    e_add16i    r0, r0, rtos_ivor32Handler@l  /* r0: Address SPE Unavail Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
     se_bne      ivr1_testIvor33Or34
 
     /* IVOR #32 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #32. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor32@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor32@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor32@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor32@l(r3)
     e_cmpl16i   r0, 0xffff
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor32@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor32@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor33Or34:
-    e_lis       r0, ivr_ivor33And34Handler@ha
-    e_add16i    r0, r0, ivr_ivor33And34Handler@l  /* r0: Address EFP Data Interrupt handler */
+    e_lis       r0, rtos_ivor33And34Handler@ha
+    e_add16i    r0, r0, rtos_ivor33And34Handler@l  /* r0: Address EFP Data Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
-    e_bne       ivr_isOSCodeException
+    e_bne       rtos_ivr1_isOSCodeException
 
     /* An IVOR #33 or #34 had started handling the FPU execution when being preempted by
        the imprecise IVOR #1. The FPU exception must not be proceeded, it surely belongs to
        the failing task, which is aborted by this MC exception but the FPU exception
        handler would return to that task without any further action. */
-    e_lis       r3, ivr_cntIvor1PreemptsIvor33Or34@ha
-    e_lhz       r0, ivr_cntIvor1PreemptsIvor33Or34@l(r3)
+    e_lis       r3, rtos_cntIvor1PreemptsIvor33Or34@ha
+    e_lhz       r0, rtos_cntIvor1PreemptsIvor33Or34@l(r3)
     e_cmpl16i   r0, 0xffff
     e_b         ivr1_isUserCodeIvor1Exception
     se_addi     r0, 1
-    e_sth       r0, ivr_cntIvor1PreemptsIvor33Or34@l(r3)
+    e_sth       r0, rtos_cntIvor1PreemptsIvor33Or34@l(r3)
     e_b         ivr1_isUserCodeIvor1Exception
 
-/* End of ivr_ivor1Handler */
+/* End of rtos_ivor1Handler */
 
 
 /**
- *   @func ivr_ivor2Handler
+ *   @func rtos_ivor2Handler
  * This is the interrupt handler for the MCU trap #2, Instruction Storage Interrupt. See Core
  * RM, 5.7.4, p. 181. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 164):
  *  - Access control.
@@ -467,9 +467,9 @@ ivr1_testIvor33Or34:
  * have this handler available.
  */
     .section    .text.ivor
-    .global     ivr_ivor2Handler
+    .global     rtos_ivor2Handler
     .p2align    4
-ivr_ivor2Handler:
+rtos_ivor2Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -486,17 +486,17 @@ ivr_ivor2Handler:
 
     /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_DI_STORAGE
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_DI_STORAGE
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor2Handler */
+/* End of rtos_ivor2Handler */
 
 
 
 
 
 /**
- *   @func ivr_ivor3Handler
+ *   @func rtos_ivor3Handler
  * This is the interrupt handler for the MCU trap #3, Instruction Storage Interrupt. See Core
  * RM, 5.7.4, p. 181. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 164):
  *  - Access control.
@@ -508,9 +508,9 @@ ivr_ivor2Handler:
  * to execute peripheral address space.
  */
     .section    .text.ivor
-    .global     ivr_ivor3Handler
+    .global     rtos_ivor3Handler
     .p2align    4
-ivr_ivor3Handler:
+rtos_ivor3Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -527,17 +527,17 @@ ivr_ivor3Handler:
 
     /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_DI_STORAGE
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_DI_STORAGE
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor3Handler */
+/* End of rtos_ivor3Handler */
 
 
 
 
 
 /**
- *   @func ivr_ivor4Handler
+ *   @func rtos_ivor4Handler
  * This is the interrupt handler for the MCU trap #4, External Interrupts. This trap
  * relates to interrupts controlled by the INTC. The INTC provides the vector to the
  * appropriate service function and handles the preemption or mutual exclusion of
@@ -548,9 +548,9 @@ ivr_ivor3Handler:
  * from interrupt.
  */
     .section    .text.ivor
-    .global     ivr_ivor4Handler
+    .global     rtos_ivor4Handler
     .p2align    4
-ivr_ivor4Handler:
+rtos_ivor4Handler:
 
     /* Define the stack frame contents as offsets of data objects. Note the minimum offset
        of 8 due to the storage of stack pointer and link register. */
@@ -625,7 +625,7 @@ ivr4_endSwitchSP:
 
     /* Clear request to processor; r3 contains the address of the ISR */
     e_lis       r3, INTC_IACKR_PRC0@ha      /* Read pointer into ISR Vector Table
-                                               ivr_INTCInterruptHandlerAry */
+                                               rtos_INTCInterruptHandlerAry */
     e_lwz       r3, INTC_IACKR_PRC0@l(r3)   /* Load INTC_IACKR, which clears request to
                                                processor */
     se_lwz      r3, 0x0(r3)         /* Read address of interrupt service routine from
@@ -634,10 +634,10 @@ ivr4_endSwitchSP:
     /* For preemptable interrupt handlers set the EE bit in the MSR. The property
        preemptability of a handler is encoded as MSBit of the function pointer. */
     se_btsti    r3, 0
-    se_beq      ivr_isr_endIfPreemptable
+    se_beq      rtos_isr_endIfPreemptable
     se_bclri    r3, 0   /* Clear the flag bit to get the proper address back. */
     wrteei      1       /* Enable processor recognition of interrupts. */
-ivr_isr_endIfPreemptable:
+rtos_isr_endIfPreemptable:
     se_mtlr     r3      /* Branch to ISR handler address found in service descriptor */
     se_blrl             /* Branch to ISR, but return here */
 
@@ -663,8 +663,8 @@ ivr_isr_endIfPreemptable:
     e_lwz       r3, (RUT_O_pPDESC+S_I4_StFr)(sp)/* Find pProcessDesc in parent stack frame */
     se_lwz      r3, O_PDESC_ST(r3)      /* r3: Process state: 0=stopped */
     se_cmpi     r3, 0
-    se_beq      rut_endUserTaskByException  /* r3: 0=IVR_CAUSE_TASK_ABBORTION_PROCESS_ABORT */
-#if IVR_CAUSE_TASK_ABBORTION_PROCESS_ABORT != 0
+    se_beq      rut_endUserTaskByException  /* r3: 0=RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT */
+#if RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT != 0
 # error Inconsistency in interface definition of assembler code
 #endif
 
@@ -676,7 +676,7 @@ ivr_isr_endIfPreemptable:
     se_sub      r3, r4      /* r3: Remaining time budget */
     se_cmpi     r3, 0       /* Compare: Budget >= 0? Wraps only after 17s */
     se_bge      iv4_retToPreemptedCtxt  /* Yes, end time >= current time, okay. */
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_DEADLINE
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_DEADLINE
     se_b        rut_endUserTaskByException
 
 iv4_retToPreemptedCtxt:
@@ -703,30 +703,30 @@ iv4_retToPreemptedCtxt:
     /* End of interrupt, restore MSR and PC from the SRR0/1. */
     se_rfi
 
-/* End of ivr_ivor4Handler */
+/* End of rtos_ivor4Handler */
 
 
 
 /**
- *   @func ivr_runUserTask
- * Entry point from C source code: Function ivr_runUserTask.\n
+ *   @func rtos_runUserTask
+ * Entry point from C source code: Function rtos_runUserTask.\n
  *   Some C code running in SV mode can call this function to execute a C function as
  * single-shot user task. The function is executed once in user mode and under given PID.
- * ivr_runUserTask handles the return from this executed C function, which requires a
+ * rtos_runUserTask handles the return from this executed C function, which requires a
  * switch back to supervisor mode and it implements the unconditional abortion of the
  * function (in case of errors or on explicit demand).\n
- *   ivr_runUserTask can be called from the OS context only, e.g. ISRs and or the OS owned
+ *   rtos_runUserTask can be called from the OS context only, e.g. ISRs and or the OS owned
  * idle task.
  *   @return
  * The function normally returns the return value got from the C executed function in r3.\n
  *   If it is aborted by an exception, then the one's complement of the error code defined in
- * ivr_ivorHandler.h is returned instead (see #IVR_CAUSE_TASK_ABBORTION_PROCESS_ABORT and
+ * rtos_ivorHandler.h is returned instead (see #RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT and
  * following), which is the same as UINT_MAX-errorCode.\n
  *   The return value is declare signed in the C interface and user code should only return
  * positive integers. This convention allows to easily check for abnormal task termination:
  * A negative value is returned.
  *   @param pUserTaskConfig
- * r3 contains the pointer to a struct of type prc_userTaskConfig_t holding the constant
+ * r3 contains the pointer to a struct of type rtos_userTaskConfig_t holding the constant
  * configuration data of the task, where e.g. the pointer to the C function to execute can
  * be found. This object is read only and needs to be located in a memory area, where it
  * can not be changed by any task code.
@@ -736,7 +736,7 @@ iv4_retToPreemptedCtxt:
  */
 
     .section    .text.ivor
-    .global     ivr_runUserTask, ivr_runInitTask
+    .global     rtos_runUserTask, rtos_runInitTask
     .balign     2
 
     /* The stack frame of this function is accessed from different code locations, e.g. to
@@ -746,7 +746,7 @@ iv4_retToPreemptedCtxt:
     #define SIZE_OF_SF      ((((RUT_SIZE_OF_SF_PAYLOAD)+15)/8)*8)
     #define O_LR            (SIZE_OF_SF+4)
 
-ivr_runUserTask:
+rtos_runUserTask:
     /* Compute the pointer to the process descriptor from the PID in the task configuration. */
     se_lbz      r6, O_TCONF_pid(r3)
     se_mtar     r8, r6                  /* r8: Aimed PID for task */
@@ -761,8 +761,8 @@ ivr_runUserTask:
 # error Optimize multiplication with constant
     e_mull2i    r6, SIZE_OF_PROCESS_DESC
 #endif
-    e_add2is    r6, prc_processAry@ha
-    e_add16i    r6, r6, prc_processAry@l
+    e_add2is    r6, rtos_processAry@ha
+    e_add16i    r6, r6, rtos_processAry@l
 /// @todo Check access to process status. Is likely byte access
     /* We check the process abort condition. The scheduler will set the process abort
        flag asynchronous to the actual task execution. So it may be set even before we
@@ -770,10 +770,10 @@ ivr_runUserTask:
     se_lwz      r7, O_PDESC_ST(r6)      /* r7: Process status, 0=stopped */
     se_cmpi     r7, 0
     se_bne      rut_continueTaskExecution
-    e_li        r3, ~IVR_CAUSE_TASK_ABBORTION_PROCESS_ABORT /* Load agreed function result */
+    e_li        r3, ~RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT /* Load agreed function result */
     se_blr                          /* Do not execute function, return immediately */
 
-ivr_runInitTask:
+rtos_runInitTask:
     /* Compute the pointer to the process descriptor from the PID in the task configuration. */
     se_lbz      r6, O_TCONF_pid(r3)
     se_mtar     r8, r6                  /* r8: Aimed PID for task */
@@ -784,8 +784,8 @@ ivr_runInitTask:
 # error Optimize multiplication with constant
     e_mull2i    r6, SIZE_OF_PROCESS_DESC
 #endif
-    e_add2is    r6, prc_processAry@ha
-    e_add16i    r6, r6, prc_processAry@l
+    e_add2is    r6, rtos_processAry@ha
+    e_add16i    r6, r6, rtos_processAry@l
 
 rut_continueTaskExecution:
     /* Create stack frame and save stack pointer and return address. */
@@ -823,8 +823,8 @@ rut_noTimeBudget:
 
     /* Let LR point to a system call for task termination. This permits the user code to
        end a task gracefully by return. */
-    e_lis       r7, ivr_terminateUserTask@ha
-    e_la        r7, ivr_terminateUserTask@l(r7)
+    e_lis       r7, rtos_terminateUserTask@ha
+    e_la        r7, rtos_terminateUserTask@l(r7)
     se_mtlr     r7
 
     /* The value of the SV sp at start of user task (i.e. the pointer to the stack frame of
@@ -886,8 +886,8 @@ rut_noTimeBudget:
     se_mfar     r3, r8  /* 1st argument: PID. r4 still holds C code specified 2nd argument */
     se_rfi
 
-    .global     ivr_terminateUserTask
-ivr_terminateUserTask:
+    .global     rtos_terminateUserTask
+rtos_terminateUserTask:
     se_mr       r4, r3  /* Return value of user function becomes argument of sys call */
     se_li       r3, 0   /* Still part of user task code: System call 0 to terminate/abort */
     se_sc               /* a task. */
@@ -898,33 +898,33 @@ ivr_terminateUserTask:
        be trusted.
          It is essential that EE=0 still holds and until we have returned to the kernel
        mode (PID0=0) and have restored the global context data. */
-    .global     ivr_scBscHdlr_terminateUserTask     /* Global as it is element of table of
+    .global     rtos_scBscHdlr_terminateUserTask     /* Global as it is element of table of
                                                        system calls */
-ivr_scBscHdlr_terminateUserTask:
+rtos_scBscHdlr_terminateUserTask:
     /* Here we get from the common part of the IVOR #8 handler (system call).  */
     mfspr       sp, SPR_G0_SVSP     /* Restore SV sp */
     e_lwz       r6, RUT_O_pPDESC(sp)/* r6: Retrieved address of process descriptor */
     se_cmpi     r4, 0               /* Arg of sys call < 0: User reported errore */
     se_bge      rut_endWithoutErr   /* Skip counting cause of termination: Normal situation */
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_USER_ABORT     /* Array idx for err counter */
-    e_li        r4, ~IVR_CAUSE_TASK_ABBORTION_USER_ABORT    /* r4: ret code of runUserTask() */
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_USER_ABORT     /* Array idx for err counter */
+    e_li        r4, ~RTOS_CAUSE_TASK_ABBORTION_USER_ABORT    /* r4: ret code of runUserTask() */
     se_b        rut_endWithErr
 
-    .global     ivr_systemCallBadArgument
-ivr_systemCallBadArgument:
+    .global     rtos_systemCallBadArgument
+rtos_systemCallBadArgument:
     /* Here we can jump from a system call handler implementation if an error appears,
        which is a) anticipatable by the calling user task and b) hinders the system call
        from succesful completion. The result is that the user task is aborted and the error
-       is counted as #IVR_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG. Condition a) is required
+       is counted as #RTOS_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG. Condition a) is required
        for a task must be aborted only if the fault is clearly at the side of the user
        code. It'll mostly be something like argument out of specified range. */
 
-    .global     ivr_scBscHdlr_sysCallUndefined
-ivr_scBscHdlr_sysCallUndefined:
+    .global     rtos_scBscHdlr_sysCallUndefined
+rtos_scBscHdlr_sysCallUndefined:
     /* This is the system call handler for otherwise empty entries in the system call
        table, i.e. it is the system call default handler. The user task, which invoked the
        system call is aborted and the error is counted in the process the task belongs to. */
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG
 
 rut_endUserTaskByException:
     /* If an exception jumps here, it'll have loaded r3 with its ID, the cause of
@@ -942,8 +942,8 @@ rut_endUserTaskByException:
     e_lwz       r6, RUT_O_pPDESC(sp)/* r6: Retrieved address of process descriptor */
 rut_endWithErr:
 #ifdef DEBUG
-    se_cmpli    r3, IVR_NO_CAUSES_TASK_ABORTION
-    se_bge      .                   /* assert(idxCause < IVR_NO_CAUSES_TASK_ABORTION) */
+    se_cmpli    r3, RTOS_NO_CAUSES_TASK_ABORTION
+    se_bge      .                   /* assert(idxCause < RTOS_NO_CAUSES_TASK_ABORTION) */
 #endif
     se_slwi     r3, 2               /* Size of counter is 4 Byte */
     se_addi     r3, O_PDESC_CNTTARY /* Add offset of array of cause counters in descriptor */
@@ -1022,12 +1022,12 @@ rut_endWithoutErr:
     #undef SIZE_OF_SF
     #undef O_LR
 
-/* End of ivr_runUserTask */
+/* End of rtos_runUserTask */
 
 
 
 /**
- *   @func ivr_ivor5Handler
+ *   @func rtos_ivor5Handler
  * This is the interrupt handler for the MCU trap #5, Alignment. See Core RM, 5.7.6,
  * p. 183. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 164):
  *   - lmw, stmw not word aligned
@@ -1036,9 +1036,9 @@ rut_endWithoutErr:
  *   - SPE ld and st instructions not properly aligned
  */
     .section    .text.ivor
-    .global     ivr_ivor5Handler
+    .global     rtos_ivor5Handler
     .p2align    4
-ivr_ivor5Handler:
+rtos_ivor5Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -1055,22 +1055,22 @@ ivr_ivor5Handler:
 
     /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_ALIGNMENT
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_ALIGNMENT
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor5Handler */
+/* End of rtos_ivor5Handler */
 
 
 /**
- *   @func ivr_ivor6Handler
+ *   @func rtos_ivor6Handler
  * This is the interrupt handler for the MCU trap #6, Progam Interrupt. See Core RM, 5.7.7,
  * p. 184. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 164):
  *   - Illegal, privileged, trap, FP enabled, AP enabled, unimplemented operation
  */
     .section    .text.ivor
-    .global     ivr_ivor6Handler
+    .global     rtos_ivor6Handler
     .p2align    4
-ivr_ivor6Handler:
+rtos_ivor6Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -1087,24 +1087,24 @@ ivr_ivor6Handler:
 
     /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor6Handler */
+/* End of rtos_ivor6Handler */
 
 
 
 /**
- *   @func ivr_ivor7Handler
+ *   @func rtos_ivor7Handler
  * This is the interrupt handler for the MCU trap #7, Floating-point unavailable. See Core
  * RM, 5.7.8, p. 185. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 164):
  *   - MSR[FP] = 0 and attempt to execute a Book E floating point operation
  *  Note: ESR, the exception syndrome register, is not set by this exception.
  */
     .section    .text.ivor
-    .global     ivr_ivor7Handler
+    .global     rtos_ivor7Handler
     .p2align    4
-ivr_ivor7Handler:
+rtos_ivor7Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -1117,15 +1117,15 @@ ivr_ivor7Handler:
     /* ESR not affected. MSR is in desired state: EE=PR=0, CE and ME not affected by
        exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_FPU_UNAVAIL
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_FPU_UNAVAIL
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor7Handler */
+/* End of rtos_ivor7Handler */
 
 
 
 /**
- *   @func ivr_ivor8Handler
+ *   @func rtos_ivor8Handler
  * This is the interrupt handler for the MCU trap #8, System Call. See Core RM, 5.7.9,
  * p. 184.\n
  *   In our RTOS we have a static ROM table of system call handlers.\n
@@ -1137,27 +1137,27 @@ ivr_ivor7Handler:
  * pointer to a descriptor objects. Through the properties of the object we can specify the
  * complexity of and required support for the service implementation.
  *   @param r3
- * r3: The index of the system call in the range 0 .. #SC_NO_SYSTEM_CALLS.
+ * r3: The index of the system call in the range 0 .. #RTOS_NO_SYSTEM_CALLS.
  *   @param rn
  * r4 .. r10: The GPR 4 till 10 contain the permitted up to 7 function arguments. Each of
  * them needs to have up to 32 Bit. 64 Bit arguments are not supported for function calls.
  */
     .section    .text.ivor
-    .global     ivr_ivor8Handler
+    .global     rtos_ivor8Handler
     .p2align    4
 
-ivr_ivor8Handler:
-    .extern     sc_systemCallDescAry
-#if SC_NO_SYSTEM_CALLS > 0  &&  SC_NO_SYSTEM_CALLS <= 65535
-# if SC_NO_SYSTEM_CALLS <= 32
-    se_cmpli    r3, SC_NO_SYSTEM_CALLS      /* Index out of range? */
+rtos_ivor8Handler:
+    .extern     rtos_systemCallDescAry
+#if RTOS_NO_SYSTEM_CALLS > 0  &&  RTOS_NO_SYSTEM_CALLS <= 65535
+# if RTOS_NO_SYSTEM_CALLS <= 32
+    se_cmpli    r3, RTOS_NO_SYSTEM_CALLS      /* Index out of range? */
 # else
-    e_cmpl16i   r3, SC_NO_SYSTEM_CALLS      /* Index out of range? */
+    e_cmpl16i   r3, RTOS_NO_SYSTEM_CALLS      /* Index out of range? */
 # endif
 #else
 # error Number of system calls out of range
 #endif
-    se_bge      ivr_systemCallBadArgument   /* Index out of range: Abort task */
+    se_bge      rtos_systemCallBadArgument   /* Index out of range: Abort task */
 
 #if SIZE_OF_SC_DESC != 8
 # error Assembler code requires adaptation. (Multiplication index with size of struct)
@@ -1167,8 +1167,8 @@ ivr_ivor8Handler:
 #endif
 
     se_slwi     r3, 3   /* r3: idxSC*SIZE_OF_SC_DESC */
-    e_add16i    r3, r3, sc_systemCallDescAry@l  /* Wrong if address above 0x8000. We have
-                                                   an according assertion in the C code. */
+    e_add16i    r3, r3, rtos_systemCallDescAry@l    /* Wrong if address above 0x8000. We have
+                                                       an according assertion in the C code. */
     se_lwz      r0, O_SCDESC_confCls(r3)    /* r0: Conformance class of system call handler. */
     se_cmpli    r0, E_SCDESC_simpleHdlr
     se_bge      ivr8_noStartBasicHandler
@@ -1298,14 +1298,14 @@ ivr8_startFullHandler:
         frame.
           @todo Decide, whether this is required for safety or whether we can wait for the
         next IVOR #4 preemption to check for process termination.
-          @todo Remarks in prc_scSmplHdlr_suspendProcess and rtos_suspendProcess point to
+          @todo Remarks in rtos_scSmplHdlr_suspendProcess and rtos_suspendProcess point to
         this issue and should be removed if a check is added here. */
 
     se_lwz      r0, O_PID(sp)
     mtspr       SPR_PID0, r0
     e_lmvsrrw   O_SRRi(sp)      /* SRR0/SRR1: 2*4 Byte */
 
-    /* O_PDESC_USP or prc_processAry.userSP doesn't need restauration: We will surely
+    /* O_PDESC_USP or rtos_processAry.userSP doesn't need restauration: We will surely
        return to a user mode context and at its first future preemption the switch to SV sp
        will anyway update this field. It can't happen that a non-sp-switching preemption
        happens as next, which would make use of the bad, not restored field. */
@@ -1322,14 +1322,14 @@ ivr8_startFullHandler:
 
     se_rfi
 
-/* End of ivr_ivor8Handler */
+/* End of rtos_ivor8Handler */
 
 
 /**
- *   @func ivr_systemCall
+ *   @func rtos_systemCall
  * General system call code, useable for all system call handlers. The system call \a
  * idxSysCall code can be invoked as C function:\n
- *   extern uint32_t ivr_systemCall(uint32_t idxSysCall, ...);\n
+ *   extern uint32_t rtos_systemCall(uint32_t idxSysCall, ...);\n
  * where ... are the function specific arguments of the call. Only register passing in the
  * volatile GPR is supported.
  *   The C API of the RTOS offers a wrapper for this assembler implemented function. Please
@@ -1340,11 +1340,11 @@ ivr8_startFullHandler:
  * OS code will lead to undefined behavior.
  */
     .section    .text
-    .globl      ivr_systemCall
+    .globl      rtos_systemCall
     .balign     2
 #define SIZE_OF_STACKFRAME  8
 
-ivr_systemCall:
+rtos_systemCall:
     e_stwu      sp, -SIZE_OF_STACKFRAME(sp)
     se_mflr     r0
     se_stw      r0, (SIZE_OF_STACKFRAME+4)(sp)
@@ -1361,7 +1361,7 @@ ivr_systemCall:
     se_blr
 
 #undef SIZE_OF_STACKFRAME
-/* End of ivr_systemCall */
+/* End of rtos_systemCall */
 
 
 /** The IVOR #9 exception is not implemented by the e200z4 core and we don't need a
@@ -1377,15 +1377,15 @@ ivr_systemCall:
 
 
 /**
- *   @func ivr_ivor13Handler
+ *   @func rtos_ivor13Handler
  * This is the interrupt handler for the MCU trap #13, Data TLB Error Interrupt. See Core
  * RM, 5.7.14, p. 188. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 165):
  *   - Data translation lookup did not match a valid entry in the TLB
  */
     .section    .text.ivor
-    .global     ivr_ivor13Handler
+    .global     rtos_ivor13Handler
     .p2align    4
-ivr_ivor13Handler:
+rtos_ivor13Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -1402,24 +1402,24 @@ ivr_ivor13Handler:
 
     /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_TBL_DATA
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_TBL_DATA
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor13Handler */
+/* End of rtos_ivor13Handler */
 
 
 
 
 /**
- *   @func ivr_ivor14Handler
+ *   @func rtos_ivor14Handler
  * This is the interrupt handler for the MCU trap #14, Data TLB Error Interrupt. See Core
  * RM, 5.7.15, p. 189. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 165):
  *   - Instruction translation lookup did not match a valid entry in the TLB
  */
     .section    .text.ivor
-    .global     ivr_ivor14Handler
+    .global     rtos_ivor14Handler
     .p2align    4
-ivr_ivor14Handler:
+rtos_ivor14Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -1434,16 +1434,16 @@ ivr_ivor14Handler:
 
     /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor14Handler */
+/* End of rtos_ivor14Handler */
 
 
 
 /// @todo Likely misunderstood: The trap instruction goes into IVOR #6. Consider comment this function and undoing the changes on HID0 and IVOR table in sup_startup.S
 /**
- *   @func ivr_ivor15Handler
+ *   @func rtos_ivor15Handler
  * This is the interrupt handler for the MCU trap #15, Debug Interrupt. See Core
  * RM, 5.7.16, p. 190. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 165):
  *   - Trap, instruction address compare, data address compare, instruction
@@ -1456,9 +1456,9 @@ ivr_ivor14Handler:
  * is cleared on entry into the exception.
  */
     .section    .text.ivor
-    .global     ivr_ivor15Handler
+    .global     rtos_ivor15Handler
     .p2align    4
-ivr_ivor15Handler:
+rtos_ivor15Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -1470,15 +1470,15 @@ ivr_ivor15Handler:
 
     /* ESR not affected. MSR is in desired state: CE=EE=PR=0, ME not affected by exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_TRAP
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_TRAP
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor15Handler */
+/* End of rtos_ivor15Handler */
 
 
 
 /**
- *   @func ivr_ivor32Handler
+ *   @func rtos_ivor32Handler
  * This is the interrupt handler for the MCU trap #32, SPE Unavailable Interrupt. See Core
  * RM, 5.7.18, p. 194, 6.2.5.1, p. 210 and 7.2.6, p. 326. This exception relates to (see
  * CRM, 5.1.2, Table 5-3, p. 165):
@@ -1486,9 +1486,9 @@ ivr_ivor15Handler:
  *     cleared
  */
     .section    .text.ivor
-    .global     ivr_ivor32Handler
+    .global     rtos_ivor32Handler
     .p2align    4
-ivr_ivor32Handler:
+rtos_ivor32Handler:
     /* We don't need a preamble with storage or register contexts of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
@@ -1504,15 +1504,15 @@ ivr_ivor32Handler:
 
     /* MSR is in desired state: EE=PR=0, CE and ME not affected by exception */
 
-    se_li       r3, IVR_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION
     e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
 
-/* End of ivr_ivor32Handler */
+/* End of rtos_ivor32Handler */
 
 
 
 /**
- *   @func ivr_ivor33And34Handler
+ *   @func rtos_ivor33And34Handler
  * This is the interrupt handler for the MCU trap #33, EFP Floating-point Data Interrupt,
  * and at the same time for IVOR #34, EFP Floating-point Round Interrupt. See Core RM,
  * 5.7.19 and 5.7.20, p. 195, 6.2.5.2 and 6.2.5.3, p. 210.\n
@@ -1543,9 +1543,9 @@ ivr_ivor32Handler:
  * instruction after some user code had enabled the exceptions.
  */
     .section    .text.ivor
-    .global     ivr_ivor33And34Handler
+    .global     rtos_ivor33And34Handler
     .p2align    4
-ivr_ivor33And34Handler:
+rtos_ivor33And34Handler:
     mfspr       r2, SPR_ESR
     se_bclri    r2, 24      /* 0x000000a0: Mask of possibly set ESR bits */
     se_bclri    r2, 26
@@ -1554,7 +1554,7 @@ ivr_ivor33And34Handler:
     mfspr       r2, SPR_G2_SDA2 /* Restore r2 after use */
     se_rfi      /* Continue exception causing context. The FPU instruction will be repeated. */
 
-/* End of ivr_ivor33And34Handler */
+/* End of rtos_ivor33And34Handler */
 
 /* @todo Check user registers DEVENT and DDAM. See CRM 11.3.4, p. 639f: Accessibility can
    be switched off. Check what the current status is. We must not harm the P&E debugger.

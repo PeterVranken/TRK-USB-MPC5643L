@@ -185,12 +185,12 @@ int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED)
            , prs_cntTestCycles, rtos_getNoActivationLoss(syc_idEvTest)
            , syc_cntISRPit3
            , rtos_getNoTotalTaskFailure(/* PID */ 1)
-           , rtos_getNoTaskFailure(/* PID */ 1, IVR_CAUSE_TASK_ABBORTION_DEADLINE)
+           , rtos_getNoTaskFailure(/* PID */ 1, RTOS_ERR_PRC_DEADLINE)
            , rtos_getNoTotalTaskFailure(/* PID */ 2)
-           , rtos_getNoTaskFailure(/* PID */ 2, IVR_CAUSE_TASK_ABBORTION_DEADLINE)
-           , rtos_getNoTaskFailure(/* PID */ 2, IVR_CAUSE_TASK_ABBORTION_USER_ABORT)
+           , rtos_getNoTaskFailure(/* PID */ 2, RTOS_ERR_PRC_DEADLINE)
+           , rtos_getNoTaskFailure(/* PID */ 2, RTOS_ERR_PRC_USER_ABORT)
            , rtos_getNoTotalTaskFailure(/* PID */ 3)
-           , rtos_getNoTaskFailure(/* PID */ 3, IVR_CAUSE_TASK_ABBORTION_DEADLINE)
+           , rtos_getNoTaskFailure(/* PID */ 3, RTOS_ERR_PRC_DEADLINE)
            );
     const uint64_t tiDuration = GSL_PPC_GET_TIMEBASE() - tiStart;
     

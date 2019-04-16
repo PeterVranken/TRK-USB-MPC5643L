@@ -1,8 +1,8 @@
-#ifndef PCP_SYSCALLPCP_INCLUDED
-#define PCP_SYSCALLPCP_INCLUDED
+#ifndef RTOS_PRIORITY_CEILING_PROTOCOL_INCLUDED
+#define RTOS_PRIORITY_CEILING_PROTOCOL_INCLUDED
 /**
- * @file pcp_sysCallPCP.h
- * Definition of global interface of module pcp_sysCallPCP.S
+ * @file rtos_priorityCeilingProtocol.h
+ * Definition of global interface of module rtos_priorityCeilingProtocol.S
  *
  * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -38,12 +38,12 @@
     priority ceiling protocol.
       @remark The C code contains preprocessor code that ensures consistency with the
     according definition in the C code. */
-#define PCP_KERNEL_PRIORITY        12
+#define RTOS_PCP_KERNEL_PRIO    12
 
 /** Index of implemented system call for setting a user context's current priority. The
     system call is wrapped in the inline function rtos_suspendAllInterruptsByPriority().
     Please refer to this function for details. */
-#define PCP_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY  1
+#define RTOS_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY  1
 
 
 #ifdef __STDC_VERSION__
@@ -64,4 +64,4 @@
 
 
 #endif  /* For C code compilation only */
-#endif  /* PCP_SYSCALLPCP_INCLUDED */
+#endif  /* RTOS_PRIORITY_CEILING_PROTOCOL_INCLUDED */

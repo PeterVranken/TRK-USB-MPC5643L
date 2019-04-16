@@ -272,7 +272,6 @@ static void initPBridge()
 {
     /* Peripheral bridge is completely open; all masters can go through AIPS and the
        peripherals have no protection. */
-    /// @todo The peripherals are protected by the MPU but it wouldn't harm to sharpen the PBridge, too
     AIPS.MPROT0_7.R   = 0x77777777;
     AIPS.MPROT8_15.R  = 0x77000000;
     AIPS.PACR0_7.R    = 0x0;
@@ -296,16 +295,10 @@ static void initPBridge()
 
 /**
  * Initialize the MCU core hardware, such that it can be safely operated. This relates
- * mainly to the setup of the clocks and PLLs.\n
- *   Additionally, the INTC is configured to serve all the external interrupts in software
- * vector mode. However, before using an interrupt, you will still have to register your
- * services, see prc_installINTCInterruptHandler().
+ * mainly to the setup of the clocks and PLLs.
  *   @remark
  * After return the MCU core is fully operational. Further HW initialization can be done in
- * the user code by implementing dedicated drivers. These will configure the I/O devices,
- * enable their interrupt and register the service using prc_installINTCInterruptHandler().\n
- *   After having done this for all required devices the user code will call
- * ihw_enableAllInterrupts() to start full MCU operation.
+ * the user code by implementing and initializing dedicated drivers.
  *   @remark
  * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file main.c, l. 115ff.
  */

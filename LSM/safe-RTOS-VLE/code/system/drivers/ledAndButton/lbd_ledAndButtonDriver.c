@@ -34,7 +34,7 @@
 #include <assert.h>
 
 #include "typ_types.h"
-#include "ivr_ivorHandler.h"
+#include "rtos_ivorHandler.h"
 #include "lbd_ledAndButtonDriver_defSysCalls.h"
 #include "lbd_ledAndButtonDriver.h"
 
@@ -65,10 +65,10 @@
 
 /** The descriptor of a user task, which is run as notification in case of a button state
     change. */
-static prc_userTaskConfig_t OS_VAR(_onButtonChangeCallback) =
-            { .taskFct = NULL
-              , .tiTaskMax = 120*1000
-              , .PID = 0
+static rtos_taskDesc_t OS_VAR(_onButtonChangeCallback) =
+            { .addrTaskFct = 0
+            , .PID = 0
+            , .tiTaskMax = RTOS_TI_US2TICKS(1000)
             };
 
 /*
@@ -84,7 +84,7 @@ static prc_userTaskConfig_t OS_VAR(_onButtonChangeCallback) =
  * if no notification is desired.
  *   @param PID
  * The ID of the process to run the callback in. The value doesn't care if \a
- * onButtonChangeCallback is NULL. The range is 1 ... #PRC_NO_PROCESSES. It is checked by
+ * onButtonChangeCallback is NULL. The range is 1 ... #RTOS_NO_PROCESSES. It is checked by
  * assertion.
  *   @remark
  * This function must be called from the OS context only. Any attempt to use it in user 
@@ -118,10 +118,10 @@ void lbd_initLEDAndButtonDriver( lbd_onButtonChangeCallback_t onButtonChangeCall
     {
         /* Here we are in trusted code. The passed PID is static configuration data and
            cannot produce an occasional failure. Checking by assertion is appropriate. */
-        assert(PID > 0  &&  PID < PRC_NO_PROCESSES);
+        assert(PID > 0  &&  PID < RTOS_NO_PROCESSES);
         _onButtonChangeCallback.PID = PID;
 
-        _onButtonChangeCallback.taskFct = (prc_taskFct_t)onButtonChangeCallback;
+        _onButtonChangeCallback.addrTaskFct = (uintptr_t)onButtonChangeCallback;
         
         /* A difficult descision: Shall we generally set a time budget for all user code?
            This may rarely produce an exception, which can leave the user code in an
@@ -162,7 +162,7 @@ uint32_t lbd_scSmplHdlr_setLED( uint32_t pidOfCallingTask ATTRIB_UNUSED
     {
         /* Abort this system call and the calling user task and count this event as an
            error in the process the failing task belongs to. */
-        ivr_systemCallBadArgument();
+        rtos_systemCallBadArgument();
     }
 
     lbd_OS_setLED(led, isOn);
@@ -201,7 +201,7 @@ uint32_t lbd_scSmplHdlr_getButton( uint32_t pidOfCallingTask ATTRIB_UNUSED
     {
         /* Abort this system call and the calling user task and count this event as an
            error in the process the failing task belongs to. */
-        ivr_systemCallBadArgument();
+        rtos_systemCallBadArgument();
     }
 } /* End of lbd_scSmplHdlr_getButton */
 
@@ -215,7 +215,7 @@ uint32_t lbd_scSmplHdlr_getButton( uint32_t pidOfCallingTask ATTRIB_UNUSED
 void lbd_task1ms(void)
 {
     /* Polling the buttons is useless if we have no notification callback. */
-    if(_onButtonChangeCallback.taskFct != NULL)
+    if(_onButtonChangeCallback.addrTaskFct != 0)
     {
         /* Read the current button status. */
         const uint8_t stateButtons = (lbd_OS_getButtonSw2()? 0x01: 0x0)
@@ -232,7 +232,7 @@ void lbd_task1ms(void)
                                  | ((stateButtons & ~lastStateButtons_) << 2) /* went on  */
                                  | ((~stateButtons & lastStateButtons_) << 3) /* went off */
                                  ;
-            rtos_OS_runTask(&_onButtonChangeCallback, /* taskParam */ comp);
+            rtos_osRunTask(&_onButtonChangeCallback, /* taskParam */ comp);
             lastStateButtons_ = stateButtons;
         }
     } /* End if(Callback demanded by system configuration?) */    

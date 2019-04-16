@@ -1,5 +1,5 @@
 /**
- * @file mpu_systemMemoryProtectionUnit.c
+ * @file rtos_systemMemoryProtectionUnit.c
  * Configuration and initialization of the Memory Protection Unit (MPU). The
  * configuration is chosen static in this sample. The initially chosen configuration is
  * never changed during run-time.\n
@@ -20,7 +20,7 @@
  * must evidently never be used to hold data, which is essential for the health of a
  * process and in particular for the process, that implements supervisory safety tasks.\n
  *   The static configuration of the MPU is the explanation for the fixed number of four
- * supported processes (#PRC_NO_PROCESSES). We need three descriptors per user process at
+ * supported processes (#RTOS_NO_PROCESSES). We need three descriptors per user process at
  * least three for the OS (including user ROM) and have 16 descriptors available.
  *
  * CAUTION: The mentioned memory chunks or areas are puzzled by the linker. The MPU
@@ -67,7 +67,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   mpu_initMPU
+ *   rtos_initMPU
  * Local functions
  */
 
@@ -82,7 +82,7 @@
 #include "MPC5643L.h"
 #include "typ_types.h"
 
-#include "mpu_systemMemoryProtectionUnit.h"
+#include "rtos_systemMemoryProtectionUnit.h"
 
 
 /*
@@ -91,7 +91,7 @@
  
 /** Development support: If this define is set to one than the entire RAM is writable for
     all processes. */
-#define MPU_DISARM_MPU  0
+#define RTOS_DISARM_MPU  0
 
 
 /*
@@ -118,9 +118,12 @@
  *   The configuration is static, a set of regions suitable for the RTOS (and its project
  * dependent configuration) is defined and then the unit is enabled.
  */
-void mpu_initMPU(void)
+void rtos_initMPU(void)
 {
     /* See RM, 31, p. 1039ff. */
+    
+    /* This function must not be used repeatedly during system initialization. */
+    assert((MPU.CESR.R & 0x1) == 0x0u);  /* VLD should be in reset state, MPU disabled. */
 
     /* RM, 14.1.4, table 14-1, p. 285: The MPU routes and protects accesses to FLASH,
        PBRIDGE and SRAM (the three slave ports). In lockstep mode, the connected masters
@@ -197,7 +200,7 @@ void mpu_initMPU(void)
        required. */
        
     /* RAM access for process 1. */
-#if MPU_DISARM_MPU == 1
+#if RTOS_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
     assert(((uintptr_t)ld_ramStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
@@ -230,7 +233,7 @@ void mpu_initMPU(void)
 #endif
     
     /* RAM access for process 2. */
-#if MPU_DISARM_MPU == 1
+#if RTOS_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
     assert(((uintptr_t)ld_ramStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
@@ -263,7 +266,7 @@ void mpu_initMPU(void)
 #endif
     
     /* RAM access for process 3. */
-#if MPU_DISARM_MPU == 1
+#if RTOS_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
     assert(((uintptr_t)ld_ramStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
@@ -296,7 +299,7 @@ void mpu_initMPU(void)
 #endif
     
     /* RAM access for process 4. */
-#if MPU_DISARM_MPU == 1
+#if RTOS_DISARM_MPU == 1
     extern uint8_t ld_ramStart[0], ld_ramEnd[0];
     assert(((uintptr_t)ld_ramStart & 0x1f) == 0  &&  ((uintptr_t)ld_ramEnd & 0x1f) == 0);
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_ramStart; /* Start address of region, 31.6.4.1 */
@@ -346,4 +349,4 @@ void mpu_initMPU(void)
     MPU.CESR.R = 0xe0000000u    /* SPERR, w2c: Reset all possibly pending errors. */
                  |      0x1u;   /* VLD: Globally enable the MPU. */
 
-} /* End of mpu_initMPU */
+} /* End of rtos_initMPU */

@@ -103,8 +103,6 @@
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"
-#include "prc_process.h"
-#include "mpu_systemMemoryProtectionUnit.h"
 #include "rtos.h"
 #include "del_delay.h"
 #include "gsl_systemLoad.h"
@@ -132,7 +130,7 @@
                 }                                                                           \
                 else                                                                        \
                 {                                                                           \
-                    priorityLevelSoFar = rtos_OS_suspendAllInterruptsByPriority             \
+                    priorityLevelSoFar = rtos_osSuspendAllInterruptsByPriority              \
                                                 (/* suspendUpToThisPriority */ (resource)); \
                 }
 
@@ -143,7 +141,7 @@
                 if((idTask) <= lastUserTaskId)                                              \
                     rtos_resumeAllInterruptsByPriority(priorityLevelSoFar);                 \
                 else                                                                        \
-                    rtos_OS_resumeAllInterruptsByPriority(priorityLevelSoFar);              \
+                    rtos_osResumeAllInterruptsByPriority(priorityLevelSoFar);               \
             }
 
 /** The task counter array is accessed by all tasks. Here it is modelled as an OSEK/VDX
@@ -175,9 +173,9 @@
 /** The enumeration of all events, tasks and priority, to have them as symbols in the
     source code. Most relevant are the event IDs. Actually, these IDs are provided by the
     RTOS at runtime, when creating the event. However, it is guaranteed that the IDs, which
-    are dealt out by rtos_createEvent() form the series 0, 1, 2, ..., 7. So we don't need
+    are dealt out by rtos_osCreateEvent() form the series 0, 1, 2, ..., 7. So we don't need
     to have a dynamic storage of the IDs; we define them as constants and double-check by
-    assertion that we got the correct, expected IDs from rtos_createEvent(). Note, this
+    assertion that we got the correct, expected IDs from rtos_osCreateEvent(). Note, this
     requires that the order of creating the events follows the order here in the
     enumeration. */
 enum
@@ -523,7 +521,7 @@ static void testPCP(unsigned int idTask)
     /* PRODUCTION compilation: Code execution can be halted only by the OS process. Not
        all of the errors will become visible by LED. */
     if(idTask >= firstOsTaskId  &&  !bOkay)
-        rtos_OS_suspendProcess(/* PID */ 1);
+        rtos_osSuspendProcess(/* PID */ 1);
 #endif
 } /* End of testPCP. */
 
@@ -596,18 +594,13 @@ static void isrPit3(void)
  * functions of our I/O drivers.\n
  *   This task is run in supervisor mode and it has no protection. The implementation
  * belongs into the sphere of trusted code.
- *   @return
- * If the task function returns a negative value then the task execution is counted as
- * error in the process.
  */
-static int32_t taskOs1ms(void)
+static void taskOs1ms(void)
 {
     /* The I/O driver for the buttons is run from the OS task with priority
        prioTaskOs1ms = 2. The driver code and the callback onButtonChangeCallback it may
        invoke inherit this priority. */
     lbd_task1ms();
-
-    return 0;
 
 } /* End of taskOs1ms */
 
@@ -794,9 +787,9 @@ static int32_t task1s(uint32_t PID ATTRIB_UNUSED)
            , mai_cntTaskIdle
            , mai_cntTaskIdlePID2
            , rtos_getNoTotalTaskFailure(/* PID */ 1)
-           , rtos_getNoTaskFailure(/* PID */ 1, IVR_CAUSE_TASK_ABBORTION_DEADLINE)
+           , rtos_getNoTaskFailure(/* PID */ 1, RTOS_ERR_PRC_DEADLINE)
            , rtos_getNoTotalTaskFailure(/* PID */ 2)
-           , rtos_getNoTaskFailure(/* PID */ 2, IVR_CAUSE_TASK_ABBORTION_DEADLINE)
+           , rtos_getNoTaskFailure(/* PID */ 2, RTOS_ERR_PRC_DEADLINE)
            , tiPrintf_
            );
     tiPrintf_ = (unsigned long)(GSL_PPC_GET_TIMEBASE() - tiFrom) / 120;
@@ -960,21 +953,21 @@ static void installInterruptServiceRoutines(void)
 
     /* Install the ISRs now that all timers are stopped.
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
-    prc_installINTCInterruptHandler( &isrPit1
-                                   , /* vectorNum */ 60
-                                   , /* psrPriority */ prioISRPit1
-                                   , /* isPreemptable */ true
-                                   );
-    prc_installINTCInterruptHandler( &isrPit2
-                                   , /* vectorNum */ 61
-                                   , /* psrPriority */ prioISRPit2
-                                   , /* isPreemptable */ true
-                                   );
-    prc_installINTCInterruptHandler( &isrPit3
-                                   , /* vectorNum */ 127
-                                   , /* psrPriority */ prioISRPit3
-                                   , /* isPreemptable */ true
-                                   );
+    rtos_installInterruptHandler( &isrPit1
+                                , /* vectorNum */ 60
+                                , /* psrPriority */ prioISRPit1
+                                , /* isPreemptable */ true
+                                );
+    rtos_installInterruptHandler( &isrPit2
+                                , /* vectorNum */ 61
+                                , /* psrPriority */ prioISRPit2
+                                , /* isPreemptable */ true
+                                );
+    rtos_installInterruptHandler( &isrPit3
+                                , /* vectorNum */ 127
+                                , /* psrPriority */ prioISRPit3
+                                , /* isPreemptable */ true
+                                );
 
     /* Peripheral clock has been initialized to 120 MHz. The timer counts at this rate. The
        RTOS operates in ticks of 1ms we use prime numbers to get good asynchronity with the
@@ -1077,7 +1070,7 @@ void main(void)
     ihw_initMcuCoreHW();
 
     /* The interrupt controller is configured. */
-    prc_initINTCInterruptController();
+    rtos_initINTCInterruptController();
 
     /* Initialize the button and LED driver for the eval board. */
     lbd_initLEDAndButtonDriver(onButtonChangeCallback, pidOnButtonChangeCallback);
@@ -1085,57 +1078,44 @@ void main(void)
     /* Initialize the serial output channel as prerequisite of using printf. */
     sio_initSerialInterface(/* baudRate */ 115200);
 
-    /* Arm the memory protection unit. */
-    mpu_initMPU();
-
     /* Register the process initialization tasks. */
-    rtos_taskDesc_t taskConfig;
     bool initOk = true;
-    taskConfig = (rtos_taskDesc_t){ .PID = 1
-                                    , .userTaskFct = taskInitProcess
-                                    , .tiTaskMaxInUS = 1000
-                                  };
-    if(!rtos_registerTask(&taskConfig, RTOS_EVENT_ID_INIT_TASK))
+    if(rtos_osRegisterInitTask(taskInitProcess, /* PID */ 1, /* tiTaskMaxInUS */ 1000)
+       != rtos_err_noError
+      )
+    {
         initOk = false;
-
-    taskConfig = (rtos_taskDesc_t){ .PID = 2
-                                    , .userTaskFct = taskInitProcess
-                                    , .tiTaskMaxInUS = 1000
-                                  };
-    if(!rtos_registerTask(&taskConfig, RTOS_EVENT_ID_INIT_TASK))
+    }
+    if(rtos_osRegisterInitTask(taskInitProcess, /* PID */ 2, /* tiTaskMaxInUS */ 1000)
+       != rtos_err_noError
+      )
+    {
         initOk = false;
-
+    }
+    
     /* Create the events that trigger application tasks at the RTOS. Note, we do not really
-       respect the ID, which is assigned to the event by the RTOS API rtos_createEvent().
+       respect the ID, which is assigned to the event by the RTOS API rtos_osCreateEvent().
        The returned value is redundant. This technique requires that we create the events
        in the right order and this requires in practice a double-check by assertion - later
        maintenance errors are unavoidable otherwise. */
 #ifdef DEBUG
     unsigned int idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 1
-                                        , .tiFirstActivationInMs = 10
-                                        , .priority = prioTask1ms
-                                        , .minPIDToTriggerThisEvent = 1
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              1
+                      , /* tiFirstActivationInMs */    10
+                      , /* priority */                 prioTask1ms
+                      , /* minPIDToTriggerThisEvent */ 1
+                      );
     assert(idEvent == idEv1ms);
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = pidTaskOs1ms
-                                             , .osTaskFct = taskOs1ms
-                                             , .tiTaskMaxInUS = 0
-                                             }
-                         , idEv1ms
-                         )
-      )
-    {
+    if(rtos_osRegisterOSTask(idEv1ms, taskOs1ms) != rtos_err_noError)
         initOk = false;
-    }
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = pidTask1ms
-                                             , .userTaskFct = task1ms
-                                             , .tiTaskMaxInUS = 0
-                                             }
-                         , idEv1ms
-                         )
+
+    if(rtos_osRegisterUserTask( idEv1ms
+                              , task1ms
+                              , pidTask1ms
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
@@ -1144,19 +1124,18 @@ void main(void)
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 3
-                                        , .tiFirstActivationInMs = 17
-                                        , .priority = prioTask3ms
-                                        , .minPIDToTriggerThisEvent = 1
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              3
+                      , /* tiFirstActivationInMs */    17
+                      , /* priority */                 prioTask3ms
+                      , /* minPIDToTriggerThisEvent */ 1
+                      );
     assert(idEvent == idEv3ms);
-    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTask3ms
-                                            , .userTaskFct = task3ms
-                                            , .tiTaskMaxInUS = 0
-                                            }
-                         , idEv3ms
-                         )
+    if(rtos_osRegisterUserTask( idEv3ms
+                              , task3ms
+                              , pidTask3ms
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
@@ -1165,19 +1144,18 @@ void main(void)
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 1000
-                                        , .tiFirstActivationInMs = 100
-                                        , .priority = prioTask1s
-                                        , .minPIDToTriggerThisEvent = 1
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              1000
+                      , /* tiFirstActivationInMs */    100
+                      , /* priority */                 prioTask1s
+                      , /* minPIDToTriggerThisEvent */ 1
+                      );
     assert(idEvent == idEv1s);
-    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTask1s
-                                            , .userTaskFct = task1s
-                                            , .tiTaskMaxInUS = 0
-                                            }
-                         , idEv1s
-                         )
+    if(rtos_osRegisterUserTask( idEv1s
+                              , task1s
+                              , pidTask1s
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
@@ -1186,19 +1164,18 @@ void main(void)
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 0 /* non-cyclic */
-                                        , .tiFirstActivationInMs = 0
-                                        , .priority = prioTaskNonCyclic
-                                        , .minPIDToTriggerThisEvent = 1
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              0 /* non-cyclic */
+                      , /* tiFirstActivationInMs */    0
+                      , /* priority */                 prioTaskNonCyclic
+                      , /* minPIDToTriggerThisEvent */ 1
+                      );
     assert(idEvent == idEvNonCyclic);
-    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTaskNonCyclic
-                                            , .userTaskFct = taskNonCyclic
-                                            , .tiTaskMaxInUS = 0
-                                            }
-                         , idEvNonCyclic
-                         )
+    if(rtos_osRegisterUserTask( idEvNonCyclic
+                              , taskNonCyclic
+                              , pidTaskNonCyclic
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
@@ -1207,19 +1184,18 @@ void main(void)
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 17
-                                        , .tiFirstActivationInMs = 0
-                                        , .priority = prioTask17ms
-                                        , .minPIDToTriggerThisEvent = 1
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              17
+                      , /* tiFirstActivationInMs */    0
+                      , /* priority */                 prioTask17ms
+                      , /* minPIDToTriggerThisEvent */ 1
+                      );
     assert(idEvent == idEv17ms);
-    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTask17ms
-                                            , .userTaskFct = task17ms
-                                            , .tiTaskMaxInUS = 0
-                                            }
-                         , idEv17ms
-                         )
+    if(rtos_osRegisterUserTask( idEv17ms
+                              , task17ms
+                              , pidTask17ms
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
@@ -1228,19 +1204,18 @@ void main(void)
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 0 /* Event task, no cycle time */
-                                        , .tiFirstActivationInMs = 0
-                                        , .priority = prioTaskOnButtonDown
-                                        , .minPIDToTriggerThisEvent = 1
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              0 /* Event task, no cycle time */
+                      , /* tiFirstActivationInMs */    0
+                      , /* priority */                 prioTaskOnButtonDown
+                      , /* minPIDToTriggerThisEvent */ 1
+                      );
     assert(idEvent == idEvOnButtonDown);
-    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTaskOnButtonDown
-                                            , .userTaskFct = taskOnButtonDown
-                                            , .tiTaskMaxInUS = 0
-                                            }
-                         , idEvOnButtonDown
-                         )
+    if(rtos_osRegisterUserTask( idEvOnButtonDown
+                              , taskOnButtonDown
+                              , pidTaskOnButtonDown
+                              , /* tiTaskMaxInUs */ 0 
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
@@ -1249,19 +1224,18 @@ void main(void)
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 23 /* ms */
-                                        , .tiFirstActivationInMs = 3
-                                        , .priority = prioTaskCpuLoad
-                                        , .minPIDToTriggerThisEvent = 1
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              23 /* ms */
+                      , /* tiFirstActivationInMs */    3
+                      , /* priority */                 prioTaskCpuLoad
+                      , /* minPIDToTriggerThisEvent */ 1
+                      );
     assert(idEvent == idEvCpuLoad);
-    if(!rtos_registerTask(&(rtos_taskDesc_t){ .PID = pidTaskCpuLoad
-                                            , .userTaskFct = taskCpuLoad
-                                            , .tiTaskMaxInUS = 0
-                                            }
-                         , idEvCpuLoad
-                         )
+    if(rtos_osRegisterUserTask( idEvCpuLoad
+                              , taskCpuLoad
+                              , pidTaskCpuLoad
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
@@ -1273,7 +1247,7 @@ void main(void)
     /* Initialize the RTOS kernel. The global interrupt processing is resumed if it
        succeeds. The step involves a configuration check. We must not startup the SW if the
        check fails. */
-    if(!initOk || !rtos_initKernel())
+    if(!initOk ||  rtos_osInitKernel() != rtos_err_noError)
         while(true)
             ;
 
@@ -1286,10 +1260,10 @@ void main(void)
        application task is running. */
 
     /* Prepare the run of the idle task of process 2. */
-    static const prc_userTaskConfig_t taskIdlePID2Config = { .taskFct = taskIdlePID2
-                                                           , .tiTaskMax = 0
-                                                           , .PID = 2
-                                                           };
+    static const rtos_taskDesc_t taskIdlePID2Config = { .addrTaskFct = (uintptr_t)taskIdlePID2
+                                                      , .PID = 2
+                                                      , .tiTaskMax = 0
+                                                      };
     while(true)
     {
         checkAndIncrementTaskCnts(idTaskIdle);
@@ -1302,14 +1276,13 @@ void main(void)
 #ifdef DEBUG
         bool bActivationAccepted =
 #endif
-        rtos_OS_triggerEvent(idEvNonCyclic);
+        rtos_osTriggerEvent(idEvNonCyclic);
         assert(bActivationAccepted);
 
         /* Run a kind of idle task in process 2. */
-        signed int resultIdle ATTRIB_DBG_ONLY =
-                                rtos_OS_runTask( &taskIdlePID2Config
-                                               , /* taskParam */ mai_cntTaskIdle
-                                               );
+        signed int resultIdle ATTRIB_DBG_ONLY = rtos_osRunTask( &taskIdlePID2Config
+                                                              , /* taskParam */ mai_cntTaskIdle
+                                                              );
         assert(resultIdle == 3*(int)mai_cntTaskIdle);
 
         /* Compute the average CPU load. Note, this operation lasts about 1s and has a
@@ -1321,6 +1294,6 @@ void main(void)
         /* In PRODUCTION compilation we halt the software execution if errors where found
            in the data consistency tests. */
         if(_sharedDataTasksIdleAnd1msAndCpuLoad.noErrors != 0)
-            rtos_OS_suspendProcess(/* PID */ 1);
+            rtos_osSuspendProcess(/* PID */ 1);
     }
 } /* End of main */

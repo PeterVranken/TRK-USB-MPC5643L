@@ -38,6 +38,7 @@
 #include "rtos.h"
 #include "gsl_systemLoad.h"
 #include "lbd_ledAndButtonDriver.h"
+#include "rtos_ivorHandler.h"
 #include "syc_systemConfiguration.h"
 #include "prf_processFailureInjection.h"
 #include "prr_processReporting.h"
@@ -167,9 +168,19 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
         /* We need to take an address, where we can be sure that no change from other side
            will happen so that we can later double check that the write attempt really
            didn't alter the value. */
-        expectedValue = prc_processAry[syc_pidSupervisor-1].cntTotalTaskFailure;
+        expectedValue = rtos_getNoTotalTaskFailure(syc_pidSupervisor);
         value = ~expectedValue;
-        address = (uint32_t)&prc_processAry[syc_pidSupervisor-1].cntTotalTaskFailure;
+        
+        /* This is, what we would do in C:
+             address = (uint32_t)&rtos_processAry[syc_pidSupervisor-1].cntTotalTaskFailure;
+             Unfortunately, rtos_processAry and its type are not public. The data is
+           however shared with the assembly code and we can use the same interfacing size
+           and field offset macros to compute the required address exactly as the assembler
+           code does. */
+        extern uint8_t rtos_processAry[];
+        address = (uint32_t)&rtos_processAry
+                  + SIZE_OF_PROCESS_DESC*(syc_pidSupervisor-1)
+                  + O_PDESC_CNTTOT;
         maxNoExpectedFailures = 1;
         break;
 #endif
@@ -598,10 +609,10 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
                 /* Run a task in the reporting process to let it print some regular
                    progress and status information. */
                 const prr_testStatus_t testStatus = { .noTestCycles = prs_cntTestCycles };
-                const prc_userTaskConfig_t userTaskConfig =  
-                                    { .taskFct = (prc_taskFct_t)prr_taskReportWatchdogStatus
-                                      , .tiTaskMax = PRC_TI_MS2TICKS(3)
+                const rtos_taskDesc_t userTaskConfig =  
+                                    { .addrTaskFct = (uintptr_t)prr_taskReportWatchdogStatus
                                       , .PID = syc_pidReporting
+                                      , .tiTaskMax = RTOS_TI_MS2TICKS(3)
                                     };
                 int32_t result ATTRIB_DBG_ONLY =
                                     rtos_runTask( &userTaskConfig
@@ -615,10 +626,10 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
             /* Run a task once in the reporting process to let it print the conditions,
                which caused the software halt. */
             status.noTestCycles = prs_cntTestCycles;
-            const prc_userTaskConfig_t userTaskConfig =  
-                                    { .taskFct = (prc_taskFct_t)prr_taskReportFailure
-                                      , .tiTaskMax = PRC_TI_MS2TICKS(5)
+            const rtos_taskDesc_t userTaskConfig =  
+                                    { .addrTaskFct = (uintptr_t)prr_taskReportFailure
                                       , .PID = syc_pidReporting
+                                      , .tiTaskMax = RTOS_TI_MS2TICKS(5)
                                     };
             int32_t result ATTRIB_DBG_ONLY =
                             rtos_runTask( &userTaskConfig

@@ -62,8 +62,8 @@
  * Include files
  */
 
-#include "ivr_ivorHandler.h"
 #include "mmu_mmuRegions.h"
+#include "rtos_ivorHandler.h"
 
 
 /*
@@ -139,7 +139,7 @@ sup_startUp:
 
     /* Our RTOS requires catching the trap instruction with the IVOR #15 handler. This can
        be done safely only if the handler cannot be preempted by an External Interrupt. By
-       default, this is possible. We configure the HID0 to clear MSR[EE] on entry ito IVOR
+       default, this is possible. We configure the HID0 to clear MSR[EE] on entry into IVOR
        #15. */
     mfspr       r0, 1008    /* Read register Hardware implementation dependent (HID) 0 */
     se_bseti    r0, 19      /* Set bit DCLREE, Debug Interrupt Clears MSR[EE] */
@@ -285,7 +285,6 @@ su_waitForever:
  */
 zeroizeRegisters:
 
-    /// @todo The GPR can be cleared without SPE using slw #32
     /* Set the MSR[SPE] bit so code can use "evmergelo" instruction. */
     e_lis       r1, 0
     e_or2is     r1, 0x0200
@@ -422,8 +421,11 @@ zeroizeRegisters:
  * the debugger.
  */
     .extern     int_INTCInterruptHandler
-    .extern     ivr_ivor1Handler, ivr_ivor4Handler, ivr_ivor5Handler, ivr_ivor6Handler
-    .extern     ivr_ivor8Handler, ivr_ivor13Handler, ivr_ivor14Handler, ivr_ivor15Handler
+    .extern     rtos_ivor1Handler, rtos_ivor2Handler, rtos_ivor3Handler, rtos_ivor4Handler
+    .extern     rtos_ivor5Handler, rtos_ivor6Handler, rtos_ivor7Handler, rtos_ivor8Handler
+    .extern     rtos_ivor13Handler, rtos_ivor14Handler, rtos_ivor15Handler, rtos_ivor32Handler
+    .extern     rtos_ivor33And34Handler
+
 initExceptionHandlers:
 
     /* Write the common most significant 16 bits of all the exception handler addresses. */
@@ -437,36 +439,36 @@ initExceptionHandlers:
     e_or2i      r3, sup_IVOR0trap@l
     mtspr       400, r3     /* IVOR0 Critical input */
     
-    e_lis       r3, ivr_ivor1Handler@h
-    e_or2i      r3, ivr_ivor1Handler@l
+    e_lis       r3, rtos_ivor1Handler@h
+    e_or2i      r3, rtos_ivor1Handler@l
     mtspr       401, r3     /* IVOR1 Machine check (non-maskable interrupt) */
 
-    e_lis       r3, ivr_ivor2Handler@h
-    e_or2i      r3, ivr_ivor2Handler@l
+    e_lis       r3, rtos_ivor2Handler@h
+    e_or2i      r3, rtos_ivor2Handler@l
     mtspr       402, r3     /* IVOR2 Data storage */
     
-    e_lis       r3, ivr_ivor3Handler@h
-    e_or2i      r3, ivr_ivor3Handler@l
+    e_lis       r3, rtos_ivor3Handler@h
+    e_or2i      r3, rtos_ivor3Handler@l
     mtspr       403, r3     /* IVOR3 Instruction storage */
 
-    e_lis       r3, ivr_ivor4Handler@h
-    e_or2i      r3, ivr_ivor4Handler@l
+    e_lis       r3, rtos_ivor4Handler@h
+    e_or2i      r3, rtos_ivor4Handler@l
     mtspr       404, r3     /* IVOR4 External input */
 
-    e_lis       r3, ivr_ivor5Handler@h
-    e_or2i      r3, ivr_ivor5Handler@l
+    e_lis       r3, rtos_ivor5Handler@h
+    e_or2i      r3, rtos_ivor5Handler@l
     mtspr       405, r3     /* IVOR5 Alignment */
     
-    e_lis       r3, ivr_ivor6Handler@h
-    e_or2i      r3, ivr_ivor6Handler@l
+    e_lis       r3, rtos_ivor6Handler@h
+    e_or2i      r3, rtos_ivor6Handler@l
     mtspr       406, r3     /* IVOR6 Program */
     
-    e_lis       r3, ivr_ivor7Handler@h
-    e_or2i      r3, ivr_ivor7Handler@l
+    e_lis       r3, rtos_ivor7Handler@h
+    e_or2i      r3, rtos_ivor7Handler@l
     mtspr       407, r3     /* IVOR7 Floating-point unavailable */
 
-    e_lis       r3, ivr_ivor8Handler@h
-    e_or2i      r3, ivr_ivor8Handler@l
+    e_lis       r3, rtos_ivor8Handler@h
+    e_or2i      r3, rtos_ivor8Handler@l
     mtspr       408, r3     /* IVOR8 System call */
 
     e_lis       r3, sup_IVOR9trap@h
@@ -482,28 +484,28 @@ initExceptionHandlers:
     e_or2i      r3, sup_IVOR12trap@l
     mtspr       412, r3     /* IVOR12 Watchdog timer */
     
-    e_lis       r3, ivr_ivor13Handler@h
-    e_or2i      r3, ivr_ivor13Handler@l
+    e_lis       r3, rtos_ivor13Handler@h
+    e_or2i      r3, rtos_ivor13Handler@l
     mtspr       413, r3     /* IVOR13 Data TLB error */
     
-    e_lis       r3, ivr_ivor14Handler@h
-    e_or2i      r3, ivr_ivor14Handler@l
+    e_lis       r3, rtos_ivor14Handler@h
+    e_or2i      r3, rtos_ivor14Handler@l
     mtspr       414, r3     /* IVOR14 Instruction TLB error */
     
-    e_lis       r3, ivr_ivor15Handler@h
-    e_or2i      r3, ivr_ivor15Handler@l
+    e_lis       r3, rtos_ivor15Handler@h
+    e_or2i      r3, rtos_ivor15Handler@l
     mtspr       415, r3     /* IVOR15 Debug */
 
-    e_lis       r3, ivr_ivor32Handler@h
-    e_or2i      r3, ivr_ivor32Handler@l
+    e_lis       r3, rtos_ivor32Handler@h
+    e_or2i      r3, rtos_ivor32Handler@l
     mtspr       528, r3      /* IVOR32 SPE unavailable */
     
-    e_lis       r3, ivr_ivor33And34Handler@h
-    e_or2i      r3, ivr_ivor33And34Handler@l
+    e_lis       r3, rtos_ivor33And34Handler@h
+    e_or2i      r3, rtos_ivor33And34Handler@l
     mtspr       529, r3      /* IVOR33 SPE data exception */
     
-    e_lis       r3, ivr_ivor33And34Handler@h
-    e_or2i      r3, ivr_ivor33And34Handler@l
+    e_lis       r3, rtos_ivor33And34Handler@h
+    e_or2i      r3, rtos_ivor33And34Handler@l
     mtspr       530, r3      /* IVOR34 SPE round exception */
 
     /* The IVOR handlers require to restore the SDA pointers in r2 and r13 since they could

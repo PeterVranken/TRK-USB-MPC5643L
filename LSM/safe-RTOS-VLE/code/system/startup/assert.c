@@ -21,7 +21,7 @@
 #include <assert.h>
 
 #include "typ_types.h"
-#include "ivr_ivorHandler.h"
+#include "rtos_ivorHandler.h"
 #include "assert_defSysCalls.h"
 
 
@@ -83,7 +83,7 @@ void _EXFUN(__assert_func, (const char *fileName, int line, const char *funcName
        assert macro usable in OS and user contexts. Whether the next function returns or
        not depends on the chosen behavior of the assert function. See
        #ASSERT_FAILURE_BEHAVIOR for details. */
-    ivr_systemCall(ASSERT_SYSCALL_ASSERT_FUNC, fileName, line, funcName, expression);
+    rtos_systemCall(ASSERT_SYSCALL_ASSERT_FUNC, fileName, line, funcName, expression);
     
 /// @todo Remove this obsolete loop or make it dependent on the chosen behavior. What shall we do with the _Noreturn?
     /* We place the infinite loop here to avoid the compiler warning about a _Noreturn

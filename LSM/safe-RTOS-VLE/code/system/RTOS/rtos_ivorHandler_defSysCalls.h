@@ -1,10 +1,10 @@
-#ifndef IVR_IVORHANDLER_DEFSYSCALLS_INCLUDED
-#define IVR_IVORHANDLER_DEFSYSCALLS_INCLUDED
+#ifndef RTOS_IVORHANDLER_DEFSYSCALLS_INCLUDED
+#define RTOS_IVORHANDLER_DEFSYSCALLS_INCLUDED
 /**
- * @file ivr_ivorHandler_defSysCalls.h
- * Declaration of system calls offered by and implemented in module ivr_ivorHandler.S. This
- * header file has to be included by source file sc_systemCall.c, which collects all system
- * call declarations and assembles the const table of system call descriptors.
+ * @file rtos_ivorHandler_defSysCalls.h
+ * Declaration of system calls offered by and implemented in module rtos_ivorHandler.S.
+ * This header file has to be included by source file rtos_systemCall.c, which collects all
+ * system call declarations and assembles the const table of system call descriptors.
  *
  * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -27,32 +27,31 @@
  */
 
 #include "typ_types.h"
-#include "ivr_ivorHandler.h"
+#include "rtos.h"
+#include "rtos_ivorHandler.h"
 
 
 /*
  * Defines
  */
 
-#ifndef SC_SYSCALL_TABLE_ENTRY_0000
-# if IVR_SYSCALL_SUSPEND_TERMINATE_TASK != 0
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0000
+# if RTOS_SYSCALL_SUSPEND_TERMINATE_TASK != 0
 #  error Inconsistent definition of system call
 # endif
-/* The basic system call handler is assembler implemented in ivr_ivorHandler.S. Note,
+/* The basic system call handler is assembler implemented in rtos_ivorHandler.S. Note,
    despite of the C style prototype, this is not a C callable function. The calling
    convention is different to C. This is the reason, why we declare it here instead of
-   publishing it globally in ivr_ivorHandler.h. */
-extern void ivr_scBscHdlr_terminateUserTask(int32_t result);
-# define SC_SYSCALL_TABLE_ENTRY_0000                                        \
-            { .addressOfFct = (uint32_t)ivr_scBscHdlr_terminateUserTask     \
-            , .conformanceClass = SC_HDLR_CONF_CLASS_BASIC                  \
-            }
+   publishing it globally in rtos_ivorHandler.h. */
+extern void rtos_scBscHdlr_terminateUserTask(int32_t result);
+# define RTOS_SYSCALL_TABLE_ENTRY_0000  \
+                        RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_terminateUserTask, BASIC)
 #else
 # error System call 0000 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    make the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define SC_SYSCALL_TABLE_ENTRY_0000    SC_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0000    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 
@@ -75,4 +74,4 @@ extern void ivr_scBscHdlr_terminateUserTask(int32_t result);
  * Global inline functions
  */
 
-#endif  /* IVR_IVORHANDLER_DEFSYSCALLS_INCLUDED */
+#endif  /* RTOS_IVORHANDLER_DEFSYSCALLS_INCLUDED */

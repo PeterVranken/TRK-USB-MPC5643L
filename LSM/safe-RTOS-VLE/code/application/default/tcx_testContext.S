@@ -33,8 +33,6 @@
  * Include files
  */
 
-#include "ivr_ivorHandler.h"
-
 
 /*
  * Defines
@@ -160,7 +158,7 @@ fillRegisters:
  */
     .section    .text
     .globl      tcx_testFailed
-    .extern     ivr_systemCall
+    .extern     rtos_systemCall
     .balign     2
 #define SIZE_OF_STACKFRAME  0
 
@@ -369,13 +367,13 @@ tc_mainLoop:
 #if 0
     /* Do a system call. We use a quite useless one which always returns without demanding
        a context switch. */
-    se_li       r3, SC_IDX_SYS_CALL_TEST_AND_DECREMENT  /* idxSysCall */
+    se_li       r3, RTOS_IDX_SYS_CALL_TEST_AND_DECREMENT  /* idxSysCall */
     se_li       r4, 1   /* idxSemaphore. Don't use 0, which is in use for LED access control */
     e_bl        int_systemCall
     
     /* Now do a system call, which doesn't return immediately, but which demands a context
        switch. */
-    se_li       r3, SC_IDX_SYS_CALL_SWITCH_CONTEXT  /* idxSysCall: cxs_switchContext */
+    se_li       r3, RTOS_IDX_SYS_CALL_SWITCH_CONTEXT  /* idxSysCall: cxs_switchContext */
     e_lis       r4, -2@h    /* signalToResumedContext */
     e_or2i      r4, -2@l    /* signalToResumedContext */
     e_bl        int_systemCall

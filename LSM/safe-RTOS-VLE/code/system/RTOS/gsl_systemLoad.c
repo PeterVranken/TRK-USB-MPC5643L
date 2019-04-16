@@ -11,7 +11,7 @@
  * change to the native 32 Bit data type for the calculations. The Arduino function
  * delayMicroseconds() has been replaced by the PowerPC substitute del_delayMicroseconds().
  *
- * Copyright (C) 2012-2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2012-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -38,7 +38,6 @@
 #include <assert.h>
 
 #include "typ_types.h"
-#include "ihw_initMcuCoreHW.h"
 #include "del_delay.h"
 #include "gsl_systemLoad.h"
 
@@ -141,7 +140,7 @@ unsigned int gsl_getSystemLoad()
         ++ step;
 
 #if MODULE_CALIBRATION_MODE == 1
-        uint32_t msr = ihw_enterCriticalSection();
+        uint32_t msr = rtos_osEnterCriticalSection();
         uint64_t tiDelayTimeAct = GSL_PPC_GET_TIMEBASE();
 #endif
         /* One step is exactly 100 ms of code execution time - regardless of how long this
@@ -150,7 +149,7 @@ unsigned int gsl_getSystemLoad()
 
 #if MODULE_CALIBRATION_MODE == 1
         uint64_t tiDelayTimeEnd = GSL_PPC_GET_TIMEBASE();
-        ihw_leaveCriticalSection(msr);
+        rtos_osLeaveCriticalSection(msr);
         
         tiDelayTimeAct = tiDelayTimeEnd - tiDelayTimeAct;
         assert(tiDelayTimeAct <= 0xffffffffull);

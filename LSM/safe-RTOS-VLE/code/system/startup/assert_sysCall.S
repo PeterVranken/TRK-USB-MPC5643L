@@ -60,7 +60,7 @@
       See #ASSERT_FAILURE_BEHAVIOR, too. */
 #define ASSERT_FAILURE_BEHAVIOR_HALT_SW                             1
 
-/// @todo We can't continue after an assert macro: The function i sconsidered _Noreturn by
+/// @todo We can't continue after an assert macro: The function is considered _Noreturn by
 // the compiler. We need to re-define the behavior, e.g. store_and_wait. wait != halt: We
 // spin in an endless loop but only in problem state and with MSR[EE]=1 so that scheduler
 // and deadline monitoring are still operational. The failing task won't proceed (just wait
@@ -146,7 +146,6 @@
  * executed with EE=0 and must not rely on sp, r2 and r13
  */
     .section    .text.ivor
-    .extern     ivr_systemCallBadArgument
     .globl      assert_scBscHdlr_assert_func
     .align      2
 

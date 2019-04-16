@@ -3,7 +3,7 @@
 /**
  * @file sio_serialIO_defSysCalls.h
  * Declaration of system calls offered by and implemented in module sio_serialIO.c. This
- * header file has to be included by source file sc_systemCall.c, which collects all system
+ * header file has to be included by source file rtos_systemCall.c, which collects all system
  * call declarations and assembles the const table of system call descriptors.
  *
  * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "rtos.h"
 #include "sio_serialIO.h"
 
 
@@ -36,19 +37,17 @@
  * Defines
  */
 
-#ifndef SC_SYSCALL_TABLE_ENTRY_0004
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0004
 # if SIO_SYSCALL_WRITE_SERIAL != 4
 #  error Inconsistent definition of system call
 # endif
-# define SC_SYSCALL_TABLE_ENTRY_0004   { .addressOfFct = (uint32_t)sio_scFlHdlr_writeSerial \
-                                       , .conformanceClass = SC_HDLR_CONF_CLASS_FULL        \
-                                       }
+# define RTOS_SYSCALL_TABLE_ENTRY_0004  RTOS_SC_TABLE_ENTRY(sio_scFlHdlr_writeSerial, FULL)
 #else
 # error System call 0004 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    make the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define SC_SYSCALL_TABLE_ENTRY_0004    SC_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0004    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 

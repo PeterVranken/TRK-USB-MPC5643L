@@ -43,8 +43,6 @@
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"
-#include "prc_process.h"
-#include "mpu_systemMemoryProtectionUnit.h"
 #include "rtos.h"
 #include "gsl_systemLoad.h"
 #include "tcx_testContext.h"
@@ -57,27 +55,27 @@
 /*
  * Defines
  */
- 
+
 
 /*
  * Local type definitions
  */
- 
+
 /*
  * Local prototypes
  */
- 
+
 
 /*
  * Data definitions
  */
- 
+
 /** The current, averaged CPU load in tens of percent. */
 volatile unsigned int SDATA_OS(syc_cpuLoad) = 1000;
- 
+
 /** A counter of the invocations of the otherwise useless PIT3 ISR. */
 volatile unsigned long long SBSS_OS(syc_cntISRPit3) = 0;
- 
+
 
 /*
  * Function implementation
@@ -127,11 +125,11 @@ static void isrPit1(void)
 
     /* Directly start a user task. It is executed synchronously with this ISR and on the
        same priority level. */
-    static const prc_userTaskConfig_t taskConfig = { .taskFct = prf_task1ms
-                                                     , .tiTaskMax = 0 //PRC_TI_MS2TICKS(5)
-                                                     , .PID = syc_pidFailingTasks
-                                                   };
-    rtos_OS_runTask(&taskConfig, /* taskParam */ cnt_);
+    static const rtos_taskDesc_t taskConfig = { .addrTaskFct = (uintptr_t)prf_task1ms
+                                              , .PID = syc_pidFailingTasks
+                                              , .tiTaskMax = 0 //RTOS_TI_MS2TICKS(5)
+                                              };
+    rtos_osRunTask(&taskConfig, /* taskParam */ cnt_);
     ++ cnt_;
 
     /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
@@ -156,7 +154,7 @@ static void isrPit2(void)
 {
     /* Indirectly start a user task. It is executed asynchronously to this ISR and on has its
        own, irrelated priority level. */
-    rtos_OS_triggerEvent(syc_idEvPIT2);
+    rtos_osTriggerEvent(syc_idEvPIT2);
 
     /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
        code" that is running in supervisor mode. */
@@ -202,21 +200,21 @@ static void installInterruptServiceRoutines(void)
 
     /* Install the ISRs now that all timers are stopped.
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
-    prc_installINTCInterruptHandler( &isrPit1
-                                   , /* vectorNum */ 60
-                                   , /* psrPriority */ syc_prioISRPit1
-                                   , /* isPreemptable */ true
-                                   );
-    prc_installINTCInterruptHandler( &isrPit2
-                                   , /* vectorNum */ 61
-                                   , /* psrPriority */ syc_prioISRPit2
-                                   , /* isPreemptable */ true
-                                   );
-    prc_installINTCInterruptHandler( &isrPit3
-                                   , /* vectorNum */ 127
-                                   , /* psrPriority */ syc_prioISRPit3
-                                   , /* isPreemptable */ true
-                                   );
+    rtos_installInterruptHandler( &isrPit1
+                                , /* vectorNum */ 60
+                                , /* psrPriority */ syc_prioISRPit1
+                                , /* isPreemptable */ true
+                                );
+    rtos_installInterruptHandler( &isrPit2
+                                , /* vectorNum */ 61
+                                , /* psrPriority */ syc_prioISRPit2
+                                , /* isPreemptable */ true
+                                );
+    rtos_installInterruptHandler( &isrPit3
+                                , /* vectorNum */ 127
+                                , /* psrPriority */ syc_prioISRPit3
+                                , /* isPreemptable */ true
+                                );
 
     /* Peripheral clock has been initialized to 120 MHz. The timer counts at this rate. The
        RTOS operates in ticks of 1ms. Here, we use prime numbers to get good asynchronicity
@@ -262,7 +260,7 @@ void main(void)
     ihw_initMcuCoreHW();
 
     /* The interrupt controller is configured. */
-    prc_initINTCInterruptController();
+    rtos_initINTCInterruptController();
 
     /* Initialize the button and LED driver for the eval board. */
     lbd_initLEDAndButtonDriver( /* onButtonChangeCallback */ NULL
@@ -272,167 +270,153 @@ void main(void)
     /* Initialize the serial output channel as prerequisite of using printf. */
     sio_initSerialInterface(/* baudRate */ 115200);
 
-    /* Arm the memory protection unit. */
-    mpu_initMPU();
-
     /* Register the process initialization tasks. Here, we used always the same function. */
-    rtos_taskDesc_t taskConfig = (rtos_taskDesc_t){ .PID = 1
-                                                    , .userTaskFct = taskInitProcess
-                                                    , .tiTaskMaxInUS = 1000
-                                                  };
     bool initOk = true;
     unsigned int u;
-    for(u=0; u<3; ++u)
+    for(u=1; u<=3; ++u)
     {
-        taskConfig.PID = u;
-        if(!rtos_registerTask(&taskConfig, RTOS_EVENT_ID_INIT_TASK))
+        if(rtos_osRegisterInitTask(taskInitProcess, /* PID */ u, /* tiTaskMaxInUs */ 1000)
+           != rtos_err_noError
+          )
+        {
             initOk = false;
+        }
     }
 
     /* Create the events that trigger application tasks at the RTOS. Note, we do not really
-       respect the ID, which is assigned to the event by the RTOS API rtos_createEvent().
+       respect the ID, which is assigned to the event by the RTOS API rtos_osCreateEvent().
        The returned value is redundant. This technique requires that we create the events
        in the right order and this requires in practice a double-check by assertion - later
        maintenance errors are unavoidable otherwise. */
 #ifdef DEBUG
     unsigned int idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 997 /* about 1s but prime to others */
-                                        , .tiFirstActivationInMs = 19
-                                        , .priority = syc_prioEvReporting
-                                        , .minPIDToTriggerThisEvent =
-                                                                PRC_EVENT_NOT_USER_TRIGGERABLE
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              997 /* about 1s but prime to others */
+                      , /* tiFirstActivationInMs */    19
+                      , /* priority */                 syc_prioEvReporting
+                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                      );
     assert(idEvent == syc_idEvReporting);
-    
+
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 10
-                                        , .tiFirstActivationInMs = 0
-                                        , .priority = syc_prioEvTest
-                                        , .minPIDToTriggerThisEvent =
-                                                                PRC_EVENT_NOT_USER_TRIGGERABLE
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              10
+                      , /* tiFirstActivationInMs */    0
+                      , /* priority */                 syc_prioEvTest
+                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                      );
     assert(idEvent == syc_idEvTest);
-    
+
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 11
-                                        , .tiFirstActivationInMs = 0
-                                        , .priority = syc_prioEvTestCtxSw
-                                        , .minPIDToTriggerThisEvent =
-                                                                PRC_EVENT_NOT_USER_TRIGGERABLE
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              11
+                      , /* tiFirstActivationInMs */    0
+                      , /* priority */                 syc_prioEvTestCtxSw
+                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                      );
     assert(idEvent == syc_idEvTestCtxSw);
-    
+
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 0
-                                        , .tiFirstActivationInMs = 0
-                                        , .priority = syc_prioEvPIT2
-                                        , .minPIDToTriggerThisEvent =
-                                                                PRC_EVENT_NOT_USER_TRIGGERABLE
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              0
+                      , /* tiFirstActivationInMs */    0
+                      , /* priority */                 syc_prioEvPIT2
+                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                      );
     assert(idEvent == syc_idEvPIT2);
-    
+
 #ifdef DEBUG
     idEvent =
 #endif
-    rtos_createEvent(&(rtos_eventDesc_t){ .tiCycleInMs = 17
-                                        , .tiFirstActivationInMs = 0
-                                        , .priority = syc_prioEv17ms
-                                        , .minPIDToTriggerThisEvent =
-                                                                PRC_EVENT_NOT_USER_TRIGGERABLE
-                                        }
-                    );
+    rtos_osCreateEvent( /* tiCycleInMs */              17
+                      , /* tiFirstActivationInMs */    0
+                      , /* priority */                 syc_prioEv17ms
+                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                      );
     assert(idEvent == syc_idEv17ms);
-    
+
     /* The tasks are associated with the events. We have two tasks, which are not triggered
        by the RTOS scheduler but by independent interrupts. One is triggered through an
        event from an asynchronous interrupt service routine (i.e. it may run on a lower
        priority as the ISR) and the other one is directly started from the ISR and
        necessarily shares the priority with the ISR. This one is the only task, which is
        not found here in the list of registrations. */
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidReporting
-                                             , .userTaskFct = prr_taskReporting
-                                             , .tiTaskMaxInUS = 1500000
-                                             }
-                         , syc_idEvReporting
-                         )
+    if(rtos_osRegisterUserTask( syc_idEvReporting
+                              , prr_taskReporting
+                              , syc_pidReporting
+                              , /* tiTaskMaxInUs */ 1500000
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
     }
-    
+
     /* The next three tasks share the same event for triggering. The order of registration
        matters: When the event becomes due the tasks will activated in the order of
        registration. We need to first see the task, which commands the (failing) action to
        take, then the task which executes the action and finally the task, which
        double-checks the system behavior. */
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidSupervisor
-                                             , .userTaskFct = prs_taskCommandError
-                                             , .tiTaskMaxInUS = 1500
-                                             }
-                         , syc_idEvTest
-                         )
+    if(rtos_osRegisterUserTask( syc_idEvTest
+                              , prs_taskCommandError
+                              , syc_pidSupervisor
+                              , /* tiTaskMaxInUs */ 1500
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
     }
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidFailingTasks
-                                             , .userTaskFct = prf_taskInjectError
-                                             , .tiTaskMaxInUS = 2500
-                                             }
-                         , syc_idEvTest
-                         )
+    if(rtos_osRegisterUserTask( syc_idEvTest
+                              , prf_taskInjectError
+                              , syc_pidFailingTasks
+                              , /* tiTaskMaxInUs */ 2500
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
     }
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidSupervisor
-                                             , .userTaskFct = prs_taskEvaluateError
-                                             , .tiTaskMaxInUS = 1500
-                                             }
-                         , syc_idEvTest
-                         )
+    if(rtos_osRegisterUserTask( syc_idEvTest
+                              , prs_taskEvaluateError
+                              , syc_pidSupervisor
+                              , /* tiTaskMaxInUs */ 1500
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
     }
-       
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidReporting
-                                             , .userTaskFct = prr_taskTestContextSwitches
-                                             , .tiTaskMaxInUS = 0
-                                             }
-                         , syc_idEvTestCtxSw
-                         )
+
+    if(rtos_osRegisterUserTask( syc_idEvTestCtxSw
+                              , prr_taskTestContextSwitches
+                              , syc_pidReporting
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
     }
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidSupervisor
-                                             , .userTaskFct = prs_taskWatchdog
-                                             , .tiTaskMaxInUS = 0
-                                             }
-                         , syc_idEvPIT2
-                         )
+    if(rtos_osRegisterUserTask( syc_idEvPIT2
+                              , prs_taskWatchdog
+                              , syc_pidSupervisor
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
     }
-    if(!rtos_registerTask( &(rtos_taskDesc_t){ .PID = syc_pidFailingTasks
-                                             , .userTaskFct = prf_task17ms
-                                             , .tiTaskMaxInUS = 0
-                                             }
-                         , syc_idEv17ms
-                         )
+    if(rtos_osRegisterUserTask( syc_idEv17ms
+                              , prf_task17ms
+                              , syc_pidFailingTasks
+                              , /* tiTaskMaxInUs */ 0
+                              )
+       != rtos_err_noError
       )
     {
         initOk = false;
@@ -441,20 +425,20 @@ void main(void)
     /* The watchdog uses the reporting process, which owns the C library and can do a
        printf, to regularly print a progress message. We need to grant the required
        permissions. */
-    rtos_grantPermissionRunTask( /* pidOfCallingTask */ syc_pidSupervisor
-                               , /* targetPID */ syc_pidReporting
-                               );
-    
+    rtos_osGrantPermissionRunTask( /* pidOfCallingTask */ syc_pidSupervisor
+                                 , /* targetPID */ syc_pidReporting
+                                 );
+
     /* The watchdog uses service rtos_suspendProcess() if it recognizes an error. We need
        to grant the required permissions. */
-    rtos_grantPermissionSuspendProcess( /* pidOfCallingTask */ syc_pidSupervisor
-                                      , /* targetPID */ syc_pidFailingTasks
-                                      );
-    
+    rtos_osGrantPermissionSuspendProcess( /* pidOfCallingTask */ syc_pidSupervisor
+                                        , /* targetPID */ syc_pidFailingTasks
+                                        );
+
     /* Initialize the RTOS kernel. The global interrupt processing is resumed if it
        succeeds. The step involves a configuration check. We must not startup the SW if the
        check fails. */
-    if(!initOk || !rtos_initKernel())
+    if(!initOk ||  rtos_osInitKernel() != rtos_err_noError)
         while(true)
             ;
 

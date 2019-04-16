@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "typ_types.h"
+#include "rtos.h"
 #include "lbd_ledAndButtonDriver.h"
 
 
@@ -35,35 +35,31 @@
  * Defines
  */
 
-#ifndef SC_SYSCALL_TABLE_ENTRY_0016
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0016
 # if LBD_SYSCALL_SET_LED != 16
 #  error Inconsistent definition of system call
 # endif
-# define SC_SYSCALL_TABLE_ENTRY_0016    { .addressOfFct = (uint32_t)lbd_scSmplHdlr_setLED   \
-                                        , .conformanceClass = SC_HDLR_CONF_CLASS_SIMPLE     \
-                                        }
+# define RTOS_SYSCALL_TABLE_ENTRY_0016  RTOS_SC_TABLE_ENTRY(lbd_scSmplHdlr_setLED, SIMPLE)
 #else
 # error System call 0016 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    make the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define SC_SYSCALL_TABLE_ENTRY_0016    SC_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0016    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 
-#ifndef SC_SYSCALL_TABLE_ENTRY_0017
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0017
 # if LBD_SYSCALL_GET_BUTTON != 17
 #  error Inconsistent definition of system call
 # endif
-# define SC_SYSCALL_TABLE_ENTRY_0017    { .addressOfFct = (uint32_t)lbd_scSmplHdlr_getButton \
-                                        , .conformanceClass = SC_HDLR_CONF_CLASS_SIMPLE      \
-                                        }
+# define RTOS_SYSCALL_TABLE_ENTRY_0017  RTOS_SC_TABLE_ENTRY(lbd_scSmplHdlr_getButton, SIMPLE)
 #else
 # error System call 0017 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    make the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define SC_SYSCALL_TABLE_ENTRY_0017    SC_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0017    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 
