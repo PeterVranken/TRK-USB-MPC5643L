@@ -731,7 +731,7 @@ static void enableIRQPit2(void)
  * arbitrary and irregular points in time, under control of two asynchronously running
  * timer interrupts.
  */
-void xsw_loop()
+void xsw_loop(void)
 {
     unsigned int u;
 

@@ -60,7 +60,7 @@
  */
 
 /** Enter the endless looping context switch experiment. */
-void xsw_loop();
+void xsw_loop(void);
 
 /** System call implementation for toggling the two contexts. */
 uint32_t cxs_sc_switchContext( int_cmdContextSwitch_t *pCmdContextSwitch
