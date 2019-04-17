@@ -83,6 +83,8 @@
     static_assert( sizeof(processDesc_t) == SIZE_OF_PROCESS_DESC                            \
                    &&  offsetof(processDesc_t, userSP) == O_PDESC_USP                       \
                    &&  O_PDESC_USP == 0                                                     \
+                   &&  offsetof(processDesc_t, state) == O_PDESC_ST                         \
+                   &&  sizeoffield(processDesc_t, state) == 1                               \
                    &&  offsetof(processDesc_t, cntTotalTaskFailure) == O_PDESC_CNTTOT       \
                    &&  sizeoffield(processDesc_t, cntTotalTaskFailure) == 4                 \
                    &&  offsetof(processDesc_t, cntTaskFailureAry) == O_PDESC_CNTTARY        \

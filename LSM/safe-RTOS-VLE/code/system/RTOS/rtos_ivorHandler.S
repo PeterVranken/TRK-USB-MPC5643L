@@ -656,12 +656,12 @@ rtos_isr_endIfPreemptable:
        SV mode. */
     mtspr       SPR_PID0, r0
     se_beq      iv4_retToPreemptedCtxt  /* CR0: Holds PID0!=0. 0: Return to other OS context */
-/// @todo Process state is a uint8_t. Need Byte access
+
     /* If we get here then we need to check the abort conditions of the otherwise resumed
        user task. Note, the evaluation could be done before entering the critical section,
        but the conditional branch would need to stay here inside. */
     e_lwz       r3, (RUT_O_pPDESC+S_I4_StFr)(sp)/* Find pProcessDesc in parent stack frame */
-    se_lwz      r3, O_PDESC_ST(r3)      /* r3: Process state: 0=stopped */
+    se_lbz      r3, O_PDESC_ST(r3)      /* r3: Process state: 0=stopped */
     se_cmpi     r3, 0
     se_beq      rut_endUserTaskByException  /* r3: 0=RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT */
 #if RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT != 0
@@ -763,11 +763,11 @@ rtos_runUserTask:
 #endif
     e_add2is    r6, rtos_processAry@ha
     e_add16i    r6, r6, rtos_processAry@l
-/// @todo Check access to process status. Is likely byte access
+
     /* We check the process abort condition. The scheduler will set the process abort
        flag asynchronous to the actual task execution. So it may be set even before we
        enter the task. */
-    se_lwz      r7, O_PDESC_ST(r6)      /* r7: Process status, 0=stopped */
+    se_lbz      r7, O_PDESC_ST(r6)      /* r7: Process status, 0=stopped */
     se_cmpi     r7, 0
     se_bne      rut_continueTaskExecution
     e_li        r3, ~RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT /* Load agreed function result */
