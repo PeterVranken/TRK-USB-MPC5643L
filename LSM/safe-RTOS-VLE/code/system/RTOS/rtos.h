@@ -349,6 +349,9 @@ void rtos_installInterruptHandler( rtos_interruptServiceRoutine_t interruptServi
 /** Grant permission to particular processes for using the service rtos_suspendProcess(). */
 void rtos_grantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID);
 
+/** Check is a pointer value is valid for writing in the context of a given process. */
+bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes);
+
 
 /*
  * Inline functions
@@ -866,12 +869,14 @@ static inline bool rtos_triggerEvent(unsigned int idEvent)
 
 
 /**
- * Helper function for system call handler implementation: A system call handler must never
- * trust a user code provided pointer; Evidently not for write access but not even for read
- * operation (a read into the address space of peripherals can have a side effect). The
- * user code could make the system call handler overwrite some non-process owned data
- * objects, cause an access violation in the supervisor code or manipulate some
- * peripherals by side effect of a read-register operation.\n
+ * Helper function, mainly intended to support safe system call handler implementation:
+ * Check if a pointer value is valid for reading in the context of a given process.\n
+ *   A system call handler must never trust a user code provided pointer; evidently not for
+ * write access but not even for read operation (a read into the address space of
+ * peripherals can have a side effect). The user code could make the system call handler
+ * overwrite some non-process owned data objects, cause an access violation in the
+ * supervisor code or manipulate some peripherals by side effect of a read-register
+ * operation.\n
  *   Normally, it's strongly disencouraged having pointers as arguments of system calls at
  * all. If not avoidable, one can use this helper function to check that a pointer points
  * into permitted address space and that all bytes of a data object pointed at are still in
@@ -887,6 +892,9 @@ static inline bool rtos_triggerEvent(unsigned int idEvent)
  *   @param noBytes
  * The size of the chunk of memory to be checked. Must not be less than one. (Checked by
  * assertion).
+ *   @remark
+ * Use the counterpart function rtos_checkUserCodeWritePtr() if a system call handler
+ * should do a write access via a user code provided pointer.
  */
 static inline bool rtos_checkUserCodeReadPtr(const void *address, size_t noBytes)
 {

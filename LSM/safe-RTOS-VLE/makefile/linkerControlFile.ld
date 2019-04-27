@@ -358,8 +358,9 @@ SECTIONS
     } >memData AT>memFlash
 
 
-    /* Order of small data sections: The two sX and the two sX2 should be close together
-       since they use the same _SDA_BASE_ pointer, or _SDA2_BASE_, respectively. */
+    /* Order of small data sections: The two sX and the two sX2, X meaning bss or data,
+       should be close together since they use the same _SDA_BASE_ pointer, or _SDA2_BASE_,
+       respectively. */
     .sbss (NOLOAD) : ALIGN(4)
     {
         /* We should explicitly set the beginning of the SDA area. If we don't do then the

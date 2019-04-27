@@ -77,6 +77,9 @@ unsigned int rtos_getNoTotalTaskFailure(unsigned int PID);
 /** Get the number of task failures of given category for the given process. */
 unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr);
 
+/** Compute how many bytes of the stack area are still unused. */
+unsigned int rtos_getStackReserve(unsigned int PID);
+
 
 /*
  * Inline functions

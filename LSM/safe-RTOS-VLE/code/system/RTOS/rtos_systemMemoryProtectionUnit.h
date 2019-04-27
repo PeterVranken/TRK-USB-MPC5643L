@@ -47,6 +47,9 @@
 /** Configure and initialize the memory protection unit, MPU. */
 void rtos_initMPU(void);
 
+/** Check is a pointer value is valid for writing in the context of a given process. */
+bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes);
+
 
 /*
  * Global static inline functions

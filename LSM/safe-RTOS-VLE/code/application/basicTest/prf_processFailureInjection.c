@@ -27,6 +27,7 @@
  *   prf_task1ms
  * Local functions
  *   random
+ *   testCheckUserCodePtr
  *   injectError
  */
 
@@ -131,6 +132,244 @@ static uint32_t random(void)
 } /* End of random */
 
 
+/**
+ * Test of RTOS service functions rtos_checkUserCodeReadPtr() and
+ * rtos_checkUserCodeWritePtr().
+ *   @return 
+ * Get \a true if the test succeeds and \a false if it fails.
+ */
+static bool testCheckUserCodePtr(void)
+{
+    bool success = true;
+
+    extern uint8_t ld_sdaP1Start[0] /*, ld_sdaP1End[0]*/
+                 , ld_sda2P1Start[0], ld_sda2P1End[0]
+                 , ld_dataP1Start[0], ld_dataP1End[0];
+
+    extern uint8_t ld_sdaP2Start[0], ld_sdaP2End[0]
+                 , ld_sda2P2Start[0], ld_sda2P2End[0]
+                 , ld_dataP2Start[0], ld_dataP2End[0];
+
+    extern uint8_t ld_sdaP3Start[0], ld_sdaP3End[0]
+                 , ld_sda2P3Start[0], ld_sda2P3End[0]
+                 , ld_dataP3Start[0], ld_dataP3End[0];
+
+    extern uint8_t ld_sdaP4Start[0], ld_sdaP4End[0]
+                 , ld_sda2P4Start[0], ld_sda2P4End[0]
+                 , ld_dataP4Start[0], ld_dataP4End[0];
+
+    extern uint8_t ld_romStart[0], ld_romEnd[0];
+
+    /* Test data and expected results. */
+    static const struct testCase_t {
+        unsigned int PID;
+        const void *addr;
+        size_t size;
+        bool rdOk
+           , wrOk;
+    } testCaseAry[] = 
+        {
+#if 0
+          #define TC1(prc,ow,sz) \
+          {.PID=(prc), .addr=ld_sdaP##ow##Start, .size=(sz), .rdOk=true, .wrOk=(prc)==(ow)},\
+          {.PID=(prc), .addr=ld_sdaP##ow##End, .size=(sz), .rdOk=true, .wrOk=false}, \
+          {.PID=(prc), .addr=ld_sda2P##ow##Start, .size=(sz), .rdOk=true, .wrOk=(prc)==(ow)},\
+          {.PID=(prc), .addr=ld_sda2P##ow##End, .size=(sz), .rdOk=true, .wrOk=false}, \
+          {.PID=(prc), .addr=ld_dataP##ow##Start, .size=(sz), .rdOk=true, .wrOk=(prc)==(ow)},\
+          {.PID=(prc), .addr=ld_dataP##ow##End, .size=(sz), .rdOk=true, .wrOk=false},
+          #define TC2(prc,sz) \
+          TC1(prc,1,sz) TC1(prc,2,sz) TC1(prc,3,sz) TC1(prc,4,sz)
+          #define TC3(sz) \
+          TC2(1,sz) TC2(2,sz) TC2(3,sz) TC2(4,sz)
+          
+          TC3(1)
+          TC3(2)
+          TC3(4)
+          
+          #undef TC1
+          #undef TC2
+          #undef TC3
+#else
+          /* All test cases ".PID=(4)" have been modified to write not permitted: process 4
+             is not configured and all sections need to be empty.
+               The test cases ".PID=(1), .addr=ld_sdaP1End", ".PID=(1),
+             .addr=ld_sda2P2Start", ".PID=(1), .addr=ld_sda2P3Start" and ".PID=(1),
+             .addr=ld_sda2P4Start" have been commented because the sections between
+             ld_sdaP1End and ld_sda2P1Start are all empty and the basically forbidden write
+             at the end of ld_sdaP1 is at the same time a permitted write into ld_sda2P1.
+               The test cases ".PID=(2), .addr=ld_sda2P2Start", ".PID=(3),
+             .addr=ld_sda2P3Start" and ".PID=(3), .addr=ld_sdaP4Start" have been commented
+             because the section is empty and writing not possible. */
+          {.PID=(1), .addr=ld_sdaP1Start, .size=(1), .rdOk=true, .wrOk=true},
+          //{.PID=(1), .addr=ld_sdaP1End, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sda2P1Start, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(1), .addr=ld_sda2P1End /* =ld_ramEnd */, .size=(1), .rdOk=false, .wrOk=false},
+          {.PID=(1), .addr=ld_dataP1Start, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(1), .addr=ld_dataP1End, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sdaP2Start, .size=(1), .rdOk=true, .wrOk=false},
+          //{.PID=(1), .addr=ld_sda2P2Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_dataP2Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sdaP3Start, .size=(1), .rdOk=true, .wrOk=false},
+          //{.PID=(1), .addr=ld_sda2P3Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_dataP3Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sdaP4Start, .size=(1), .rdOk=true, .wrOk=false},
+          //{.PID=(1), .addr=ld_sda2P4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_dataP4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sdaP1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sda2P1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_dataP1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sdaP2Start, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(2), .addr=ld_sdaP2End, .size=(1), .rdOk=true, .wrOk=false},
+          //{.PID=(2), .addr=ld_sda2P2Start, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(2), .addr=ld_sda2P2End, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_dataP2Start, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(2), .addr=ld_dataP2End, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sdaP3Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sda2P3Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_dataP3Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sdaP4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sda2P4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_dataP4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sdaP1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sda2P1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_dataP1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sdaP2Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sda2P2Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_dataP2Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sdaP3Start, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(3), .addr=ld_sdaP3End, .size=(1), .rdOk=true, .wrOk=false},
+          //{.PID=(3), .addr=ld_sda2P3Start, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(3), .addr=ld_sda2P3End, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_dataP3Start, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(3), .addr=ld_dataP3End, .size=(1), .rdOk=true, .wrOk=false},
+          //{.PID=(3), .addr=ld_sdaP4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sda2P4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_dataP4Start/* = ld_dataP3Start */, .size=(1), .rdOk=true, .wrOk=true},
+          {.PID=(4), .addr=ld_sdaP1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP1Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sdaP2Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P2Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP2Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sdaP3Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P3Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP3Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sdaP4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sdaP4End, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P4End, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP4Start, .size=(1), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP4End, .size=(1), .rdOk=true, .wrOk=false},
+
+          {.PID=(1), .addr=ld_sdaP1Start, .size=(31), .rdOk=true, .wrOk=true},
+          //{.PID=(1), .addr=ld_sdaP1End, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sda2P1Start, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(1), .addr=ld_sda2P1End /* =ld_ramEnd */, .size=(31), .rdOk=false, .wrOk=false},
+          {.PID=(1), .addr=ld_dataP1Start, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(1), .addr=ld_dataP1End, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sdaP2Start, .size=(31), .rdOk=true, .wrOk=false},
+          //{.PID=(1), .addr=ld_sda2P2Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_dataP2Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sdaP3Start, .size=(31), .rdOk=true, .wrOk=false},
+          //{.PID=(1), .addr=ld_sda2P3Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_dataP3Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sdaP4Start, .size=(31), .rdOk=true, .wrOk=false},
+          //{.PID=(1), .addr=ld_sda2P4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_dataP4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sdaP1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sda2P1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_dataP1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sdaP2Start, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(2), .addr=ld_sdaP2End, .size=(31), .rdOk=true, .wrOk=false},
+          //{.PID=(2), .addr=ld_sda2P2Start, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(2), .addr=ld_sda2P2End, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_dataP2Start, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(2), .addr=ld_dataP2End, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sdaP3Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sda2P3Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_dataP3Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sdaP4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_sda2P4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_dataP4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sdaP1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sda2P1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_dataP1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sdaP2Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sda2P2Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_dataP2Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sdaP3Start, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(3), .addr=ld_sdaP3End, .size=(31), .rdOk=true, .wrOk=false},
+          //{.PID=(3), .addr=ld_sda2P3Start, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(3), .addr=ld_sda2P3End, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_dataP3Start, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(3), .addr=ld_dataP3End, .size=(31), .rdOk=true, .wrOk=false},
+          //{.PID=(3), .addr=ld_sdaP4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_sda2P4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_dataP4Start/* = ld_dataP3Start */, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(4), .addr=ld_sdaP1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP1Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sdaP2Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P2Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP2Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sdaP3Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P3Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP3Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sdaP4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sdaP4End, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_sda2P4End, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP4Start, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_dataP4End, .size=(31), .rdOk=true, .wrOk=false},
+
+          {.PID=(1), .addr=ld_sdaP1Start-5, .size=(31), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_sda2P1End-31 /* =ld_ramEnd */, .size=(31), .rdOk=true, .wrOk=true},
+          {.PID=(1), .addr=ld_sda2P1End-30 /* =ld_ramEnd */, .size=(31), .rdOk=false, .wrOk=false},
+
+          {.PID=(1), .addr=ld_romStart, .size=(311), .rdOk=true, .wrOk=false},
+          {.PID=(1), .addr=ld_romEnd, .size=(311), .rdOk=false, .wrOk=false},
+          {.PID=(1), .addr=ld_romEnd-310, .size=(311), .rdOk=false, .wrOk=false},
+          {.PID=(1), .addr=ld_romEnd-311, .size=(311), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_romStart, .size=(311), .rdOk=true, .wrOk=false},
+          {.PID=(2), .addr=ld_romEnd, .size=(311), .rdOk=false, .wrOk=false},
+          {.PID=(2), .addr=ld_romEnd-310, .size=(311), .rdOk=false, .wrOk=false},
+          {.PID=(2), .addr=ld_romEnd-311, .size=(311), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_romStart, .size=(311), .rdOk=true, .wrOk=false},
+          {.PID=(3), .addr=ld_romEnd, .size=(311), .rdOk=false, .wrOk=false},
+          {.PID=(3), .addr=ld_romEnd-310, .size=(311), .rdOk=false, .wrOk=false},
+          {.PID=(3), .addr=ld_romEnd-311, .size=(311), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_romStart, .size=(311), .rdOk=true, .wrOk=false},
+          {.PID=(4), .addr=ld_romEnd, .size=(311), .rdOk=false, .wrOk=false},
+          {.PID=(4), .addr=ld_romEnd-310, .size=(311), .rdOk=false, .wrOk=false},
+          {.PID=(4), .addr=ld_romEnd-311, .size=(311), .rdOk=true, .wrOk=false},
+
+          /** Address of interrupt controller INTC0 for test of peripheral access. */
+          #define INTC0   ((uint8_t*)0xfff48000)
+          {.PID=(1), .addr=INTC0, .size=(4), .rdOk=false, .wrOk=false},
+          {.PID=(2), .addr=INTC0, .size=(4), .rdOk=false, .wrOk=false},
+          {.PID=(3), .addr=INTC0, .size=(4), .rdOk=false, .wrOk=false},
+          {.PID=(4), .addr=INTC0, .size=(4), .rdOk=false, .wrOk=false},
+          #undef INTC0
+#endif
+        };
+
+    unsigned int u;
+    const struct testCase_t *pTC = &testCaseAry[0];
+    for(u=0; u<sizeOfAry(testCaseAry); ++u, ++pTC)
+    {
+        if(rtos_checkUserCodeReadPtr(pTC->addr, pTC->size) != pTC->rdOk)
+            success = false;
+            
+        if(rtos_checkUserCodeWritePtr(pTC->PID, pTC->addr, pTC->size) != pTC->wrOk)
+            success = false;
+
+    } /* for(All test cases defined in the array) */
+
+    return success;
+    
+} /* End of testCheckUserCodePtr */
+
+
 
 /**
  * Implementation of the intentionally produced failures.
@@ -153,6 +392,14 @@ static void injectError(void)
 
 #if PRF_ENA_TC_PRF_KOF_NO_FAILURE == 1
     case prf_kof_noFailure:
+        /* We run a "normal" test case, whichis not connected to the exception mechanism of
+           the RTOS. The test function will always return but it can tell a testfailure by
+           return value. The return value is caught by infinite loop, which would be seen
+           as an (here unexpected) deadline exception. */
+        if(!testCheckUserCodePtr())
+            while(true)
+                ;
+
         /* Here, we can test the voluntary task termination for a deeply nested stack. */
         rtos_terminateTask(0);
         break;

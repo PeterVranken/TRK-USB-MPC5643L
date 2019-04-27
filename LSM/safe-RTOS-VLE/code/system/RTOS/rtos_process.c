@@ -26,6 +26,7 @@
  *   rtos_isProcessSuspended
  *   rtos_getNoTotalTaskFailure
  *   rtos_getNoTaskFailure
+ *   rtos_getStackReserve
  * Module inline interface
  * Local functions
  */
@@ -546,4 +547,93 @@ unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr)
         return UINT_MAX;
     }
 } /* End of rtos_getNoTaskFailure */
+
+
+
+/**
+ * Compute how many bytes of the stack area of a process are still unused. If the value is
+ * requested after an application has been run a long while and has been forced to run
+ * through all its conditional code paths, it may be used to optimize the static stack
+ * allocation. The function is useful only for diagnosis purpose as there's no chance to
+ * dynamically increase or decrease the stack area at runtime.\n
+ *   The function may be called from a task, ISR and from the idle task.\n
+ *   The algorithm is as follows: The unused part of the stack is initialized with a
+ * specific pattern word. This routine counts the number of subsequent pattern words down
+ * from the (logical) top of the stack area. The result is returned as number of bytes.\n
+ *   The returned result must not be trusted too much: It could of course be that a pattern
+ * word is found not because of the initialization but because it has been pushed onto the
+ * stack - in which case the return value is too great (too optimistic). The probability
+ * that this happens is significantly greater than zero. The chance that two pattern words
+ * had been pushed is however much less and the probability of three, four, five such words
+ * in sequence is negligible. Any stack size optimization based on this routine should
+ * therefore subtract e.g. eight bytes from the returned reserve and diminish the stack
+ * outermost by this modified value.\n
+ *   Be careful with operating system stack size optimization based only on this routine.
+ * The OS stack takes all interrupt stack frames. Even if the application ran a long time
+ * there's a significant probability that there has not yet been the deepest possible
+ * nesting of interrupts in the very instance that the code execution was busy in the
+ * deepest nested sub-routine of any of the service routines, i.e. when having the largest
+ * imaginable stack consumption for the OS stack. (Actually, the likelihood of not seeing
+ * this is rather close to one than close to zero.) A good suggestion therefore is to add
+ * the product of ISR stack frame size with the number of IRQ priority levels in use to the
+ * measured OS stack use and reduce the allocated stack memory only on this basis.\n
+ *   The IRQ stack frame is 96 Byte for normal IRQs and 200 Byte for those, which may start
+ * a user task (SW IRQs and I/O IRQs with callback into user code).\n
+ *   In the worst case, with 15 IRQ priority levels, this can sum up to 3 kByte. The stack
+ * reserve of a "safe" application should be in this order of magnitude.
+ *   @return
+ * The number of still unused stack bytes of the given process. See function description
+ * for details.
+ *   @param PID
+ * The process ID the query relates to. (Each process has its own stack.) ID 0 relates to
+ * the OS/kernel stack.
+ *   @remark
+ * The computation is a linear search for the first non-pattern word and thus relatively
+ * expensive. It's suggested to call it only in some specific diagnosis compilation or
+ * occasionally from the idle task.
+ *   @remark
+ * This function can be called from both, the OS context and a user task.
+ */
+unsigned int rtos_getStackReserve(unsigned int PID)
+{
+    if(PID <= RTOS_NO_PROCESSES)
+    {
+        /* The stack area is defined by the linker script. We can access the information by
+           declaring the linker defined symbols. */
+        extern uint32_t ld_stackStartOS[], ld_stackStartP1[], ld_stackStartP2[]
+                      , ld_stackStartP3[], ld_stackStartP4[]
+                      , ld_stackEndOS[], ld_stackEndP1[], ld_stackEndP2[]
+                      , ld_stackEndP3[], ld_stackEndP4[];
+        static const uint32_t const *stackStartAry_[RTOS_NO_PROCESSES+1] =
+                                                        { [0] = ld_stackStartOS
+                                                        , [1] = ld_stackStartP1
+                                                        , [2] = ld_stackStartP2
+                                                        , [3] = ld_stackStartP3
+                                                        , [4] = ld_stackStartP4
+                                                        }
+                                  , *stackEndAry_[RTOS_NO_PROCESSES+1] =
+                                                        { [0] = ld_stackEndOS
+                                                        , [1] = ld_stackEndP1
+                                                        , [2] = ld_stackEndP2
+                                                        , [3] = ld_stackEndP3
+                                                        , [4] = ld_stackEndP4
+                                                        };
+        const uint32_t *sp = stackStartAry_[PID];
+        if((intptr_t)stackEndAry_[PID] - (intptr_t)sp >= (intptr_t)sizeof(uint32_t))
+        {
+            /* The bottom of the stack is always initialized with a non pattern word (e.g.
+               there's an illegal return address 0xffffffff). Therefore we don't need a
+               limitation of the search loop - it'll always find a non-pattern word in the
+               stack area. */
+            while(*sp == 0xa5a5a5a5)
+                ++ sp;
+            return (uintptr_t)sp - (uintptr_t)stackStartAry_[PID];
+        }
+        else
+            return 0;
+    }
+    else
+        return 0;
+
+} /* End of rtos_getStackReserve */
 

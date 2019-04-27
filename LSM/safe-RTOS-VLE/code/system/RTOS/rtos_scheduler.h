@@ -85,8 +85,5 @@ rtos_errorCode_t rtos_osInitKernel(void);
 /** Get the current number of failed task activations since start of the RTOS scheduler. */
 unsigned int rtos_getNoActivationLoss(unsigned int idTask);
 
-/** Compute how many bytes of the stack area are still unused. */
-unsigned int rtos_getStackReserve(unsigned int PID);
-
 
 #endif  /* RTOS_SCHEDULER_INCLUDED */
