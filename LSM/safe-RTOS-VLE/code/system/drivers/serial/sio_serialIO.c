@@ -32,9 +32,9 @@
  *   sio_initSerialInterface
  *   sio_scFlHdlr_writeSerial
  *   sio_writeSerial (inline)
- *   sio_OS_writeSerial
- *   sio_OS_getChar
- *   sio_OS_getLine
+ *   sio_osWriteSerial
+ *   sio_osGetChar
+ *   sio_osGetLine
  * Local functions
  *   configSIULForUseWithOpenSDA
  *   configDMA
@@ -158,7 +158,7 @@ volatile unsigned long sio_serialOutNoDMATransfers SECTION(.sbss.OS) = 0;
     underwent trunction.
       @remark Because of the race conditions between serial I/O interrupt and application
     software can not clearly relate a change of \a sio_serialOutNoTruncatedMsgs to a
-    particular character or message it sends with sio_OS_writeSerial(). In particular, it must
+    particular character or message it sends with sio_osWriteSerial(). In particular, it must
     not try to reset the counter prior to a read operation in order to establish such a
     relation. The application will just know that there are garbled messages. */
 volatile unsigned long sio_serialOutNoTruncatedMsgs SECTION(.sbss.OS) = 0;
@@ -352,7 +352,7 @@ static void configDMA(void)
     EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.NBYTES = 1;
 
     /* Initialize the begining and current major loop iteration counts to zero. We will set
-       it in the next call of sio_OS_writeSerial. */
+       it in the next call of sio_osWriteSerial. */
     EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = 0;
     EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = 0;
     EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER_LINKCH = 0;
@@ -396,7 +396,7 @@ static void configDMA(void)
 #endif
 
     /* EDMA.DMAERQL.R: Not touched yet, we don't enable the channel yet. This will be done in
-       the next use of sio_OS_writeSerial. */
+       the next use of sio_osWriteSerial. */
     
     /* Route LINFlex TX DMA request to eDMA channel DMA_CHN_FOR_SERIAL_OUTPUT.
          ENBL, 0x80: Enable channel
@@ -668,7 +668,7 @@ unsigned int sio_scFlHdlr_writeSerial( uint32_t PID ATTRIB_UNUSED
     
     /* After checking the potentially bad user input we may delegate it to the "normal"
        function implementation. */
-    return sio_OS_writeSerial(msg, noBytes);
+    return sio_osWriteSerial(msg, noBytes);
 
 } /* End of sio_scFlHdlr_writeSerial */
         
@@ -696,9 +696,9 @@ unsigned int sio_scFlHdlr_writeSerial( uint32_t PID ATTRIB_UNUSED
  * This function must be called by trusted code in supervisor mode only. It belongs to the
  * sphere of trusted code itself.
  */
-unsigned int sio_OS_writeSerial( const char *msg
-                               , unsigned int noBytes
-                               )
+unsigned int sio_osWriteSerial( const char *msg
+                              , unsigned int noBytes
+                              )
 {
     /* Do not interfere with a (possibly) running DMA transfer if we don't really need to
        do anything. */
@@ -818,7 +818,7 @@ unsigned int sio_OS_writeSerial( const char *msg
     
     return noBytes;
     
-} /* End of sio_OS_writeSerial */
+} /* End of sio_osWriteSerial */
 
 
 
@@ -837,7 +837,7 @@ unsigned int sio_OS_writeSerial( const char *msg
  * This function must be called by trusted code in supervisor mode only. It belongs to the
  * sphere of trusted code itself.
  */
-signed int sio_OS_getChar(void)
+signed int sio_osGetChar(void)
 {
     signed int c;
     
@@ -874,7 +874,7 @@ signed int sio_OS_getChar(void)
 
     return c;
 
-} /* End of sio_OS_getChar */
+} /* End of sio_osGetChar */
 
 
 
@@ -935,7 +935,7 @@ signed int sio_OS_getChar(void)
  * This function must be called by trusted code in supervisor mode only. It belongs to the
  * sphere of trusted code itself.
  */
-char *sio_OS_getLine(char str[], unsigned int sizeOfStr)
+char *sio_osGetLine(char str[], unsigned int sizeOfStr)
 {
     if(sizeOfStr == 0)
     {
@@ -1070,6 +1070,6 @@ char *sio_OS_getLine(char str[], unsigned int sizeOfStr)
 
     return result;
 
-} /* End of sio_OS_getLine */
+} /* End of sio_osGetLine */
 
 

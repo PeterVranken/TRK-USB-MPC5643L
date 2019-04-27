@@ -4,7 +4,7 @@
  * @file sio_serialIO.h
  * Definition of global interface of module sio_serialIO.c
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -63,8 +63,8 @@ extern volatile unsigned long sio_serialOutNoTruncatedMsgs;
     trunction.
       @remark Because of the race conditions between serial I/O interrupt an application
     software can not clearly relate a change of \a sio_serialOutNoTruncatedMsgs to a
-    particular character or message it gets from the read functions sio_OS_getChar or
-    sio_OS_getLine. In particular, it must not try to reset the counter prior to a read
+    particular character or message it gets from the read functions sio_osGetChar or
+    sio_osGetLine. In particular, it must not try to reset the counter prior to a read
     operation in order to establish such a relation. The application will just know that
     there are garbled messages. */
 extern volatile unsigned long sio_serialOutNoLostMsgBytes;
@@ -93,13 +93,13 @@ extern volatile unsigned long sio_serialInNoRxBytes;
 void sio_initSerialInterface(unsigned int baudRate);
 
 /** Write a character string into the serial interface. Can be called from OS context. */
-unsigned int sio_OS_writeSerial(const char *msg, unsigned int noBytes);
+unsigned int sio_osWriteSerial(const char *msg, unsigned int noBytes);
 
 /** Application API function to read a single character from serial input. */
-signed int sio_OS_getChar(void);
+signed int sio_osGetChar(void);
 
 /* Read a line of input text from the serial interface. */
-char *sio_OS_getLine(char buf[], unsigned int sizeOfBuf);
+char *sio_osGetLine(char buf[], unsigned int sizeOfBuf);
 
 
 /*
