@@ -76,17 +76,11 @@
 /** The DMA channel to serve the UART with sent data bytes. */
 #define DMA_CHN_FOR_SERIAL_OUTPUT   15
 
-/** The interrupt priority for serial output. The interrupt is requested by the DMA when
-    all bytes of the last recently initiated transfer are sent. The range is 1..15.
-      @remark The chosen priority needs to be greater or equal than the priority of any
-    context, that makes use of the API functions of this module. */
-#define INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT     5
-
 /** The interrupt priority for serial input. The interrupt is requested by the UART when
     another byte has been received. The range is 1..15.
       @remark The chosen priority needs to be greater than the priority of any context,
     that makes use of the input related API functions of this module. */
-#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     ((INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT)+1)
+#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     6
 
 /** The size of the ring buffer for serial output can be chosen as a power of two of bytes.
       @remark Note, the permitted range of values depends on the reservation of space made
@@ -178,8 +172,9 @@ volatile unsigned long sio_serialOutNoLostMsgBytes SECTION(.sbss.OS) = 0;
     significant bits of the buffer address need to be zero. The buffer address (and thus
     its alignment) is specified in the linker file, which therefore limits the maximum size
     of the buffer. */
-static  _Alignas(SERIAL_OUTPUT_RING_BUFFER_SIZE) uint8_t _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE]
-                                                 SECTION(.dmaRingBuffer._serialOutRingBuf);
+static _Alignas(SERIAL_OUTPUT_RING_BUFFER_SIZE) uint8_t
+                                    _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE]
+                                    SECTION(.dmaRingBuffer._serialOutRingBuf);
 
 /** The write index into the ring buffer used for serial output. Since we use bytes and
     since the log2(sizeOfBuffer) least significant bits of the buffer address are zero
