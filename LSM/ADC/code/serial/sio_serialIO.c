@@ -13,7 +13,7 @@
  * this module.\n
  *   Note, formatted input is not possible through C standard functions.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -73,17 +73,11 @@
 /** The DMA channel to serve the UART with sent data bytes. */
 #define DMA_CHN_FOR_SERIAL_OUTPUT   15
 
-/** The interrupt priority for serial output. The interrupt is requested by the DMA when
-    all bytes of the last recently initiated transfer are sent. The range is 1..15.
-      @remark The chosen priority needs to be greater or equal than the priority of any
-    context, that makes use of the API functions of this module. */
-#define INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT     7
-
 /** The interrupt priority for serial input. The interrupt is requested by the UART when
     another byte has been received. The range is 1..15.
       @remark The chosen priority needs to be greater than the priority of any context,
     that makes use of the input related API functions of this module. */
-#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     ((INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT)+1)
+#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     8
 
 /** The size of the ring buffer for serial output can be chosen as a power of two of bytes.
       @remark Note, the permitted range of values depends on the reservation of space made
