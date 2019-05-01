@@ -36,28 +36,11 @@
 #include <stdbool.h>
 
 #include "typ_types.h"
-#include "sup_settings.h"
 
 
 /*
  * Defines
  */
-
-/* The software is written as portable as reasonably possible. This requires the awareness
-   of the C language standard it is compiled with. */
-#if defined(__STDC_VERSION__)
-# if (__STDC_VERSION__)/100 == 2011
-#  define _STDC_VERSION_C11
-# elif (__STDC_VERSION__)/100 == 1999
-#  define _STDC_VERSION_C99
-# endif
-#endif
-
-/* Check precondition of implementation. */
-#ifndef SUP_LOCK_STEP_MODE
-# error The critical section code implemented in this file does not work in decoupled \
-        processor mode
-#endif
 
 
 /*

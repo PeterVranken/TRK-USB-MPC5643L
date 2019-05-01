@@ -59,8 +59,8 @@
 # The makefile compiles and links all source files which are located in a given list of
 # source directories. The list of directories is a variable set in the calling makefile,
 # please look the variable srcDirList below.
-#   A second list of files is found as cFileListExcl. These C/C++ files are excluded from
-# build.
+#   A second list of files is found as cFileListExcl. These C/C++ or assembler files are
+# excluded from build.
 
 
 # General settings for the makefile.
@@ -88,7 +88,7 @@ projectExe := $(target).s19
 .DEFAULT_GOAL := help
 h help targets usage:
 	$(info Usage: make [-s] [-k] [CONFIG=<configuration>] [SAVE_TMP=1] {<target>})
-	$(info <configuration> is one out of DEBUG (default) or PRODUCTION.)
+	$(info CONFIG: <configuration> is one out of DEBUG (default) or PRODUCTION.)
 	$(info SAVE_TMP set to one will make the preprocessed C(++) sources and the assembler \
            files appear in the target directory bin/ppc/<configuration>/obj/)
 	$(info Available targets are:)
@@ -106,6 +106,7 @@ h help targets usage:
              assembler module. Build product is sibling of source file)
 	$(info - versionGCC: Print information about which compiler is used)
 	$(info - helpGCC: Print usage text of compiler)
+	$(info - builtinMacrosGCC: Print builtin #define's of compiler for given configuration)
 	$(info - help: Print this help)
 	$(error)
 
@@ -144,14 +145,14 @@ targetDir := $(call binFolder)
 .PHONY: makeDir
 makeDir: | $(targetDir)obj
 $(targetDir)obj:
-	-$(mkdir) -p $@
+	-$(mkdir) -pv $@
 
 # Some core variables have already been set prior to reading this common part of the
 # makefile. These variables are:
 #   project: Name of the sub-project; used e.g. as name of the executable
 #   srcDirList: a blank separated list of directories holding source files
 #   cFileListExcl: a blank separated list of source files (with extension but without path)
-# excluded from the compilation of all *.c and *.cpp
+# excluded from the compilation of all *.S, *.c and *.cpp
 #   incDirList: a blank separated list of directories holding header files. The directory
 # names should end with a slash. The list must not comprise common, project independent
 # directories and nor must the directories listed in srcDirList be included
@@ -278,6 +279,7 @@ ifeq ($(SAVE_TMP),1)
     # directory
     ccFlags += -save-temps=obj -fverbose-asm 
 endif
+# Debug settings see https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
 ifeq ($(CONFIG),DEBUG)
     ccFlags += -g3 -gdwarf-2 -Og
 else

@@ -170,7 +170,7 @@ volatile unsigned long sio_serialOutNoLostMsgBytes = 0;
     its alignment) is specified in the linker file, which therefore limits the maximum size
     of the buffer. */
 static _Alignas(SERIAL_OUTPUT_RING_BUFFER_SIZE) uint8_t
-            _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE] SECTION(.heap.dmaRingBuffer);
+                _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE] SECTION(.dmaRingBuffer);
 
 /** The write index into the ring buffer used for serial output. Since we use bytes and
     since the log2(sizeOfBuffer) least significant bits of the buffer address are zero
@@ -298,14 +298,12 @@ static void configDMA(void)
        control file, which provides the address of the buffer. */
     assert(((uintptr_t)_serialOutRingBuf & SERIAL_OUTPUT_RING_BUFFER_IDX_MASK) == 0);
 
-#if 0 // This code section first requires an according update of the linker script
     /* The linker script is required to provide a properly aligned buffer without risking
        to loose lots of RAM because of the alignment. Therefore, the linker script itself
        has a constant for the size of the buffer. We need to double check the consistency
        of linker configuration with C code. */
     extern uint8_t ld_noBitsDmaRingBuffer[0] ATTRIB_DBG_ONLY;
     assert((uintptr_t)ld_noBitsDmaRingBuffer == SERIAL_OUTPUT_RING_BUFFER_SIZE_PWR_OF_TWO);
-#endif
 
     /* Initialize write to ring buffer. */
     _serialOutRingBufIdxWrM = 0;
