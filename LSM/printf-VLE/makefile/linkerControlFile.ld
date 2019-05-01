@@ -1,7 +1,7 @@
 /*
  * GNU GCC Memory map for Freescale MPC5643L in Lock Step Mode
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -16,6 +16,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* Entry Point */
+ENTRY(sup_startUp)
 
 /* Definition of memory regions using absolute MPC5643L addresses. */
 MEMORY
@@ -79,8 +82,6 @@ ld_memRamSize = LENGTH(memData) + LENGTH(memHeap) + LENGTH(memStack);
 ld_memRamEnd = ld_memRamStart + ld_memRamSize;
 
 
-ENTRY(sup_startUp)
-
 SECTIONS
 {
     .boot :
@@ -95,9 +96,18 @@ SECTIONS
 
     } >memBoot
 
+
     .text_vle :
     {
         INPUT_SECTION_FLAGS (SHF_PPC_VLE)
+
+        /* Some empty fragments from the C library go here. */
+        *(.rela.dyn)
+        *(.rela.got2)
+        *(.rela.text)
+        *(.rela.text.*)
+        *(.rela.rodata.*)
+        *(.rela.*)
 
         /* All the MPU trap handlers need to be in the same 64k page. The boot sector
            defines the empty dummy handlers for unused traps. Implemented, real handlers
@@ -107,30 +117,132 @@ SECTIONS
         *(.text.ivor)
         *(.text.ivor.*)
 
-        *(.text)
         *(.text.*)
-        *(.init)
-        *(.fini)
-        *(rdata)
-        *(.eini)
+        *(.text)
+        KEEP(*(.init))
+        KEEP(*(.fini))
+
     } >memFlash
+
+    INCLUDE makefile/crtSupport.ld
 
     .rodata :
     {
         *(.rodata)
         *(.rodata.*)
+
+        /* Leave this section 4 Byte aligned so that the subsequent load sections have this
+           alignment. Our startup code requires this alignment. */
+        . = ALIGN(4);
+
     } >memFlash
 
-    /* Note, several NXP samples, hold both, the samll data section and the small data 2
-       section in RAM. However, according to the NXP document "Power PC Embedded
-       Application Binary Interface (EABI): 32-Bit Implementation", p. 14, .sdata2 is used
-       for variables declared const in the C code; accordingly, we place the section into
-       ROM. */
+
+    /* The order of data sections matters because of some cnstraints:
+         - The two sX and the two sX2 should be close together since they use the same
+       _SDA_BASE_ pointer, or _SDA2_BASE_, respectively
+         - The current startup implementation suffers from having only a single memcpy to
+       initialize the data sections from a mirror in ROM. Therefore all initialized data
+       section need to be arranged consecutively
+         - The interrupt vector table is initialized data and need to be on a 16 Bit
+       boundary (HW constraint). If we don't want to waste alignment memory then we need to
+       put it at the very beginning. This contstraint makes it difficult to fulfill both of
+       the others! The first constraint is not essential and we will hurt this one
+         @todo Merge the startup code from project DEVKIT-MPC5748G, which supports a table
+       of initialized data chunks. */
+
+    /* The compiler's default section for initialized data. */
+    .data : ALIGN(8)
+    {
+        /* Beginning of initialized data sections. */
+        ld_dataStart = . ;
+
+        /* The External Interrupt vector table requires a 16 Bit alignment. This is ensured
+           by an assembler statement but this can mean a waste of up to 64k of RAM if the
+           section location is not at such a boundary. To reduce this risk, we place the
+           table's section as very first, which is the beginning of RAM and fine.
+             @todo A better solution would be the introduction of a dedicated memory
+           segment at address 0x40000000 and of required length 256*4 Byte. */
+        *(.INTCInterruptHandlerAry)
+        *(.INTCInterruptHandlerAry.*)
+
+        *(.data)
+        *(.data.*)
+
+        *(.got2)
+        *(.got2.*)
+        *(.tm_clone_table)
+        *(.tm_clone_table.*)
+        *(.jcr)
+        *(.jcr.*)
+
+        /* Our ROM to RAM copy routine in the startup code copies always 4 Byte at once.
+           The end address of the copied area should thus be a multiple of 4. */
+        . = ALIGN(4);
+
+        /* Our startup code copies one chunk of ROM to RAM to fill all initialized data
+           sections. The linker doesn't know about this and does not guarantee that the
+           gaps between the initialized RAM sections are identical to those between the
+           related load sections in ROM. If this is not the case then the 2nd RAM section
+           will contain bad data. We can avoid this by aligning the end of the first
+           section such that the linker is satisfied and doesn't require any gap.
+             @todo Note, this is just a workaround. We need to copy all load sections
+           separately in the startup code. */
+        . = ALIGN(8) ;
+
+    } >memData AT>memFlash =0xae
+
+
+    .sdata  : ALIGN(8)
+    {
+        /* Some empty fragments from the C library go here. */
+        *(.rela.sdata)
+        *(.rela.sdata.*)
+
+        *(.sdata)
+        *(.sdata.*)
+
+        /* Our ROM to RAM copy routine in the startup code copies always 4 Byte at once.
+           The end address of the copied area should thus be a multiple of 4. */
+        . = ALIGN(4);
+
+        /* Our startup code copies one chunk of ROM to RAM to fill all initialized data
+           sections. The linker doesn't know about this and does not guarantee that the
+           gaps between the initialized RAM sections are identical to those between the
+           related load sections in ROM. If this is not the case then the 2nd RAM section
+           will contain bad data. We can avoid this by aligning the end of the first
+           section such that the linker is satisfied and doesn't require any gap.
+             @todo Note, this is just a workaround. We need to copy all load sections
+           separately in the startup code. */
+        . = ALIGN(8) ;
+
+    } >memData AT>memFlash =0xae
+
+
     .sdata2 :
     {
         *(.sdata2)
         *(.sdata2.*)
-    } >memFlash =0xae
+
+        /* Our ROM to RAM copy routine in the startup code copies always 4 Byte at once.
+           The end address of the copied area should thus be a multiple of 4. */
+        . = ALIGN(4);
+
+        /* End of initialized data sections. */
+        ld_dataEnd = . ;
+
+    } >memData AT>memFlash
+
+
+    .sbss   (NOLOAD) : ALIGN(4)
+    {
+        ld_ramStart = . ;
+
+        *(.sbss)
+        *(.sbss.*)
+
+    } >memData
+
 
     .sbss2  (NOLOAD) :
     {
@@ -150,53 +262,6 @@ SECTIONS
 
         ld_sbss2End = . ;
 
-    } >memFlash =0xae
-
-    /* The compiler's default section for initialized data. */
-    .data : ALIGN(8)
-    {
-        ld_ramStart = . ;
-        ld_dataStart = . ;
-
-        /* The External Interrupt vector table requires a 16 Bit alignment. This is ensured
-           by an assembler statement but this can mean a waste of up to 64k of RAM if the
-           section location is not at such a boundary. To reduce this risk, we place the
-           table's section as very first, which is the beginning of RAM and fine.
-             @todo A better solution would be the introduction of a dedicated memory
-           segment at address 0x40000000 and of required length 256*4 Byte. */
-        *(.INTCInterruptHandlerAry)
-        *(.INTCInterruptHandlerAry.*)
-
-        *(.data)
-        *(.data.*)
-
-        /* Our startup code copies one chunk of ROM to RAM to fill all initialized data
-           sections. The linker doesn't know about this and does not guarantee that the
-           gaps between the initialized RAM sections are identical to those between the
-           related load sections in ROM. If this is not the case then the 2nd RAM section
-           will contain bad data. We can avoid this by aligning the end of the first
-           section such that the linker is satisfied and doesn't require any gap.
-             @todo Note, this is just a workaround. We need to copy all load sections
-           separately in the startup code. */
-        . = ALIGN(8) ;
-
-    } >memData AT>memFlash
-
-    .sdata  : ALIGN(8)
-    {
-        *(.sdata)
-        *(.sdata.*)
-
-        ld_dataEnd = . ;
-
-    } >memData AT>memFlash =0xae
-
-    /* The uninitialized RAM sections follow. These are the compiler's default sections for
-       uninitialized data. */
-    .sbss   (NOLOAD) : ALIGN(4)
-    {
-        *(.sbss)
-        *(.sbss.*)
     } >memData
 
     .bss    (NOLOAD) : ALIGN(4)
@@ -204,15 +269,10 @@ SECTIONS
         *(.bss)
         *(.bss.*)
 
-        /* Our assembler startup code rounds the ram end address downwards to the next
-           multiple of 16 Byte when zeroizing the RAM. To avoid non zero but used RAM cells
-           we align here to the next such boundary. */
-/* Enable this statement if the startup code is switched to zeroize the used RAM only.
-   Currently it zeroizes all RAM, including stack and heap.
-        . = ALIGN(16);
-*/
-        ld_ramEnd = . ;
+        *(COMMON)
+
     } >memData
+    
 
     /* The heap area is used in this sample for the printf functionality of the C lib.
        Furthermore, our code requires a memory area with constraints in alignment and size
@@ -237,17 +297,57 @@ SECTIONS
         ld_sbrkEnd = . ;
 
         ld_heapEnd = . ;
+
     } >memHeap
     
+
+    /* The DWARF debug sections are explicitly mentioned to avoid default orphan section
+       placing so that we can benefit from orphan section warnings. */
+    .PPC.EMB.apuinfo 0 : { *(.PPC.EMB.apuinfo) }
+    .boffs           0 : { KEEP (*(.boffs)) }
+    .comment         0 : { *(.comment) }
+    .gnu.attributes  0 : { *(.gnu.attributes) }
+    .debug           0 : { *(.debug) }
+    .debug_abbrev    0 : { *(.debug_abbrev) }
+    .debug_aranges   0 : { *(.debug_aranges) }
+    .debug_frame     0 : { *(.debug_frame) }
+    .debug_funcnames 0 : { *(.debug_funcnames) }
+    .debug_info      0 : { *(.debug_info) }
+    .debug_line      0 : { *(.debug_line) }
+    .debug_loc       0 : { *(.debug_loc) }
+    .debug_macinfo   0 : { *(.debug_macinfo) }
+    .debug_macro     0 : { *(.debug_macro) }
+    .debug_pubnames  0 : { *(.debug_pubnames) }
+    .debug_ranges    0 : { *(.debug_ranges) }
+    .debug_sfnames   0 : { *(.debug_sfnames) }
+    .debug_srcinfo   0 : { *(.debug_srcinfo) }
+    .debug_str       0 : { *(.debug_str) }
+    .debug_typenames 0 : { *(.debug_typenames) }
+    .debug_varnames  0 : { *(.debug_varnames) }
+    .debug_weaknames 0 : { *(.debug_weaknames) }
+    .glink           0 : { *(.glink) }
+    .iplt            0 : { *(.iplt); *(.rela.iplt) }
+    .line            0 : { *(.line) }
+    .version_info    0 : { *(.version_info) }
+
     /* Read the end of the used flash ROM into a linker label. */
-    .dummy : { ld_romEnd = . ; } >memFlash
+    .dummyROM : { ld_romEnd = ABSOLUTE(.); } >memFlash
+
+    /* Read the end of the used RAM into a linker label.
+         Our assembler startup code rounds the Ram end address downwards to the next
+       multiple of 16 Byte when zeroizing the RAM. To avoid non zero but used RAM cells
+       we align here to the next such boundary.
+         @todo Enable the alignment statement if the startup code is switched to zeroize
+       the used RAM only (open TODO in assembly code). Currently it zeroizes all physical
+       RAM. */
+    .dummyRAM : { /* . = ALIGN(16); */ ld_ramEnd = ABSOLUTE(.); } >memData
 
     /* Compute the used portions of RAM and ROM, so that they appear in the map file and
        can be used from the startup and application code. */
     ld_dataSize = ld_dataEnd - ld_dataStart;
     ld_ramSize = ld_ramEnd - ld_ramStart;
     ld_dataMirrorStart = LOADADDR(.data);
-    ld_dataMirrorEnd   = LOADADDR(.sdata) + SIZEOF(.sdata);
+    ld_dataMirrorEnd   = LOADADDR(.sdata2) + SIZEOF(.sdata2);
     ld_dataMirrorSize  = ld_dataMirrorEnd - ld_dataMirrorStart;
     ld_sbrkSize = ld_sbrkEnd - ld_sbrkStart;
     ld_romSize = ld_romEnd - ld_romStart;

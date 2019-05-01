@@ -69,6 +69,7 @@
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"
 #include "f2d_float2Double.h"
+#include "tcc_testCppCompilation.h"
 #include "mai_main.h"
 
 
@@ -453,6 +454,16 @@ void main()
     double y = expf(1.0);
     printf("%s=%.2f, %c=%.5g\r\n", "pi", f2d(x), 'e', f2d(y));
 
+    /* Test the call of C++ implemented functionality. */
+    unsigned int cntCppCalls = tcc_sayHello(/* isEnglish */ true);
+    assert(cntCppCalls == 1);
+    cntCppCalls = tcc_sayHello(/* isEnglish */ false);
+    assert(cntCppCalls == 2);
+    cntCppCalls = tcc_sayHello(/* isEnglish */ false);
+    assert(cntCppCalls == 3);
+    cntCppCalls = tcc_sayHello(/* isEnglish */ true);
+    assert(cntCppCalls == 4);
+    
     /* System time. (We use floating point for the only reason of proving its correct
        operation. After about 2^24 times 10ms tiNextCycle will no longer increment and the
        software will fail.) All times in seconds. */

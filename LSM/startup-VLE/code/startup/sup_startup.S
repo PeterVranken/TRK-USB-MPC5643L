@@ -20,7 +20,6 @@
  */
 /* Module interface
  *   sub_startup
- *   __eabi
  *   sup_IVOR0trap .. sup_IVOR15trap
  *   sup_IVOR32trap .. sup_IVOR34trap
  * Local functions
@@ -31,6 +30,7 @@
  *   zeroizeSRAM
  *   disableWatchdog
  *   initFlash
+ *   initSDataRegisters
  */
 
 #ifndef __VLE__
@@ -193,12 +193,9 @@ su_loopInitData:
     msync                       /* Complete the copy operation */
 su_noInitData:
 
-    /* GCC calls a routine, that is expected to prepare the eabi register configuration as
-       a callback on entry into main. Other compilers don't do so. For those, we call the
-       routine directly prior to main. */
-#ifndef __GNUC__
-    e_bl    __eabi
-#endif
+    /* Load r2 and r13 for small, fast data access */
+    e_bl    initSDataRegisters
+    
     /* Calling main: Load EABI function argument registers with argc=0, argv=NULL. */
     se_li   r3, 0
     se_mr   r4, r3
@@ -1072,19 +1069,12 @@ if_movalbeMachineCode:
 
 
 /**
- * Prepare some registers as required by the PowerPC eabi. GCC will invoke this function on
- * entry into main.
- *   @remark
- * GCC 4.9.0 and 4.9.2 for PowerPC invoke the callback __eabi even if the switch
- * -mnoeabi is given on the command line.
- *   @remark
- * Never rename this function. GCC will otherwise not find it as callback and take its own
- * variant from the clib, which is not operational in our context.
+ * Prepare some registers as required by the PowerPC eabi for the implementation of fast
+ * small data access.
  */
-    .globl  __eabi
     .extern _SDA_BASE_, _SDA2_BASE_
-    .type   __eabi, @function
-__eabi:
+
+initSDataRegisters:
     e_lis   r13, _SDA_BASE_@h       /* Load .sdata base into r13 */
     e_or2i  r13, _SDA_BASE_@l
     e_lis   r2, _SDA2_BASE_@h       /* Load .sdata2 base into r2 */
@@ -1092,8 +1082,7 @@ __eabi:
 
     se_blr
 
-    .size   __eabi, .-__eabi
-/* End of __eabi */
+/* End of initSDataRegisters */
 
     /* At the end of the code: Avoid a gap in the section. This makes the flash procedure
        in Code Warrior 10.7 fail to flash the code. */
