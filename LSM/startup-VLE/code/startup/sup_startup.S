@@ -3,7 +3,7 @@
  * VLE assembler implementation of startup code for MPC5643L in Lockstep Mode (LSM). The
  * code has been designed for use with GCC for PowerPC EABI.
  *
- * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -19,7 +19,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   sub_startup
+ *   sup_startup
  *   sup_IVOR0trap .. sup_IVOR15trap
  *   sup_IVOR32trap .. sup_IVOR34trap
  * Local functions
@@ -48,6 +48,12 @@
 /*
  * Defines
  */
+
+/** Switch instruction cache on. */
+#define ENABLE_ICACHE               1
+
+/** Switch branch prediction on. */
+#define ENABLE_BRANCH_PREDICTION    1
 
 /* The definition of the boot sector (at 0x00000000). The data contents are defined here
    and the location of the boot sector is defined in the linker control file.
@@ -92,7 +98,6 @@
 sup_bamData:
     .dc.w RCHW_VALUE, 0
     .dc.l sup_startUp
-    .align  4
 
 
 /**
@@ -104,7 +109,7 @@ sup_bamData:
     .global sup_startUp
     .type   sup_startUp, @function
 sup_startUp:
-    e_bl    zeroizeRegisters        /* Set MSR[SPE], clear all GPR and all relevant SPR */
+    e_bl    zeroizeRegisters        /* Clear all GPR and all relevant SPR */
     e_bl    initExceptionHandlers   /* Set all IVOR registers of the MCU */
     e_bl    initMMU                 /* Make MMU allow all memory accesses */
     
@@ -119,6 +124,17 @@ sup_startUp:
     e_or2i  r0, 0x1000              /* ME: Machine check */
     mtmsr   r0
 
+#if ENABLE_BRANCH_PREDICTION == 1
+    /* Enable the Branch Target Buffer (BTB) for branch prediction. Clear all buffer
+       entries, which might be arbitrarily set after reset, and enable all branch
+       predictions. See CoreRM, sections 2.4.13, p. 81ff, and 4.4.2, p. 140.
+         0x200: BBFI, Branch target buffer flash invalidate
+         0x1: BPEN, Branch target buffer prediction enable */
+    e_li        r0, 0x201
+    mtspr       1013, r0        /* SPR 1013, Branch Unit Control and Status Register (BUCSR) */
+    se_isync
+#endif
+    
     e_bl    initTimeBase            /* Start the MCU's high resolution counter */
     e_bl    zeroizeSRAM             /* Clear all RAM */
 
@@ -128,11 +144,47 @@ sup_startUp:
        to zeroize the bss section and the watchdog bites. */
     e_bl      disableWatchdog
 
+    /* Enable instruction cache. The procedure is described in the e200z4 Power
+       Architecture Core Reference Manual, section 9.6, p. 552ff. 9.6.1 Cache
+       Enable/Disable and 9.6.5 Cache Invalidation apply. */
+#if ENABLE_ICACHE == 1
+su_icache_cfg:
+    /* Core RM, 9.6.5: Instruction cache invalidation. */
+    se_li       r0, 0x2     /* SPR 1011: L1CSR1, Cache control and status register 1, Bit 1 */
+    mtspr       1011, r0    /* Set bit L1CSR1[ICINV] to start the invalidation of the
+                               entire instruction cache. All other bits remain zero, which
+                               is their reset default value */
+
+su_icache_waitForInvalidation:
+    sync            /* EREF 2.0, 4.5.4.3, table 4-3, demands a sync prio to mfspr L1CSR0/1 */
+    mfspr       r0, 1011    /* Read L1CSR1, invalidation busy bit 0x2 will be reset by HW
+                               on completion, abort bit 0x4 may be set before */
+    se_btsti    r0, 29      /* Test for abort */
+    se_beq      su_icache_noAbort
+    se_bclri    r0, 29      /* Explicitly clear the abort flag by SW */
+    mtspr       1011, r0
+    se_b        su_icache_cfg   /* Start over, retry */
+
+su_icache_noAbort:
+    se_btsti    r0, 30      /* Test still busy flag */
+    se_bne      su_icache_waitForInvalidation   /* Busy wait for completion. */
+
+    /* Core RM, 9.6.1: Data cache enabling */
+    se_bseti    r0, 31      /* Set bit L1CSR1[CDE], data cache enable */
+    se_isync
+    msync
+    mtspr       1011, r0
+    se_isync        /* EREF 2.0, 4.5.4.3, table 4-3, demands an isync after mfspr L1CSR0/1.
+                       We do this only here, where cache enabling has a context altering
+                       effect. */
+#endif
+
+
    /* The initial setting of the stack pointer. The stack rises towards lower addresses so
       the initial value is the end of the reserved RAM area. The value is provided by the
       linker, which is in charge to do the reservation but 16 Bytes are subtracted in order
-      to implements some EABI requirements concerning the bottom of the stack.
-        Note, there are some strict alignment constraints (16 Byte aligned values needed),
+      to implements some EABI requirements concerning the logical bottom of the stack.
+        Note, there are some strict alignment constraints (8 Byte aligned values needed),
       which need to be ensured in the linker script file. They are not checked here and
       will in case cause an exception. */
     e_lis   sp, (ld_memStackEnd-16)@h
