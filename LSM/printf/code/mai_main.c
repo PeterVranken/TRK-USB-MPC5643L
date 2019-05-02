@@ -64,11 +64,11 @@
 
 #include "MPC5643L.h"
 #include "typ_types.h"
-#include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"
 #include "f2d_float2Double.h"
+#include "tcc_testCppCompilation.h"
 #include "mai_main.h"
 
 
@@ -77,7 +77,7 @@
  */
 
 /** Software version */
-#define VERSION "0.10.4"
+#define VERSION "0.12.0"
 
 /*
  * Local type definitions
@@ -328,7 +328,7 @@ static void showC()
     static const char gplShowC[] =
     "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
     " interface\r\n"
-    "Copyright (C) 2017  Peter Vranken\r\n"
+    "Copyright (C) 2017-2019  Peter Vranken\r\n"
     "\r\n"
     "This program is free software: you can redistribute it and/or modify\r\n"
     "it under the terms of the GNU Lesser General Public License as published\r\n"
@@ -357,7 +357,7 @@ static void version()
     static const char version[] =
     "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
     " interface\r\n"
-    "Copyright (C) 2017  Peter Vranken\r\n"
+    "Copyright (C) 2017-2019  Peter Vranken\r\n"
     "Version " VERSION "\r\n";
 
     puts(version);
@@ -373,12 +373,13 @@ static void help()
     static const char help[] =
     "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
     " interface\r\n"
-    "Copyright (C) 2017  Peter Vranken\r\n"
+    "Copyright (C) 2017-2019  Peter Vranken\r\n"
     "Type:\r\n"
     "help: Get this help text\r\n"
     "show c, show w: Show details of software license\r\n"
     "green, red: Switch LED color. The color may be followed by the desired period time"
       " in ms and the duty cycle in percent\r\n"
+    "hello en, hello de: Call C++ code to print a greeting\r\n"
     "time: Print current time\r\n"
     "timing: Do some output and measure execution time\r\n"
     "version: Print software version designation\r\n";
@@ -398,16 +399,6 @@ void main()
 {
     /* Init core HW of MCU so that it can be safely operated. */
     ihw_initMcuCoreHW();
-
-#ifdef DEBUG
-    /* Check linker script. It's error prone with respect to keeping the initialized RAM
-       sections and the according initial-data ROM sections strictly in sync. As long as
-       this has not been sorted out by a redesign of linker script and startup code we put
-       a minimal plausibility check here, which will likely detect typical errors.
-         If this assertion fires your initial RAM contents will be corrupt. */
-    extern const uint8_t ld_dataSize[0], ld_dataMirrorSize[0];
-    assert(ld_dataSize == ld_dataMirrorSize);
-#endif
 
     /* Disable timers during configuration. */
     PIT.PITMCR.R = 0x2;
@@ -453,6 +444,16 @@ void main()
     double y = expf(1.0);
     printf("%s=%.2f, %c=%.5g\r\n", "pi", f2d(x), 'e', f2d(y));
 
+    /* Test the call of C++ implemented functionality. */
+    unsigned int cntCppCalls ATTRIB_DBG_ONLY = tcc_sayHello(/* isEnglish */ true);
+    assert(cntCppCalls == 1);
+    cntCppCalls = tcc_sayHello(/* isEnglish */ false);
+    assert(cntCppCalls == 2);
+    cntCppCalls = tcc_sayHello(/* isEnglish */ false);
+    assert(cntCppCalls == 3);
+    cntCppCalls = tcc_sayHello(/* isEnglish */ true);
+    assert(cntCppCalls == 4);
+    
     /* System time. (We use floating point for the only reason of proving its correct
        operation. After about 2^24 times 10ms tiNextCycle will no longer increment and the
        software will fail.) All times in seconds. */
@@ -538,6 +539,25 @@ void main()
                             else if(strcmp(argV[1], "w") == 0)
                                 showW();
                         }
+                    }
+                    else if(strcmp(argV[0], "hello") == 0)
+                    {
+                        bool isEnglish = true;
+                        
+                        /* Language demanded? */
+                        if(argC >= 2)
+                        {
+                            if(strcmp(argV[1], "de") == 0)
+                                isEnglish = false;
+                            else if(strcmp(argV[1], "en") != 0)
+                            {
+                                iprintf( "Command C++: Language is either English (\"en\") or"
+                                         " German (\"de\") but got \"%s\"\r\n"
+                                       , argV[1]
+                                       );
+                            }
+                        }
+                        tcc_sayHello(isEnglish);
                     }
                     else if(strcmp(argV[0], "help") == 0)
                         help();

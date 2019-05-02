@@ -79,7 +79,7 @@ SECTIONS
     } >memBoot
 
 
-    .text_vle :
+    .text_vle : ALIGN(4)
     {
         INPUT_SECTION_FLAGS (SHF_PPC_VLE)
 
@@ -111,7 +111,7 @@ SECTIONS
 
     INCLUDE makefile/crtSupport.ld
 
-    .rodata :
+    .rodata : ALIGN(4)
     {
         /* Normal, const data from C source files goes here. */
         *(.rodata)
@@ -244,7 +244,7 @@ SECTIONS
 
     /* Order of small data sections: The two sX and the two sX2 should be close together
        since they use the same _SDA_BASE_ pointer, or _SDA2_BASE_, respectively. */
-    .sdata2 :
+    .sdata2 : ALIGN(4)
     {
         ld_sdata2Start = ABSOLUTE(.);
         *(.sdata2)
@@ -261,7 +261,7 @@ SECTIONS
 
     /* The uninitialized RAM sections follow. These are the compiler's default sections for
        uninitialized data. */
-    .sbss2 (NOLOAD) :
+    .sbss2 (NOLOAD) : ALIGN(4)
     {
         /* @todo NXP document "Power PC Embedded Application Binary Interface (EABI):
            32-Bit Implementation", p. 11: ".sbss2 is intended to hold writable small data"

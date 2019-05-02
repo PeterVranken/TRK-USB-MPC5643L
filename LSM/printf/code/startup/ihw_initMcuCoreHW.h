@@ -36,7 +36,6 @@
 #include <stdbool.h>
 
 #include "typ_types.h"
-#include "sup_settings.h"
 
 
 /*
@@ -51,12 +50,6 @@
 # elif (__STDC_VERSION__)/100 == 1999
 #  define _STDC_VERSION_C99
 # endif
-#endif
-
-/* Check precondition of implementation. */
-#ifndef SUP_LOCK_STEP_MODE
-# error The critical section code implemented in this file does not work in decoupled \
-        processor mode
 #endif
 
 

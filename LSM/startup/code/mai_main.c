@@ -66,7 +66,6 @@
 #include <assert.h>
 
 #include "MPC5643L.h"
-#include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
 #include "mai_main.h"
@@ -261,16 +260,6 @@ void main()
     /* Init core HW of MCU so that it can be safely operated. */
     ihw_initMcuCoreHW();
     
-#ifdef DEBUG
-    /* Check linker script. It's error prone with respect to keeping the initialized RAM
-       sections and the according initial-data ROM sections strictly in sync. As long as
-       this has not been sorted out by a redesign of linker script and startup code we put
-       a minimal plausibility check here, which will likely detect typical errors.
-         If this assertion fires your initial RAM contents will be corrupt. */
-    extern const uint8_t ld_dataSize[0], ld_dataMirrorSize[0];
-    assert(ld_dataSize == ld_dataMirrorSize);
-#endif
-
     /* Install the interrupt handler for SW interrupt 3 (for test only) */
     ihw_installINTCInterruptHandler( interruptSW3Handler
                                    , /* vectorNum */ 3

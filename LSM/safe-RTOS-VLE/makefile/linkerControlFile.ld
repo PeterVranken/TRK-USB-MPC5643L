@@ -83,6 +83,7 @@ SECTIONS
 
     } >memBoot
 
+
     .text_vle :
     {
         INPUT_SECTION_FLAGS (SHF_PPC_VLE)
@@ -102,6 +103,7 @@ SECTIONS
         *(.rela.text.*)
         *(.rela.rodata)
         *(.rela.rodata.*)
+        *(.rela.*)
 
         /* Normal code segments go here. */
         *(.text.*)
@@ -634,7 +636,7 @@ SECTIONS
     } > memFlash
 
     /* The DWARF debug sections are explicitly mentioned to avoid default orphan section
-       plaing so that we can benefit from orphan section warnings. */
+       placing so that we can benefit from orphan section warnings. */
     .PPC.EMB.apuinfo 0 : { *(.PPC.EMB.apuinfo) }
     .boffs           0 : { KEEP (*(.boffs)) }
     .comment         0 : { *(.comment) }

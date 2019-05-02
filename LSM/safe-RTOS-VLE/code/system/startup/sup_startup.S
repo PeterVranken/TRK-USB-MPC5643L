@@ -118,9 +118,8 @@ sup_bamData:
  * specified in the BAM data block in the boot sector to make this happen after reset.
  */
     .section    .boot, "a"
-    .extern     ld_stackStart       /* Absolute start of all stack memory. */
-    .extern     ld_stackSize        /* Total size of all stack memory. */
-    .extern     ld_stackEndCore0    /* End of stack memory for core 0. */
+    .extern     ld_stackStartOS     /* Absolute start of all stack memory. */
+    .extern     ld_stackEndOS       /* End of stack memory area. */
     .global     sup_startUp
     .balign     2
 sup_startUp:
@@ -201,7 +200,6 @@ su_icache_noAbort:
                        effect. */
 #endif
 
-
    /* The initial setting of the stack pointer. The stack rises towards lower addresses so
       the initial value is the end of the reserved RAM area. The value is provided by the
       linker, which is in charge to do the reservation but 16 Bytes are subtracted in order
@@ -278,7 +276,7 @@ su_waitForever:
  * First step of MCU startup is to bring all relevant registers into a defined state. In
  * LSM, it is essential do do this prior to the first write outside the sphere of
  * replication in order to avoid a false lock step error notifictation. We set all of them
- * to zero. The a bit hidden 64 Bit character of the general purpose registers is
+ * to zero. The somewhat hidden 64 Bit character of the general purpose registers is
  * considered, the never used upper 32 Bit are cleared, too.
  *   @remark This code is based on NXP sample
  * MPC5643L-LINFlex-UART-DMA-CW210, file MPC5643L_LSM_Startup.c, l. 24ff
@@ -290,7 +288,7 @@ zeroizeRegisters:
     e_or2is     r1, 0x0200
     mtmsr       r1
     se_isync                /* Core RM, 4.6: mtmsr only has completion synchronization.
-                               It's no fully clear if we need dispatch or refetch
+                               It's not fully clear if we need dispatch or refetch
                                synchronization to make the SPE work; likely it's dispatch.
                                Anyway, isync does both. */
 

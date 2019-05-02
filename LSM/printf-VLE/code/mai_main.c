@@ -64,7 +64,6 @@
 
 #include "MPC5643L.h"
 #include "typ_types.h"
-#include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"
@@ -78,7 +77,7 @@
  */
 
 /** Software version */
-#define VERSION "0.10.4"
+#define VERSION "0.12.0"
 
 /*
  * Local type definitions
@@ -316,7 +315,7 @@ static void showW()
 
     fiprintf(stdout, gplShowW);
 
-} /* End of showW() */
+} /* End of showW */
 
 
 
@@ -329,7 +328,7 @@ static void showC()
     static const char gplShowC[] =
     "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
     " interface\r\n"
-    "Copyright (C) 2017  Peter Vranken\r\n"
+    "Copyright (C) 2017-2019  Peter Vranken\r\n"
     "\r\n"
     "This program is free software: you can redistribute it and/or modify\r\n"
     "it under the terms of the GNU Lesser General Public License as published\r\n"
@@ -346,7 +345,7 @@ static void showC()
 
     puts(gplShowC);
 
-} /* End of showC() */
+} /* End of showC */
 
 
 
@@ -358,12 +357,12 @@ static void version()
     static const char version[] =
     "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
     " interface\r\n"
-    "Copyright (C) 2017  Peter Vranken\r\n"
+    "Copyright (C) 2017-2019  Peter Vranken\r\n"
     "Version " VERSION "\r\n";
 
     puts(version);
     
-} /* End of version() */
+} /* End of version */
 
 
 /**
@@ -374,19 +373,20 @@ static void help()
     static const char help[] =
     "\rTRK-USB-MPC5643LAtGitHub - printf, demonstrate use of C lib's stdout with serial"
     " interface\r\n"
-    "Copyright (C) 2017  Peter Vranken\r\n"
+    "Copyright (C) 2017-2019  Peter Vranken\r\n"
     "Type:\r\n"
     "help: Get this help text\r\n"
     "show c, show w: Show details of software license\r\n"
     "green, red: Switch LED color. The color may be followed by the desired period time"
       " in ms and the duty cycle in percent\r\n"
+    "hello en, hello de: Call C++ code to print a greeting\r\n"
     "time: Print current time\r\n"
     "timing: Do some output and measure execution time\r\n"
     "version: Print software version designation\r\n";
 
     fputs(help, stderr);
 
-} /* End of help() */
+} /* End of help */
 
 
 
@@ -445,7 +445,7 @@ void main()
     printf("%s=%.2f, %c=%.5g\r\n", "pi", f2d(x), 'e', f2d(y));
 
     /* Test the call of C++ implemented functionality. */
-    unsigned int cntCppCalls = tcc_sayHello(/* isEnglish */ true);
+    unsigned int cntCppCalls ATTRIB_DBG_ONLY = tcc_sayHello(/* isEnglish */ true);
     assert(cntCppCalls == 1);
     cntCppCalls = tcc_sayHello(/* isEnglish */ false);
     assert(cntCppCalls == 2);
@@ -539,6 +539,25 @@ void main()
                             else if(strcmp(argV[1], "w") == 0)
                                 showW();
                         }
+                    }
+                    else if(strcmp(argV[0], "hello") == 0)
+                    {
+                        bool isEnglish = true;
+                        
+                        /* Language demanded? */
+                        if(argC >= 2)
+                        {
+                            if(strcmp(argV[1], "de") == 0)
+                                isEnglish = false;
+                            else if(strcmp(argV[1], "en") != 0)
+                            {
+                                iprintf( "Command C++: Language is either English (\"en\") or"
+                                         " German (\"de\") but got \"%s\"\r\n"
+                                       , argV[1]
+                                       );
+                            }
+                        }
+                        tcc_sayHello(isEnglish);
                     }
                     else if(strcmp(argV[0], "help") == 0)
                         help();

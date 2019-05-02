@@ -9,7 +9,7 @@
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
 
-# Only uncomment the next line when running this fragment independently for maintenace
+# Only uncomment the next line when running this fragment independently for maintenance
 # purpose.
 #include commonFunctions.mk
 
@@ -24,7 +24,8 @@ toolsSearchPath := $(subst ;, ,$(call w2u,$(PATH)))
 else
 toolsSearchPath := $(subst :, ,$(PATH))
 endif
-toolsSearchPath := $(GCC_POWERPC_HOME) $(toolsSearchPath)
+toolsSearchPath := $(call trailingSlash,$(GCC_POWERPC_HOME))bin $(toolsSearchPath)
+toolsSearchPath := $(call w2u,$(toolsSearchPath))
 #$(info Search path for external tools: $(toolsSearchPath))
 
 # Under Windows we have to look for gcc.exe rather than for gcc.
@@ -65,24 +66,26 @@ endif
 # and as is executing this makefile fragment.
 make := $(MAKE)
 
-.PHONY: versionGCC helpGCC
+.PHONY: versionGCC helpGCC builtinMacrosGCC
 versionGCC:
 	$(info GCC: $(call u2w,$(gcc)))
 	$(gcc) --version
 helpGCC:
 	$(gcc) -v --help
+builtinMacrosGCC:
+	$(gcc) -dM -E - < nul
 
 # A plausibility check that tools could be loacted.
-ifeq ($(and $(make),$(gcc)),)
-    $(info make: $(make), gcc: $(gcc), cp: $(cp))
+ifeq ($(and $(make),$(gcc),$(cp),$(echo)),)
+    $(info make: $(make), gcc: $(gcc), cp: $(cp), echo: $(echo))
     $(info Current working directory: $(shell cd))
     $(info $$(GCC_POWERPC_HOME): $(GCC_POWERPC_HOME))
-    $(info $$(PATH): $(PATH))
+    $(info $$(PATH): $(toolsSearchPath))
     $(error Required GNU tools can't be located. Most probable reasons are: You \
             didn't install the Cycwin Unix tools, you didn't install GCC for PowerPC \
             or you didn't add the paths to the executables to the environment variable \
             PATH and you didn't set environment variable GCC_POWERPC_HOME to point to \
             the installation of GCC)
 else
-    #$(info make: $(make), gcc: $(gcc), cp: $(cp))
+    #$(info make: $(make), gcc: $(gcc), cp: $(cp), echo: $(echo))
 endif

@@ -123,9 +123,9 @@ sup_bamData:
     .global sup_startUp
     .balign     2
 sup_startUp:
-    e_bl    zeroizeRegisters        /* Clear all GPR and all relevant SPR */
-    e_bl    initExceptionHandlers   /* Set all IVOR registers of the MCU */
-    e_bl    initMMU                 /* Make MMU allow all memory accesses */
+    e_bl        zeroizeRegisters        /* Clear all GPR and all relevant SPR */
+    e_bl        initExceptionHandlers   /* Set all IVOR registers of the MCU */
+    e_bl        initMMU                 /* Make MMU allow all memory accesses */
     
     /* Exception handlers are installed, memory is accessible - there's no reason to wait
        any longer with enabling the higher prior interrupts (machine check). We have the
@@ -134,7 +134,7 @@ sup_startUp:
          Note, the external interrupts are not enabled yet. They are entirely managed by
        the application software. */
     e_li        r0, 0x1000  /* Initialize MSR: CE=EE=0 but ME=1 */
-    mtmsr   r0
+    mtmsr       r0
 
 #if ENABLE_BRANCH_PREDICTION == 1
     /* Enable the Branch Target Buffer (BTB) for branch prediction. Clear all buffer
@@ -147,14 +147,14 @@ sup_startUp:
     se_isync
 #endif
     
-    e_bl    initTimeBase            /* Start the MCU's high resolution counter */
+    e_bl        initTimeBase    /* Start the MCU's high resolution counter */
     e_bl        zeroizeSRAM     /* Clear all RAM to avoid ECC errors */
 
     /* The watchdog is disabled now. Most available sample code code does do this as C
        function at the beginning of main, however, if we are in lockstep mode and use the
        full available RAM of 128k then it takes much too long to copy the data section and
        to zeroize the bss section and the watchdog bites. */
-    e_bl      disableWatchdog
+    e_bl        disableWatchdog
 
     /* Enable instruction cache. The procedure is described in the e200z4 Power
        Architecture Core Reference Manual, section 9.6, p. 552ff. 9.6.1 Cache
@@ -275,8 +275,7 @@ su_waitForever:
 zeroizeRegisters:
 
     /* Set the MSR[SPE] bit so code can use "evmergelo" instruction. */
-    e_lis   r1, 0
-    e_or2is r1, 0x0200
+    e_lis   r1, 0x0200
     mtmsr   r1
     se_isync                /* Core RM, 4.6: mtmsr only has completion synchronization.
                                It's not fully clear if we need dispatch or refetch
@@ -284,7 +283,7 @@ zeroizeRegisters:
                                Anyway, isync does both. */
 
     /* Initialize the 64-bits of GPR0 to 0 */
-    e_lis     r1, 0         /* Initialize the lower 32-bits of GPR1 to 0. */
+    e_li      r1, 0         /* Initialize the lower 32-bits of GPR1 to 0. */
     evmergelo r0, r1, r1    /* Write the lower 32-bits of GPR1 into both halfs of GPR0. */
     evmergelo r1, r0, r0    /* Clear 64 Bit of r1, r2 ... */
     evmergelo r2 ,r0 ,r0
@@ -410,7 +409,7 @@ zeroizeRegisters:
  * the debugger.
  */
     .extern int_INTCInterruptHandler
-    .extern     rtos_ivor4Handler
+    .extern     int_INTCInterruptHandler
 initExceptionHandlers:
     
     /* Write the common most significant 16 bits of all the exception handler addresses. */
