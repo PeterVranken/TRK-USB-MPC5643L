@@ -119,13 +119,12 @@ unsigned int HelloWorld::sayHello()
 } /* End of HelloWorld::sayHello */
 
 
-extern "C"
-{
+
 
 /**
  * C compatible wrapper to make the class interface callable from ordinary C.
  */
-unsigned int tcc_sayHello(bool isEnglish)
+extern "C" unsigned int tcc_sayHello(bool isEnglish)
 {
     if(isEnglish)
     {
@@ -143,19 +142,5 @@ unsigned int tcc_sayHello(bool isEnglish)
 } /* End of tcc_sayHello */
 
 
-/** As an alternative to -fno-threadsafe-statics in this simple environment: We provide
-    stubs for the otherwise missing synchronization functions. */
-int __cxa_guard_acquire(int64_t *guardObj ATTRIB_UNUSED)
-{
-    /* Ignore race conditions in this software. Always let the object be initialized. */
-    return 1;
-}
-
-void __cxa_guard_release(int64_t *guardObj ATTRIB_UNUSED)
-{
-}
-
-
-} /* End of extern "C" */
 
 
