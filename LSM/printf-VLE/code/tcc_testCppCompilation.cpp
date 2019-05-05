@@ -135,8 +135,8 @@ extern "C" unsigned int tcc_sayHello(bool isEnglish)
     else
     {
         /* The German speaking object is created on first use. It'll go onto the heap. */
-        //static HelloWorld helloWorld_de = new HelloWorld(/* isEnglish */ false);
-        static HelloWorld helloWorld_de(/* isEnglish */ false);
+        static HelloWorld& helloWorld_de = *new HelloWorld(/* isEnglish */ false);
+        //static HelloWorld helloWorld_de(/* isEnglish */ false);
         return helloWorld_de.sayHello();
     }
 } /* End of tcc_sayHello */
