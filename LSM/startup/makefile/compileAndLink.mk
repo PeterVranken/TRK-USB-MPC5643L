@@ -286,20 +286,20 @@ else
     ccFlags += -g1 -gdwarf-2 $(productionCodeOptimization)
 endif
 
-cFlags = $(ccFlags) -Wno-old-style-declaration -Wno-nested-externs -std=gnu11
+cFlags = $(ccFlags) -Wno-old-style-declaration -Wno-nested-externs
 #$(info cFlags := $(cFlags), ccFlags := $(ccFlags))
 
 $(targetDir)obj/%.o: %.c
 	$(info Compiling C file $<)
-	$(gcc) -c $(cFlags) -o $@ $<
+	$(gcc) -c $(cFlags) -std=gnu11 -o $@ $<
 
 $(targetDir)obj/%.o: %.cpp
 	$(info Compiling C++ file $<)
-	$(gcc) -c $(ccFlags) -o $@ $<
+	$(gcc) -c $(ccFlags) -std=gnu++11 -o $@ $<
 
 $(targetDir)obj/%.o: %.cc
 	$(info Compiling C++ file $<)
-	$(gcc) -c $(ccFlags) -o $@ $<
+	$(gcc) -c $(ccFlags) -std=gnu++11 -o $@ $<
 
 # Create a preprocessed source file, which is convenient to debug complex nested macro
 # expansion, or an assembler listing, which is convenient to understand the
