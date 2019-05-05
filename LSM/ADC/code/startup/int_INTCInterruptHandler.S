@@ -32,8 +32,6 @@
  * Include files
  */
 
-#include "sup_settings.h"
-
 
 /*
  * Defines

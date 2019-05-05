@@ -36,28 +36,11 @@
 #include <stdbool.h>
 
 #include "typ_types.h"
-#include "sup_settings.h"
 
 
 /*
  * Defines
  */
-
-/* The software is written as portable as reasonably possible. This requires the awareness
-   of the C language standard it is compiled with. */
-#if defined(__STDC_VERSION__)
-# if (__STDC_VERSION__)/100 == 2011
-#  define _STDC_VERSION_C11
-# elif (__STDC_VERSION__)/100 == 1999
-#  define _STDC_VERSION_C99
-# endif
-#endif
-
-/* Check precondition of implementation. */
-#ifndef SUP_LOCK_STEP_MODE
-# error The critical section code implemented in this file does not work in decoupled \
-        processor mode
-#endif
 
 
 /*
@@ -82,11 +65,16 @@
  */
 static ALWAYS_INLINE void ihw_suspendAllInterrupts()
 {
+    /* The completion synchronizing character of the wrteei instruction forms the memory
+       barrier, which ensures that all memory operations before the now entered critical
+       section are completed before we enter (see core RM, 4.6.1, p. 151). The "memory"
+       constraint ensures that the compiler won't reorder instructions from behind the
+       wrteei to before it. */
     asm volatile ( /* AssemblerTemplate */
                    "wrteei 0\n"
                  : /* OutputOperands */
                  : /* InputOperands */
-                 : /* Clobbers */
+                 : /* Clobbers */ "memory"
                  );
 } /* End of ihw_suspendAllInterrupts */
 
@@ -98,12 +86,16 @@ static ALWAYS_INLINE void ihw_suspendAllInterrupts()
  */
 static ALWAYS_INLINE void ihw_resumeAllInterrupts()
 {
+    /* The completion synchronizing character of the wrteei instruction forms the memory
+       barrier, which ensures that all memory operations inside the now left critical
+       section are completed before we leave (see core RM, 4.6.1, p. 151). The "memory"
+       constraint ensures that the compiler won't reorder instructions from before the
+       wrteei to behind it. */
     asm volatile ( /* AssemblerTemplate */
-                   "msync\n\t"
                    "wrteei 1\n"
                  : /* OutputOperands */
                  : /* InputOperands */
-                 : /* Clobbers */
+                 : /* Clobbers */ "memory"
                  );
 } /* End of ihw_resumeAllInterrupts */
 
@@ -123,13 +115,18 @@ static ALWAYS_INLINE void ihw_resumeAllInterrupts()
  */
 static ALWAYS_INLINE uint32_t ihw_enterCriticalSection()
 {
+    /* The completion synchronizing character of the mfmsr instruction forms the memory
+       barrier, which ensures that all memory operations before the now entered critical
+       section are completed before we enter (see core RM, 4.6.1, p. 151). The "memory"
+       constraint ensures that the compiler won't reorder instructions from behind the
+       wrteei to before it. */
     uint32_t msr;
     asm volatile ( /* AssemblerTemplate */
                    "mfmsr %0\n\t"
                    "wrteei 0\n\t"
                  : /* OutputOperands */ "=r" (msr)
                  : /* InputOperands */
-                 : /* Clobbers */
+                 : /* Clobbers */ "memory"
                  );
     return msr;
 
@@ -147,12 +144,16 @@ static ALWAYS_INLINE uint32_t ihw_enterCriticalSection()
  */
 static ALWAYS_INLINE void ihw_leaveCriticalSection(uint32_t msr)
 {
+    /* The completion synchronizing character of the wrtee instruction forms the memory
+       barrier, which ensures that all memory operations inside the now left critical
+       section are completed before we leave (see core RM, 4.6.1, p. 151). The "memory"
+       constraint ensures that the compiler won't reorder instructions from before the
+       wrtee to behind it. */
     asm volatile ( /* AssemblerTemplate */
-                   "msync\n\t"
-                   "mtmsr %0\n"
+                   "wrtee %0\n"
                  : /* OutputOperands */
                  : /* InputOperands */ "r" (msr)
-                 : /* Clobbers */
+                 : /* Clobbers */ "memory"
                  );
 } /* End of ihw_leaveCriticalSection */
 
