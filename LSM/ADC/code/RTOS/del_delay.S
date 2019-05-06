@@ -39,6 +39,12 @@
  * Defines
  */
 
+/** Is the instruction cache switched on? This is decided in file sup_startup.S */
+#define IS_ENABLE_ICACHE            1
+
+/** Is the branch prediction switched on? This is decided in file sup_startup.S */
+#define IS_ENABLE_BRANCH_PREDICTION 1
+
 
 /*
  * External function declarations
@@ -88,8 +94,13 @@
 del_delayMicroseconds:
 
 #ifdef __VLE__
-//# define NO_CYCLES_PER_US   20  /* I-cache off, no branch prediction. */
+# if !IS_ENABLE_ICACHE && !IS_ENABLE_BRANCH_PREDICTION
+#  define NO_CYCLES_PER_US   20     /* I-cache off, no branch prediction. */
+# elif IS_ENABLE_ICACHE && IS_ENABLE_BRANCH_PREDICTION
 # define NO_CYCLES_PER_US   60  /* I-cache and branch prediction on. */
+# else
+#  error Module del_delay.S needs calibration for chosen confguration
+# endif
 
     e_mulli r3, r3, NO_CYCLES_PER_US    /* Rescale us to CPU clock ticks. */
     
@@ -107,10 +118,18 @@ exitDelayMicroseconds:
 
 # undef NO_CYCLES_PER_US
 #else /* Book E instruction set */
-# define NO_CYCLES_PER_US_NUM   40  /* I-cache off, no branch prediction. */
-//# define NO_CYCLES_PER_US_DEN   3   /* I-cache off, no branch prediction. */
-# define NO_CYCLES_PER_US_DEN   1   /* I-cache and branch prediction on. */
+
+# if !IS_ENABLE_ICACHE && !IS_ENABLE_BRANCH_PREDICTION
+#  define NO_CYCLES_PER_US_NUM   40 /* I-cache off, no branch prediction. */
+#  define NO_CYCLES_PER_US_DEN   3   
 # define NO_CYCLES_OVERHEAD     3
+# elif IS_ENABLE_ICACHE && IS_ENABLE_BRANCH_PREDICTION
+#  define NO_CYCLES_PER_US_NUM   40 /* I-cache and branch prediction on. */
+#  define NO_CYCLES_PER_US_DEN   1
+#  define NO_CYCLES_OVERHEAD     9
+# else
+#  error Module del_delay.S needs calibration for chosen confguration
+# endif
 
     li      r4, NO_CYCLES_PER_US_DEN    /* Rescale us to CPU clock ticks. */
     mulli   r3, r3, NO_CYCLES_PER_US_NUM   
