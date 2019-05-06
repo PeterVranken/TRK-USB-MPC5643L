@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -57,10 +57,10 @@
 # ===========
 #
 # The makefile compiles and links all source files which are located in a given list of
-# source directories. The list of directories is hard coded in the makefile, please look
-# for the setting of srcDirList below.
-#   A second list of files is found as cFileListExcl. These C/C++ files are excluded from
-# build.
+# source directories. The list of directories is a variable set in the calling makefile,
+# please look the variable srcDirList below.
+#   A second list of files is found as cFileListExcl. These C/C++ or assembler files are
+# excluded from build.
 
 
 # General settings for the makefile.
@@ -88,7 +88,7 @@ projectExe := $(target).s19
 .DEFAULT_GOAL := help
 h help targets usage:
 	$(info Usage: make [-s] [-k] [CONFIG=<configuration>] [SAVE_TMP=1] {<target>})
-	$(info <configuration> is one out of DEBUG (default) or PRODUCTION.)
+	$(info CONFIG: <configuration> is one out of DEBUG (default) or PRODUCTION.)
 	$(info SAVE_TMP set to one will make the preprocessed C(++) sources and the assembler \
            files appear in the target directory bin/ppc/<configuration>/obj/)
 	$(info Available targets are:)
@@ -106,6 +106,7 @@ h help targets usage:
              assembler module. Build product is sibling of source file)
 	$(info - versionGCC: Print information about which compiler is used)
 	$(info - helpGCC: Print usage text of compiler)
+	$(info - builtinMacrosGCC: Print builtin #define's of compiler for given configuration)
 	$(info - help: Print this help)
 	$(error)
 
@@ -144,14 +145,14 @@ targetDir := $(call binFolder)
 .PHONY: makeDir
 makeDir: | $(targetDir)obj
 $(targetDir)obj:
-	-$(mkdir) -p $@
+	-$(mkdir) -pv $@
 
 # Some core variables have already been set prior to reading this common part of the
 # makefile. These variables are:
 #   project: Name of the sub-project; used e.g. as name of the executable
 #   srcDirList: a blank separated list of directories holding source files
 #   cFileListExcl: a blank separated list of source files (with extension but without path)
-# excluded from the compilation of all *.c and *.cpp
+# excluded from the compilation of all *.S, *.c and *.cpp
 #   incDirList: a blank separated list of directories holding header files. The directory
 # names should end with a slash. The list must not comprise common, project independent
 # directories and nor must the directories listed in srcDirList be included
@@ -176,11 +177,11 @@ cFileList := $(call rwildcard,$(srcDirList),*.c *.cpp *.S)
 #   Before we remove the directories from the source file designations, we need to extract
 # and keep these directories. They are needed for the VPATH search and for compiler include
 # instructions. Note, the $(sort) is not for sorting but to eliminate duplicates.
-srcDirList := $(sort $(dir $(cFileList)))
+srcDirListExpanded := $(sort $(dir $(cFileList)))
 cFileList := $(notdir $(cFileList))
 # Subtract each excluded file from the list.
 cFileList := $(filter-out $(cFileListExcl), $(cFileList))
-#$(info cFileList := $(cFileList)$(call EOL)srcDirList := $(srcDirList))
+#$(info cFileList := $(cFileList)$(call EOL)srcDirListExpanded := $(srcDirListExpanded))
 # Translate C source file names in target binary files by altering the extension and adding
 # path information.
 objList := $(cFileList:.cpp=.o)
@@ -195,8 +196,8 @@ objListWithPath := $(addprefix $(targetDir)obj/, $(objList))
 
 # Blank separated search path for source files and their prerequisites permit to use auto
 # rules for compilation.
-#$(info VPATH: $(srcDirList) $(targetDir))
-VPATH := $(srcDirList) $(targetDir)
+#$(info VPATH: $(srcDirListExpanded) $(targetDir))
+VPATH := $(srcDirListExpanded) $(targetDir)
 
 # Selection of the target. These configuration settings determine the set of machine
 # instructions to be used. To ensure consistency, they are passed to the assembler, the
@@ -237,13 +238,13 @@ endif
     # O1: 52%
     # Os: 50%, requires linkage of crtsavres.S
     # Ofast: 41%, likely same as -O3
-productionCodeOptimization := -Ofast
+productionCodeOptimization := -Os
 
 # Pattern rules for assembler language source files.
 asmFlags = $(targetFlags)                                                                   \
            -Wall                                                                            \
-           -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                  \
-           $(foreach path,$(srcDirList) $(incDirList),-I$(path))                            \
+           -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                             \
+           $(foreach path,$(call noTrailingSlash,$(srcDirListExpanded) $(incDirList)),-I$(path))\
            $(cDefines) $(foreach def,$(defineList),-D$(def))                                \
            -Wa,-g -Wa,-gdwarf-2
 
@@ -259,39 +260,46 @@ $(targetDir)obj/%.o: %.S
 
 # Pattern rules for compilation of, C and C++ source files.
 
-cFlags = $(targetFlags) -mno-string                                                         \
+ccFlags = $(targetFlags) -mno-string                                                        \
          -fno-common -fno-exceptions -ffunction-sections -fdata-sections                    \
-         -fshort-enums -fdiagnostics-show-option -finline-functions                         \
+          -fshort-enums -fdiagnostics-show-option -finline-functions -fmessage-length=0     \
          -fzero-initialized-in-bss -fno-tree-loop-optimize                                  \
-         -Wall -Wno-main -Wno-old-style-declaration -Winline -Wextra -Wstrict-overflow=4    \
+          -Wall -Wno-main -Winline -Wextra -Wstrict-overflow=4 -Wmissing-declarations       \
          -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat -Wformat-security             \
          -Wignored-qualifiers -Wsign-conversion -Wsign-compare                              \
          -Werror=missing-declarations -Werror=implicit-function-declaration                 \
-         -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
-         -Werror=pointer-to-int-cast -Werror=return-local-addr -Werror=missing-prototypes   \
+          -Werror=int-to-pointer-cast -Werror=pointer-sign -Werror=pointer-to-int-cast      \
+          -Werror=return-local-addr -Werror=missing-prototypes                              \
          -Werror=missing-field-initializers                                                 \
-         -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                                    \
-         $(foreach path,$(srcDirList) $(incDirList),-I$(path))                              \
+          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                              \
+          $(foreach path,$(call noTrailingSlash,$(srcDirListExpanded) $(incDirList)),-I$(path))\
          $(cDefines) $(foreach def,$(defineList),-D$(def))
 ifeq ($(SAVE_TMP),1)
     # Debugging the build: Put preprocessed C file and assembler listing in the output
     # directory
-    cFlags += -save-temps=obj -fverbose-asm #-dp
+    ccFlags += -save-temps=obj -fverbose-asm 
 endif
+# Debug settings see https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
 ifeq ($(CONFIG),DEBUG)
-    cFlags += -g3 -gdwarf-2 -Og
+    ccFlags += -g3 -gdwarf-2 -Og
 else
-    cFlags += -g1 -gdwarf-2 $(productionCodeOptimization)
+    ccFlags += -g1 -gdwarf-2 $(productionCodeOptimization)
 endif
-#$(info cFlags := $(cFlags))
+
+cFlags = $(ccFlags) -Wno-old-style-declaration -Wno-nested-externs
+#$(info cFlags := $(cFlags), ccFlags := $(ccFlags))
 
 $(targetDir)obj/%.o: %.c
 	$(info Compiling C file $<)
-	$(gcc) -c $(cFlags) -o $@ $<
+	$(gcc) -c $(cFlags) -std=gnu11 -o $@ $<
 
-#$(targetDir)obj/%.o: %.cpp
-#	$(info Compiling C++ file $<)
-#	$(gcc) -c $(cFlags) -o $@ $<
+$(targetDir)obj/%.o: %.cpp
+	$(info Compiling C++ file $<)
+	$(gcc) -c $(ccFlags) -std=gnu++11 -o $@ $<
+
+$(targetDir)obj/%.o: %.cc
+	$(info Compiling C++ file $<)
+	$(gcc) -c $(ccFlags) -std=gnu++11 -o $@ $<
 
 # Create a preprocessed source file, which is convenient to debug complex nested macro
 # expansion, or an assembler listing, which is convenient to understand the
@@ -308,36 +316,11 @@ $(targetDir)obj/%.o: %.c
 
 %.i %.asm: %.cpp
 	$(info Preprocessing C++ file $(notdir $<) to text file $(patsubst %.cpp,%$(suffix $@),$<))
-	$(gcc) $(if $(call eq,$(suffix $@),.i),-E,-S) $(filter-out -MMD,$(cFlags)) -o $(patsubst %.cpp,%$(suffix $@),$<) $<
+	$(gcc) $(if $(call eq,$(suffix $@),.i),-E,-S) $(filter-out -MMD,$(ccFlags)) -o $(patsubst %.cpp,%$(suffix $@),$<) $<
 
-
-# Windows only: A global resource file is compiled to a binary representation of the
-# application's icons. The binary representation is linked with the executable. This makes
-# Windows show the application with its own icon. Furthermore, the user can create an
-# association of the file name extension of the application's input files with one of its
-# icons.
-#   No according code is supported for the other environments. Here, no icons are available
-# as part of the executable file. The functionality (the actual code of the application) is
-# not affected at all.
-ifeq ($(OS),xxxInhibitRulexxx_Windows_NT)
-    # A single (compiled) resource file is demanded for the project if it is build under
-    # Windows.
-    projectResourceFile := $(targetDir)obj/$(target).res
-
-    # A general auto rule for compiling resource files under Windows is added.
-    #   TODO The rule is insufficient. The prerequisite is the *.rc file which references
-    # external files, e.g. icon files. These external files should also be prerequisites.
-    # Directly specifying these files in a rule would break the concept of a generic
-    # makefile. We need a working hypothesis similar to the C/C++ code: Look for all icon
-    # files in all input directories and add these as prerequisites. At the moment, a
-    # change of an icon file won't be considered in the next build.
-    $(targetDir)obj/%.res: %.rc
-		$(info Compile Windows resource file $<)
-		$(windres) $< -O coff -o $@
-else
-    # Empty variable: A (compiled) resource file is not known under this operating system.
-    projectResourceFile :=
-endif
+%.i %.asm: %.cc
+	$(info Preprocessing C++ file $(notdir $<) to text file $(patsubst %.cpp,%$(suffix $@),$<))
+	$(gcc) $(if $(call eq,$(suffix $@),.i),-E,-S) $(filter-out -MMD,$(ccFlags)) -o $(patsubst %.cpp,%$(suffix $@),$<) $<
 
 
 ## A general rule enforces rebuild if one of the configuration files changes
@@ -349,15 +332,30 @@ endif
 # More than 30 Years of DOS & Windows but the system still fails to handle long command
 # lines. We write the names of all object files line by line into a simple text file and
 # will only pass the name of this file to the linker.
-$(targetDir)obj/listOfObjFiles.txt: $(objListWithPath) $(projectResourceFile)
+$(targetDir)obj/listOfObjFiles.txt: $(objListWithPath)
 	$(info Create linker input file $@)
-	$(and $(call createFileList,$@,$^),)
-	$(info File created)
+	$(file >$@,$^)
 
 # Let the linker create the flashable binary file.
-lFlags = -Wl,-Tmakefile/linkerControlFile.ld -nostartfiles -Wl,--gc-sections $(targetFlags) \
+#   CAUTION: An unsolved problem with GCC 4.9.4 is the switch -fshort-double, which is
+# highly desired in software emulation mode and unavoidable in hardware mode. There seems
+# to be no set of libraries, which has been compiled in this mode. If we call a library
+# function using the type double for in- or output then the code doesn't crash but produces
+# bad results. A statement like x=exp(y); will produce the wrong result for x. We need to
+# do, what is anyway strongly recommended - using the float variants of these library
+# functions. Our example would become x=expf(y);, which works as expected. This problem can
+# only be solved by rebuilding the C library with our settings.
+#   Note, there's no such function for printf & co, e.g. printff. See sample "printf" for
+# a proposed, particular work-around.
+#   -nostartfiles: The compiler generates the call of a function __eabi(stackPointer) at
+# the entry into main. __eabi is a function in the clib, which does the initialization of
+# the clib, in particular, the C++ constructors seem to be called. If -nostartfiles is
+# given then the linker won't link the related files from the clib but the compiler still
+# calls __eabi() so that we need to offer a stub then. The clib is not initialized and it
+# can be that elements from it won't work.
+lFlags = -Wl,-Tmakefile/linkerControlFile.ld -Wl,--gc-sections $(targetFlags)               \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
-         -Wl,--warn-common,--warn-once -Wl,-g                                               \
+         -Wl,--warn-common,--warn-once,--orphan-handling=warn -Wl,-g                        \
          --sysroot=$(dir $(gcc))../powerpc-eabivle/newlib
 
 $(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt makefile/linkerControlFile.ld
@@ -367,7 +365,7 @@ $(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt makefile/linkerCon
 # Create hex file from linker output.
 $(targetDir)$(target).s19: $(targetDir)$(target).elf
 	$(objcopy) -O ihex $< $(patsubst %.elf,%.hex,$<)
-	$(objcopy) -O srec $< $(patsubst %.elf,%.s19,$<)
+	$(objcopy) -O symbolsrec $< $(patsubst %.elf,%.s19,$<)
 
 # Delete all dependency files ignoring (-) the return code from Windows because of non
 # existing files.

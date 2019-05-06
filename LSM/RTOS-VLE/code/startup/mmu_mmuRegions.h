@@ -173,7 +173,7 @@
 
 /* 1MB at 0x0 (flash ROM). This is  nearly a copy of the definition of entry 0. It uses
    however the other table entry 1 and the other address space.
-     Reason: This table entry is use temporarily in order to avoid overlapping region
+     Reason: This table entry is used temporarily in order to avoid overlapping region
    definitions at any time during initialization. */
 #define MMU_TLB1_TMP_ENTRY1_MAS0 MMU_MAS0(/* idxTblEntry */ 1)
 #define MMU_TLB1_TMP_ENTRY1_MAS1 (MMU_MAS1_FLASH & ~SUP_MMU_TBL_TS(0) | SUP_MMU_TBL_TS(1))

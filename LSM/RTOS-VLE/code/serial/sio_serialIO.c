@@ -1,8 +1,8 @@
 /**
  * @file sio_serialIO.c
- * Support of the LINFlex device of the MPC5643L. The device is configured as UART and fed
- * by DMA. We get a serial RS 232 output channel of high throughput with a minimum of CPU
- * interaction.\n
+ * Support of the LINFlex device of the MPC5643L for serial text I/O. The device is
+ * configured as UART and fed by DMA. We get a serial RS 232 output channel of high
+ * throughput with a minimum of CPU interaction.\n
  *   Input is done by interrupt on a received character. The bandwidth of the input channel
  * is by far lower than the output. This is fine for the normal use case, controlling an
  * application by some input commands, but would become a problem if the intention is to
@@ -13,7 +13,7 @@
  * this module.\n
  *   Note, formatted input is not possible through C standard functions.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -34,9 +34,9 @@
  *   sio_getChar
  *   sio_getLine
  * Local functions
- *   initDMA
- *   initLINFlex
- *   dmaTransferCompleteInterrupt
+ *   configSIULForUseWithOpenSDA
+ *   configDMA
+ *   configLINFlex
  *   linFlexRxInterrupt
  *   registerInterrupts
  */
@@ -45,7 +45,6 @@
  * Include files
  */
 
-#include <unistd.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,23 +73,16 @@
 /** The DMA channel to serve the UART with sent data bytes. */
 #define DMA_CHN_FOR_SERIAL_OUTPUT   15
 
-/** The interrupt priority for serial output. The interrupt is requested by the DMA when
-    all bytes of the last recently initiated transfer are sent. The range is 1..15.
-      @remark The chosen priority needs to be greater or equal than the priority of any
-    context, that makes use of the API functions of this module. */
-#define INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT     5
-
 /** The interrupt priority for serial input. The interrupt is requested by the UART when
     another byte has been received. The range is 1..15.
       @remark The chosen priority needs to be greater than the priority of any context,
-    that makes use of the API functions of this module.
-      @remark Because of the larger UART buffer applied for serial output, this priority
-    should normally be chosen higher than #INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT. */
-#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     ((INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT)+1)
+    that makes use of the input related API functions of this module. */
+#define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     6
 
 /** The size of the ring buffer for serial output can be chosen as a power of two of bytes.
       @remark Note, the permitted range of values depends on the reservation of space made
-    in the linker control file. */
+    in the linker control file. The macro here needs to be maintained in sync with the
+    symbol ld_noBitsDmaRingBuffer, that is maintained in the linker file. */
 #define SERIAL_OUTPUT_RING_BUFFER_SIZE_PWR_OF_TWO   10
 
 /** The size of the ring buffer for serial input as number of bytes. The maximum capacity
@@ -177,7 +169,8 @@ volatile unsigned long sio_serialOutNoLostMsgBytes = 0;
     significant bits of the buffer address need to be zero. The buffer address (and thus
     its alignment) is specified in the linker file, which therefore limits the maximum size
     of the buffer. */
-static uint8_t SECTION(.heap.dmaRingBuffer) _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE];
+static _Alignas(SERIAL_OUTPUT_RING_BUFFER_SIZE) uint8_t
+                _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE] SECTION(.dmaRingBuffer);
 
 /** The write index into the ring buffer used for serial output. Since we use bytes and
     since the log2(sizeOfBuffer) least significant bits of the buffer address are zero
@@ -187,12 +180,6 @@ static uint8_t SECTION(.heap.dmaRingBuffer) _serialOutRingBuf[SERIAL_OUTPUT_RING
     significant bits don't care (but aren't necessarily zero). This is indicated by the M
     at the end of the name. */
 static volatile unsigned int _serialOutRingBufIdxWrM = 0;
-
-/** On-DMA-Complete interrupt and API function sio_writeSerial need to share the
-    information, whether a transfer is currently running. The flag is set when all elder
-    output had been completed and the client code demands a new output. It is reset when a
-    DMA transfer completes and the client code has not demanded a new output meanwhile. */
-static volatile bool _serialOutDmaTransferIsRunning = false;
 
 /** The ring buffer used for the interrupt based serial input. No particular section is
     required. Due to the low performance requirements we can use any location and do normal
@@ -233,145 +220,17 @@ volatile unsigned long sio_serialInNoRxBytes = 0;
  */
 
 /**
- * Initialize the DMA device. The chosen channel is set up to write the contents of a
- * cyclic buffer of fixed address and size into the UART.
- *   @remark
- * The DMA initialization is mostly related to the DMA channel in use (which can be
- * considered reserved for this purpose in all reasonable environments). However, this
- * function access some DMA registers, too, that affect all channels (e.g. channel
- * arbitration). This function will require changes, when the module is integrated into an
- * environment, where different DMA channels are applied for different, irrelated purposes.
+ * Initialize the external pin mapping. If LINFlexD_0 is configured then the LINFlexD
+ * device can be used without additional hardware or wiring for the serial communication
+ * with the openSDA chip on the TRK-USB-MPC5643L evaluation board.\n
+ *   Additional wiring is required for LINFlexD_1. The ports PD9/12 are used for TX, RX,
+ * respectively.\n
+ *   Other pin mappings are not supported. Usually there is more than one choices per
+ * LINFlexD device. If the code is run on another board it depends which pins to be used.
+ * This cannot be anticipated by the code offered here.
  */
-static void initDMA(void)
+static void configSIULForUseWithOpenSDA(void)
 {
-    /* Check preconditions for use of DMA with modulo source addressing. If this assert
-       fires it may point to a inconsistency between the C source code and the linker
-       control file, which provides the address of the buffer. */
-    assert(((uintptr_t)_serialOutRingBuf & SERIAL_OUTPUT_RING_BUFFER_IDX_MASK) == 0);
-    
-    /* Initialize write to ring buffer. */
-    _serialOutRingBufIdxWrM = 0;
-    
-    /* Initial load address of source data is the beginning of the ring buffer. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD0_.B.SADDR =
-                                    (vuint32_t)&_serialOutRingBuf[_serialOutRingBufIdxWrM];
-    /* Read 1 byte per transfer. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.SSIZE = 0;
-    /* After transfer, add 1 to the source address. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.SOFF = 1;
-    /* After major loop, do not move the source pointer. Next transfer will read from next
-       cyclic address. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD12_.B.SLAST = 0;
-    /* Source modulo feature is applied to implement the ring buffer. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.SMOD =
-                                                SERIAL_OUTPUT_RING_BUFFER_SIZE_PWR_OF_TWO;
-
-    /* Load address of destination is fixed. It is the byte input of the UART's FIFO. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD16_.B.DADDR =
-                                                        ((vuint32_t)&LINFLEX.BDRL.R) + 3;
-    /* Write 1 byte per transfer. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.DSIZE = 0;
-    /* After transfer, do not alter the destination address. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.DOFF = 0;
-    /* After major loop, do not alter the destination address. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD24_.B.DLAST_SGA = 0;
-    /* Destination modulo feature is not used. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.DMOD = 0;
-
-    /* Transfer 1 byte per minor loop */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.SMLOE = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.DMLOE = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.MLOFF = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.NBYTES = 1;
-
-    /* Initialize the begining and current major loop iteration counts to zero. We will set
-       it in the next call of sio_writeSerial. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER_LINKCH = 0;
-
-    /* Do a single transfer; don't repeat, don't link to other channels. 1: Do once, 0:
-       Continue by repeating all */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.D_REQ = 1;
-    
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.INT_HALF = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.INT_MAJ = 1;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER_E_LINK = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER_E_LINK = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.MAJOR_E_LINK = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.E_SG = 0;
-    
-    /* 0: No stalling, 3: Stall for 8 cycles after each byte; fast enough for serial com. */
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BWC = 3;
-    
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.START = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.DONE = 0;
-    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.ACTIVE = 0;
-
-    /* ERCA, 0x4: 1: Round robin for channel arbitration, 0: Priority controlled
-       EDBG, 0x2: 1: Halt DMA when entering the debugger.
-         Note, this setting affects all channels! */
-    EDMA.DMACR.R = 0x2;
-
-    /* We use priority controlled channel arbitration. All active channels need to have
-       different priorities. The standard configuration is to set the priority to the
-       channel number. This is the reset default of the hardware and we are not going to
-       change it. The reset default disables preemptability or all channels.
-         Note, this configuration affects all channels! */
-#if 0
-    unsigned int idxChn;
-    for(idxChn=0; idxChn<16; ++idxChn)
-    {
-        /* ECP, 0x80: 1: Channel can be preempted, 0: cannot be preempted
-           DPA, 0x40: 0: Channel can preempt, 1: cannot preempt others */
-        EDMA.DCHPRI[idxChn].R = idxChn;
-    }
-#endif
-
-    /* EDMA.DMAERQL.R: Not touched yet, we don't enable the channel yet. This will be done in
-       the next use of sio_writeSerial. */
-    
-    /* Route LINFlex TX DMA request to eDMA channel DMA_CHN_FOR_SERIAL_OUTPUT.
-         ENBL, 0x80: Enable channel
-         SOURCE, 0x3f: Selection of DMAMUX input. The devices are hardwired to the DMAMUX
-       and the index of a specific device can be found in table 18-4, MCU ref. manual, p.
-       388. Index 22: LINFlexD_0, Tx, index 24: LINFlexD_1, Tx */
-    DMAMUX.CHCONFIG[DMA_CHN_FOR_SERIAL_OUTPUT].R |= (0x80 + 22 + 2*IDX_LINFLEX_D);
-
-} /* End of initDMA */
-
-
-
-
-/**
- * Initialization of the MPC5643L's I/O device LINFlex_0. The device is put into UART mode
- * for serial in-/output.
- *   @param baudRate
- * The Baud rate in Hz. Allow values range from 10 .. 1000000, proven values range from 300
- * till 115200 Hz.
- *   @remark
- * To match the correct Baud rates the code assumes a peripheral clock rate of 120 MHz.
- */
-static void initLINFlex(unsigned int baudRate)
-{
-    /* Avoid over-/underflow down below. */
-    if(baudRate < 10)
-        baudRate = 10;
-    else if(baudRate > 1000000)
-        baudRate = 1000000;
-    
-    /* Please find the UART register description in the MCU ref. manual, section 30.10, p.
-       979ff. */
-
-    /* Enter INIT mode. This is a prerequiste to access the other registers.
-       INIT, 0x1: 1 init mode, 0 normal operation or sleep
-       SLEEP, 0x2: 1 sleep mode, 0: normal operation */
-    LINFLEX.LINCR1.R = 0x1;
-
-    /* Wait for acknowledge of the INIT mode. */
-    while (0x1000 != (LINFLEX.LINSR.R & 0xf000))
-    {}
-
     /* Configure SIUL. Specify for the affected MCU pins, which function they have. We
        connect the RX and TX ports of the LINFlex_0 device with the MCU pins, that are
        connected to the USB-to-serial chip. The possible connections are (MCU ref. manual,
@@ -418,11 +277,162 @@ static void initLINFlex(unsigned int baudRate)
     /* PSMI: Input select. */
     SIU.PSMI31.B.PADSEL = 0;    /* PSMI[31]=0 connects pin B3 with LINFlexD_0 RX. */
 
+} /* End of configSIULForUseWithOpenSDA */
+
+
+
+/**
+ * Initialize the DMA device. The chosen channel is set up to write the contents of a
+ * cyclic buffer of fixed address and size into the UART.
+ *   @remark
+ * The DMA initialization is mostly related to the DMA channel in use (which is considered
+ * globally reserved for this purpose). However, this function accesses some DMA registers,
+ * too, that affect all channels (e.g. channel arbitration). This function will require
+ * changes, when the module is integrated into an environment, where different DMA channels
+ * are applied for different, unrelated purposes.
+ */
+static void configDMA(void)
+{
+    /* Check preconditions for use of DMA with modulo source addressing. If this assert
+       fires it may point to a inconsistency between the C source code and the linker
+       control file, which provides the address of the buffer. */
+    assert(((uintptr_t)_serialOutRingBuf & SERIAL_OUTPUT_RING_BUFFER_IDX_MASK) == 0);
+    
+    /* The linker script is required to provide a properly aligned buffer without risking
+       to loose lots of RAM because of the alignment. Therefore, the linker script itself
+       has a constant for the size of the buffer. We need to double check the consistency
+       of linker configuration with C code. */
+    extern uint8_t ld_noBitsDmaRingBuffer[0] ATTRIB_DBG_ONLY;
+    assert((uintptr_t)ld_noBitsDmaRingBuffer == SERIAL_OUTPUT_RING_BUFFER_SIZE_PWR_OF_TWO);
+
+    /* Initialize write to ring buffer. */
+    _serialOutRingBufIdxWrM = 0;
+    
+    /* Initial load address of source data is the beginning of the ring buffer. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD0_.B.SADDR =
+                                    (vuint32_t)&_serialOutRingBuf[_serialOutRingBufIdxWrM];
+    /* Read 1 byte per transfer. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.SSIZE = 0;
+    /* After transfer, add 1 to the source address. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.SOFF = 1;
+    /* After major loop, do not move the source pointer. Next transfer will read from next
+       cyclic address. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD12_.B.SLAST = 0;
+    /* Source modulo feature is applied to implement the ring buffer. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.SMOD =
+                                                SERIAL_OUTPUT_RING_BUFFER_SIZE_PWR_OF_TWO;
+
+    /* Load address of destination is fixed. It is the byte input of the UART's FIFO. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD16_.B.DADDR =
+                                                        ((vuint32_t)&LINFLEX.BDRL.R) + 3;
+    /* Write 1 byte per transfer. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.DSIZE = 0;
+    /* After transfer, do not alter the destination address. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.DOFF = 0;
+    /* After major loop, do not alter the destination address. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD24_.B.DLAST_SGA = 0;
+    /* Destination modulo feature is not used. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD4_.B.DMOD = 0;
+
+    /* Transfer 1 byte per minor loop */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.SMLOE = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.DMLOE = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.MLOFF = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD8_.B.NBYTES = 1;
+
+    /* Initialize the begining and current major loop iteration counts to zero. We will set
+       it in the next call of sio_writeSerial. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER_LINKCH = 0;
+
+    /* Do a single transfer; don't repeat, don't link to other channels. 1: Do once, 0:
+       Continue by repeating all */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.D_REQ = 1;
+    
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.INT_HALF = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.INT_MAJ = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER_E_LINK = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER_E_LINK = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.MAJOR_E_LINK = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.E_SG = 0;
+    
+    /* 0: No stalling, 3: Stall for 8 cycles after each byte; fast enough for serial com. */
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BWC = 3;
+    
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.START = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.DONE = 0;
+    EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.ACTIVE = 0;
+
+    /* ERCA, 0x4: 1: Round robin for channel arbitration, 0: Priority controlled
+       EDBG, 0x2: 1: Halt DMA when entering the debugger.
+         Note, this setting affects all channels! */
+    EDMA.DMACR.R = 0x2;
+
+    /* We use priority controlled channel arbitration. All active channels need to have
+       different priorities. The standard configuration is to set the priority to the
+       channel number. This is the reset default of the hardware and we are not going to
+       change it. The reset default disables preemptability or all channels.
+         Note, this configuration affects all channels! */
+#if 0
+    unsigned int idxChn;
+    for(idxChn=0; idxChn<16; ++idxChn)
+    {
+        /* ECP, 0x80: 1: Channel can be preempted, 0: cannot be preempted
+           DPA, 0x40: 0: Channel can preempt, 1: cannot preempt others */
+        EDMA.DCHPRI[idxChn].R = idxChn;
+    }
+#endif
+
+    /* EDMA.DMAERQL.R: Not touched yet, we don't enable the channel yet. This will be done in
+       the next use of sio_writeSerial. */
+    
+    /* Route LINFlex TX DMA request to eDMA channel DMA_CHN_FOR_SERIAL_OUTPUT.
+         ENBL, 0x80: Enable channel
+         SOURCE, 0x3f: Selection of DMAMUX input. The devices are hardwired to the DMAMUX
+       and the index of a specific device can be found in table 18-4, MCU ref. manual, p.
+       388. Index 22: LINFlexD_0, Tx, index 24: LINFlexD_1, Tx */
+    DMAMUX.CHCONFIG[DMA_CHN_FOR_SERIAL_OUTPUT].R |= (0x80 + 22 + 2*IDX_LINFLEX_D);
+
+} /* End of configDMA */
+
+
+
+
+/**
+ * Initialization of the MPC5643L's I/O device LINFlex_0. The device is put into UART mode
+ * for serial in-/output.
+ *   @param baudRate
+ * The Baud rate in Hz. Allow values range from 10 .. 1000000, proven values range from 300
+ * till 115200 Hz. ("Proven" relates to the TRK-USB-MPC6543L connected to a Windows host
+ * through openSDA and USB.)
+ *   @remark
+ * To match the correct Baud rates the code assumes a peripheral clock rate of 120 MHz.
+ */
+static void configLINFlex(unsigned int baudRate)
+{
+    /* Avoid over-/underflow down below. */
+    if(baudRate < 10)
+        baudRate = 10;
+    else if(baudRate > 1000000)
+        baudRate = 1000000;
+    
+    /* Please find the UART register description in the MCU ref. manual, section 30.10, p.
+       979ff. */
+
+    /* Enter INIT mode. This is a prerequisite to access the other registers.
+       INIT, 0x1: 1 init mode, 0 normal operation or sleep
+       SLEEP, 0x2: 1 sleep mode, 0: normal operation */
+    LINFLEX.LINCR1.R = 0x1;
+
+    /* Wait for acknowledge of the INIT mode. */
+    while((LINFLEX.LINSR.R & 0xf000) != 0x1000 /* initialization mode*/)
+    {}
+
     /* Configure the LINFlex to operate in UART mode
        UART, 0x1: 0 for UART, 1 for LIN
-         Note, the NXP samples set the UART bit prior to other bits in the same register in
-       order to become able to write the other configuration bits. This has not been
-       doubted although such behavior is not documented in the MCU manual, section 30.9. */
+         The UART bit is set prior to other bits in the same register in
+       order to become able to write the other configuration bits. */
     LINFLEX.UARTCR.R = 0x0001;
 
     /* RDFLRFC, 0x1c00: (no bytes to receive - 1) in buffer mode or read FIFO fill amount
@@ -443,7 +453,7 @@ static void initLINFlex(unsigned int baudRate)
        LINIBRR.IBR = integer part of LFDIV
        LINFBRR.FBR = 16 * fractional part of LFDIV (after decimal point)
 
-       for instance:
+       Example:
        LFDIV = 120e6/(16*19200) = 390.625
        LINIBRR.IBR = 390
        LINFBRR.FBR = 16*0.625 = 10 
@@ -461,6 +471,9 @@ static void initLINFlex(unsigned int baudRate)
     LINFLEX.LINIBRR.B.IBR = IBR;
     LINFLEX.LINFBRR.B.FBR = FBR;
 
+    /* Clear all possibly pending status bits by w2c access. RM 30.10.6, p. 992. */
+    LINFLEX.UARTSR.R = 0x0000ffafu;
+
 #define USE_FIELD_ALIASES_LINFLEX xxx
 
     /* LINIER: Interrupt enable. The bits relate to the bits of same name in LINESR (error
@@ -477,87 +490,15 @@ static void initLINFlex(unsigned int baudRate)
        SR: set 1 to reset counters, buffers and FIFO but keep configuration and operation */
 
     /* Enter normal mode again. */
-    /// @todo Why don't we wait as on init?
     LINFLEX.LINCR1.R = 0x0; /* INIT, 0x1: 0, back to normal operation */
     
-} /* End of initLINFlex */
+    /* According to RM 30.10.3 we would expect LINSR.LINS transit to 2, to indicate the idle
+       state. However, the following loop is endless, LINS changes from 1 (initialization
+       mode) to 0 (sleep mode) and remains there. Nonetheless, the UART is worimg well. */
+    //while((LINFLEX.LINSR.R & 0xf000) != 0x2000 /* idle */){}
 
+} /* End of configLINFlex */
 
-
-
-/**
- * Interrupt handler for DMA channel DMA_CHN_FOR_SERIAL_OUTPUT.
- *   @remark
- * This interrupt must have a priority higher than any OS schedule relevant interrupt. The
- * application tasks using the serial channel must not become active.
- */
-static void dmaTransferCompleteInterrupt(void)
-{
-    /* Note, most buffer addresses or indexes in this section of the code are understood as
-       cylic, i.e. modulo the buffer size. This is indicated by an M as last character of
-       the affectzed symbols but not mentioned again in the code comments. */
-#define MODULO(bufIdx)    ((bufIdx) & SERIAL_OUTPUT_RING_BUFFER_IDX_MASK)
-
-    /* Interrupt should be raised on transfer done. Reset of the bit by software is however
-       not required. */
-#define IRQ_MASK    (0x1 << DMA_CHN_FOR_SERIAL_OUTPUT)
-    assert(EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.DONE == 1);
-    assert((EDMA.DMASERQ.R & IRQ_MASK) == 0);
-    assert(_serialOutDmaTransferIsRunning);
-    
-    /* MCU ref manual is ambiguous in how to reset the interrupt request bit: It says both,
-       DMAINTL is a normal read modify write register and writing a 1 would reset the
-       corresponding bit while writing a 0 has no effect. Tried out: the latter works
-       well (and doesn't generate race conditions with other DMA channels like a
-       read-modify-write). */
-    EDMA.DMAINTL.R = IRQ_MASK;
-    
-    /* Check the cyclic address computation feature of the DMA in modulo mode. */
-    assert(EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD0_.B.SADDR >= (uintptr_t)&_serialOutRingBuf[0]
-           &&  EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD0_.B.SADDR
-               < (uintptr_t)&_serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE]
-          );
-
-    /* We need to retrigger the DMA transfer if the ring buffer has been written meanwhile
-       with new data. */
-    const uint32_t noBytesWrittenMeanwhile = 
-                        MODULO(_serialOutRingBufIdxWrM - EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD0_.B.SADDR);
-
-    /* Same pointer values is used as empty indication. Therefore it is not possible to
-       entirely fill the buffer. Condition "less than" holds. */
-    assert(noBytesWrittenMeanwhile < SERIAL_OUTPUT_RING_BUFFER_SIZE);
-
-    if(noBytesWrittenMeanwhile > 0)
-    {
-        /* Set the number of bytes to transfer by DMA to the UART.
-             Note, here we have a problem with the NXP support file MPC5643L.h. The same
-           value needs to be written to the two fields CITER and BITER of the Transfer
-           Control Words 5 and 7, respectively. These fields are defined conditionally,
-           depending on the channel-to-channel linking bit e_link - they have either
-           9 or 15 Bit. This could be mapped by a support file e.g. in form of a union,
-           which allows both variants. Unfortunately, MPC5643L.h defines CITER and BITER
-           unconditionaly but differently. We use the 15 Bit length and may use MPC5643L.h
-           to access BITER but must not use the support file to access CITER. */
-        EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = noBytesWrittenMeanwhile;
-        //EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytesWrittenMeanwhile;
-        const uint16_t doff = 0;
-        EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.R =
-                                            ((noBytesWrittenMeanwhile & 0x7fff) << 16) | doff;
-
-        /* Enable the UART to request bytes from the DMA. This initiates a subsequent DMA
-           transfer. */
-        ++ sio_serialOutNoDMATransfers;
-        EDMA.DMASERQ.R = DMA_CHN_FOR_SERIAL_OUTPUT;
-    }            
-    else
-    {
-        /* No subsequent DMA transfer is immediately initiated, so the application code
-           will need to start one the next time the API function sio_writeSerial is
-           called. */
-        _serialOutDmaTransferIsRunning = false;
-    }
-#undef MODULO
-} /* End of dmaTransferCompleteInterrupt */
 
 
 
@@ -566,7 +507,7 @@ static void dmaTransferCompleteInterrupt(void)
  * and put into our ring buffer if there's space left. Otherwise the character is counted
  * as lost without further remedial action.
  */
-static void linFlexRxInterrupt()
+static void linFlexRxInterrupt(void)
 {
     /* Get the received byte. */
     /// @todo Record a buffer overrun bit in case the IRQ handler comes too slow
@@ -599,7 +540,7 @@ static void linFlexRxInterrupt()
                 ++ _serialInNoEOL;
 
             /* Update write position into ring buffer. This is at the same time the indication
-               of the availablity of the new character to the application API functions. */
+               of the availability of the new character to the application API functions. */
             _pWrSerialInRingBuf = pWrNext;
         }
         else    
@@ -614,7 +555,7 @@ static void linFlexRxInterrupt()
         
     } /* End if(Character discarded?) */
 
-    /* Acknowlege the interrupt and enable the next one at the same time. */
+    /* Acknowlege the interrupt by w2c and enable the next one at the same time. */
     assert((LINFLEX.UARTSR.R & 0x4) != 0);
     LINFLEX.UARTSR.R = 0x4;  
     
@@ -630,22 +571,14 @@ static void registerInterrupts(void)
 {
 /* Interrupt offsets taken from MCU reference manual, p. 936. The DMA interrupts for the
    different channels start with 11, e.g. 26 for DMA channel 15. */
-#define IDX_DMA_IRQ         (11+DMA_CHN_FOR_SERIAL_OUTPUT)
 #define IDX_LINFLEX_RX_IRQ  (79 + 20*IDX_LINFLEX_D)
 
-    /* Register our IRQ handlers. Priority is chosen low for output DMA since we serve a
-       slow data channel, which even has a four Byte queue inside. */
-    ihw_installINTCInterruptHandler( &dmaTransferCompleteInterrupt
-                                   , /* vectorNum */ IDX_DMA_IRQ
-                                   , /* psrPriority */ INTC_PRIO_IRQ_DMA_FOR_SERIAL_OUTPUT
-                                   , /* isPreemptable */ true
-                                   );
+    /* Register our IRQ handler. */
     ihw_installINTCInterruptHandler( &linFlexRxInterrupt
                                    , /* vectorNum */ IDX_LINFLEX_RX_IRQ
                                    , /* psrPriority */ INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT
                                    , /* isPreemptable */ true
                                    );
-#undef IDX_DMA_IRQ 
 #undef IDX_LINFLEX_RX_IRQ
 } /* End of registerInterrupts */
 
@@ -663,13 +596,20 @@ static void registerInterrupts(void)
  */
 void sio_initSerialInterface(unsigned int baudRate)
 {
-    initLINFlex(baudRate);
+    /* Connect the LINFlexD device with the external MCU pins.
+         If LINFlexD_0 is configured on the evaluation board TRK-USB-MPC5643L, then
+       communication with the host computer via the openSDA chip and the USB connection
+       becomes possible. */
+    configSIULForUseWithOpenSDA();
+    
+    /* Configure the LINFlex device for serial in- and output. */
+    configLINFlex(baudRate);
 
-    /* Register the interrupt handler for DMA. */
+    /* Register the interrupt handler serial RX. */
     registerInterrupts();
     
-    /* Initialize DMA and connect it to the UART. */
-    initDMA();
+    /* Initialize DMA for writing into the UART. */
+    configDMA();
 
     /* Empty receive buffer. */
     _pWrSerialInRingBuf =
@@ -681,7 +621,10 @@ void sio_initSerialInterface(unsigned int baudRate)
 
 /** 
  * Principal API function for data output. A byte string is sent through the serial
- * interface. Actually, the bytes are queued for sending and the function is non-blocking. 
+ * interface. Actually, the bytes are queued for sending and the function is
+ * non-blocking.\n
+ *   The function can be called from any context. However, it must not be
+ * called untill function sio_initSerialInterface() has completed.
  *   @return
  * The number of queued bytes is returned. Normally, this is the same value as argument \a
  * noBytes. However, the byte sequence can be longer than the currently available space in
@@ -698,6 +641,13 @@ unsigned int sio_writeSerial(const char *msg, unsigned int noBytes)
 {
     uint32_t msr = ihw_enterCriticalSection();
     {
+        /* Stop the (possibly) running DMA channel.
+            See 19.2.1.15 and RM of MPC5748G, 70.5.8.1: Coherently stop a DMA channel with
+           the ability of resuming it later. */
+        while((EDMA.DMAHRSL.R & (0x1<<DMA_CHN_FOR_SERIAL_OUTPUT)) != 0)
+        {}
+        EDMA.DMACERQ.R = DMA_CHN_FOR_SERIAL_OUTPUT;
+
         /* Note, most buffer addresses or indexes in this section of the code are
            understood as cylic, i.e. modulo the buffer size. This is indicated by an M as
            last character of the affectzed symbols but not mentioned again in the code
@@ -756,14 +706,18 @@ unsigned int sio_writeSerial(const char *msg, unsigned int noBytes)
             memcpy(&_serialOutRingBuf[0], msg+noBytesAtEnd, noBytes-noBytesAtEnd);
         }           
         
+        /* Apply a memory barrier to ensure that all data is in memory before we (re-)start
+           the DMA transfer. */
+        atomic_thread_fence(memory_order_seq_cst);
+
         _serialOutRingBufIdxWrM = _serialOutRingBufIdxWrM + noBytes;
 
-        /* Start DMA only if there's no currently running transfer (from a write of
-           before). If there is such a running transfer then the next transfer will be
-           initiated from its on-complete-interrupt. */
-        if(noBytes > 0  &&  !_serialOutDmaTransferIsRunning)
-        {
-            /* Set the number of bytes to transfer by DMA to the UART. 
+        /* Start DMA. We can do this unconditionally because we have filtered the special
+           situation of not writing any new character. */
+        const uint32_t noBytesPending = MODULO(_serialOutRingBufIdxWrM - idxEndOfFreeSpaceM);
+        assert(noBytesPending > 0);
+    
+        /* Set the number of bytes to transfer to the UART by DMA.
                  Note, here we have a problem with the NXP support file MPC5643L.h. The
                same value needs to be written to the two fields CITER and BITER of the
                Transfer Control Words 5 and 7, respectively. These fields are defined
@@ -773,32 +727,26 @@ unsigned int sio_writeSerial(const char *msg, unsigned int noBytes)
                CITER and BITER unconditionally but differently. We use the 15 Bit length and
                may use MPC5643L.h to access BITER but must not use the support file to
                access CITER. */
-            assert((unsigned)noBytes <= SERIAL_OUTPUT_RING_BUFFER_SIZE-1);
-            EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = noBytes;
-            //EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytes;
+        assert((unsigned)noBytesPending <= SERIAL_OUTPUT_RING_BUFFER_SIZE-1);
+        EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD28_.B.BITER = noBytesPending;
+        //EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.B.CITER = noBytesPending;
             const uint16_t doff = 0;
             EDMA.CHANNEL[DMA_CHN_FOR_SERIAL_OUTPUT].TCDWORD20_.R =
-                                                        ((noBytes & 0x7fff) << 16) | doff;
+                                                    ((noBytesPending & 0x7fff) << 16) | doff;
 
             /* Enable the DMA channel to accept the UART's requests for bytes. This
-               initiates a DMA transfer.
+           initiates or resumes the DMA transfer.
                  NOP, 0x80: 1: Ignore write to register (to permit 32 Bit access to more
                than one of these byte registers at a time)
-                 SERQ0, 0x40: 0: Address channel with SERQ, 1: Enable all channels
+             SERQ, 0x40: 0: Address channel with SERQ, 1: Enable all channels
                  SERQ, 0xf: Channel number */
-            atomic_thread_fence(memory_order_seq_cst);
+        EDMA.DMASERQ.R = DMA_CHN_FOR_SERIAL_OUTPUT;
             ++ sio_serialOutNoDMATransfers;
-            EDMA.DMASERQ.R = DMA_CHN_FOR_SERIAL_OUTPUT;
 
-            /* The status, whether we have currently started a transfer or not is shared
-               with the on-complete-interrupt. */
-            _serialOutDmaTransferIsRunning = true;
-        }
 #undef MODULO
     }
     ihw_leaveCriticalSection(msr);
     
-    /* noBytes is saturated to buffer size-1 and can't overflow in conversion to signed. */
     return noBytes;
     
 } /* End of sio_writeSerial */
@@ -862,7 +810,7 @@ signed int sio_getChar(void)
 
 /**
  * The function reads a line of text from serial in and stores it into the string pointed
- * to by \a str. It stops when either the end of line character is read and returns an
+ * to by \a str. It stops when the end of line character is read and returns an
  * empty string if no such character has been received since system start or the previous
  * call of this function.\n
  *   Note, the latter condition means that the function is non-blocking - it doesn't wait
@@ -877,7 +825,7 @@ signed int sio_getChar(void)
  * This function returns \a str on success, and NULL on error or if not enough characters
  * have been received meanwhile to form a complete line of text.\n
  *   Note the special situation of a full receive buffer without having received any end of
- * line character. Ths system would be stuck - later received end of line characters would
+ * line character. The system would be stuck - later received end of line characters would
  * be discarded becaus eof the full buffer and this function could never again return a
  * line of text. Therefore the function will return the complete buffer contents at once as
  * a line of input.
@@ -903,15 +851,15 @@ signed int sio_getChar(void)
  * string in \a str, but they differ in function return code, which is NULL or \a str,
  * respectively.
  *   @remark
- * On buffer overrun, an end of line won't be written into the internal receive buffer and
- * the truncated line will be silently concatenated with its successor. You may consider
- * observing the global variables \a sio_serialOutNoTruncatedMsgs or \a
- * sio_serialInLostBytes to recognize this situation. Note, because of the race conditions
- * between serial I/O interrupt and application software you can not clearly relate a
- * change of these variables to a particular message you get from this function. In
- * particular, you must not try to reset the counter prior to a read operation in order to
- * establish such a relation. Your application will just know that there are some garbled
- * messages.
+ * On buffer overrun, i.e. if the client code didn't invoke this function fast enough, an
+ * end of line won't be written into the internal receive buffer and the truncated line
+ * will be silently concatenated with its successor. You may consider observing the global
+ * variable \a sio_serialInLostBytes to recognize this situation. Note, because of the race
+ * conditions between serial I/O interrupt and application software you can not clearly
+ * relate a change of these variables to a particular message you get from this function.
+ * In particular, you must not try to reset the counter prior to a read operation in order
+ * to establish such a relation. Your application will just know that there is some garbled
+ * input.
  */
 char *sio_getLine(char str[], unsigned int sizeOfStr)
 {

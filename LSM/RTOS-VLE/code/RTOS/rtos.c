@@ -702,8 +702,8 @@ unsigned int rtos_getStackReserve(void)
 {
     /* The stack area is defined by the linker script. We can access the information by
        declaring the linker defined symbols. */
-    extern uint32_t ld_memStackStart[];
-    uint32_t *sp = &ld_memStackStart[0];
+    extern uint32_t ld_stackStart[];
+    uint32_t *sp = &ld_stackStart[0];
 
     /* The bottom of the stack is always initialized with a non pattern word (e.g. there's
        an illegal return address 0xffffffff). Therefore we don't need a limitation of the
@@ -711,7 +711,7 @@ unsigned int rtos_getStackReserve(void)
     while(*sp == 0xa5a5a5a5)
         ++ sp;
 
-    return sizeof(uint32_t)*(unsigned int)(sp - &ld_memStackStart[0]);
+    return sizeof(uint32_t)*(unsigned int)(sp - &ld_stackStart[0]);
 
 } /* End of rtos_getStackReserve */
 

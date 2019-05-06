@@ -28,9 +28,9 @@ binFolder = bin/ppc/$(CONFIG)/
 
 # Function pathSearch
 #   Look for a single file in a search path, i.e. a list of directories.
-# $(1): Blank separated path list (not ending on shlashes) to search through
+# $(1): Blank separated path list to search through
 # $(2): File name without path to be searched in the path
-pathSearch = $(firstword $(wildcard $(addsuffix /$(2),$(1))))
+pathSearch = $(firstword $(wildcard $(addsuffix $(2),$(call trailingSlash,$(1)))))
 # Example:
 #$(info make is $(call pathSearch,$(subst ;, ,$(PATH)),make.exe))
 
@@ -101,7 +101,8 @@ define createFileList
     $(shell $(echo) $(firstword $(2)) > $(1))
     $(foreach srcFile,$(wordlist 2,$(words $(2)),$(2)),$(shell $(echo) $(srcFile) >> $(1)))
 endef # createFileList
-#   Example:
+#   Example (note that the example won't run here, because the order of includes of *.mk
+# $(echo) is not set yet):
 #$(info Create file tmp.lst$(and $(call createFileList,tmp.lst,file1.c file2.c file3.c),))
 
 # Test for equality: A wrapper around the required ugly string comparison operations.
@@ -109,3 +110,17 @@ endef # createFileList
 # http://stackoverflow.com/questions/7324204/how-to-check-if-a-variable-is-equal-to-one-of-two-values-using-the-if-or-and-fun
 # on March 22, 2017.
 eq = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+
+
+
+# Test if a file is in a list of such. Can be used in conditional expressions to handle
+# such a file specifically.
+#   The file is addressed by $(notdir $(1)), i.e. it is addressed to by only its raw file
+# name with extension.
+#   $(1): The file (can also be a list of such). The macro expands to non-empty if the file
+# (or one or more of the files in the list) matches one of the elements of the list $(2).
+# Otherwise it expands to nothing. The macro can thus be used as condition c of
+# $(if c, ... , ...)
+#   $(2): The list of file names to test. Only provide raw file names with extension.
+isFileInList = $(if $(filter $(2), $(notdir $(1))),1,)
+#$(info "$(call isFileInList, a/x/test.c path/c, a b xtest.c)")

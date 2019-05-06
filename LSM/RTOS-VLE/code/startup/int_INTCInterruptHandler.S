@@ -32,8 +32,6 @@
  * Include files
  */
 
-#include "sup_settings.h"
-
 
 /*
  * Defines
@@ -167,8 +165,14 @@ int_INTCInterruptHandler:
          0x00008000: EE (depends, only for preemtable handlers)
          0x00001000: ME */
     
+    /** @todo Revise handling of MSR: It is not necessary to set ME and CE, they are not
+        changed by the interrupt. Meanwhile we say not to use SPE at all since we only save
+        a 32 Bit context. All of this means that the several instructions to manipulate the
+        MSR can be condensed to a single wrteei. */
+
 int_isPreemptable:
     /* Clear the flag bit to get the proper address back. */
+    /// @todo Use se_bclri r3, 0
     e_rlwinm r3, r3, 0, 1, 31   /* Keep bits 0..30 in r3 */
     
     /* Enable processor recognition of interrupts. */
