@@ -38,7 +38,7 @@
  * assertion, which will halt the code execution (in DEBUG compilation only). Everything is
  * fine as long as the LEDs continue blinking.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -87,7 +87,6 @@
 
 #include "MPC5643L.h"
 #include "typ_types.h"
-#include "sup_settings.h"
 #include "ihw_initMcuCoreHW.h"
 #include "lbd_ledAndButtonDriver.h"
 #include "sio_serialIO.h"

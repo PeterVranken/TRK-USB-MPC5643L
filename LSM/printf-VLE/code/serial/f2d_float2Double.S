@@ -99,7 +99,7 @@ f2d:
 
     se_lwz  r0, 20(sp)      /* Load return address back into linkr register */
     mtlr    r0
-    e_la    sp, 16(sp)      /* Delete stack frame */
+    se_addi sp, 16          /* Delete stack frame */
     se_blr                  /* Return */
     
 #else /* Book E */
