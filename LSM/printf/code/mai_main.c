@@ -19,7 +19,7 @@
  * Bit, no parity, 1 start and stop bit. After reset of the evaluation board, begin with
  * typing help in the terminal program.
  *
- * Copyright (C) 2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
