@@ -58,7 +58,7 @@
 #
 # The makefile compiles and links all source files which are located in a given list of
 # source directories. The list of directories is a variable set in the calling makefile,
-# please look the variable srcDirList below.
+# please look for the variable srcDirList below.
 #   A second list of files is found as cFileListExcl. These C/C++ or assembler files are
 # excluded from build.
 

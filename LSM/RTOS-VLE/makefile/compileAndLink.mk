@@ -58,7 +58,7 @@
 #
 # The makefile compiles and links all source files which are located in a given list of
 # source directories. The list of directories is a variable set in the calling makefile,
-# please look the variable srcDirList below.
+# please look for the variable srcDirList below.
 #   A second list of files is found as cFileListExcl. These C/C++ or assembler files are
 # excluded from build.
 
@@ -87,7 +87,8 @@ projectExe := $(target).s19
 .PHONY: h help targets usage
 .DEFAULT_GOAL := help
 h help targets usage:
-	$(info Usage: make [-s] [-k] [CONFIG=<configuration>] [SAVE_TMP=1] {<target>})
+	$(info Usage: make [-s] [-k] [INSTR=<instructionSet>] [CONFIG=<configuration>] [APP=<sourceCodeFolder>] [SAVE_TMP=1] {<target>})
+	$(info INSTR: <instructionSet> is one out of BOOK_E (default) or VLE.)
 	$(info CONFIG: <configuration> is one out of DEBUG (default) or PRODUCTION.)
 	$(info SAVE_TMP set to one will make the preprocessed C(++) sources and the assembler \
            files appear in the target directory bin/ppc/<configuration>/obj/)
@@ -240,6 +241,15 @@ endif
     # Ofast: 41%, likely same as -O3
 productionCodeOptimization := -Os
 
+# Choose C library.
+#   The switch -specs=nosys.specs links the generically implemented C library against a
+# stub library that satisfies the low level I/O routines without providing true
+# functionality. We must not use this switch if we want to have the printf
+# functionality with true I/O. If we remove this switch we need however to provide our
+# own I/O stub to satisfy the low level I/O of the clib. See file nwl_ioSysNewLib.c.
+cClibSpec := --sysroot=$(call w2u,$(dir $(gcc))../powerpc-eabivle/newlib)
+#cClibSpec += -specs=nosys.specs
+
 # Pattern rules for assembler language source files.
 asmFlags = $(targetFlags)                                                                   \
            -Wall                                                                            \
@@ -260,6 +270,8 @@ $(targetDir)obj/%.o: %.S
 
 # Pattern rules for compilation of, C and C++ source files.
 
+# TODO We could decide to not add -Winline if we optimize for size. With -Os it's quite
+# normal that an inline function is not implemented as such.
 ccFlags = $(targetFlags) -mno-string                                                        \
           -fno-common -fno-exceptions -ffunction-sections -fdata-sections                   \
           -fshort-enums -fdiagnostics-show-option -finline-functions -fmessage-length=0     \
@@ -271,7 +283,7 @@ ccFlags = $(targetFlags) -mno-string                                            
           -Werror=int-to-pointer-cast -Werror=pointer-sign -Werror=pointer-to-int-cast      \
           -Werror=return-local-addr -Werror=missing-prototypes                              \
           -Werror=missing-field-initializers                                                \
-          -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                              \
+         $(cClibSpec) -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                  \
           $(foreach path,$(call noTrailingSlash,$(srcDirListExpanded) $(incDirList)),-I$(path))\
           $(cDefines) $(foreach def,$(defineList),-D$(def))
 ifeq ($(SAVE_TMP),1)
