@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -250,13 +250,14 @@ endif
     # Os: 50%, requires linkage of crtsavres.S
     # Ofast: 41%, likely same as -O3
 productionCodeOptimization := -Os
+
 # Choose C library.
 #   The switch -specs=nosys.specs links the generically implemented C library against a
 # stub library that satisfies the low level I/O routines without providing true
 # functionality. We must not use this switch if we want to have the printf
 # functionality with true I/O. If we remove this switch we need however to provide our
 # own I/O stub to satisfy the low level I/O of the clib. See file nwl_ioSysNewLib.c.
-cClibSpec := --sysroot=$(call w2u,$(GCC_POWERPC_HOME))/powerpc-eabivle/newlib
+cClibSpec := --sysroot=$(call w2u,$(dir $(gcc))../powerpc-eabivle/newlib)
 #cClibSpec += -specs=nosys.specs
 
 # Pattern rules for assembler language source files.
@@ -281,40 +282,46 @@ $(targetDir)obj/%.o: %.S
 
 # TODO We could decide to not add -Winline if we optimize for size. With -Os it's quite
 # normal that an inline function is not implemented as such.
-cFlags = $(targetFlags) -mno-string                                                         \
+ccFlags = $(targetFlags) -mno-string                                                         \
          -fno-common -fno-exceptions -ffunction-sections -fdata-sections                    \
          -fshort-enums -fdiagnostics-show-option -finline-functions -fmessage-length=0      \
          -fzero-initialized-in-bss -fno-tree-loop-optimize                                  \
-         -Wall -Wno-main -Wno-old-style-declaration -Winline -Wextra -Wstrict-overflow=4    \
-         -Wmissing-declarations -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat        \
-         -Wformat-security -Wignored-qualifiers -Wsign-conversion -Wsign-compare            \
+          -Wall -Wno-main -Winline -Wextra -Wstrict-overflow=4 -Wmissing-declarations       \
+          -Wno-parentheses -Wdiv-by-zero -Wcast-align -Wformat -Wformat-security            \
+          -Wignored-qualifiers -Wsign-conversion -Wsign-compare                             \
          -Werror=missing-declarations -Werror=implicit-function-declaration                 \
-         -Wno-nested-externs -Werror=int-to-pointer-cast -Werror=pointer-sign               \
-         -Werror=pointer-to-int-cast -Werror=return-local-addr -Werror=missing-prototypes   \
+          -Werror=int-to-pointer-cast -Werror=pointer-sign -Werror=pointer-to-int-cast      \
+          -Werror=return-local-addr -Werror=missing-prototypes                              \
          -Werror=missing-field-initializers                                                 \
-         $(cClibSpec) -MMD -Wa,-a=$(patsubst %.o,%.lst,$@) -std=gnu11                       \
+         $(cClibSpec) -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                  \
          $(foreach path,$(call noTrailingSlash,$(srcDirListExpanded) $(incDirList)),-I$(path))\
          $(cDefines) $(foreach def,$(defineList),-D$(def))
 ifeq ($(SAVE_TMP),1)
     # Debugging the build: Put preprocessed C file and assembler listing in the output
     # directory
-    cFlags += -save-temps=obj -fverbose-asm 
+    ccFlags += -save-temps=obj -fverbose-asm 
 endif
 # Debug settings see https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
 ifeq ($(CONFIG),DEBUG)
-    cFlags += -g3 -gdwarf-2 -Og
+    ccFlags += -g3 -gdwarf-2 -Og
 else
-    cFlags += -g1 -gdwarf-2 $(productionCodeOptimization)
+    ccFlags += -g1 -gdwarf-2 $(productionCodeOptimization)
 endif
-#$(info cFlags := $(cFlags))
+
+cFlags = $(ccFlags) -Wno-old-style-declaration -Wno-nested-externs
+#$(info cFlags := $(cFlags), ccFlags := $(ccFlags))
 
 $(targetDir)obj/%.o: %.c
 	$(info Compiling C file $<)
-	$(gcc) -c $(cFlags) -o $@ $<
+	$(gcc) -c $(cFlags) -std=gnu11 -o $@ $<
 
-#$(targetDir)obj/%.o: %.cpp
-#	$(info Compiling C++ file $<)
-#	$(gcc) -c $(cFlags) -o $@ $<
+$(targetDir)obj/%.o: %.cpp
+	$(info Compiling C++ file $<)
+	$(gcc) -c $(ccFlags) -std=gnu++11 -o $@ $<
+
+$(targetDir)obj/%.o: %.cc
+	$(info Compiling C++ file $<)
+	$(gcc) -c $(ccFlags) -std=gnu++11 -o $@ $<
 
 # Create a preprocessed source file, which is convenient to debug complex nested macro
 # expansion, or an assembler listing, which is convenient to understand the
@@ -331,7 +338,11 @@ $(targetDir)obj/%.o: %.c
 
 %.i %.asm: %.cpp
 	$(info Preprocessing C++ file $(notdir $<) to text file $(patsubst %.cpp,%$(suffix $@),$<))
-	$(gcc) $(if $(call eq,$(suffix $@),.i),-E,-S) $(filter-out -MMD,$(cFlags)) -o $(patsubst %.cpp,%$(suffix $@),$<) $<
+	$(gcc) $(if $(call eq,$(suffix $@),.i),-E,-S) $(filter-out -MMD,$(ccFlags)) -o $(patsubst %.cpp,%$(suffix $@),$<) $<
+
+%.i %.asm: %.cc
+	$(info Preprocessing C++ file $(notdir $<) to text file $(patsubst %.cpp,%$(suffix $@),$<))
+	$(gcc) $(if $(call eq,$(suffix $@),.i),-E,-S) $(filter-out -MMD,$(ccFlags)) -o $(patsubst %.cpp,%$(suffix $@),$<) $<
 
 
 ## A general rule enforces rebuild if one of the configuration files changes
@@ -365,9 +376,9 @@ $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath)
 # calls __eabi() so that we need to offer a stub then. The clib is not initialized and it
 # can be that elements from it won't work.
 lFlags = -Wl,-Tmakefile/linkerControlFile$(if $(call eq,$(INSTR),BOOK_E),.BookE,.VLE).ld    \
-         -nostartfiles -Wl,--gc-sections $(targetFlags)                                     \
+         -Wl,--gc-sections $(targetFlags)                                                   \
          -Wl,-sort-common -Wl,-Map="$(targetDir)$(target).map" -Wl,--cref                   \
-         -Wl,--warn-common,--warn-once -Wl,-g                                               \
+         -Wl,--warn-common,--warn-once,--orphan-handling=warn -Wl,-g                        \
          $(cClibSpec)
 
 $(targetDir)$(target).elf: $(targetDir)obj/listOfObjFiles.txt                               \

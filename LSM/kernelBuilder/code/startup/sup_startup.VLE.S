@@ -2,8 +2,28 @@
  * @file sup_startup.S
  * VLE assembler implementation of startup code for MPC5643L in Lockstep Mode (LSM). The
  * code has been designed for use with GCC for PowerPC EABI.
+ *   On core 0, the startup code:\n
+ *   - Zeroizes all GPR\n
+ *   - Initializes the exception vectors (IVOR)\n
+ *   - Initializes the MMU for widely open access\n
+ *   - Enables Critical Interrupt handling\n
+ *   - Enables branch target prediction\n
+ *   - Initializes the high resolution timer (time base)\n
+ *   - Zeroizes all physical RAM\n
+ *   - Disables the watchdog, which is running by default\n
+ *   - Enables instruction cache\n
+ *   - Initializes the stack\n
+ *   - Presets the small data pointers r2 and r13\n
+ *   - Copy initial values to RAM for all initialized data sections\n
+ *   - Branches into the C main function\n
+ *   The further HW initialization is left to the C code and needs to be called from the
+ * begining of the main function. A minumum configuration would be:\n
+ *   - All clock settings (on entry into main we still run on the fast internal RC
+ *     oscillator)\n
+ *   - Peripheral bridge\n
+ *   - Interrupt controller for External Interrupts\n
  *
- * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -19,16 +39,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   sub_startup
- *   __eabi
- *   sup_IVOR0trap .. sup_IVOR15trap
+ *   sup_startup
+ *   sup_IVOR0trap .. sup_IVOR3trap
+ *   sup_IVOR5trap .. sup_IVOR15trap
  *   sup_IVOR32trap .. sup_IVOR34trap
  * Local functions
  *   zeroizeRegisters
+ *   disableWatchdog
  *   initExceptionHandlers
  *   initMMU
  *   initTimeBase
  *   zeroizeSRAM
+ *   initSDataRegisters
  *   disableWatchdog
  *   initFlash
  */
@@ -39,13 +61,19 @@
  * Include files
  */
 
-#include "sup_settings.h"
 #include "mmu_mmuRegions_VLE.h"
+
 
 
 /*
  * Defines
  */
+
+/** Switch instruction cache on. */
+#define ENABLE_ICACHE               1
+
+/** Switch branch prediction on. */
+#define ENABLE_BRANCH_PREDICTION    1
 
 /* The definition of the boot sector (at 0x00000000). The data contents are defined here
    and the location of the boot sector is defined in the linker control file.
@@ -59,22 +87,12 @@
  * External function declarations
  */
 
+/** C main function. */
 .extern main
 
 /*
  * Data declarations
  */
-
-/** Linker provided symbol, which has the address of the end of the stack area
-    (effectively the bottom of the stack, it grows downwards). */
-.extern ld_memStackStart
-
-/** Linker provided symbols that hold end of stack area and its size in Byte. */
-.extern ld_memStackEnd, ld_memStackSize
-
-/** Linker provided symbols, which indicate where initialized data begins and ends in RAM
-    and where its initial data is located in ROM. */
-.extern ld_dataStart, ld_dataEnd, ld_dataMirrorStart
 
 
 /*
@@ -90,7 +108,6 @@
 sup_bamData:
     .dc.w RCHW_VALUE, 0
     .dc.l sup_startUp
-    .align  4
 
 
 /**
@@ -99,26 +116,38 @@ sup_bamData:
  * specified in the BAM data block in the boot sector to make this happen after reset.
  */
     .section .boot, "a"
+    .extern     ld_stackStart       /* Absolute start of all stack memory. */
+    .extern     ld_stackEnd         /* End of stack memory area. */
+    .extern     suc_initializeRam   /* C code implementation of RAM initialization from ROM */
     .global sup_startUp
-    .type   sup_startUp, @function
+    .balign     2
 sup_startUp:
-    e_bl    zeroizeRegisters        /* Set MSR[SPE], clear all GPR and all relevant SPR */
+    e_bl        zeroizeRegisters        /* Clear all GPR and all relevant SPR */
     e_bl    initExceptionHandlers   /* Set all IVOR registers of the MCU */
     e_bl    initMMU                 /* Make MMU allow all memory accesses */
     
     /* Exception handlers are installed, memory is accessible - there's no reason to wait
-       any longer with enabling the higher prior interrupts (critical and machine
-       check). We have the minimum functionality of an empty trap handler, which reports
-       the problem to the SW developer.
+       any longer with enabling the higher prior interrupts (machine check). We have the
+       minimum functionality of an empty trap handler, which reports the problem to the SW
+       developer.
          Note, the external interrupts are not enabled yet. They are entirely managed by
        the application software. */
-    mfmsr   r0
-    e_or2is r0, 0x0002              /* CE: Critical interrupts */
-    e_or2i  r0, 0x1000              /* ME: Machine check */
+    e_li        r0, 0x1000  /* Initialize MSR: CE=EE=0 but ME=1 */
     mtmsr   r0
 
+#if ENABLE_BRANCH_PREDICTION == 1
+    /* Enable the Branch Target Buffer (BTB) for branch prediction. Clear all buffer
+       entries, which might be arbitrarily set after reset, and enable all branch
+       predictions. See CoreRM, sections 2.4.13, p. 81ff, and 4.4.2, p. 140.
+         0x200: BBFI, Branch target buffer flash invalidate
+         0x1: BPEN, Branch target buffer prediction enable */
+    e_li        r0, 0x201
+    mtspr       1013, r0        /* SPR 1013, Branch Unit Control and Status Register (BUCSR) */
+    se_isync
+#endif
+    
     e_bl    initTimeBase            /* Start the MCU's high resolution counter */
-    e_bl    zeroizeSRAM             /* Clear all RAM */
+    e_bl        zeroizeSRAM     /* Clear all RAM to avoid ECC errors */
 
     /* The watchdog is disabled now. Most available sample code code does do this as C
        function at the beginning of main, however, if we are in lockstep mode and use the
@@ -126,15 +155,50 @@ sup_startUp:
        to zeroize the bss section and the watchdog bites. */
     e_bl      disableWatchdog
 
+    /* Enable instruction cache. The procedure is described in the e200z4 Power
+       Architecture Core Reference Manual, section 9.6, p. 552ff. 9.6.1 Cache
+       Enable/Disable and 9.6.5 Cache Invalidation apply. */
+#if ENABLE_ICACHE == 1
+su_icache_cfg:
+    /* Core RM, 9.6.5: Instruction cache invalidation. */
+    se_li       r0, 0x2     /* SPR 1011: L1CSR1, Cache control and status register 1, Bit 1 */
+    mtspr       1011, r0    /* Set bit L1CSR1[ICINV] to start the invalidation of the
+                               entire instruction cache. All other bits remain zero, which
+                               is their reset default value */
+
+su_icache_waitForInvalidation:
+    sync            /* EREF 2.0, 4.5.4.3, table 4-3, demands a sync prio to mfspr L1CSR0/1 */
+    mfspr       r0, 1011    /* Read L1CSR1, invalidation busy bit 0x2 will be reset by HW
+                               on completion, abort bit 0x4 may be set before */
+    se_btsti    r0, 29      /* Test for abort */
+    se_beq      su_icache_noAbort
+    se_bclri    r0, 29      /* Explicitly clear the abort flag by SW */
+    mtspr       1011, r0
+    se_b        su_icache_cfg   /* Start over, retry */
+
+su_icache_noAbort:
+    se_btsti    r0, 30      /* Test still busy flag */
+    se_bne      su_icache_waitForInvalidation   /* Busy wait for completion. */
+
+    /* Core RM, 9.6.1: Data cache enabling */
+    se_bseti    r0, 31      /* Set bit L1CSR1[CDE], data cache enable */
+    se_isync
+    msync
+    mtspr       1011, r0
+    se_isync        /* EREF 2.0, 4.5.4.3, table 4-3, demands an isync after mfspr L1CSR0/1.
+                       We do this only here, where cache enabling has a context altering
+                       effect. */
+#endif
+
    /* The initial setting of the stack pointer. The stack rises towards lower addresses so
       the initial value is the end of the reserved RAM area. The value is provided by the
       linker, which is in charge to do the reservation but 16 Bytes are subtracted in order
-      to implements some EABI requirements concerning the bottom of the stack.
-        Note, there are some strict alignment constraints (16 Byte aligned values needed),
+      to implements some EABI requirements concerning the logical bottom of the stack.
+        Note, there are some strict alignment constraints (8 Byte aligned values needed),
       which need to be ensured in the linker script file. They are not checked here and
       will in case cause an exception. */
-    e_lis   sp, (ld_memStackEnd-16)@h
-    e_or2i  sp, (ld_memStackEnd-16)@l
+    e_lis       sp, (ld_stackEnd-16)@h
+    e_or2i      sp, (ld_stackEnd-16)@l
 
     /* Select appropriate conditions for the operation of the flash (waitstates, caching,
        etc.) It is essential to do this prior to rising the CPU clock rate by configuring
@@ -143,97 +207,82 @@ sup_startUp:
 
     /* Fill the stack with a byte pattern. This pattern is used later to measure the
        current stack usage. */
-    e_lis   r8, ld_memStackStart@h
-    e_or2i  r8, ld_memStackStart@l
-    e_lis   r9, ld_memStackSize@h
-    e_or2i  r9, ld_memStackSize@l
-    srawi   r9, r9, 0x2   /* Divide length in Byte by 2^2=4 */
-    mtctr   r9
-    e_lis   r9, 0xa5a5a5a5@h    /* Load pattern into r9 */
-    e_or2i  r9, 0xa5a5a5a5@l
+    e_lis       r3, ld_stackStart@h
+    e_or2i      r3, ld_stackStart@l
+    e_lis       r4, ld_stackEnd@h
+    e_or2i      r4, ld_stackEnd@l
+    se_sub      r4, r3
+    se_srwi     r4, 0x2             /* Divide length in Byte by 2^2=4 */
+    se_mtctr    r4
+    e_lis       r4, 0xa5a5a5a5@h    /* Load pattern into r4 */
+    e_or2i      r4, 0xa5a5a5a5@l
 su_loopFillStack:
-    e_stw   r9, 0(r8)           /* Write the four pattern bytes in r9 */
-    e_la    r8, 4(r8)           /* Increment write pointer */
+    e_stw       r4, 0(r3)           /* Write the four pattern bytes in r4 */
+    se_addi     r3, 4               /* Increment write pointer */
     e_bdnz  su_loopFillStack    /* Branch on counter register not zero */
 
     /* Taken from NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file __start.c, l. 186ff:
        "Prepare a terminating stack record."
-         Note, we'd set the stack pointer 16 Bytes below the end of the RAM area, so we
-       have enough head room to do so.
-         @todo To be check if we misunderstood something. The standard stack frame of the
-       entry into main will already overwrite the word 4(sp) with the saved link register
-       and our -1 has no effect. */
-    e_lis   r8, 0              /* Clear r8. */
-    e_stw   r8, 0(sp)          /* SysVr4 EABI Supp indicated that initial back chain word
-                                  should be null. */
-    e_addi  r8, r8, -1         /* Load 0xffffffff into r8. */
-    e_stw   r8, 4(sp)          /* Make an illegal return address of 0xffffffff.  */
+         Note, we had set the stack pointer 16 Bytes below the end of the RAM area, so we
+       have enough head room to do so. */
+    se_li       r3, 0       /* Clear r3 */
+    e_stw       r3, 0(sp)   /* Initial stack frame link pointer is set to NULL */
+    se_subi     r3, 1       /* Load 0xffffffff into r3 */
+    e_stw       r3, 4(sp)   /* By convention, initialize return address from first stack
+                               frame to -1. Has actually no effect */
+
+    /* Load r2 and r13 for small, fast data access */
+    e_bl    initSDataRegisters
     
     /* Copy the mirror of the initialized RAM sections from flash ROM to the RAM - all
-       global C data will have the wanted initial values. */
-    e_lis   r8, ld_dataMirrorStart@h    /* r8 points into ROM mirror of RAM, moving */
-    e_or2i  r8, ld_dataMirrorStart@l
-    e_lis   r9, ld_dataEnd@h            /* r9 is const pointer to the end of the RAM */
-    e_or2i  r9, ld_dataEnd@l
-    e_lis   r10, ld_dataStart@h         /* r10 is moving pointer to RAM write location */
-    e_or2i  r10, ld_dataStart@l
+       global C data will have the wanted initial values.
+         suc_initializeRam: Copying the RAM blocks is implemented in C code. */
+    e_lis       r3, suc_initializeRam@h
+    e_or2i      r3, suc_initializeRam@l
+    se_mtlr     r3
+    se_blrl
 
-    cmplw   cr0, r9, r10        /* The .data section may by empty */
-    e_beq   su_noInitData
-
-su_loopInitData:
-    e_lwz   r11, 0(r8)          /* Move next word from ROM to .data section in RAM */
-    e_la    r8, 4(r8)
-    e_stw   r11, 0(r10)
-    e_la    r10, 4(r10)
-    cmplw   cr0, r10, r9
-    e_blt   su_loopInitData
-    msync                       /* Complete the copy operation */
-su_noInitData:
-
-    /* GCC calls a routine, that is expected to prepare the eabi register configuration as
-       a callback on entry into main. Other compilers don't do so. For those, we call the
-       routine directly prior to main. */
-#ifndef __GNUC__
-    e_bl    __eabi
-#endif
     /* Calling main: Load EABI function argument registers with argc=0, argv=NULL. */
+    e_lis       r3, main@h
+    e_or2i      r3, main@l
+    se_mtlr     r3
     se_li   r3, 0
     se_mr   r4, r3
-    e_bl    main
+    se_blrl
 
     /* We enter an infinite loop if someone should try to leave main - which is not
-       intended. The external interrupts are disables so that possible RTOS code would not
+       intended. The external interrupts are disabled so that possible RTOS code would not
        make some other portions of code become active any more. */
     wrteei  0
 su_waitForever:
     e_b     su_waitForever
 
-    .size   sup_startUp, .-sup_startUp
 /* End of sup_startUp */
 
 
 
 /**
  *   @func zeroizeRegisters
- * First step of MCU startup is to bring all relevant registers into a
- * defined state. We set all of them to zero. The a bit hidden 64 Bit
- * character of the general purpose registers is considered, the never
- * used upper 32 Bit are cleared.
+ * First step of MCU startup is to bring all relevant registers into a defined state. In
+ * LSM, it is essential do do this prior to the first write outside the sphere of
+ * replication in order to avoid a false lock step error notifictation. We set all of them
+ * to zero. The somewhat hidden 64 Bit character of the general purpose registers is
+ * considered, the never used upper 32 Bit are cleared, too.
  *   @remark This code is based on NXP sample
  * MPC5643L-LINFlex-UART-DMA-CW210, file MPC5643L_LSM_Startup.c, l. 24ff
  */
-    .type   zeroizeRegisters, @function
 zeroizeRegisters:
 
     /* Set the MSR[SPE] bit so code can use "evmergelo" instruction. */
-    e_lis   r1, 0
-    e_or2is r1, 0x0200
+    e_lis   r1, 0x0200
     mtmsr   r1
-    se_isync
+    se_isync                /* Core RM, 4.6: mtmsr only has completion synchronization.
+                               It's not fully clear if we need dispatch or refetch
+                               synchronization to make the SPE work; likely it's dispatch.
+                               Anyway, isync does both. */
 
     /* Initialize the 64-bits of GPR0 to 0 */
-    e_lis     r1, 0         /* Initialize the lower 32-bits of GPR1 to 0. */
+    e_li      r1, 0         /* Initialize the lower 32-bits of GPR1 to 0. */
     evmergelo r0, r1, r1    /* Write the lower 32-bits of GPR1 into both halfs of GPR0. */
     evmergelo r1, r0, r0    /* Clear 64 Bit of r1, r2 ... */
     evmergelo r2 ,r0 ,r0
@@ -345,7 +394,6 @@ zeroizeRegisters:
     se_isync
     
     se_blr
-.size   zeroizeRegisters, .-zeroizeRegisters
 
 /* End of zeroizeRegisters */
 
@@ -354,72 +402,70 @@ zeroizeRegisters:
 /**
  *   @func initExceptionHandlers
  * Set up the MCU's interrupt table. This relates to the 16 built-in exception handlers,
- * not to the external interrupts, the application code will mainly use. (The external
+ * not to the external interrupts the application code will mainly use. (The external
  * interrupts are one of the 16 exceptions set here.) We assign empty handlers to most
- * exceptions. These handler loop infinitely so that you will see the exception in the
- * debugger.
+ * exceptions. These handlers loop infinitely so that you will see a caught exception in
+ * the debugger.
  */
-    .type   initExceptionHandlers, @function
-    .extern int_INTCInterruptHandler, int_systemCallHandler
+    .extern     int_INTCInterruptHandler, int_systemCallHandler
 initExceptionHandlers:
     
     /* Write the common most significant 16 bits of all the exception handler addresses. */
-    e_lis   r0, sup_IVOR0trap@h
-    mtspr   63, r0      /* IVPR */
+    e_lis       r3, sup_IVOR0trap@h
+    mtspr       63, r3      /* IVPR */
     
     /* Write the individual bits 4..15 of the all the exception handler addresses. It
        doesn't matter to write all bits, later at exception handling time they will
        be ignored or read zero. Therefore, we need to ensure that bits 0..3 of the actual
        addresses are surely zero. This is done below by assembler statement .align. */
-    e_li    r0, sup_IVOR0trap@l
-    mtspr   400, r0     /* IVOR0 Critical input */
-    e_li    r0, sup_IVOR1trap@l
-    mtspr   401, r0     /* IVOR1 Machine check (non-maskable interrupt) */
-    e_li    r0, sup_IVOR2trap@l
-    mtspr   402, r0     /* IVOR2 Data storage */
-    e_li    r0, sup_IVOR3trap@l
-    mtspr   403, r0     /* IVOR3 Instruction storage */
-    
-    e_lis   r0, int_INTCInterruptHandler@ha
-    e_la    r0, int_INTCInterruptHandler@l(r0)
-    mtspr   404, r0     /* IVOR4 External input */
+    e_li        r3, sup_IVOR0trap@l
+    mtspr       400, r3     /* IVOR0 Critical input */
+    e_li        r3, sup_IVOR1trap@l
+    mtspr       401, r3     /* IVOR1 Machine check (non-maskable interrupt) */
+    e_li        r3, sup_IVOR2trap@l
+    mtspr       402, r3     /* IVOR2 Data storage */
+    e_li        r3, sup_IVOR3trap@l
+    mtspr       403, r3     /* IVOR3 Instruction storage */
 
-    e_li    r0, sup_IVOR5trap@l
-    mtspr   405, r0     /* IVOR5 Alignment */
-    e_li    r0, sup_IVOR6trap@l
-    mtspr   406, r0     /* IVOR6 Program */
-    e_li    r0, sup_IVOR7trap@l
-    mtspr   407, r0     /* IVOR7 Floating-point unavailable */
-    
-    e_lis   r0, int_systemCallHandler@ha
-    e_la    r0, int_systemCallHandler@l(r0)
-    mtspr   408, r0     /* IVOR8 System call */
+    e_lis       r3, int_INTCInterruptHandler@ha
+    e_la        r3, int_INTCInterruptHandler@l(r3)
+    mtspr       404, r3     /* IVOR4 External input */
 
-    e_li    r0, sup_IVOR9trap@l
-    mtspr   409, r0     /* IVOR9 AP unavailable (not used by this core) */
-    e_li    r0, sup_IVOR10trap@l
-    mtspr   410, r0     /* IVOR10 Decrementer */
-    e_li    r0, sup_IVOR11trap@l
-    mtspr   411, r0     /* IVOR11 Fixed-interval timer */
-    e_li    r0, sup_IVOR12trap@l
-    mtspr   412, r0     /* IVOR12 Watchdog timer */
-    e_li    r0, sup_IVOR13trap@l
-    mtspr   413, r0     /* IVOR13 Data TLB error */
-    e_li    r0, sup_IVOR14trap@l
-    mtspr   414, r0     /* IVOR14 Instruction TLB error */
-    e_li    r0, sup_IVOR15trap@l
-    mtspr   415, r0     /* IVOR15 Debug */
-                 
-    e_li    r0, sup_IVOR32trap@l
-    mtspr   528, r0      /* IVOR32 SPE unavailable */
-    e_li    r0, sup_IVOR33trap@l
-    mtspr   529, r0      /* IVOR33 SPE data exception */
-    e_li    r0, sup_IVOR34trap@l
-    mtspr   530, r0      /* IVOR34 SPE round exception */
+    e_li        r3, sup_IVOR5trap@l
+    mtspr       405, r3     /* IVOR5 Alignment */
+    e_li        r3, sup_IVOR6trap@l
+    mtspr       406, r3     /* IVOR6 Program */
+    e_li        r3, sup_IVOR7trap@l
+    mtspr       407, r3     /* IVOR7 Floating-point unavailable */
+    
+    e_lis       r0, int_systemCallHandler@ha
+    e_la        r0, int_systemCallHandler@l(r0)
+    mtspr       408, r0     /* IVOR8 System call */
+
+    e_li        r3, sup_IVOR9trap@l
+    mtspr       409, r3     /* IVOR9 AP unavailable (not used by this core) */
+    e_li        r3, sup_IVOR10trap@l
+    mtspr       410, r3     /* IVOR10 Decrementer */
+    e_li        r3, sup_IVOR11trap@l
+    mtspr       411, r3     /* IVOR11 Fixed-interval timer */
+    e_li        r3, sup_IVOR12trap@l
+    mtspr       412, r3     /* IVOR12 Watchdog timer */
+    e_li        r3, sup_IVOR13trap@l
+    mtspr       413, r3     /* IVOR13 Data TLB error */
+    e_li        r3, sup_IVOR14trap@l
+    mtspr       414, r3     /* IVOR14 Instruction TLB error */
+    e_li        r3, sup_IVOR15trap@l
+    mtspr       415, r3     /* IVOR15 Debug */
+
+    e_li        r3, sup_IVOR32trap@l
+    mtspr       528, r3      /* IVOR32 SPE unavailable */
+    e_li        r3, sup_IVOR33trap@l
+    mtspr       529, r3      /* IVOR33 SPE data exception */
+    e_li        r3, sup_IVOR34trap@l
+    mtspr       530, r3      /* IVOR34 SPE round exception */
 
     se_blr
 
-    .size   initExceptionHandlers, .-initExceptionHandlers
 /* End of initExceptionHandlers */
 
 
@@ -427,14 +473,12 @@ initExceptionHandlers:
  *   @func sup_IVOR0trap
  * Exception handler IVOR0 for the Critical Input interrupt.
  */
-    .global sup_IVOR0trap   /* Note, it is not required to make this symbol global. However
-                               it is handy to see the traps in the application map file and
-                               this is why we do so for all traps. */
-    .type   sup_IVOR0trap, @function
-    .align  4
+    .global     sup_IVOR0trap   /* Note, it is not required to make this symbol global.
+                                   However it is handy to see the traps in the application
+                                   map file and this is why we do so for all traps. */
+    .p2align 4
 sup_IVOR0trap:
     se_b    sup_IVOR0trap   /* Critical Input interrupt handler */ 
-    .size   sup_IVOR0trap, .-sup_IVOR0trap
 
 
 /**
@@ -442,11 +486,9 @@ sup_IVOR0trap:
  * Exception handler IVOR1 for the Machine check / (NMI) interrupt.
  */
     .global sup_IVOR1trap
-    .type   sup_IVOR1trap, @function
-    .align  4
+    .p2align 4
 sup_IVOR1trap:
     se_b    sup_IVOR1trap   /* Machine check / (NMI) interrupt handler */
-    .size   sup_IVOR1trap, .-sup_IVOR1trap
 
 
 /**
@@ -455,11 +497,9 @@ sup_IVOR1trap:
  * signals an unpermitted data access.
  */
     .global sup_IVOR2trap
-    .type   sup_IVOR2trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR2trap:
     se_b    sup_IVOR2trap   /* Data Storage interrupt handler */
-    .size   sup_IVOR2trap, .-sup_IVOR2trap
 
 
 /**
@@ -468,11 +508,9 @@ sup_IVOR2trap:
  * the MMU signals an unpermitted instruction fetch.
  */
     .global sup_IVOR3trap
-    .type   sup_IVOR3trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR3trap:
     se_b    sup_IVOR3trap   /* Instruction Storage interrupt handler */
-    .size   sup_IVOR3trap, .-sup_IVOR3trap
 
 
 /* Note, there's no default IVOR4 trap since we always install a real trap handler for the
@@ -483,11 +521,9 @@ sup_IVOR3trap:
  * Exception handler IVOR5 for the Alignment interrupt.
  */
     .global sup_IVOR5trap
-    .type   sup_IVOR5trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR5trap:
     se_b    sup_IVOR5trap   /* Alignment interrupt handler */
-    .size   sup_IVOR5trap, .-sup_IVOR5trap
 
 
 /**
@@ -495,11 +531,9 @@ sup_IVOR5trap:
  * Exception handler IVOR6 for the Program interrupt.
  */
     .global sup_IVOR6trap
-    .type   sup_IVOR6trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR6trap:
     se_b    sup_IVOR6trap   /* Program interrupt handler */
-    .size   sup_IVOR6trap, .-sup_IVOR6trap
 
 
 /**
@@ -507,15 +541,23 @@ sup_IVOR6trap:
  * Exception handler IVOR7 for the Floating-point unavailable interrupt.
  */
     .global sup_IVOR7trap
-    .type   sup_IVOR7trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR7trap:
     se_b    sup_IVOR7trap   /* Floating-point unavailable interrupt handler */
-    .size   sup_IVOR7trap, .-sup_IVOR7trap
 
 
 /* Note, there's no default IVOR8 trap since we install a real trap handler for the
    implementation of system calls. */
+#if 0
+/**
+ *   @func sup_IVOR8trap
+ * Exception handler IVOR8 for the System call interrupt.
+ */
+    .global sup_IVOR8trap
+    .p2align    4
+sup_IVOR8trap:
+    se_b    sup_IVOR8trap   /* System call interrupt handler */
+#endif
 
 
 /**
@@ -523,11 +565,9 @@ sup_IVOR7trap:
  * Exception handler IVOR9 for the AP unavailable interrupt.
  */
     .global sup_IVOR9trap
-    .type   sup_IVOR9trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR9trap:
     se_b    sup_IVOR9trap   /* AP unavailable interrupt handler */
-    .size   sup_IVOR9trap, .-sup_IVOR9trap
 
 
 /**
@@ -535,11 +575,9 @@ sup_IVOR9trap:
  * Exception handler IVOR10 for the Decrementer interrupt.
  */
     .global sup_IVOR10trap
-    .type   sup_IVOR10trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR10trap:
     se_b    sup_IVOR10trap   /* Decrementer interrupt handler */
-    .size   sup_IVOR10trap, .-sup_IVOR10trap
 
 
 /**
@@ -547,11 +585,9 @@ sup_IVOR10trap:
  * Exception handler IVOR11 for the Fixed Interval Timer interrupt.
  */
     .global sup_IVOR11trap
-    .type   sup_IVOR11trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR11trap:
     se_b    sup_IVOR11trap   /* Fixed Interval Timer interrupt handler */
-    .size   sup_IVOR11trap, .-sup_IVOR11trap
 
 
 /**
@@ -559,11 +595,9 @@ sup_IVOR11trap:
  * Exception handler IVOR12 for the Watchdog Timer interrupt.
  */
     .global sup_IVOR12trap
-    .type   sup_IVOR12trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR12trap:
     se_b    sup_IVOR12trap   /* Watchdog Timer interrupt handler */
-    .size   sup_IVOR12trap, .-sup_IVOR12trap
 
 
 /**
@@ -571,11 +605,9 @@ sup_IVOR12trap:
  * Exception handler IVOR13 for the Data TLB Error interrupt.
  */
     .global sup_IVOR13trap
-    .type   sup_IVOR13trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR13trap:
     se_b    sup_IVOR13trap   /* Data TLB Error interrupt handler */
-    .size   sup_IVOR13trap, .-sup_IVOR13trap
 
 
 /**
@@ -583,11 +615,9 @@ sup_IVOR13trap:
  * Exception handler IVOR14 for the Instruction TLB Error interrupt.
  */
     .global sup_IVOR14trap
-    .type   sup_IVOR14trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR14trap:
     se_b    sup_IVOR14trap   /* Instruction TLB Error interrupt handler */
-    .size   sup_IVOR14trap, .-sup_IVOR14trap
 
 
 /**
@@ -595,22 +625,19 @@ sup_IVOR14trap:
  * Exception handler IVOR15 for the Debug I.
  */
     .global sup_IVOR15trap
-    .type   sup_IVOR15trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR15trap:
     se_b    sup_IVOR15trap   /* Debug Interrupt */
-    .size   sup_IVOR15trap, .-sup_IVOR15trap
+
 
 /**
  *   @func sup_IVOR32trap
  * Exception handler IVOR32 for the SPE unavailable interrupt.
  */
     .global sup_IVOR32trap
-    .type   sup_IVOR32trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR32trap:
     se_b    sup_IVOR32trap   /* SPE unavailable */
-    .size   sup_IVOR32trap, .-sup_IVOR32trap
 
 
 /**
@@ -618,11 +645,9 @@ sup_IVOR32trap:
  * Exception handler IVOR33 for the SPE data exception interrupt.
  */
     .global sup_IVOR33trap
-    .type   sup_IVOR33trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR33trap:
     se_b    sup_IVOR33trap   /* SPE data exception */
-    .size   sup_IVOR33trap, .-sup_IVOR33trap
 
 
 /**
@@ -630,11 +655,9 @@ sup_IVOR33trap:
  * Exception handler IVOR34 for the SPE round exception interrupt.
  */
     .global sup_IVOR34trap
-    .type   sup_IVOR34trap, @function
-    .align  4
+    .p2align    4
 sup_IVOR34trap:
     se_b    sup_IVOR34trap   /* SPE round exception */
-    .size   sup_IVOR34trap, .-sup_IVOR34trap
 
 /* End of IVOR exception handlers 0..15 and 32..24 */
 
@@ -648,9 +671,7 @@ sup_IVOR34trap:
  * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file
  * MPC5643L_HWInit.c, l. 396ff.
  */
-    .type   initMMU, @function
 initMMU:
-
     mflr    r27
 
     /* On entry we have a single valid MMU entry, which permits executing code from the
@@ -825,7 +846,6 @@ initMMU:
 
     se_blr
 
-    .size   initMMU, .-initMMU
 /* End of initMMU */
 
 
@@ -841,7 +861,6 @@ initMMU:
  * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file
  * MPC5643L_HWInit.c, l. 210ff
  */
-    .type   writeMMUTableEntryS, @function
 writeMMUTableEntryS:
 
     /* Write MMU Assist Register 0 (MAS0); SPR 624 */
@@ -865,7 +884,6 @@ writeMMUTableEntryS:
 
     se_blr
 
-    .size   writeMMUTableEntryS, .-writeMMUTableEntryS
 /* End of writeMMUTableEntryS */
 
 
@@ -878,7 +896,6 @@ writeMMUTableEntryS:
  * This code is based on NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file
  * MPC5643L_HWInit.c, l. 241ff
  */
-    .type   writeMMUTableEntry, @function
 writeMMUTableEntry:
 
     /* Write MMU Assist Register 0 (MAS0); SPR 624 */
@@ -894,7 +911,6 @@ writeMMUTableEntry:
 
     se_blr
 
-    .size   writeMMUTableEntry, .-writeMMUTableEntry
 /* End of writeMMUTableEntry */
 
 
@@ -905,7 +921,6 @@ writeMMUTableEntry:
  * resolution timer, mostly used to measure execution times. It is enabled and reset to
  * zero.
  */
-    .type   initTimeBase, @function
 initTimeBase:
     /* Reset timer */
     se_li   r0, 0
@@ -914,12 +929,11 @@ initTimeBase:
 
     /* Enable time base */
     mfspr   r0, 1008    /* Read register Hardware implementation dependent (HID) 0 */
-    e_or2i  r0, 1<<14   /* Set bit time base enable (TBEN) */
+    se_bseti    r0, 17      /* Set bit time base enable (TBEN) */
     mtspr   1008, r0    /* Write updated value back to HID0 */
 
     se_blr
 
-    .size   initTimeBase, .-initTimeBase
 /* End of initTimeBase */
 
 
@@ -929,41 +943,57 @@ initTimeBase:
  *   @func zeroizeSRAM
  * Zeroize all SRAM cells. All bytes from ld_memRamStart and ld_memRamStart+ld_memRamSize are
  * written to zero.\n
- *   ld_memRamStart needs to be 4 Byte aligned, ld_memRamStart+ld_memRamSize is rounded
- * downwards to a multiple of 16. (Remaining bytes wouldn't be touched.)
- *   @remark
+ *   ld_memRamStart needs to be 8 Byte aligned. ld_memRamSize is rounded downwards to a
+ * multiple of 8. (Remaining bytes wouldn't be touched and couldn't be used due to
+ * resulting ECC errors.)
+ *   @todo
  * An optimization could be zeroizing only the used RAM cells. The according labels are
  * exported by the linker. The stack portion of the RAM will anyway be initialized twice;
  * first here and later it is filled with the fill pattern required for computation of
- * stack consumption.
+ * stack consumption. This change would not only speed up the system start but install an
+ * additional fault recognition: A read access to an unused memory address would be
+ * reported as ECC error.
  */
-    .type   zeroizeSRAM, @function
     .extern ld_memRamStart, ld_memRamSize
 zeroizeSRAM:
-    e_lis   r8, ld_memRamStart@h
-    e_or2i  r8, ld_memRamStart@l
-    e_lis   r9, ld_memRamSize@h
-    e_or2i  r9, ld_memRamSize@l
-    srawi   r9, r9, 4       /* Divide length in Byte by 2^4=16 */
-    mtctr   r9
+    e_lis       r3, ld_memRamStart@h
+    e_or2i      r3, ld_memRamStart@l
+    e_lis       r4, ld_memRamSize@h
+    e_or2i      r4, ld_memRamSize@l
+    se_srwi     r4, 3           /* Divide length in Byte by 2^3=8 */
+    se_mtctr    r4
     se_li   r31, 0
     se_li   r30, 0
-    se_li   r29, 0
-    se_li   r28, 0
 
 zreg_loop:
-    /* ECC SRAM must be initialized with 64-bit writes, hence stmw; 16-btye alignment
-       should work always */
-    e_stmw  r28, 0(r8)      /* Write registers 28-31 thus 16 Byte */
-    e_la    r8, 16(r8)
+    /* RM, 46.5: ECC SRAM must be initialized with 32-bit writes on 4-Byte aligned
+       addresses. Here, we adopt the code from the MPC5748G, where 8 Byte writes are
+       required, performed at once by an e_stmw. */
+    e_stmw      r30, 0(r3)      /* Write registers 30 and 31 in one instruction, thus 8 Byte */
+    se_addi     r3, 8
     e_bdnz  zreg_loop
 
     se_blr
 
-    .size   zeroizeSRAM, .-zeroizeSRAM
 /* End of zeroizeSRAM */
 
 
+
+
+/**
+ * Prepare some registers as required by the PowerPC eabi for the implementation of fast
+ * small data access.
+ */
+    .extern     _SDA_BASE_, _SDA2_BASE_
+initSDataRegisters:
+    e_lis       r13, _SDA_BASE_@h       /* Load .sdata base into r13 */
+    e_or2i      r13, _SDA_BASE_@l
+    e_lis       r2, _SDA2_BASE_@h       /* Load .sdata2 base into r2 */
+    e_or2i      r2, _SDA2_BASE_@l
+
+    se_blr
+
+/* End of initSDataRegisters */
 
 
 /**
@@ -973,7 +1003,6 @@ zreg_loop:
  * The assembler implementation here follows for example the implementation of NXP
  * sample NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file main.c, l. 221ff.
  */
-    .type   disableWatchdog, @function
 disableWatchdog:
     // SWT.SR.R = 0x0000c520;   /* Write 1st key to clear soft lock bit */
     e_lis   r9, 0xfff3
@@ -995,7 +1024,6 @@ disableWatchdog:
 
     se_blr
 
-    .size   disableWatchdog, .-disableWatchdog
 /* End of disableWatchdog */
 
 
@@ -1016,7 +1044,6 @@ disableWatchdog:
  * code, which itself resides in ROM. This function copies a tiny machine code fragment onto
  * the stack and branches there to fulfill this requirement.
  */
-    .type   initFlash, @function
 initFlash:
     e_stwu  sp, -24(sp) /* We need 20 Byte but stack frame must be multiple of 8 (EABI) */
     mflr    r0
@@ -1059,37 +1086,6 @@ if_movalbeMachineCode:
     msync                   /* Accomplish transaction before return to flash. */
     se_blr
     
-    .size   initFlash, .-initFlash
 /* End of initFlash */
-
-
-
-/**
- * Prepare some registers as required by the PowerPC eabi. GCC will invoke this function on
- * entry into main.
- *   @remark
- * GCC 4.9.0 and 4.9.2 for PowerPC invoke the callback __eabi even if the switch
- * -mnoeabi is given on the command line.
- *   @remark
- * Never rename this function. GCC will otherwise not find it as callback and take its own
- * variant from the clib, which is not operational in our context.
- */
-    .globl  __eabi
-    .extern _SDA_BASE_, _SDA2_BASE_
-    .type   __eabi, @function
-__eabi:
-    e_lis   r13, _SDA_BASE_@h       /* Load .sdata base into r13 */
-    e_or2i  r13, _SDA_BASE_@l
-    e_lis   r2, _SDA2_BASE_@h       /* Load .sdata2 base into r2 */
-    e_or2i  r2, _SDA2_BASE_@l
-
-    se_blr
-
-    .size   __eabi, .-__eabi
-/* End of __eabi */
-
-    /* At the end of the code: Avoid a gap in the section. This makes the flash procedure
-       in Code Warrior 10.7 fail to flash the code. */
-    .align  4
 
 #endif /* VLE */
