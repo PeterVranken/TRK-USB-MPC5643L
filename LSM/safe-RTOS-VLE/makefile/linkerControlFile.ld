@@ -71,7 +71,7 @@ SECTIONS
 {
     /* The boot sector, the first 4k of ROM, which are accessible after
        reset and prior to configuration of the MMU. */
-    .boot :
+    .boot : ALIGN(4)
     {
         ld_romStart = ABSOLUTE(.);
 
@@ -84,7 +84,7 @@ SECTIONS
     } >memBoot
 
 
-    .text_vle :
+    .text_vle : ALIGN(4)
     {
         INPUT_SECTION_FLAGS (SHF_PPC_VLE)
 
@@ -116,7 +116,7 @@ SECTIONS
 
     INCLUDE makefile/crtSupport.ld
 
-    .rodata :
+    .rodata : ALIGN(4)
     {
         /* Normal, const data from C source files goes here. */
         *(.rodata)
@@ -204,7 +204,7 @@ SECTIONS
     } >memData
 
 
-    .data : ALIGN(8)
+    .data : ALIGN(4)
     {
         ld_dataStart = ABSOLUTE(.);
 
@@ -388,7 +388,7 @@ SECTIONS
     } >memData
 
 
-    .sdata : ALIGN(8)
+    .sdata : ALIGN(4)
     {
         ld_sdataStart = ABSOLUTE(.);
 
@@ -511,7 +511,7 @@ SECTIONS
 
     } >memData
 
-    .sdata2 : ALIGN(8)
+    .sdata2 : ALIGN(4)
     {
         ld_sdata2Start = ABSOLUTE(.);
 
