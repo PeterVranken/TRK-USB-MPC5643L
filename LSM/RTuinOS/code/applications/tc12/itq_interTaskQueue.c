@@ -138,7 +138,7 @@ void itq_writeElem(int16_t queuedElem)
  *   @see void itq_writeElem(int16_t)
  */
 
-int16_t itq_readElem()
+int16_t itq_readElem(void)
 {
     int16_t elem;
     

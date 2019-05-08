@@ -86,13 +86,13 @@ extern volatile uint16_t adc_inputVoltage;
 
 /** Moule initialization. To be called prior to start of RTuinOS kernel, i.e. from void
     setup(). */
-void adc_initAfterPowerUp();
+void adc_initAfterPowerUp(void);
 
 /** Select the next or previous input for the next conversion. */
 void adc_nextInput(bool up);
 
 /** Main function of ADC task. Process next conversion result. */
-void adc_onConversionComplete();
+void adc_onConversionComplete(void);
 
 
 #endif  /* ADC_ANALOGINPUT_INCLUDED */

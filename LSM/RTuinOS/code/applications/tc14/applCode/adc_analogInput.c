@@ -2,7 +2,7 @@
  * @file adc_analogInput.cpp
  *   The ADC task code: Process the analog input.
  *
- * Copyright (C) 2013-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2013-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -143,7 +143,7 @@ static void selectAdcInput(uint8_t input)
  * ready to accept and handle the interrupts. Please refer to the RTuinOS manual for more.
  */
 
-void adc_initAfterPowerUp()
+void adc_initAfterPowerUp(void)
 {
     /* Initialize the ADC driver. Note, the driver is not specific to this sample
        application but a reusable building block from the TRK-USB-MPC5643L project
@@ -213,7 +213,7 @@ void adc_nextInput(bool up)
  *   A user selected ADC input is measured and converted to Volt. The client of this
  * information is a simple display task.
  */
-void adc_onConversionComplete()
+void adc_onConversionComplete(void)
 {
     /* Averaging: Each series accumulates up to 64 samples. */
     static uint32_t accumuatedAdcResult_ = 0;

@@ -45,7 +45,7 @@
  */
 
 void itq_writeElem(int16_t queuedElem);
-int16_t itq_readElem();
+int16_t itq_readElem(void);
 
 
 #endif  /* ITQ_INTERTASKQUEUE_INCLUDED */

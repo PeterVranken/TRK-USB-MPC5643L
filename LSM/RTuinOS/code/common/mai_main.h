@@ -4,7 +4,7 @@
  * @file mai_main.h
  * Definition of global interface of module mai_main.c
  *
- * Copyright (C) 2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2018-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,16 +29,6 @@
  * Defines
  */
 
-/* The software is written as portable as reasonably possible. This requires the awareness
-   of the C language standard it is compiled with. */
-#if defined(__STDC_VERSION__)
-# if (__STDC_VERSION__)/100 == 2011
-#  define _STDC_VERSION_C11
-# elif (__STDC_VERSION__)/100 == 1999
-#  define _STDC_VERSION_C99
-# endif
-#endif
-
 
 /*
  * Global type definitions
@@ -58,10 +48,10 @@
 void delay(unsigned int tiInMs);
 
 /** System time elapsed since startup in Milliseconds. */
-unsigned long millis();
+unsigned long millis(void);
 
 /** System time elapsed since startup in Microseconds. */
-unsigned long micros();
+unsigned long micros(void);
 
 /** Flash the LED a number of times to give simple feedback. */
 void mai_blink(unsigned int noFlashes);

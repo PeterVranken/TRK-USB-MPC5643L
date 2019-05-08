@@ -10,7 +10,7 @@
  *   Because of doing all application individual stuff in the hooks this module can be
  * re-used in all RTuinOS samples.
  *
- * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -129,7 +129,7 @@ void delay(unsigned int tiInMs)
  *   @remark
  * The 32 Bit result wraps around after 49d 17h 2min 47s.
  */
-unsigned long millis()
+unsigned long millis(void)
 {
     return (unsigned long)(GSL_PPC_GET_TIMEBASE() / 120000ull);
 
@@ -144,7 +144,7 @@ unsigned long millis()
  *   @remark
  * The 32 Bit result wraps around after 1h 11min 35s.
  */
-unsigned long micros()
+unsigned long micros(void)
 {
     return (unsigned long)(GSL_PPC_GET_TIMEBASE() / 120ull);
 
@@ -189,16 +189,6 @@ void main(void)
 {
     /* Init core HW of MCU so that it can be safely operated. */
     ihw_initMcuCoreHW();
-
-#ifdef DEBUG
-    /* Check linker script. It's error prone with respect to keeping the initialized RAM
-       sections and the according initial-data ROM sections strictly in sync. As long as
-       this has not been sorted out by a redesign of linker script and startup code we put
-       a minimal plausibility check here, which will likely detect typical errors.
-         If this assertion fires your initial RAM contents will be corrupt. */
-    extern const uint8_t ld_dataSize[0], ld_dataMirrorSize[0];
-    assert(ld_dataSize == ld_dataMirrorSize);
-#endif
 
     /* Initialize the button and LED driver for the eval board. */
     lbd_initLEDAndButtonDriver();

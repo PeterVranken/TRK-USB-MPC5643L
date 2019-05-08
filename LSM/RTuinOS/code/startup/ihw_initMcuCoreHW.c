@@ -45,7 +45,6 @@
 
 #include "typ_types.h"
 #include "MPC5643L.h"
-#include "sup_settings.h"
 #include "int_interruptHandler.h"
 #include "ihw_initMcuCoreHW.h"
 

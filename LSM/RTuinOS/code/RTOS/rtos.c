@@ -1901,7 +1901,7 @@ _Noreturn void rtos_initRTOS(void)
        symbols are declared in the linker command file. Having this information doesn't
        cost anything but enables to apply the stack reserve computation for the idle task,
        too. */
-    extern uint32_t ld_memStackStart[0], ld_memStackSize[0];
+    extern uint8_t ld_stackStart[0], ld_stackEnd[0];
 
     pT = _pIdleTask;
     
@@ -1920,8 +1920,8 @@ _Noreturn void rtos_initRTOS(void)
 #if RTOS_ROUND_ROBIN_MODE_SUPPORTED == RTOS_FEATURE_ON
     pT->cntRoundRobin = 0;          /* Not used at all. */
 #endif
-    pT->pStackArea = ld_memStackStart;          /* Used for stack reserve computation. */
-    pT->stackSize = (uint32_t)ld_memStackSize;  /* Not used at all. */
+    pT->pStackArea = (uint32_t*)ld_stackStart;  /* Used for stack reserve computation. */
+    pT->stackSize = (uint32_t)(ld_stackEnd - ld_stackStart);  /* Not used at all. */
     pT->cntDelay = 0;               /* Not used at all. */
 
     /* The next element always needs to be 0. Otherwise any interrupt or a call of

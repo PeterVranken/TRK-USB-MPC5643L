@@ -44,7 +44,7 @@
 /** Startup message for RTuinOS applications. */
 #define RTOS_RTUINOS_STARTUP_MSG                                                            \
     "RTuinOS " RTOS_RTUINOS_VERSION " for NXP MPC5643L" RTOS_EOL                            \
-    "Copyright (C) 2012-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)" RTOS_EOL        \
+    "Copyright (C) 2012-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)" RTOS_EOL        \
     "This is free software; see the source for copying conditions. There is NO" RTOS_EOL    \
     "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 

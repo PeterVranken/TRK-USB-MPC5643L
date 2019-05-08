@@ -77,7 +77,7 @@
  * configuration DEBUG/PRODUCTION. Furthermore, the execution time needs to be kept clear
  * of load address caused variances, which can be controlled only in an assembly module.
  *   @remark
- * This function can be called from user mode tasks and from kernel code.
+ * This function can be called from user and supervisor mode.
  */
     .section .text.del_delayMicroseconds, "ax", @progbits
     .global del_delayMicroseconds, del_loopDelayMicroseconds
