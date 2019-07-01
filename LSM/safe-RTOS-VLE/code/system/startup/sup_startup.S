@@ -96,7 +96,6 @@
  */
 
 
-
 /*
  * Function implementation
  */
@@ -105,7 +104,7 @@
 /**
  * The boot sector contents are defined as first element of sector .boot.
  */
-    .section .bamData, "a"
+    .section    .bamData, "a"
     .global     sup_bamData         /* Nice to have this in the map file */
 sup_bamData:
     .dc.w       RCHW_VALUE, 0
@@ -155,7 +154,7 @@ sup_startUp:
     mtspr       1013, r0        /* SPR 1013, Branch Unit Control and Status Register (BUCSR) */
     se_isync
 #endif
-    
+
     e_bl        initTimeBase    /* Start the MCU's high resolution counter */
     e_bl        zeroizeSRAM     /* Clear all RAM to avoid ECC errors */
 
@@ -207,8 +206,8 @@ su_icache_noAbort:
         Note, there are some strict alignment constraints (8 Byte aligned values needed),
       which need to be ensured in the linker script file. They are not checked here and
       will in case cause an exception. */
-    e_lis   sp, (ld_stackEndOS-16)@h
-    e_or2i  sp, (ld_stackEndOS-16)@l
+    e_lis       sp, (ld_stackEndOS-16)@h
+    e_or2i      sp, (ld_stackEndOS-16)@l
 
     /* Select appropriate conditions for the operation of the flash (waitstates, caching,
        etc.) It is essential to do this prior to rising the CPU clock rate by configuring
@@ -284,8 +283,7 @@ su_waitForever:
 zeroizeRegisters:
 
     /* Set the MSR[SPE] bit so code can use "evmergelo" instruction. */
-    e_lis       r1, 0
-    e_or2is     r1, 0x0200
+    e_lis       r1, 0x0200
     mtmsr       r1
     se_isync                /* Core RM, 4.6: mtmsr only has completion synchronization.
                                It's not fully clear if we need dispatch or refetch
@@ -293,7 +291,7 @@ zeroizeRegisters:
                                Anyway, isync does both. */
 
     /* Initialize the 64-bits of GPR0 to 0 */
-    e_lis       r1, 0       /* Initialize the lower 32-bits of GPR1 to 0. */
+    se_li       r1, 0       /* Initialize the lower 32-bits of GPR1 to 0. */
     evmergelo   r0, r1, r1  /* Write the lower 32-bits of GPR1 into both halfs of GPR0. */
     evmergelo   r1, r0, r0  /* Clear 64 Bit of r1, r2 ... */
     evmergelo   r2 ,r0 ,r0
@@ -937,19 +935,15 @@ initMMU:
  */
 writeMMUTableEntryS:
 
-    /* Write MMU Assist Register 0 (MAS0); SPR 624 */
-    mtspr   624, r3
-    /* Write MMU Assist Register 1 (MAS1); SPR 625 */
-    mtspr   625, r4
-    /* Write MMU Assist Register 2 (MAS2); SPR 626 */
-    mtspr   626, r5
-    /* Write MMU Assist Register 3 (MAS3); SPR 627 */
-    mtspr   627, r6
+    mtspr       624, r3 /* SPR 624: MMU Assist Register 0 (MAS0) */
+    mtspr       625, r4 /* SPR 625: MMU Assist Register 1 (MAS1) */
+    mtspr       626, r5 /* SPR 626: MMU Assist Register 2 (MAS2) */
+    mtspr       627, r6 /* SPR 627: MMU Assist Register 3 (MAS3) */
 
     /* Write the table entry.
-         All instruction will complete here in current context. */
+         All instructions will complete here in current context. */
     msync
-    tlbwe
+    tlbwe               /* Copy contents of assist registers into the MMU table entry */
 
     /* Synchronize instruction fetches and data accesses in respect with the new created
        TLB entry. */
@@ -972,16 +966,12 @@ writeMMUTableEntryS:
  */
 writeMMUTableEntry:
 
-    /* Write MMU Assist Register 0 (MAS0); SPR 624 */
-    mtspr   624, r3
-    /* Write MMU Assist Register 1 (MAS1); SPR 625 */
-    mtspr   625, r4
-    /* Write MMU Assist Register 2 (MAS2); SPR 626 */
-    mtspr   626, r5
-    /* Write MMU Assist Register 3 (MAS3); SPR 627 */
-    mtspr   627, r6
-    /* Write the table entry */
-    tlbwe
+
+    mtspr       624, r3 /* SPR 624: MMU Assist Register 0 (MAS0) */
+    mtspr       625, r4 /* SPR 625: MMU Assist Register 1 (MAS1) */
+    mtspr       626, r5 /* SPR 626: MMU Assist Register 2 (MAS2) */
+    mtspr       627, r6 /* SPR 627: MMU Assist Register 3 (MAS3) */
+    tlbwe               /* Copy contents of assist registers into the MMU table entry */
 
     se_blr
 
@@ -998,8 +988,8 @@ writeMMUTableEntry:
 initTimeBase:
     /* Reset timer */
     se_li       r0, 0
-    mtspr       284, r0    /* Clear TBL */
-    mtspr       285, r0    /* Clear TBU */
+    mtspr       284, r0     /* Clear TBL */
+    mtspr       285, r0     /* Clear TBU */
 
     /* Enable time base */
     mfspr       r0, 1008    /* Read register Hardware implementation dependent (HID) 0 */
@@ -1078,23 +1068,23 @@ initSDataRegisters:
  * sample NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file main.c, l. 221ff.
  */
 disableWatchdog:
-    // SWT.SR.R = 0x0000c520;   /* Write 1st key to clear soft lock bit */
-    e_lis   r9, 0xfff3
-    e_or2i  r9, 0x8000
-    e_li    r10, 0
-    e_or2i  r10, 0xc520
-    e_stw   r10, 16(r9)
-    // SWT.SR.R = 0x0000d928;   /* Write 2nd key to clear soft lock bit */
-    e_li    r10, 0
-    e_or2i  r10, 0xd928
-    e_stw   r10, 16(r9)
-    // SWT.CR.R = 0x8000010A;   /* Clear watchdog enable (WEN) */
-    e_lis   r10, 0x8000
-    e_or2i  r10, 0x10a
-    e_stw   r10, 0(r9)
-    // Clear e200 Core Watchdog Timer
-    e_li    r9, 0
-    mtspr   340, r9
+    /* SWT.SR.R = 0x0000c520. Write 1st key to clear soft lock bit */
+    e_lis       r9, 0xfff3
+    e_or2i      r9, 0x8000
+    e_li        r10, 0
+    e_or2i      r10, 0xc520
+    e_stw       r10, 16(r9)
+    /* SWT.SR.R = 0x0000d928. Write 2nd key to clear soft lock bit */
+    e_li        r10, 0
+    e_or2i      r10, 0xd928
+    e_stw       r10, 16(r9)
+    /* SWT.CR.R = 0x8000010A. Clear watchdog enable (WEN) */
+    e_lis       r10, 0x8000
+    e_or2i      r10, 0x10a
+    e_stw       r10, 0(r9)
+    /* Clear e200 Core Watchdog Timer */
+    e_li        r9, 0
+    mtspr       340, r9
 
     se_blr
 
@@ -1119,44 +1109,44 @@ disableWatchdog:
  * the stack and branches there to fulfill this requirement.
  */
 initFlash:
-    e_stwu  sp, -24(sp) /* We need 20 Byte but stack frame must be multiple of 8 (EABI) */
-    mflr    r0
-    e_stw   r0, 28(sp)
+    e_stwu      sp, -24(sp) /* We need 20 Byte but stack frame must be multiple of 8 (EABI) */
+    mflr        r0
+    e_stw       r0, 28(sp)
 
     /* Load the required four movable instructions into r8..r10. */
-    e_lis   r10, if_movalbeMachineCode@ha
-    e_add16i r10, r10, if_movalbeMachineCode@l
-    e_lwz   r8, 0(r10)
-    e_lwz   r9, 4(r10)
-    e_lwz   r10, 8(r10)
+    e_lis       r10, if_movalbeMachineCode@ha
+    e_add16i    r10, r10, if_movalbeMachineCode@l
+    e_lwz       r8, 0(r10)
+    e_lwz       r9, 4(r10)
+    e_lwz       r10, 8(r10)
 
     /* Store moveable sub-routine in the stack area. */
-    e_stw   r8, 8(sp)
-    e_stw   r9, 12(sp)
-    e_stw   r10, 16(sp)
+    e_stw       r8, 8(sp)
+    e_stw       r9, 12(sp)
+    e_stw       r10, 16(sp)
 
     /* Load function arguments of our moveable sub-routine.
          Configuration word 0x18c7eded: 3 wait states on read and write, buffers enabled
        and prefetch of buffers on instruction read, prefetch on miss or hit. */
-    e_lis   r3, 0x18c7
-    e_or2i  r3, 0xeded
-    e_lis   r4, 0xc3f8      /* &CFLASH.PFCR0.R: Configuration register of flash controller */
-    e_or2i  r4, 0x801c
+    e_lis       r3, 0x18c7
+    e_or2i      r3, 0xeded
+    e_lis       r4, 0xc3f8  /* CFLASH.PFCR0: Configuration register of flash controller */
+    e_or2i      r4, 0x801c
 
     /* Call sub-routine, which is in the stack area. */
-    e_la    r9, 8(sp)
-    mtctr   r9
+    e_la        r9, 8(sp)
+    mtctr       r9
     se_bctrl
 
-    e_lwz   r0, 28(sp)
-    mtlr    r0
-    e_la    sp, 24(sp)
+    e_lwz       r0, 28(sp)
+    mtlr        r0
+    e_la        sp, 24(sp)
     se_blr
 
-    .align  2
+    .align      2
 if_movalbeMachineCode:
     se_isync                /* Force re-reading instructions after leaving flash. */
-    e_stw   r3, 0(r4)
+    e_stw       r3, 0(r4)
     msync                   /* Accomplish transaction before return to flash. */
     se_blr
 

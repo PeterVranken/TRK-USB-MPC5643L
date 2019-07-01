@@ -67,7 +67,7 @@
     and the linker script would need more or altered section filters.\n
       No using all pre-configured processes doesn't matter. Just use a process in a task
     specification or leave it. An unused process doesn't produce any overhead. */
-#define RTOS_NO_PROCESSES    4
+#define RTOS_NO_PROCESSES           4
 
 
 /** The period time of the RTOS system timer. Unit is 1ms. */
@@ -328,7 +328,7 @@ uint32_t rtos_systemCall(uint32_t idxSysCall, ...);
 
 
 /**
- * C signature for a assembler entry point, which ends a system call handler with user
+ * C signature for an assembler entry point, which ends a system call handler with user
  * task termination and counted process error. Must be used solely from within the
  * implementation of a system call and only if the abortion is due to a clear fault in the
  * calling user code.

@@ -82,7 +82,7 @@
     mode. Calibration mode is for development only. Instead of measuring the CPU load the
     internally used delay function is checked. The actually yielded delay times are
     measured and stored in this array for inspection. The unit is the CPU clock tick (8 1/3
-    ns on our platform) and the accurate, execpted time is 100ms. */
+    ns on our platform) and the accurate, expected time is 100ms. */
 static uint32_t gsl_tiCalResult[32];
 #endif
  

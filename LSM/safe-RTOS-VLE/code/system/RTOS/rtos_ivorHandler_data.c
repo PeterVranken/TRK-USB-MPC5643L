@@ -1,7 +1,7 @@
 /**
  * @file rtos_ivorHandler_data.c
  * Data object of the assembly code, which should appear in the debug information, are
- * placed here. (It's not so clear how to declare it directly in teh assembly code.)
+ * placed here. (It's not so clear how to declare it directly in the assembly code.)
  *
  * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
