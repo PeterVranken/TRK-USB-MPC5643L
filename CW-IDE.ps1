@@ -18,4 +18,4 @@ function endWithError { write-host $usage; exit; }
 write-host ("CW-IDE.ps1: You need to configure this script prior to first use: Specify location of Code Warrior IDE")
 Write-Host "Press any key to continue ..."; $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
-C:\ProgramFiles\Freescale\CW-MCU-v10.7\eclipse\cwide.exe -data .\workspaceCW
+C:\ProgramFiles\NXP\CW-MCU-v10.7\eclipse\cwide.exe -data .\workspaceCW
