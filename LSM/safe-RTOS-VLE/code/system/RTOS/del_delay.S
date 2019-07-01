@@ -39,6 +39,12 @@
  * Defines
  */
 
+/** Is the instruction cache switched on? This is decided in file sup_startup.S */
+#define IS_ENABLE_ICACHE            1
+
+/** Is the branch prediction switched on? This is decided in file sup_startup.S */
+#define IS_ENABLE_BRANCH_PREDICTION 1
+
 
 /*
  * External function declarations
@@ -71,58 +77,75 @@
  * configuration DEBUG/PRODUCTION. Furthermore, the execution time needs to be kept clear
  * of load address caused variances, which can be controlled only in an assembly module.
  *   @remark
- * This function can be called from user mode tasks and from kernel code.
+ * This function can be called from user and supervisor mode.
  */
-    .section .text.del_delayMicroseconds, "ax", @progbits
-    .global del_delayMicroseconds, del_loopDelayMicroseconds
-    .type   del_delayMicroseconds, @function
+    .section    .text.del_delayMicroseconds, "ax", @progbits
+    .global     del_delayMicroseconds, del_loopDelayMicroseconds
     
     /* The alignment of the function code is the most important element of the
        implementation. The loop code must be inside a 64 Bit word because of the 64 Bit
        address bus for fetching instructions. Otherwise the execution time rises and the
        timing calibration fails.
          The alignment is ensured by the .align in combination with the nop instructions
-       and can be double checked in the map file. */
-    .align  3
-    
+       and can be double checked in the map file; therefore, we've made
+       del_loopDelayMicroseconds a global symbol. */
+    .balign     8
+
 del_delayMicroseconds:
 
 #ifdef __VLE__
-//# define NO_CYCLES_PER_US   20  /* I-cache off, no branch prediction */
-# define NO_CYCLES_PER_US   60  /* I-cache and branch prediction on. */
+# if !IS_ENABLE_ICACHE && !IS_ENABLE_BRANCH_PREDICTION
+#  define NO_CYCLES_PER_US   20     /* I-cache off, no branch prediction. */
+# elif IS_ENABLE_ICACHE && IS_ENABLE_BRANCH_PREDICTION
+#  define NO_CYCLES_PER_US   60     /* I-cache and branch prediction on. */
+# else
+#  error Module del_delay.S needs calibration for chosen confguration
+# endif
 
-    e_mulli r3, r3, NO_CYCLES_PER_US    /* Rescale us to CPU clock ticks */
+    e_mulli     r3, r3, NO_CYCLES_PER_US    /* Rescale us to CPU clock ticks. */
     
-    se_cmpli r3, 1                  /* Two loops delay less to compensate for */
-    e_ble   exitDelayMicroseconds   /* overhead, like function call and return. */
-    e_addi  r3, r3, -2
-    se_nop                          /* Ensure alignment of loop code on 8 Byte address. */
-    
+    se_cmpli    r3, 1                   /* Two loops delay less to compensate for */
+    e_ble       exitDelayMicroseconds   /* overhead, like function call and return. */
+    e_addi      r3, r3, -2
+    .balignw    8, 0x4400   /* Ensure alignment of loop code on 8 Byte address using fill
+                               pattern "se_nop" */
 del_loopDelayMicroseconds:
-    e_add2i. r3, -1
-    se_bne  del_loopDelayMicroseconds
+    e_add2i.    r3, -1
+    se_bne      del_loopDelayMicroseconds
 
 exitDelayMicroseconds:
     se_blr
 
 # undef NO_CYCLES_PER_US
 #else /* Book E instruction set */
-# define NO_CYCLES_PER_US_NUM   40  /* I-cache off, no branch prediction */
-# define NO_CYCLES_PER_US_DEN   3   /* I-cache off, no branch prediction */
-# define NO_CYCLES_OVERHEAD     3
 
-    li      r4, NO_CYCLES_PER_US_DEN    /* Rescale us to CPU clock ticks */
-    mulli   r3, r3, NO_CYCLES_PER_US_NUM   
-    divwu   r3, r3, r4
+# if !IS_ENABLE_ICACHE && !IS_ENABLE_BRANCH_PREDICTION
+#  define NO_CYCLES_PER_US_NUM   40 /* I-cache off, no branch prediction. */
+#  define NO_CYCLES_PER_US_DEN   3
+#  define NO_CYCLES_OVERHEAD     3
+# elif IS_ENABLE_ICACHE && IS_ENABLE_BRANCH_PREDICTION
+#  define NO_CYCLES_PER_US_NUM   40 /* I-cache and branch prediction on. */
+#  define NO_CYCLES_PER_US_DEN   1
+#  define NO_CYCLES_OVERHEAD     9
+# else
+#  error Module del_delay.S needs calibration for chosen confguration
+# endif
+
+    li          r4, NO_CYCLES_PER_US_DEN    /* Rescale us to CPU clock ticks. */
+    mulli       r3, r3, NO_CYCLES_PER_US_NUM   
+    divwu       r3, r3, r4
     
-    cmpli   cr7, r3, (NO_CYCLES_OVERHEAD-1) /* A few loops delay less to compensate for */
-    ble     cr7, exitDelayMicroseconds      /* overhead, like function call and return. */
-    subi    r3, r3, NO_CYCLES_OVERHEAD
-    
+    cmpli       cr7, r3, (NO_CYCLES_OVERHEAD-1) /* A few loops delay less to compensate for */
+    ble         cr7, exitDelayMicroseconds      /* overhead, like function call and return. */
+    subi        r3, r3, NO_CYCLES_OVERHEAD
+
+/// @todo Prove correctness of next two lines and uncomment
+//    .balignl    8, 0x60000000  /* Ensure alignment of loop code on 8 Byte address using fill
+//                                  pattern "ori r0, r0, 0" */
 del_loopDelayMicroseconds:
-    subi    r3, r3, 1
-    cmpwi   cr7, r3, 0
-    bne+    cr7, del_loopDelayMicroseconds
+    subi        r3, r3, 1
+    cmpwi       cr7, r3, 0
+    bne+        cr7, del_loopDelayMicroseconds
 
 exitDelayMicroseconds:
     blr
