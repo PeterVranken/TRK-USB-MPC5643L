@@ -1084,8 +1084,10 @@ rtos_errorCode_t rtos_osInitKernel(void)
     {
         /* Caution: Maintenance of this code is required consistently with
            rtos_osGrantPermissionRunTask() and rtos_scFlHdlr_runTask(). */
-        assert(maxPIDInUse >= 1  &&  maxPIDInUse <= 4);
-        const uint16_t mask = 0x1111 << (maxPIDInUse-1);
+        assert(maxPIDInUse <= 4);
+        const uint16_t mask = maxPIDInUse >= 1
+                              ? 0x1111 << (maxPIDInUse-1)   /* Normal situation */
+                              : 0xffff;                     /* No process in use */
         if((_runTask_permissions & mask) != 0)
             errCode = rtos_err_runTaskBadPermission;
     }
@@ -1179,7 +1181,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
         /* Disable all PIT timers during configuration. */
         PIT.PITMCR.R = 0x2;
 
-        /* Install the interrupt servive routine for cyclic timer PIT 0. It drives the OS
+        /* Install the interrupt service routine for cyclic timer PIT 0. It drives the OS
            scheduler for cyclic task activation. */
         rtos_installInterruptHandler( &onOsTimerTick
                                     , /* vectorNum */ 59
