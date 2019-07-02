@@ -77,19 +77,19 @@
  * configuration DEBUG/PRODUCTION. Furthermore, the execution time needs to be kept clear
  * of load address caused variances, which can be controlled only in an assembly module.
  *   @remark
- * This function can be called from user mode tasks and from kernel code.
+ * This function can be called from user and supervisor mode.
  */
     .section .text.del_delayMicroseconds, "ax", @progbits
     .global del_delayMicroseconds, del_loopDelayMicroseconds
-    .type   del_delayMicroseconds, @function
     
     /* The alignment of the function code is the most important element of the
        implementation. The loop code must be inside a 64 Bit word because of the 64 Bit
        address bus for fetching instructions. Otherwise the execution time rises and the
        timing calibration fails.
          The alignment is ensured by the .align in combination with the nop instructions
-       and can be double checked in the map file. */
-    .align  3
+       and can be double checked in the map file; therefore, we've made
+       del_loopDelayMicroseconds a global symbol. */
+    .balign     8
     
 del_delayMicroseconds:
 
@@ -107,8 +107,8 @@ del_delayMicroseconds:
     se_cmpli r3, 1                  /* Two loops delay less to compensate for */
     e_ble   exitDelayMicroseconds   /* overhead, like function call and return. */
     e_addi  r3, r3, -2
-    se_nop                          /* Ensure alignment of loop code on 8 Byte address. */
-    
+    .balignw    8, 0x4400   /* Ensure alignment of loop code on 8 Byte address using fill
+                               pattern "se_nop" */
 del_loopDelayMicroseconds:
     e_add2i. r3, -1
     se_bne  del_loopDelayMicroseconds
@@ -139,6 +139,9 @@ exitDelayMicroseconds:
     ble     cr7, exitDelayMicroseconds      /* overhead, like function call and return. */
     subi    r3, r3, NO_CYCLES_OVERHEAD
     
+/// @todo Prove correctness of next two lines and uncomment
+//    .balignl    8, 0x60000000  /* Ensure alignment of loop code on 8 Byte address using fill
+//                                  pattern "ori r0, r0, 0" */
 del_loopDelayMicroseconds:
     subi    r3, r3, 1
     cmpwi   cr7, r3, 0
