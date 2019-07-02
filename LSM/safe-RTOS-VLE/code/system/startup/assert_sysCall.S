@@ -39,19 +39,19 @@
  * Defines
  */
 
-/** The code that implements the function called from the C assert macro, when its
-    condition is \a false, can be compiled in different ways. It can halt te SW execution
+/** The code that implements the function called from the C assert macro, if its
+    condition is \a false, can be compiled in different ways. It can halt the SW execution
     immediately or only count the occurances of \a false conditions and continue. The
     decision has a major impact on the testability of failure handling.\n
       One out of #ASSERT_FAILURE_BEHAVIOR_HALT_SW,
     #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST or
     #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_LAST is assigned to this define. See
-    these other macro for more details. */
+    these other macros for more details. */
 #define ASSERT_FAILURE_BEHAVIOR     ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST
 
 /** Traditional behavior of assert: The SW execution is halted at the first occurrence of an
     assert macro with \a false condition.\n
-      This behavior can be chosen if software is functionally tested, which is expected to
+      This behavior can be chosen when software is functionally tested, which is expected to
     be error free.\n
       This behavior must not be used if the software's failure handling is tested, e.g. by
     purposely injected errors. If this behavior is chosen then the fault handling system of
@@ -68,7 +68,7 @@
 // high.
 //   Change impact on code is little but we have to rename and re-doc the macros.
 //   todoc: In typical situations, the macro exposes the traditional behavior: If placed in
-// SV code, if placed in supervisor task (has highest prio)
+// SV code, if placed in supervisory task (has highest prio)
 
 /** "Safe" behavior of assert: The occurrence of assert macros with \a false condition is
     counted. The assert information is stored only for the very first occurrence of an
@@ -128,8 +128,9 @@
  * compiled SW is no longer testable with respect to fault handling. It's unavoidable that
  * failing, straying code could enter the system call by accident. It will halt the SW
  * execution (and report wrong fault information through the stored assert information,
- * filename, line number, etc.) rather then running through the established fault handling
- * procedures. Fault handling would become untestable by principle.\n
+ * filename, line number, etc.) rather then running through the fault handling procedures
+ * established in the operating system. Fault handling would become untestable by
+ * principle.\n
  *   On the other hand is halting the SW still very useful for all early, "normal" testing,
  * when the basic SW functionality is put to operation and initially tested. A logical
  * fault halts execution and the stored assert information points directly to the violated
@@ -138,8 +139,18 @@
  * function may halt the code execution or it just stores the assert information, counts
  * the occurance and returns (to the failing user task). The choice needs to be made at
  * compile time, see macro #ASSERT_FAILURE_BEHAVIOR.
- *   @param
- * On entry, r4 holds
+ *   @param fileName
+ * On entry, r4 holds a pointer to the constant string with the name of source, which the
+ * failing assertion is located in.
+ *   @param line
+ * On entry, r5 holds a pointer to the constant string with the line number, which the
+ * failing assertion is located at.
+ *   @param funcName
+ * On entry, r6 holds a pointer to the constant string with the name of C function, which
+ * the failing assertion is located in.
+ *   @param expression
+ * On entry, r7 holds a pointer to the constant string with the failing expression in the
+ * assertion.
  *   @remark
  * This is the implementation of a system call handler. The code must not be invoked
  * directly. The system call handler is compliant with the basic conformance class. It is
@@ -177,7 +188,7 @@ ass_noUpdErrInfo:
     e_lis       r3, assert_PID@ha
     e_lbz       r4, assert_PID@l(r3)    /* r4: PID stored so far, can initially be 0xff */
     se_extsb    r4                      /* r4: PID so far as int32_t, range [-1 .. 4] */
-    se_cmp      r3, r4                  /* Signed compare with PID from this assertion */
+    se_cmp      r0, r4                  /* Signed compare with PID from this assertion */
     se_ble      ass_noUpdPID            /* Don't store if not greater */
     e_stb       r0, assert_PID@l(r3)    /* Store new greatest seen PID. */
 ass_noUpdPID:
