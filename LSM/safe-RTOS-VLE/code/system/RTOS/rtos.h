@@ -85,6 +85,10 @@
     setting, the value cannot be changed. */
 #define RTOS_MAX_NO_EVENTS          8
 
+/** This event ID is returned if creation of a new event is impossible. The ID is unusable,
+    no task can be created specifying this event ID. */
+#define RTOS_INVALID_EVENT_ID       (RTOS_MAX_NO_EVENTS)
+
 /** The maximum number of user tasks, which can be activated by an event. The chosen number
     is a compile time configuration setting and there are no constraints in changing it
     besides the ammout of reserved RAM space for the resulting table size.\n
@@ -189,6 +193,10 @@ typedef void (*rtos_interruptServiceRoutine_t)(void);
 typedef enum rtos_errorCode_t
 {
     rtos_err_noError = 0        /// Not an error, function cuceeded
+    , rtos_err_tooManyEventsCreated /// Can't create no more than #RTOS_MAX_NO_EVENTS events
+    , rtos_err_invalidEventPrio /// Priority needs to be in range [1; #RTOS_KERNEL_PRIORITY)
+    , rtos_err_badEventTiming   /// Inconsistent or bad timing configuration stated for event
+    , rtos_err_eventNotTriggerable  /// Bad configuration makes event unusable
     , rtos_err_configurationOfRunningKernel /// Attempt to (re-)configure a running kernel
     , rtos_err_badEventId       /// The ID of the event is invalid. No such event exists
     , rtos_err_badProcessId     /// The ID of the process is invalid. No such process exists
@@ -252,11 +260,12 @@ typedef struct rtos_taskDesc_t
  */
 
 /** Creation of an event. The event can be cyclically triggering or software triggerd. */
-unsigned int rtos_osCreateEvent( unsigned int tiCycleInMs
-                               , unsigned int tiFirstActivationInMs
-                               , unsigned int priority
-                               , unsigned int minPIDToTriggerThisEvent
-                               );
+rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
+                                   , unsigned int tiCycleInMs
+                                   , unsigned int tiFirstActivationInMs
+                                   , unsigned int priority
+                                   , unsigned int minPIDToTriggerThisEvent
+                                   );
 
 /** Task registration for user mode or operating system initialization task. */
 rtos_errorCode_t rtos_osRegisterInitTask( int32_t (*initTaskFct)(uint32_t PID)

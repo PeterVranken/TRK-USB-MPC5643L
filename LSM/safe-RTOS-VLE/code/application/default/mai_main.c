@@ -1098,148 +1098,178 @@ void main(void)
        The returned value is redundant. This technique requires that we create the events
        in the right order and this requires in practice a double-check by assertion - later
        maintenance errors are unavoidable otherwise. */
-#ifdef DEBUG
-    unsigned int idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              1
-                      , /* tiFirstActivationInMs */    10
-                      , /* priority */                 prioTask1ms
-                      , /* minPIDToTriggerThisEvent */ 1
-                      );
-    assert(idEvent == idEv1ms);
-    if(rtos_osRegisterOSTask(idEv1ms, taskOs1ms) != rtos_err_noError)
-        initOk = false;
-
-    if(rtos_osRegisterUserTask( idEv1ms
-                              , task1ms
-                              , pidTask1ms
-                              , /* tiTaskMaxInUs */ 0
-                              )
-       != rtos_err_noError
+    unsigned int idEvent;
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              1
+                         , /* tiFirstActivationInMs */    10
+                         , /* priority */                 prioTask1ms
+                         , /* minPIDToTriggerThisEvent */ 1
+                         )
+       == rtos_err_noError
       )
     {
-        initOk = false;
-    }
+        assert(idEvent == idEv1ms);
 
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              3
-                      , /* tiFirstActivationInMs */    17
-                      , /* priority */                 prioTask3ms
-                      , /* minPIDToTriggerThisEvent */ 1
-                      );
-    assert(idEvent == idEv3ms);
-    if(rtos_osRegisterUserTask( idEv3ms
-                              , task3ms
-                              , pidTask3ms
-                              , /* tiTaskMaxInUs */ 0
-                              )
-       != rtos_err_noError
+        if(rtos_osRegisterOSTask(idEv1ms, taskOs1ms) != rtos_err_noError)
+            initOk = false;
+
+        if(rtos_osRegisterUserTask( idEv1ms
+                                  , task1ms
+                                  , pidTask1ms
+                                  , /* tiTaskMaxInUs */ 0
+                                  )
+           != rtos_err_noError
+          )
+        {
+            initOk = false;
+        }
+    }
+    else
+        initOk = false;
+        
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              3
+                         , /* tiFirstActivationInMs */    17
+                         , /* priority */                 prioTask3ms
+                         , /* minPIDToTriggerThisEvent */ 1
+                         )
+       == rtos_err_noError
       )
     {
-        initOk = false;
+        assert(idEvent == idEv3ms);
+        if(rtos_osRegisterUserTask( idEv3ms
+                                  , task3ms
+                                  , pidTask3ms
+                                  , /* tiTaskMaxInUs */ 0
+                                  )
+           != rtos_err_noError
+          )
+        {
+            initOk = false;
+        }
     }
-
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              1000
-                      , /* tiFirstActivationInMs */    100
-                      , /* priority */                 prioTask1s
-                      , /* minPIDToTriggerThisEvent */ 1
-                      );
-    assert(idEvent == idEv1s);
-    if(rtos_osRegisterUserTask( idEv1s
-                              , task1s
-                              , pidTask1s
-                              , /* tiTaskMaxInUs */ 0
-                              )
-       != rtos_err_noError
+    else
+        initOk = false;
+    
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              1000
+                         , /* tiFirstActivationInMs */    100
+                         , /* priority */                 prioTask1s
+                         , /* minPIDToTriggerThisEvent */ 1
+                         )
+       == rtos_err_noError
       )
     {
-        initOk = false;
+        assert(idEvent == idEv1s);
+        if(rtos_osRegisterUserTask( idEv1s
+                                  , task1s
+                                  , pidTask1s
+                                  , /* tiTaskMaxInUs */ 0
+                                  )
+           != rtos_err_noError
+          )
+        {
+            initOk = false;
+        }
     }
-
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              0 /* non-cyclic */
-                      , /* tiFirstActivationInMs */    0
-                      , /* priority */                 prioTaskNonCyclic
-                      , /* minPIDToTriggerThisEvent */ 1
-                      );
-    assert(idEvent == idEvNonCyclic);
-    if(rtos_osRegisterUserTask( idEvNonCyclic
-                              , taskNonCyclic
-                              , pidTaskNonCyclic
-                              , /* tiTaskMaxInUs */ 0
-                              )
-       != rtos_err_noError
+    else
+        initOk = false;
+    
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              0 /* non-cyclic */
+                         , /* tiFirstActivationInMs */    0
+                         , /* priority */                 prioTaskNonCyclic
+                         , /* minPIDToTriggerThisEvent */ 1
+                         )
+       == rtos_err_noError
       )
     {
-        initOk = false;
+        assert(idEvent == idEvNonCyclic);
+        if(rtos_osRegisterUserTask( idEvNonCyclic
+                                  , taskNonCyclic
+                                  , pidTaskNonCyclic
+                                  , /* tiTaskMaxInUs */ 0
+                                  )
+           != rtos_err_noError
+          )
+        {
+            initOk = false;
+        }
     }
+    else
+        initOk = false;
 
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              17
-                      , /* tiFirstActivationInMs */    0
-                      , /* priority */                 prioTask17ms
-                      , /* minPIDToTriggerThisEvent */ 1
-                      );
-    assert(idEvent == idEv17ms);
-    if(rtos_osRegisterUserTask( idEv17ms
-                              , task17ms
-                              , pidTask17ms
-                              , /* tiTaskMaxInUs */ 0
-                              )
-       != rtos_err_noError
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              17
+                         , /* tiFirstActivationInMs */    0
+                         , /* priority */                 prioTask17ms
+                         , /* minPIDToTriggerThisEvent */ 1
+                         )
+       == rtos_err_noError
       )
     {
-        initOk = false;
+        assert(idEvent == idEv17ms);
+        if(rtos_osRegisterUserTask( idEv17ms
+                                  , task17ms
+                                  , pidTask17ms
+                                  , /* tiTaskMaxInUs */ 0
+                                  )
+           != rtos_err_noError
+          )
+        {
+            initOk = false;
+        }
     }
-
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              0 /* Event task, no cycle time */
-                      , /* tiFirstActivationInMs */    0
-                      , /* priority */                 prioTaskOnButtonDown
-                      , /* minPIDToTriggerThisEvent */ 1
-                      );
-    assert(idEvent == idEvOnButtonDown);
-    if(rtos_osRegisterUserTask( idEvOnButtonDown
-                              , taskOnButtonDown
-                              , pidTaskOnButtonDown
-                              , /* tiTaskMaxInUs */ 0 
-                              )
-       != rtos_err_noError
+    else
+        initOk = false;
+        
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              0 /* Event task, no cycle time */
+                         , /* tiFirstActivationInMs */    0
+                         , /* priority */                 prioTaskOnButtonDown
+                         , /* minPIDToTriggerThisEvent */ 1
+                         )
+       == rtos_err_noError
       )
     {
-        initOk = false;
+        assert(idEvent == idEvOnButtonDown);
+        if(rtos_osRegisterUserTask( idEvOnButtonDown
+                                  , taskOnButtonDown
+                                  , pidTaskOnButtonDown
+                                  , /* tiTaskMaxInUs */ 0 
+                                  )
+           != rtos_err_noError
+          )
+        {
+            initOk = false;
+        }
     }
+    else
+        initOk = false;
 
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              23 /* ms */
-                      , /* tiFirstActivationInMs */    3
-                      , /* priority */                 prioTaskCpuLoad
-                      , /* minPIDToTriggerThisEvent */ 1
-                      );
-    assert(idEvent == idEvCpuLoad);
-    if(rtos_osRegisterUserTask( idEvCpuLoad
-                              , taskCpuLoad
-                              , pidTaskCpuLoad
-                              , /* tiTaskMaxInUs */ 0
-                              )
-       != rtos_err_noError
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              23 /* ms */
+                         , /* tiFirstActivationInMs */    3
+                         , /* priority */                 prioTaskCpuLoad
+                         , /* minPIDToTriggerThisEvent */ 1
+                         )
+       == rtos_err_noError
       )
     {
-        initOk = false;
+        assert(idEvent == idEvCpuLoad);
+        if(rtos_osRegisterUserTask( idEvCpuLoad
+                                  , taskCpuLoad
+                                  , pidTaskCpuLoad
+                                  , /* tiTaskMaxInUs */ 0
+                                  )
+           != rtos_err_noError
+          )
+        {
+            initOk = false;
+        }
     }
+    else
+        initOk = false;
 
     /* The last check ensures that we didn't forget to register a task. */
     assert(idEvent == noRegisteredTasks-2);

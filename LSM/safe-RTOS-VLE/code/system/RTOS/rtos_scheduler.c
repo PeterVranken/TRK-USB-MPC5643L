@@ -686,12 +686,16 @@ static void onOsTimerTick(void)
  * All calls of this function need to be done prior to the start of the kernel using
  * rtos_osInitKernel().\n
  *   @return
- * All events are identified by a positive integer. Normally this ID is returned. The
- * maximum number of events is limited to #RTOS_MAX_NO_EVENTS by hardware constraints. If
- * the event cannot be created due to this constraint or if the event descriptor contains
- * invalid data then the function returns (unsigned int)-1.\n
+ * \a rtos_err_noError (zero) if the event could be created. The maximum number of events
+ * is limited to #RTOS_MAX_NO_EVENTS by hardware constraints. If the event cannot be
+ * created due to this constraint or if the event descriptor contains invalid data then
+ * then the function returns a non zero value from enumeration \a rtos_errorCode_t.\n
  *   An assertion in the calling code is considered appropriate to handle the error because
- * it'll always be a static configuration error.\n
+ * it'll always be a static configuration error.
+ *   @param pEventId
+ * All events are identified by a positive integer. Normally this ID is returned by
+ * reference in * \a pEventId. If the event cannot be created then #RTOS_INVALID_EVENT_ID
+ * is returned in * \a pEventId.\n
  *   Note, it is guaranteed to the caller that the returned ID is not an arbitrary,
  * meaningless number. Instead, the ID is counted from zero in order of creating events.
  * The first call of this function will return 0, the second 1, and so on. This simplifies
@@ -737,28 +741,31 @@ static void onOsTimerTick(void)
  *   @remark
  * This function must be called by trusted code in supervisor mode only.
  */
-unsigned int rtos_osCreateEvent( unsigned int tiCycleInMs
-                               , unsigned int tiFirstActivationInMs
-                               , unsigned int priority
-                               , unsigned int minPIDToTriggerThisEvent
-                               )
+rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
+                                   , unsigned int tiCycleInMs
+                                   , unsigned int tiFirstActivationInMs
+                                   , unsigned int priority
+                                   , unsigned int minPIDToTriggerThisEvent
+                                   )
 {
+    *pEventId = RTOS_INVALID_EVENT_ID;
+    
     /* The number of events is constraint by hardware (INTC) */
     if(_noEvents >= RTOS_MAX_NO_EVENTS)
-        return (unsigned int)-1;
+        return rtos_err_tooManyEventsCreated;
 
     /* The INTC permits priorities only in the range 0..15 and we exclude 0 since such a
        task would never become active. We furthermore exclude priorities equal to or
        greater then the one of the scheduler to avoid unwanted blocking states. */
     if(priority == 0  ||  priority >= RTOS_KERNEL_PRIORITY)
-        return (unsigned int)-1;
+        return rtos_err_invalidEventPrio;
 
     /* Check settings for non regularly activated tasks. */
     if(tiCycleInMs == 0)
     {
         /* Avoid a useless and misleading setting. */
         if(tiFirstActivationInMs != 0)
-            return (unsigned int)-1;
+            return rtos_err_badEventTiming;
     }
 
     /* The full 32 Bit range is avoided for time designations in order to have safe and
@@ -766,11 +773,11 @@ unsigned int rtos_osCreateEvent( unsigned int tiCycleInMs
          Furthermore, no task must have the initial due time of 0xffffffff in order to not
        invalidate the startup logic of the scheduler (see rtos_osInitKernel()). */
     else if(((tiCycleInMs | tiFirstActivationInMs) & 0xc0000000) != 0)
-        return (unsigned int)-1;
+        return rtos_err_badEventTiming;
 
     /* Is the PID constraint plausible? */
     if(minPIDToTriggerThisEvent > RTOS_NO_PROCESSES+1)
-        return (unsigned int)-1;
+        return rtos_err_eventNotTriggerable;
 
     /* Add the new event to the array and initialize the data structure. */
     _eventAry[_noEvents].tiCycleInMs = tiCycleInMs;
@@ -780,8 +787,11 @@ unsigned int rtos_osCreateEvent( unsigned int tiCycleInMs
     _eventAry[_noEvents].noActivationLoss = 0;
     _eventAry[_noEvents].taskAry = NULL;
     _eventAry[_noEvents].noTasks = 0;
-
-    return _noEvents++;
+    
+    /* Assign the next available event ID. */
+    *pEventId = _noEvents++;
+    
+    return rtos_err_noError;
 
 } /* End of rtos_osCreateEvent */
 

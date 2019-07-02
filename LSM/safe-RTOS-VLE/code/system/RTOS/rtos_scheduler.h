@@ -54,11 +54,12 @@
  */
 
 /** Creation of an event. The event can be cyclically triggering or software triggerd. */
-unsigned int rtos_osCreateEvent( unsigned int tiCycleInMs
-                               , unsigned int tiFirstActivationInMs
-                               , unsigned int priority
-                               , unsigned int minPIDToTriggerThisEvent
-                               );
+rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
+                                   , unsigned int tiCycleInMs
+                                   , unsigned int tiFirstActivationInMs
+                                   , unsigned int priority
+                                   , unsigned int minPIDToTriggerThisEvent
+                                   );
 
 /** Task registration for user mode or operating system initialization task. */
 rtos_errorCode_t rtos_osRegisterInitTask( int32_t (*initTaskFct)(uint32_t PID)

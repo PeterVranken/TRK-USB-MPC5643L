@@ -288,55 +288,77 @@ void main(void)
        The returned value is redundant. This technique requires that we create the events
        in the right order and this requires in practice a double-check by assertion - later
        maintenance errors are unavoidable otherwise. */
-#ifdef DEBUG
-    unsigned int idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              997 /* about 1s but prime to others */
-                      , /* tiFirstActivationInMs */    19
-                      , /* priority */                 syc_prioEvReporting
-                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
-                      );
-    assert(idEvent == syc_idEvReporting);
+    unsigned int idEvent;
+    if(rtos_osCreateEvent
+                    ( &idEvent
+                    , /* tiCycleInMs */              997 /* about 1s but prime to others */
+                    , /* tiFirstActivationInMs */    19
+                    , /* priority */                 syc_prioEvReporting
+                    , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                    )
+       != rtos_err_noError
+      )
+    {
+        initOk = false;
+    }
+    else
+        assert(idEvent == syc_idEvReporting);
 
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              10
-                      , /* tiFirstActivationInMs */    0
-                      , /* priority */                 syc_prioEvTest
-                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
-                      );
-    assert(idEvent == syc_idEvTest);
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              10
+                         , /* tiFirstActivationInMs */    0
+                         , /* priority */                 syc_prioEvTest
+                         , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         )
+       != rtos_err_noError
+      )
+    {
+        initOk = false;
+    }
+    else
+        assert(idEvent == syc_idEvTest);
 
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              11
-                      , /* tiFirstActivationInMs */    0
-                      , /* priority */                 syc_prioEvTestCtxSw
-                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
-                      );
-    assert(idEvent == syc_idEvTestCtxSw);
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              11
+                         , /* tiFirstActivationInMs */    0
+                         , /* priority */                 syc_prioEvTestCtxSw
+                         , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         )
+       != rtos_err_noError
+      )
+    {
+        initOk = false;
+    }
+    else
+        assert(idEvent == syc_idEvTestCtxSw);
 
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              0
-                      , /* tiFirstActivationInMs */    0
-                      , /* priority */                 syc_prioEvPIT2
-                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
-                      );
-    assert(idEvent == syc_idEvPIT2);
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              0
+                         , /* tiFirstActivationInMs */    0
+                         , /* priority */                 syc_prioEvPIT2
+                         , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         )
+       != rtos_err_noError
+      )
+    {
+        initOk = false;
+    }
+    else
+        assert(idEvent == syc_idEvPIT2);
 
-#ifdef DEBUG
-    idEvent =
-#endif
-    rtos_osCreateEvent( /* tiCycleInMs */              17
-                      , /* tiFirstActivationInMs */    0
-                      , /* priority */                 syc_prioEv17ms
-                      , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
-                      );
-    assert(idEvent == syc_idEv17ms);
+    if(rtos_osCreateEvent( &idEvent
+                         , /* tiCycleInMs */              17
+                         , /* tiFirstActivationInMs */    0
+                         , /* priority */                 syc_prioEv17ms
+                         , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         )
+       != rtos_err_noError
+      )
+    {
+        initOk = false;
+    }
+    else
+        assert(idEvent == syc_idEv17ms);
 
     /* The tasks are associated with the events. We have two tasks, which are not triggered
        by the RTOS scheduler but by independent interrupts. One is triggered through an
