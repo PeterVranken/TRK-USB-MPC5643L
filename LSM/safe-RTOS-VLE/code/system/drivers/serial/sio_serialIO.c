@@ -299,7 +299,7 @@ static void configSIULForUseWithOpenSDA(void)
  */
 static void configDMA(void)
 {
-    /* Check preconditions for use of DMA with modulo source addressing. If this assert
+    /* Check preconditions for use of DMA with modulo source addressing. If this assertion
        fires it may point to a inconsistency between the C source code and the linker
        control file, which provides the address of the buffer. */
     assert(((uintptr_t)_serialOutRingBuf & SERIAL_OUTPUT_RING_BUFFER_IDX_MASK) == 0);

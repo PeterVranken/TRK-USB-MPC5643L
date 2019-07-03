@@ -396,8 +396,8 @@ bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t no
  * called prior to rtos_osInitKernel().
  */
 static inline void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCallingTask
-                                                        , unsigned int targetPID
-                                                        )
+                                                       , unsigned int targetPID
+                                                       )
 {
     extern void rtos_grantPermissionSuspendProcess(unsigned int, unsigned int);
     rtos_grantPermissionSuspendProcess(pidOfCallingTask, targetPID);
@@ -904,10 +904,12 @@ static inline bool rtos_triggerEvent(unsigned int idEvent)
  *   @remark
  * Use the counterpart function rtos_checkUserCodeWritePtr() if a system call handler
  * should do a write access via a user code provided pointer.
+ *   @remark
+ * Although this function is intended for use inside a system call handler it can be safely
+ * used from user code, too.
  */
 static inline bool rtos_checkUserCodeReadPtr(const void *address, size_t noBytes)
 {
-    assert(noBytes > 0);
     const uint8_t * const p = (uint8_t*)address;
     extern uint8_t ld_ramStart[0], ld_ramEnd[0], ld_romStart[0], ld_romEnd[0];
 

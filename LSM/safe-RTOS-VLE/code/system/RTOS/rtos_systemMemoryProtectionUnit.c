@@ -386,16 +386,19 @@ void rtos_initMPU(void)
  *   @remark
  * The counterpart function rtos_checkUserCodeReadPtr() is implemented as inline function
  * in the RTOS API header file, rtos.h.
+ *   @remark
+ * Although this function is intended for use inside a system call handler it can be safely
+ * used from user code, too.
  */
 bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes)
 {
-    assert(noBytes > 0);
     const uint8_t * const p = (uint8_t*)address;
 
     /* The function doesn't support the kernel process with ID zero. We consider the index
        offset by one. */
     const unsigned int idxP = PID-1;
-    assert(idxP < RTOS_NO_PROCESSES);
+    if(idxP >= RTOS_NO_PROCESSES)
+        return false;
 
     /* All relevant RAM areas are defined in the linker script. We can access the
        information by declaring the linker defined symbols. */

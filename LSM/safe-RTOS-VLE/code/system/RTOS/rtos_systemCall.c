@@ -277,14 +277,14 @@
     done at compile-time and the compiler won't emit any machine code; therefore, it
     doesn't matter where to place the macro. */
 #define CHECK_INTERFACE_S2C                                                                 \
-    static_assert( sizeof(systemCallDesc_t) == SIZE_OF_SC_DESC                              \
-                   &&  offsetof(systemCallDesc_t, addressOfFct) == O_SCDESC_sr              \
-                   &&  sizeoffield(systemCallDesc_t, addressOfFct) == 4                     \
-                   &&  offsetof(systemCallDesc_t, conformanceClass) == O_SCDESC_confCls     \
-                   &&  sizeoffield(systemCallDesc_t, conformanceClass) == 4                 \
-                 , "struct systemCallDesc_t: Inconsistent interface between"                \
-                   " assembler and C code"                                                  \
-                 )
+    _Static_assert( sizeof(systemCallDesc_t) == SIZE_OF_SC_DESC                             \
+                    &&  offsetof(systemCallDesc_t, addressOfFct) == O_SCDESC_sr             \
+                    &&  sizeoffield(systemCallDesc_t, addressOfFct) == 4                    \
+                    &&  offsetof(systemCallDesc_t, conformanceClass) == O_SCDESC_confCls    \
+                    &&  sizeoffield(systemCallDesc_t, conformanceClass) == 4                \
+                  , "struct systemCallDesc_t: Inconsistent interface between"               \
+                    " assembler and C code"                                                 \
+                  )
 
 
 /*

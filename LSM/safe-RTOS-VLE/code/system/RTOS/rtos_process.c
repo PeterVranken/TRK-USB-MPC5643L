@@ -69,31 +69,31 @@
     done at compile-time and the compiler won't emit any machine code; therefore, it
     doesn't matter where to place the macro. */
 #define CHECK_INTERFACE_S2C                                                                 \
-    static_assert( sizeof(rtos_taskDesc_t) == SIZE_OF_TASK_CONF                             \
-                   &&  offsetof(rtos_taskDesc_t, addrTaskFct) == O_TCONF_pFct               \
-                   &&  offsetof(rtos_taskDesc_t, addrTaskFct) == 0                          \
-                   &&  sizeoffield(rtos_taskDesc_t, addrTaskFct) == 4                       \
-                   &&  sizeoffield(rtos_taskDesc_t, addrTaskFct) == sizeof(uintptr_t)       \
-                   &&  offsetof(rtos_taskDesc_t, tiTaskMax) == O_TCONF_tiMax                \
-                   &&  sizeoffield(rtos_taskDesc_t, tiTaskMax) == 4                         \
-                   &&  offsetof(rtos_taskDesc_t, PID) == O_TCONF_pid                        \
-                   &&  sizeoffield(rtos_taskDesc_t, PID) == 1                               \
-                 , "struct rtos_taskDesc_t: Inconsistent interface between"                 \
-                   " assembler and C code"                                                  \
-                 );                                                                         \
-    static_assert( sizeof(processDesc_t) == SIZE_OF_PROCESS_DESC                            \
-                   &&  offsetof(processDesc_t, userSP) == O_PDESC_USP                       \
-                   &&  O_PDESC_USP == 0                                                     \
-                   &&  offsetof(processDesc_t, state) == O_PDESC_ST                         \
-                   &&  sizeoffield(processDesc_t, state) == 1                               \
-                   &&  offsetof(processDesc_t, cntTotalTaskFailure) == O_PDESC_CNTTOT       \
-                   &&  sizeoffield(processDesc_t, cntTotalTaskFailure) == 4                 \
-                   &&  offsetof(processDesc_t, cntTaskFailureAry) == O_PDESC_CNTTARY        \
-                   &&  sizeoffield(processDesc_t, cntTaskFailureAry)                        \
-                       == RTOS_NO_CAUSES_TASK_ABORTION*4                                    \
-                 , "struct processDesc_t: Inconsistent interface between"                   \
-                   " assembler and C code"                                                  \
-                 );
+    _Static_assert( sizeof(rtos_taskDesc_t) == SIZE_OF_TASK_CONF                            \
+                    &&  offsetof(rtos_taskDesc_t, addrTaskFct) == O_TCONF_pFct              \
+                    &&  offsetof(rtos_taskDesc_t, addrTaskFct) == 0                         \
+                    &&  sizeoffield(rtos_taskDesc_t, addrTaskFct) == 4                      \
+                    &&  sizeoffield(rtos_taskDesc_t, addrTaskFct) == sizeof(uintptr_t)      \
+                    &&  offsetof(rtos_taskDesc_t, tiTaskMax) == O_TCONF_tiMax               \
+                    &&  sizeoffield(rtos_taskDesc_t, tiTaskMax) == 4                        \
+                    &&  offsetof(rtos_taskDesc_t, PID) == O_TCONF_pid                       \
+                    &&  sizeoffield(rtos_taskDesc_t, PID) == 1                              \
+                  , "struct rtos_taskDesc_t: Inconsistent interface between"                \
+                    " assembler and C code"                                                 \
+                  );                                                                        \
+    _Static_assert( sizeof(processDesc_t) == SIZE_OF_PROCESS_DESC                           \
+                    &&  offsetof(processDesc_t, userSP) == O_PDESC_USP                      \
+                    &&  O_PDESC_USP == 0                                                    \
+                    &&  offsetof(processDesc_t, state) == O_PDESC_ST                        \
+                    &&  sizeoffield(processDesc_t, state) == 1                              \
+                    &&  offsetof(processDesc_t, cntTotalTaskFailure) == O_PDESC_CNTTOT      \
+                    &&  sizeoffield(processDesc_t, cntTotalTaskFailure) == 4                \
+                    &&  offsetof(processDesc_t, cntTaskFailureAry) == O_PDESC_CNTTARY       \
+                    &&  sizeoffield(processDesc_t, cntTaskFailureAry)                       \
+                        == RTOS_NO_CAUSES_TASK_ABORTION*4                                   \
+                  , "struct processDesc_t: Inconsistent interface between"                  \
+                    " assembler and C code"                                                 \
+                  );
 
 /*
  * Local type definitions
@@ -267,7 +267,11 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
                                          - (unsigned int)stackStartAry[idxP];
         if(sizeOfStack > 0)
         {
-            if(sizeOfStack >= 256  &&  sizeOfStack <= 0x100000
+#define MIN_REASONABLE_STACK_SIZE   256
+#define MAX_REASONABLE_STACK_SIZE   0x10000
+
+            if(sizeOfStack >= MIN_REASONABLE_STACK_SIZE
+               &&  sizeOfStack <= MAX_REASONABLE_STACK_SIZE
                &&  ((uintptr_t)stackStartAry[idxP] & 0x7) == 0
                &&  (sizeOfStack & 0x7) == 0
               )
@@ -286,6 +290,9 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
                 /* Keep track of the highest PID in use. */
                 if(idxP+1 > maxPIDInUse)
                     maxPIDInUse = idxP+1;
+
+#undef MIN_REASONABLE_STACK_SIZE
+#undef MAX_REASONABLE_STACK_SIZE
             }
             else
                 errCode = rtos_err_prcStackInvalid;
