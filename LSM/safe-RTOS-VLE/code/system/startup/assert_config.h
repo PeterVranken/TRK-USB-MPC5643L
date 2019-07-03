@@ -29,6 +29,7 @@
  * Defines
  */
 
+#ifndef ASSERT_FAILURE_BEHAVIOR
 /** The code that implements the function called from the C assert macro, if its
     condition is \a false, can be compiled in different ways. It can halt the SW execution
     immediately or only count the occurances of \a false conditions and continue. The
@@ -37,7 +38,9 @@
     #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST or
     #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_LAST is assigned to this define. See
     these other macros for more details. */
-#define ASSERT_FAILURE_BEHAVIOR     ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST
+# define ASSERT_FAILURE_BEHAVIOR     ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST
+#endif
+
 
 /** Traditional behavior of assert: The SW execution is halted at the first occurrence of an
     assert macro with \a false condition.\n
