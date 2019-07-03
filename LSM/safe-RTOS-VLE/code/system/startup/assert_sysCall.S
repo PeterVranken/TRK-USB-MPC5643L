@@ -34,59 +34,13 @@
  * Include files
  */
 
+#include "assert_config.h"
+
 
 /*
  * Defines
  */
 
-/** The code that implements the function called from the C assert macro, if its
-    condition is \a false, can be compiled in different ways. It can halt the SW execution
-    immediately or only count the occurances of \a false conditions and continue. The
-    decision has a major impact on the testability of failure handling.\n
-      One out of #ASSERT_FAILURE_BEHAVIOR_HALT_SW,
-    #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST or
-    #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_LAST is assigned to this define. See
-    these other macros for more details. */
-#define ASSERT_FAILURE_BEHAVIOR     ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST
-
-/** Traditional behavior of assert: The SW execution is halted at the first occurrence of an
-    assert macro with \a false condition.\n
-      This behavior can be chosen when software is functionally tested, which is expected to
-    be error free.\n
-      This behavior must not be used if the software's failure handling is tested, e.g. by
-    purposely injected errors. If this behavior is chosen then the fault handling system of
-    the RTOS is by principle non-trustable. There's a significant chance that the software
-    halts because of unintended entry of a straying task into the assert system call.\n
-      See #ASSERT_FAILURE_BEHAVIOR, too. */
-#define ASSERT_FAILURE_BEHAVIOR_HALT_SW                             1
-
-/// @todo We can't continue after an assert macro: The function is considered _Noreturn by
-// the compiler. We need to re-define the behavior, e.g. store_and_wait. wait != halt: We
-// spin in an endless loop but only in problem state and with MSR[EE]=1 so that scheduler
-// and deadline monitoring are still operational. The failing task won't proceed (just wait
-// for its deadline failure abort) and the chance to catch this in a debugger is quite
-// high.
-//   Change impact on code is little but we have to rename and re-doc the macros.
-//   todoc: In typical situations, the macro exposes the traditional behavior: If placed in
-// SV code, if placed in supervisory task (has highest prio)
-
-/** "Safe" behavior of assert: The occurrence of assert macros with \a false condition is
-    counted. The assert information is stored only for the very first occurrence of an
-    assert macro with \a false condition. The SW execution is halted if the assert macro is
-    placed in operating system code but continued behind the assert macro if it is placed
-    in user task code.\n
-      Note: This behavior can be used with SW compilations, which are to be used for
-    testing of the software's failure handling capabilities. */
-#define ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST         2
-
-/** "Safe" behavior of assert: The occurrence of assert macros with \a false condition is
-    counted. The assert information is stored for the last recent occurrence of an assert
-    macro with \a false condition. The SW execution is halted if the assert macro is placed
-    in operating system code but continued behind the assert macro if it is placed in user
-    task code.\n
-      Note: This behavior can be used with SW compilations, which are to be used for
-    testing of the software's failure handling capabilities. */
-#define ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_LAST          3
 
 
 /** SPR index of process ID. */
@@ -126,19 +80,20 @@
  * halt the SW execution as traditionally the case for the assert macro.\n
  *   For user code we could halt the SW but this impacts the SW behavior such that DEBUG
  * compiled SW is no longer testable with respect to fault handling. It's unavoidable that
- * failing, straying code could enter the system call by accident. It will halt the SW
- * execution (and report wrong fault information through the stored assert information,
- * filename, line number, etc.) rather then running through the fault handling procedures
- * established in the operating system. Fault handling would become untestable by
- * principle.\n
+ * failing, straying code (e.g. due to failure injection) could enter the system call by
+ * accident. It will halt the SW execution (and report wrong fault information through the
+ * stored assert information, filename, line number, etc.) rather then running through the
+ * fault handling procedures established in the operating system. Fault handling would
+ * become untestable by principle.\n
  *   On the other hand is halting the SW still very useful for all early, "normal" testing,
  * when the basic SW functionality is put to operation and initially tested. A logical
  * fault halts execution and the stored assert information points directly to the violated
  * invariant.\n
  *   We offer two behaviors of the assert function. User code, which enters the assert
- * function may halt the code execution or it just stores the assert information, counts
- * the occurance and returns (to the failing user task). The choice needs to be made at
- * compile time, see macro #ASSERT_FAILURE_BEHAVIOR.
+ * function may halt the user code execution or it just stores the assert information,
+ * counts the occurance and returns (to the failing user task). The choice needs to be made
+ * at compile time, see macro #ASSERT_FAILURE_BEHAVIOR. Note, that an failing assertion in
+ * the supervisor code will always halt the code execution.
  *   @param fileName
  * On entry, r4 holds a pointer to the constant string with the name of source, which the
  * failing assertion is located in.

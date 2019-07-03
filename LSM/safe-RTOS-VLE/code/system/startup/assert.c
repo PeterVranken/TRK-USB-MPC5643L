@@ -85,11 +85,18 @@ void _EXFUN(__assert_func, (const char *fileName, int line, const char *funcName
        #ASSERT_FAILURE_BEHAVIOR for details. */
     rtos_systemCall(ASSERT_SYSCALL_ASSERT_FUNC, fileName, line, funcName, expression);
     
-/// @todo Remove this obsolete loop or make it dependent on the chosen behavior. What shall we do with the _Noreturn?
-    /* We place the infinite loop here to avoid the compiler warning about a _Noreturn
-       function returning. A user task may block but if it has been started with deadline
-       monitoring then the system is not blocked. (And anyway not the tasks of higher
-       priority.) */
+    /* The assert system call will return if the assertion is in user mode code and if the
+       compiled behavior is either #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST or
+       #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_LAST. Unfortunately, we can't return
+       from this function to the C code, which placed the assertion because this function
+       is decalred _Noreturn and we can't rely on the compiler to implement the right
+       instructions for continuing the calling function. Instead, we place an infinite loop
+       here. The promise to continue the SW execution is held in this way:
+         The user task spins in the loop either forever or until a specified time budget is
+       exhausted. In either case, the problem is reported by the kernel. Forever spinning
+       is reported as activation losses of the according event, time budget exhausted as
+       process error #RTOS_ERR_PRC_DEADLINE. Anyway, kernel and the tasks of higher
+       priority are not impacted. */
     while(true)
         ;
         
