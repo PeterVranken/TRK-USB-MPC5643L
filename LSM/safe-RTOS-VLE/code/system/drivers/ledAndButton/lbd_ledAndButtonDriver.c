@@ -165,7 +165,7 @@ uint32_t lbd_scSmplHdlr_setLED( uint32_t pidOfCallingTask ATTRIB_UNUSED
         rtos_systemCallBadArgument();
     }
 
-    lbd_OS_setLED(led, isOn);
+    lbd_osSetLED(led, isOn);
     return isOn;
     
 } /* End of lbd_scSmplHdlr_setLED */
@@ -196,7 +196,7 @@ uint32_t lbd_scSmplHdlr_getButton( uint32_t pidOfCallingTask ATTRIB_UNUSED
        avoid undesired access to I/O ports other than the two true button ports on the eval
        board. */
     if(button == lbd_bt_button_SW2  ||  button == lbd_bt_button_SW3)
-        return (uint32_t)lbd_OS_getButton(button);
+        return (uint32_t)lbd_osGetButton(button);
     else
     {
         /* Abort this system call and the calling user task and count this event as an
@@ -218,8 +218,8 @@ void lbd_task1ms(void)
     if(_onButtonChangeCallback.addrTaskFct != 0)
     {
         /* Read the current button status. */
-        const uint8_t stateButtons = (lbd_OS_getButtonSw2()? 0x01: 0x0)
-                                     | (lbd_OS_getButtonSw3()? 0x10: 0x0)
+        const uint8_t stateButtons = (lbd_osGetButtonSw2()? 0x01: 0x0)
+                                     | (lbd_osGetButtonSw3()? 0x10: 0x0)
                                      ;
 
         /* Compare with last state and invoke callback on any difference. */

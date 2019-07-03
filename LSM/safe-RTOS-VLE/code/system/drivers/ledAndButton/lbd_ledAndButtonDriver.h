@@ -5,7 +5,7 @@
  * Definition of global interface of module lbd_ledAndButtonDriver.c
  * Simple hardware driver for the LEDs and buttons on the eval board TRK-USB-MPC5643L.
  *
- * Copyright (C) 2017-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -23,11 +23,11 @@
 /* Module interface
  *   lbd_initLEDAndButtonDriver
  *   lbd_setLED
- *   lbd_OS_setLED
+ *   lbd_osSetLED
  *   lbd_getButton
- *   lbd_OS_getButtonSw2
- *   lbd_OS_getButtonSw3
- *   lbd_OS_getButton
+ *   lbd_osGetButtonSw2
+ *   lbd_osGetButtonSw3
+ *   lbd_osGetButton
  */
 /*
  * Include files
@@ -55,7 +55,7 @@
 #endif
 
 /** The debounce time of the read process of the button states in ticks, where one tick is
-    the time between two invokations of interface function lbd_OS_getButton.
+    the time between two invokations of interface function lbd_osGetButton.
       The range is 2 .. 100. */
 #define LBD_DEBOUNCE_TIME_BUTTONS   4
 
@@ -145,20 +145,20 @@ typedef int32_t (*lbd_onButtonChangeCallback_t)( uint32_t PID
  * code will lead to a privileged exception. See lbd_setLED() for the user mode variant of
  * the function.
  */
-static inline void lbd_OS_setLED(lbd_led_t led, bool isOn)
+static inline void lbd_osSetLED(lbd_led_t led, bool isOn)
 {
     /* Using .B.PDO implements a byte access to one of the single pad registers. This means
        that we don't have race conditions with other pads (maybe concurrently controlled
        from other contexts). */
     SIU.GPDO[led].B.PDO = isOn? 0: 1;
 
-} /* End of lbd_OS_setLED */
+} /* End of lbd_osSetLED */
 
 
 
 /**
  * Switch a single LED on or off. This is a system call to make the LED I/O driver
- * accessible from a user task. It has the same functionality as lbd_OS_setLED().
+ * accessible from a user task. It has the same functionality as lbd_osSetLED().
  *   @param led
  * The enumeration value to identify an LED.
  *   @param isOn
@@ -196,7 +196,7 @@ static inline void lbd_setLED(lbd_led_t led, bool isOn)
  * code will lead to a privileged exception. User task code can consider using
  * lbd_getButton() instead.
  */
-static inline bool lbd_OS_getButtonSw2(void)
+static inline bool lbd_osGetButtonSw2(void)
 {
     _Static_assert( LBD_MAX_CNT_BTN_DEBOUNCE >= 1  && LBD_MAX_CNT_BTN_DEBOUNCE <= 50
                   , "Debounce time configuration out of range"
@@ -217,7 +217,7 @@ static inline bool lbd_OS_getButtonSw2(void)
     }
     return buttonState_;
 
-} /* End of lbd_OS_getButtonSw2 */
+} /* End of lbd_osGetButtonSw2 */
 
 
 
@@ -239,7 +239,7 @@ static inline bool lbd_OS_getButtonSw2(void)
  * code will lead to a privileged exception. User task code can consider using
  * lbd_getButton() instead.
  */
-static inline bool lbd_OS_getButtonSw3(void)
+static inline bool lbd_osGetButtonSw3(void)
 {
     static int cntDebounce_ = 0;
     static bool buttonState_ = false;
@@ -256,7 +256,7 @@ static inline bool lbd_OS_getButtonSw3(void)
     }
     return buttonState_;
 
-} /* End of lbd_OS_getButtonSw3 */
+} /* End of lbd_osGetButtonSw3 */
 
 
 
@@ -278,16 +278,16 @@ static inline bool lbd_OS_getButtonSw3(void)
  * code will lead to a privileged exception. User task code can consider using
  * lbd_getButton() instead.
  */
-static inline bool lbd_OS_getButton(lbd_button_t button)
+static inline bool lbd_osGetButton(lbd_button_t button)
 {
     if(button == lbd_bt_button_SW2)
-        return lbd_OS_getButtonSw2();
+        return lbd_osGetButtonSw2();
     else
     {
         assert(button == lbd_bt_button_SW3);
-        return lbd_OS_getButtonSw3();
+        return lbd_osGetButtonSw3();
     }
-} /* End of lbd_OS_getButton */
+} /* End of lbd_osGetButton */
 
 
 
