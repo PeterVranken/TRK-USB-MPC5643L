@@ -456,7 +456,7 @@ static inline int32_t rtos_osRunTask( const rtos_taskDesc_t *pUserTaskConfig
  * context if it is positive. A returned negative task function result is interpreted as
  * failing task and rtos_runTask() returns #RTOS_ERR_PRC_USER_ABORT instead.
  * Furthermore, this event is counted as process error in the target process.
- *   @param pTaskConfig
+ *   @param pUserTaskConfig
  * The read-only configuration data for the task. In particular the task function pointer
  * and the ID of the target process.
  *   @param pTaskParam

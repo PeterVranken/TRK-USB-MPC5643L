@@ -140,11 +140,13 @@ void rtos_dummyINTCInterruptHandler(void)
  *   The interrupt default handler is rtos_dummyINTCInterruptHandler(). It does nothing in
  * PRODUCTION compilation but an assertion will fire in DEBUG compilation in order to
  * indicate the missing true handler for an enabled interrupt.\n
- *   Note, this function locally sets but does not touch the enable external interrupts bit
- * in the machine status register. You will call it normally at system startup time, when
- * all interrupts are still disabled, then call rtos_installInterruptHandler()
- * repeatedly for all interrupts your code is interested in and eventually enable the
- * interrupt processing at the CPU.
+ *   Note, this function temporarily clears the enable external interrupts bit in the
+ * machine status register but doesn't have changed it on return. You will call it normally
+ * at system startup time, when all interrupts are still disabled, then call
+ * rtos_installInterruptHandler() repeatedly for all interrupts your code is interested in
+ * and eventually enable the interrupt processing at the CPU.
+ *   @remark
+ * This function must be called from supervisor mode only.
  */
 void rtos_initINTCInterruptController(void)
 {
@@ -228,6 +230,8 @@ void rtos_initINTCInterruptController(void)
  * rtos_osResumeAllInterrupts().\n
  *   This function must not be called for an interrupt number n from the context of that
  * interrupt n.
+ *   @remark
+ * This function must be called from supervisor mode only.
  */
 void rtos_installInterruptHandler( const rtos_interruptServiceRoutine_t pInterruptHandler
                                  , unsigned int vectorNum
