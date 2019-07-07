@@ -1148,6 +1148,20 @@ rtos_ivor7Handler:
 
 rtos_ivor8Handler:
     .extern     rtos_systemCallDescAry
+    
+    /* It is a most typically occuring error to make a system call from operating system
+       code (as the system call instruction is somewhere hidden in a normally looking C
+       style function) and we add an according assertion here; if we wait until the code
+       really fails then it's much harder to debug the cause. If your code hangs in this
+       assertion then you just have to inspect the SPR SRR0 or the call stack to find the
+       code location, which had run made the system call although in was executed in
+       supervisor mode. */
+#ifdef DEBUG
+    mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
+    se_btsti    r0, 17          /* Test bit "problem state" */
+    se_beq      .               /* assert(Problem state == user) */
+#endif
+
 #if RTOS_NO_SYSTEM_CALLS > 0  &&  RTOS_NO_SYSTEM_CALLS <= 65535
 # if RTOS_NO_SYSTEM_CALLS <= 32
     se_cmpli    r3, RTOS_NO_SYSTEM_CALLS      /* Index out of range? */
