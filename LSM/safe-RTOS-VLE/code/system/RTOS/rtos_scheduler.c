@@ -460,7 +460,6 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
             return rtos_err_initTaskRedefined;
 
         _initTaskCfgAry[idxP].addrTaskFct = addrTaskFct;
-
         _initTaskCfgAry[idxP].tiTaskMax = tiTaskMaxInUs * 120;
         _initTaskCfgAry[idxP].PID = PID;
     }
@@ -475,11 +474,9 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
             noTasksBefore += _eventAry[idxEv].noTasks;
 
         unsigned int idxTask;
-        for(idxTask=noTasksBefore; idxTask<_noTasks; ++idxTask)
-            _taskCfgAry[idxTask+1] = _taskCfgAry[idxTask];
+        for(idxTask=_noTasks; idxTask>noTasksBefore; --idxTask)
+            _taskCfgAry[idxTask] = _taskCfgAry[idxTask-1];
 
-        /* Typecast: The assembler interface offers an extended function signature, which
-           we cannot exploit in this context. */
         _taskCfgAry[noTasksBefore].addrTaskFct = addrTaskFct;
         _taskCfgAry[noTasksBefore].tiTaskMax = tiTaskMaxInUs * 120;
         _taskCfgAry[noTasksBefore].PID = PID;
@@ -493,7 +490,7 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
         }
         ++ _eventAry[idEvent].noTasks;
 
-        for(; idxEv<_noEvents; ++idxEv)
+        for(/* it is: idxEv=idEvent+1 */; idxEv<_noEvents; ++idxEv)
             if(_eventAry[idxEv].taskAry != NULL)
                 ++ _eventAry[idxEv].taskAry;
     }
@@ -702,7 +699,7 @@ static void onOsTimerTick(void)
  * ID handling in the application code, constants can mostly be applied as the IDs are
  * effectively known at compile time.
  *   @param tiCycleInMs
- * The period time for regularly triggering event in ms.\n
+ * The period time for regularly triggering events in ms.\n
  *   The permitted range is 0..2^30-1. 0 means no regular, timer controlled trigger and the
  * event is only enabled for software trigger using rtos_triggerEvent() (permitted for
  * interrupts or other tasks).
@@ -726,15 +723,15 @@ static void onOsTimerTick(void)
  * tasks before the later ceated event.
  *   @param minPIDToTriggerThisEvent
  * An event can be triggered by user code, using rtos_triggerEvent(). However, tasks
- * belonging to less privileged processes must not generally granted permission to trigger
+ * belonging to less privileged processes must not generally have permission to trigger
  * events that may activate tasks of higher privileged processes. Since an event is not
- * process related, we make the minimum process ID an explicitly configured, which is
- * required to trigger this event.\n
+ * process related, we make the minimum process ID, which is required to trigger this
+ * event, an explicitly configured property of the event.\n
  *   Only tasks belonging to a process with PID >= \a minPIDToTriggerThisEvent are
  * permitted to trigger this event.\n
  *   The range of \a minPIDToTriggerThisEvent is 0 ... (#RTOS_NO_PROCESSES+1). 0 and 1 both
- * mean, all processes may trigger the event, #RTOS_NO_PROCESSES+1 means only OS code can
- * trigger the event. #RTOS_NO_PROCESSES+1 is available as
+ * mean, all processes may trigger the event, (#RTOS_NO_PROCESSES+1) means only OS code can
+ * trigger the event. (#RTOS_NO_PROCESSES+1) is available as
  * #RTOS_EVENT_NOT_USER_TRIGGERABLE, too.
  *   @remark
  * Never call this function after the call of rtos_osInitKernel()!
