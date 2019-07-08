@@ -38,7 +38,8 @@
 /** The number of supported system calls.\n
       If this define is increased than the initializer expression of \a
     rtos_systemCallDescAry and the list of conditional defines #RTOS_SYSCALL_TABLE_ENTRY_0000,
-    found if file rtos_systemCall.c, need to be extended, too. */
+    #RTOS_SYSCALL_TABLE_ENTRY_0001, and so on, found in file rtos_systemCall.c, need to be
+    extended, too. */
 #define RTOS_NO_SYSTEM_CALLS  64
 
 /** Definition of the enumeration of the supported conformance classes for system call

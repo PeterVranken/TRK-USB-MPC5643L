@@ -417,10 +417,10 @@ static inline void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCalli
  * context if it is positive. A returned negative task function result is interpreted as
  * failing task and rtos_osRunTask() returns #RTOS_ERR_PRC_USER_ABORT instead.
  * Furthermore, this event is counted as process error in the target process.
- *   @param pTaskConfig
+ *   @param pUserTaskConfig
  * The read-only configuration data for the task. In particular the task function pointer
  * and the ID of the target process.
- *   @param pTaskParam
+ *   @param taskParam
  * This argument is meaningless to the function. The value is just passed on to the started
  * task function. The size is large enough to convey a pointer.
  *   @remark
@@ -437,6 +437,7 @@ static inline int32_t rtos_osRunTask( const rtos_taskDesc_t *pUserTaskConfig
     return rtos_runUserTask(pUserTaskConfig, taskParam);
 
 } /* End of rtos_osRunTask */
+
 
 
 /**
@@ -459,7 +460,7 @@ static inline int32_t rtos_osRunTask( const rtos_taskDesc_t *pUserTaskConfig
  *   @param pUserTaskConfig
  * The read-only configuration data for the task. In particular the task function pointer
  * and the ID of the target process.
- *   @param pTaskParam
+ *   @param taskParam
  * This argument is meaningless to the function. The value is just passed on to the started
  * task function. The size is large enough to convey a pointer.
  *   @remark

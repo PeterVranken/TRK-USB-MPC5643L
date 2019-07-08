@@ -29,6 +29,15 @@
  * Defines
  */
  
+/* The assembler code of the kernel needs to know the index of the assert system call. It
+   re-defines it since it can't read the definition made here. To avoid inconsistencies
+   it's inivitable to compare both definitions from C code, which is capable of reading
+   both definitions. */
+#if ASSERT_SYSCALL_ASSERT_FUNC != RTOS_SYSCALL_ASSERT_FUNC
+# error Assert system call index: Inconsistent data definition in interface between C and \
+        assembly code
+#endif
+
  
 /*
  * Local type definitions

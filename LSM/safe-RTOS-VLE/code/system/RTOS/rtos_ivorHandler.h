@@ -98,6 +98,13 @@
     configurable switch. Task termination needs to be system call zero. */
 #define RTOS_SYSCALL_SUSPEND_TERMINATE_TASK  0
 
+/** The index of the system call that implements the C assert macro. Note, the choice is
+    actually made in the implementation files of the assert function. We need to duplicate
+    the definition here as the assembly code can't read the original C code definition. To
+    ensure consistency, the C code implementation file reads this header and compares this
+    duplicate with its original definition. */
+#define RTOS_SYSCALL_ASSERT_FUNC            (0x3f)
+
 /** SPR index of SPRG0. We use it for temporary storage of the SV stack pointer. It is
     possible to hold it in RAM, too, using the SPR is just to have more concise code for
     the frequently accessed variable. */
