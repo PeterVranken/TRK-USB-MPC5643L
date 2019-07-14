@@ -24,7 +24,6 @@
  */
 /* Module interface
  *   rtos_scBscHdlr_suspendAllInterruptsByPriority
- *   rtos_suspendAllInterruptsByPriority
  * Local functions
  */
 

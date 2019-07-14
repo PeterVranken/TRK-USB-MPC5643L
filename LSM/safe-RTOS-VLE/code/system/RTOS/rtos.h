@@ -635,12 +635,12 @@ static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)
  * competing tasks, but at least all non competing tasks of higher priority will still be
  * served (and this will likely include most interrupt handlers).\n
  *   To release the protected resource or to leave the critical section, call the
- * counterpart function rtos_resumeAllInterruptsByPriority(), which restores the original
+ * counterpart function rtos_osResumeAllInterruptsByPriority(), which restores the original
  * interrupt/task priority level.
  *   @return
  * The priority level at entry into this function (and into the critical section) is
  * returned. This level needs to be restored on exit from the critical section using
- * rtos_resumeAllInterruptsByPriority().
+ * rtos_osResumeAllInterruptsByPriority().
  *   @param suspendUpToThisPriority
  * All tasks/interrupts up to and including this priority will be locked. The CPU will
  * not handle them until the priority level is lowered again.
@@ -650,7 +650,7 @@ static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)
  * suspendUpToThisPriority is less than the current value then the current value is not
  * altered. The function still returns the current value and the calling code doesn't need
  * to take care: It can unconditionally end a critical section with
- * rtos_resumeAllInterruptsByPriority() stating the returned priority level value. (The
+ * rtos_osResumeAllInterruptsByPriority() stating the returned priority level value. (The
  * resume function will have no effect in this case.) This makes the OSEK like functions
  * usable without deep inside or full transparency of the priority levels behind the scene;
  * just use the pairs of Get-/ResumeResource, be they nested or not.
@@ -687,7 +687,7 @@ static inline uint32_t rtos_osSuspendAllInterruptsByPriority(uint32_t suspendUpT
     /* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority
        in the INTC should be done under global interrupt lock. */
     rtos_osSuspendAllInterrupts();
-    uint32_t priorityLevelSoFar = INTC.CPR_PRC0.R;
+    const uint32_t priorityLevelSoFar = INTC.CPR_PRC0.R;
 
     /* It is useless and a waste of CPU but not a severe error to let this function set the
        same priority level we already have.
@@ -739,10 +739,26 @@ static inline uint32_t rtos_osSuspendAllInterruptsByPriority(uint32_t suspendUpT
  * See function rtos_osSuspendAllInterruptsByPriority(), which has the same functionality
  * but offered to the OS context only. Differences to the OS function are:\n
  *   The priority can be raised only up to #RTOS_KERNEL_PRIORITY-2. An attempt to raise it
- * beyond this limit will lead to an #RTOS_ERR_PRC_SYS_CALL_BAD_ARG exception.
- * Safety rationale: A critical section cannot be shaped with the RTOS scheduler and nor
+ * beyond this limit will lead to an #RTOS_ERR_PRC_SYS_CALL_BAD_ARG exception. The same
+ * exception is thrown if \a suspendUpToThisPriority would be lower than the basic priority
+ * of the calling task, i.e. the priority which had been configured for the event, which
+ * triggers the task.\n
+ *   Safety rationale: A critical section cannot be shaped with the RTOS scheduler and nor
  * with the user task of highest priority. The intention is to inhibit a task from blocking
- * a safety task, which is assumed to be the only task running at highest priority.
+ * a safety task, which is assumed to be the only task running at highest priority.\n
+ *   Note, since it is impossible to shape a critical section with the safety task of
+ * highest priority, it is in turn not possible to let this very task make use of this
+ * function: it would unavoidably try to set the priority level to a value outside the
+ * permitted range and cause an exception.\n
+ *   @todo One and the same system call is used to implement the suspend and the resume
+ * operation. This means a significant difference to the operating system variants of the
+ * function pair: Nestable pairs of GetResource/ReleaseResource can't be build for user
+ * code. rtos_suspendAllInterruptsByPriority() doesn't reject lowering the current priority
+ * level (as long as it remains in the permitted boudaries) and nested use of the function
+ * pairs would require an order of calls to suspend in monotonic rising order of priority -
+ * which is practically impossible with respect to code maintainability and likelihood of
+ * making errors. We will need to have two different system calls, one for suspend and one
+ * for resume.
  *   @return
  * Get the priority level at entry into this function (and into the critical section). This
  * priority level needs to be restored on exit from the critical section using system call
@@ -769,12 +785,12 @@ static inline uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToT
 /**
  * This function is called to end a critical section of code, which requires mutual
  * exclusion of two or more tasks/ISRs. It is the counterpart of function
- * rtos_suspendAllInterruptsByPriority(), refer to this function for more details.\n
+ * rtos_osSuspendAllInterruptsByPriority(), refer to this function for more details.\n
  *   Note, this function simply and unconditionally sets the current task/interrupt
  * priority level to the stated value. It can therefore be used to build further optimized
  * mutual exclusion code if it is applied to begin \a and to end a critical section. This
  * requires however much more control of the specified priority levels as when using the
- * counterpart function rtos_suspendAllInterruptsByPriority() on entry. Accidental
+ * counterpart function rtos_osSuspendAllInterruptsByPriority() on entry. Accidental
  * temporary lowering of the level will make the RTOS immediately fail.
  *   @param resumeDownToThisPriority
  * All tasks/interrupts above this priority level are resumed again. All tasks/interrupts
