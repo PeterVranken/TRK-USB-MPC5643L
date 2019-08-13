@@ -430,7 +430,7 @@ void rtos_scSmplHdlr_suspendProcess(uint32_t pidOfCallingTask, uint32_t PID)
  * Kernel function to initially release a process. "Initially" means that no state machine
  * is implemented, which would allow to alternatingly suspend and resume the operation of a
  * process. After startup, all processes are suspended. When the kernel is initialized it
- * may call this function once for each of the processes. It must however never se it again
+ * may call this function once for each of the processes. It must however never use it again
  * for a process, e.g. after a call of rtos_osSuspendProcess().
  *   @param PID
  * The ID of the process to suspend in the range 1..4. Checked by assertion.

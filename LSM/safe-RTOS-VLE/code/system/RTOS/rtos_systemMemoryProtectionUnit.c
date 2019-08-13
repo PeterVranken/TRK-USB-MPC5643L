@@ -376,7 +376,7 @@ void rtos_initMPU(void)
  *   @return
  * Get \a true if the pointer may be used for write access and \a false otherwise.
  *   @param PID
- * The ID of the process the query relates to. Range is 1..4, checked by assertion.
+ * The ID of the process the query relates to. Range is 1..4.
  *   @param address
  * The pointer value, or the beginning of the chunk of memory, which needs to be entirely
  * located in writable memory.

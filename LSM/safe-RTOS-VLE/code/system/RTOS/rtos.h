@@ -227,8 +227,9 @@ typedef struct rtos_taskDesc_t
     /** Address of task function, which is run in user mode and with process ID \a PID.\n
           Note, the signature of a task function differs. An initialization task and a user
         mode task function can signal an error by return value, while a scheduled OS task
-        function can't. A task function started with rtos_runTask() has a caller provided
-        argument, which is not available to regularly scheduled tasks.\n
+        function can't. A task function started with rtos_runTask() or with
+        rtos_osRunTask() has a caller provided argument, which is not available to
+        regularly scheduled tasks.\n
           In the assembler code, this field is addressed to by offset O_TCONF_pFct. */
     uintptr_t addrTaskFct;
 
@@ -464,8 +465,8 @@ static inline int32_t rtos_osRunTask( const rtos_taskDesc_t *pUserTaskConfig
  * This argument is meaningless to the function. The value is just passed on to the started
  * task function. The size is large enough to convey a pointer.
  *   @remark
- * This function must be called from the OS context only. Any attempt to use it in user
- * code will lead to a privileged exception.
+ * This function must be called from a user process context only. Any attempt to use it in
+ * supervisor code will lead to a crash.
  */
 static inline int32_t rtos_runTask( const rtos_taskDesc_t *pUserTaskConfig
                                   , uintptr_t taskParam

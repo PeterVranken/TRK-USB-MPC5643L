@@ -49,10 +49,12 @@
 #define RTOS_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG   4 /* Task referred to invalid system
                                                          call */
 #define RTOS_CAUSE_TASK_ABBORTION_ALIGNMENT          5 /* IVOR #5, Alignment */
-#define RTOS_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT  6 /* IVOR #6, mostly illegal instruction */
+#define RTOS_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT  6 /* IVOR #6, mostly illegal
+                                                          instruction */
 #define RTOS_CAUSE_TASK_ABBORTION_FPU_UNAVAIL        7 /* IVOR #7, Book E FPU instructions */
 #define RTOS_CAUSE_TASK_ABBORTION_TBL_DATA           8 /* IVOR #13, TBL data access mismatch */
-#define RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION    9 /* IVOR #14, TBL instr access mismatch */
+#define RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION    9 /* IVOR #14, TBL instr access
+                                                          mismatch */
 #define RTOS_CAUSE_TASK_ABBORTION_TRAP              10 /* IVOR #15, trap and debug events */
 #define RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION   11 /* IVOR #32, use of SPE instruction */
 #define RTOS_CAUSE_TASK_ABBORTION_USER_ABORT        12 /* User code returned error code */
@@ -138,7 +140,7 @@ struct rtos_taskDesc_t;
  * Global prototypes
  */
 
-/** C signature for a assembler entry point, which ends a system call handler with user
+/** C signature for an assembler entry point, which ends a system call handler with user
     task termination and counted error. Must be used solely from within the implementation
     of a system call and only if the abortion is due to a clear fault in the calling user
     code. */

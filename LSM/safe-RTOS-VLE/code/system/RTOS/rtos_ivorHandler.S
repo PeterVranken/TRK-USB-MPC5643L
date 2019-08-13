@@ -194,7 +194,7 @@ rtos_ivor1Handler:
        a distinction of user code faults and faults in the "trusted" OS code: Normally, any
        exception of SV code points to a severe fault in the operating system itself (kernel
        or I/O driver).
-         If we recognize the later then we can halt the software execution and delegate the
+         If we recognize the latter then we can halt the software execution and delegate the
        problem to the next safety catch level: A watchdog will bring the system into the safe
        state. Not recognizing the problem means opening a door to let the SW do unsafe
        things.
@@ -207,7 +207,7 @@ rtos_ivor1Handler:
        handler in this case, too, then we would ignore a process fault and eventually return
        to the failing task. Now, the decision is to really count an MC exception as failure
        cause and abort the failing task. The begun IVOR #4 handler is not resumed. The
-       interrupt is still asserted and is taken by the CPU at next occasion. */
+       interrupt is still asserted and is taken by the CPU a second time at next occasion. */
 
     /* Note, we don't make use of short addressing modes, neither for handler addresses nor
        for counter variables, to keep code independent from location and to spare expensive
@@ -615,8 +615,8 @@ ivr4_endSwitchSP:
 
     /* Restore the changed EABI registers to their nominal value (which is the lost value
        at least for error free U code). This needs to be done prior to EE=1.*/
-    mfspr       r2, SPR_G2_SDA2         /* Load .sdata base into r13 */
-    mfspr       r13, SPR_G1_SDA         /* Load .sdata2 base into r2 */
+    mfspr       r2, SPR_G2_SDA2         /* Load .sdata2 base into r2 */
+    mfspr       r13, SPR_G1_SDA         /* Load .sdata base into r13 */
 
     /* Store all GPRegisters and SPR, which are volatile according to the EABI. */
     e_stmvgprw  O_R00(sp)    /* r0, r3-r12: 11*4 Byte */
