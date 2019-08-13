@@ -795,8 +795,9 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
 
 
 /**
- * Registration of a process initialization task. This function is repeatedly called by the
- * application code as often as there are processes, which need initialization.\n
+ * Registration of a process initialization task. This function is typically repeatedly
+ * called by the operating system initialization code as often as there are processes,
+ * which need initialization.\n
  *   Initialization functions are particularly useful for the user processes. They allow
  * having user provided code, that is run prior to the start of the scheduler, in a still
  * race condition free environment but already with full protection against runtime
@@ -820,6 +821,9 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
  *   The process the task belongs to by identifier. We have a fixed, limited number of four
  * processes (#RTOS_NO_PROCESSES) plus the kernel process, which has ID 0. The range of
  * process IDs to be used here is 0 .. #RTOS_NO_PROCESSES.\n
+ *   At kernel initialization time, the registered user process initialization functions
+ * will be called in the order of rising PID, followed by the registered kernel process
+ * initialization function.
  *   @param tiTaskMaxInUs
  * Time budget for the function execution in Microseconds. The budget relates to
  * deadline monitoring, i.e. it is a world time budget, not an execution time budget.\n
@@ -1226,10 +1230,22 @@ rtos_errorCode_t rtos_osInitKernel(void)
        initialization tasks. */
 
     /* Run all process initialization in order of increasing PID. A process with higher
-       privileges is initialized after another with less privileges. The higher
-       privileged could override settings made by its predecessor. */
-    for(idxP=0; errCode==rtos_err_noError && idxP<1+RTOS_NO_PROCESSES; ++idxP)
-    {
+       privileges is initialized after another with less privileges. The higher privileged
+       could override settings made by its predecessor.
+         In this consideration and despite of its PID zero, the operating system process
+       has the highest privileges. This requires a loop counter like 1, 2, ..., N, 0. */
+    idxP = 0;
+    do
+    {   
+#if RTOS_NO_PROCESSES > 0
+        if(idxP < RTOS_NO_PROCESSES)
+            ++ idxP;
+        else
+            idxP = 0;
+#else
+        /* No processes, just initialize the OS. idxP=0 is only loop cycle. */
+#endif
+
         /* The specification of an initialization task is an option only. Check for NULL
            pointer. */
         if(_initTaskCfgAry[idxP].addrTaskFct != 0)
@@ -1263,7 +1279,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
                 assert(false);
             }
         } /* End if(Init task configured for process?) */
-    } /* End for(All possible processes) */
+    }
+    while(idxP != 0);  /* End for(All possible processes, OS as last one) */
 
     /* After successfully completing all the initialization tasks, we can release the
        scheduler and the processes. We do this in a critical section in order to not
