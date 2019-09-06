@@ -107,6 +107,12 @@ and averaged CPU load information. The diagnostics comes along with a new
 API to halt the execution of a process. Permission to use this API is
 granted only to what is considered the safety process or task.
 
+Many more details can be found in the manual, which is
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/readMe.adoc[online^]
+available here in GitHub, or available as
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/manual.pdf[printable^]
+document.
+
 === Differences to the ancestor RTOS
 
 The architecture of the RTOS is very simple and almost identical to its
@@ -505,9 +511,7 @@ Only VLE code is supported.
 
 == Known issues
 
-1. The manual of the RTOS has not been written yet.
-
-2. Debugger: If the view shows the INTC0 register set then the debugger
+. Debugger: If the view shows the INTC0 register set then the debugger
 harmfully affects program execution and the RTOS fails: The write to
 INTC_EOIR_PRC0, which normally restores the current priority level
 INTC_CPR_PRC0, now fails to do so. The complete interrupt handling fails

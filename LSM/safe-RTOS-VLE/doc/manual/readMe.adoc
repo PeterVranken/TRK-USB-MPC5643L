@@ -1243,7 +1243,7 @@ implementation of an operating system, e.g. in its I/O drivers.
 
 The two pairs of functions differ in that only
 `rtos_osEnterCriticalSection`/`rtos_osLeaveCriticalSection` is nestable --
-for the price of an a bit higher execution time.
+at the price of an a bit higher execution time.
 
 All of these functions are implemented as inline functions, which expand
 to a few machine instructions.
