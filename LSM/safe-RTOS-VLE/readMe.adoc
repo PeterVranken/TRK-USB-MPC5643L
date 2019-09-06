@@ -138,7 +138,7 @@ The differences to the simple RTOS are:
 == The safety concept
 
 This sections aims at giving an overview on the safety concept. Technical
-details can be found in the manual of the RTOS (TODO).
+details can be found in the manual of the RTOS.
 
 A typical nowadays embedded project consists of a lot of code coming from
 various sources. There may be an Open Source Ethernet stack, an Open
