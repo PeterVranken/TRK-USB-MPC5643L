@@ -37,13 +37,13 @@ processes without fearing harmful interferences between them. Features:
 * I/O driver model for safe implementation of a complete operating system
 
 The RTOS itself is not a runnable piece of software. It requires some
-application code. The application file from the elder sample RTOS-VLE has
-been modified as `code\application\default\mai_main.c` in order to make
-use of some of the new features of the RTOS. The functionality is similar
-to sample "startup" with its blinking LEDs. Several tasks are running
-concurrently and the LEDs are driven by different tasks. Some progress
-information is printed to the serial output but much of the operation can
-be observed only in the debugger.
+application code. The demo application file from the elder sample RTOS-VLE
+has been modified as `code\application\default\mai_main.c` in order to
+make use of some of the new features of the RTOS. The functionality is
+similar to sample "startup" with its blinking LEDs. Several tasks are
+running concurrently and the LEDs are driven by different tasks. Some
+progress information is printed to the serial output but much of the
+operation can be observed only in the debugger.
 
 To see how the sample works you need to open a terminal software on your
 host machine. You can find a terminal as part of the CodeWarrior Eclipse
@@ -64,9 +64,9 @@ A more meaningful application of the RTOS can be found in
 == The RTOS
 
 The proposed RTOS is little exciting with respect to its functionality.
-The scheduler implements the functionality of the Basic Conformance Class
-1 (BCC1) of the OSEK/VDX standard and of BCC2 with the exception of
-activation queuing.
+The scheduler implements the functionality of what is called the "Basic
+Conformance Class 1" (BCC1) of the OSEK/VDX-OS standard and of its BCC2 with
+the exception of activation queuing.
 
 The scheduler offers an API to create events that can activate tasks. An
 event is either a regular timer event, triggered by the RTOS system clock,
@@ -74,9 +74,9 @@ or a software triggered event. The latter can be triggered either from
 user code (if it has sufficient privileges) or from ISRs belonging to the
 operating system.
 
-The RTOS offers a pre-configured set of up to four processes. (The
+The RTOS offers a pre-configured set of up to four processes. The
 limitation to four is a hardware constraint and for sake of simplicity no
-virtualization by software has been shaped.) The operating system forms a
+virtualization by software has been shaped. The operating system forms a
 fifth process. The operating system startup code will register the needed
 tasks. The registration assigns them to one of the processes and
 associates them with one of the created events.
@@ -124,6 +124,9 @@ The differences to the simple RTOS are:
   used a one-by-one relation between events and tasks. (Having more than
   one task per event makes sense only in conjunction with the new process
   concept)
+* The architecture may be similar but the implementation isn't. The safety
+  demands required a significant portion of assembler code for
+  implementation
 * The Book E instruction set is no longer supported
 
 == The safety concept
@@ -446,15 +449,15 @@ to use the `make.exe` from the compiler installation archive but
 explicitly typing `mingw32-make` will avoid any problem.
 
 The makefile is designed to run on different host systems but has been
-tested with Windows 7 only.
+tested with Windows 7 and Windows 10 only.
 
 Note, the Eclipse project configuration in the root folder of this sample
 supports the build of only a sub-set of the possible configurations.
-Safe-RTOS can be compiled with a few sample applications only, each of them
-in DEBUG and PRODUCTION compilation and for either instruction set. To
-build the other samples with Eclipse you would have to duplicate the
-existing build configurations and adapt the make command lines in the
-build settings according to the explanations and examples above.
+Safe-RTOS can be compiled with a few sample applications only, each of
+them in DEBUG and PRODUCTION compilation. To build more samples with
+Eclipse you would have to duplicate the existing build configurations and
+adapt the make command lines in the build settings according to the
+explanations and examples above.
 
 === Flashing and debugging
 
@@ -486,14 +489,14 @@ button "Debug".
 application.)
 
 You can find more details on using the CodeWarrior IDE at
-https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
+https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation[TRK-USB-MPC5643L/wiki/Tools-and-Installation^].
 
 == Code architecture
 
 This sample builds on the other sample "RTOS-VLE" located in a sibling
 folder. "safe-RTOS-VLE" is compiled for the VLE instruction set. The build
 settings are identical to "startup-VLE". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc^]
 for details.
 
 === Book E versus VLE
