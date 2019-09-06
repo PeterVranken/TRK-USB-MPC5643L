@@ -45,7 +45,7 @@
 #else
 # error System call 0005 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
-   make the compiler emit a message with the location of the conflicting previous
+   makes the compiler emit a message with the location of the conflicting previous
    definition.*/
 # define RTOS_SYSCALL_TABLE_ENTRY_0005    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
@@ -59,7 +59,7 @@
 #else
 # error System call 0010 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
-   make the compiler emit a message with the location of the conflicting previous
+   makes the compiler emit a message with the location of the conflicting previous
    definition.*/
 # define RTOS_SYSCALL_TABLE_ENTRY_0010    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif

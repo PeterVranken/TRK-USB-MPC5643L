@@ -291,17 +291,10 @@ void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int t
 rtos_errorCode_t rtos_osInitKernel(void);
 
 /** Software triggered task activation. Can be called from OS context (incl. interrupts). */
-bool rtos_osTriggerEvent(unsigned int idTask);
+bool rtos_osTriggerEvent(unsigned int idEvent);
 
-/** Get the current number of failed task activations since start of the RTOS scheduler.
-    Can be called from OS context (incl. interrupts). */
-unsigned int rtos_osGetNoActivationLoss(unsigned int idTask);
-
-/** Compute how many bytes of the stack area are still unused. */
-unsigned int rtos_osGetStackReserve(unsigned int PID);
-
-/** Get the current number of failed task activations since start of the RTOS scheduler. */
-unsigned int rtos_getNoActivationLoss(unsigned int idTask);
+/** Get the current number of failed event triggers since start of the RTOS scheduler. */
+unsigned int rtos_getNoActivationLoss(unsigned int idEvent);
 
 /** Get the number of task failures counted for the given process since start of the kernel. */
 unsigned int rtos_getNoTotalTaskFailure(unsigned int PID);
@@ -359,7 +352,7 @@ void rtos_installInterruptHandler( rtos_interruptServiceRoutine_t interruptServi
 /** Grant permission to particular processes for using the service rtos_suspendProcess(). */
 void rtos_grantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID);
 
-/** Check is a pointer value is valid for writing in the context of a given process. */
+/** Check if a pointer value is valid for writing in the context of a given process. */
 bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes);
 
 
@@ -400,6 +393,7 @@ static inline void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCalli
                                                        , unsigned int targetPID
                                                        )
 {
+    /// @todo Double-check, why we use osGrantPermission as an alias of grantPermission instead of directly naming the function according to our naming scheme
     extern void rtos_grantPermissionSuspendProcess(unsigned int, unsigned int);
     rtos_grantPermissionSuspendProcess(pidOfCallingTask, targetPID);
 
@@ -493,6 +487,10 @@ static inline int32_t rtos_runTask( const rtos_taskDesc_t *pUserTaskConfig
  *   The requested task abortion is not considered an error if \a taskReturnValue is
  * greater or equal to zero. The value is propagated to the task creating context.
  *   @remark
+ * If the function is called from inside a critical section, which had been started using
+ * rtos_suspendAllInterruptsByPriority(), then the critical section is implicitly ended by
+ * this function call.
+ *   @remark
  * This function must be called from the user task context only. Any attempt to use it from
  * OS code will lead to a crash.
  */
@@ -514,7 +512,7 @@ static inline _Noreturn void rtos_terminateTask(int32_t taskReturnValue)
  * This function must be called from the OS context only. Any attempt to use it in user
  * code will lead to a privileged exception.
  */
-static ALWAYS_INLINE void rtos_osSuspendAllInterrupts()
+static ALWAYS_INLINE void rtos_osSuspendAllInterrupts(void)
 {
     /* The completion synchronizing character of the wrteei instruction forms the memory
        barrier, which ensures that all memory operations before the now entered critical
@@ -538,7 +536,7 @@ static ALWAYS_INLINE void rtos_osSuspendAllInterrupts()
  * This function must be called from the OS context only. Any attempt to use it in user
  * code will lead to a privileged exception.
  */
-static ALWAYS_INLINE void rtos_osResumeAllInterrupts()
+static ALWAYS_INLINE void rtos_osResumeAllInterrupts(void)
 {
     /* The completion synchronizing character of the wrteei instruction forms the memory
        barrier, which ensures that all memory operations inside the now left critical
@@ -570,7 +568,7 @@ static ALWAYS_INLINE void rtos_osResumeAllInterrupts()
  * This function must be called from the OS context only. Any attempt to use it in user
  * code will lead to a privileged exception.
  */
-static ALWAYS_INLINE uint32_t rtos_osEnterCriticalSection()
+static ALWAYS_INLINE uint32_t rtos_osEnterCriticalSection(void)
 {
     /* The completion synchronizing character of the mfmsr instruction forms the memory
        barrier, which ensures that all memory operations before the now entered critical
@@ -854,7 +852,7 @@ static inline void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisP
  * Trigger an event to activate all associated tasks. A event, which had been registered
  * with cycle time zero is normally not executed. It needs to be triggered with this
  * function in order to make its associated tasks run once, i.e. to make its task functions
- * exceuted once as result of this call.\n
+ * executed once as result of this call.\n
  *   This function must only be called from user tasks, which belong to a process with
  * sufficient privileges. The operation is permitted only for tasks belonging to those
  * processes, which have an ID that is greater of equal to the minimum specified for the
@@ -868,9 +866,11 @@ static inline void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisP
  * task is immediately preempted to the advantage of the activated task. Otherwise the
  * activated task is chained and executed after the activating task.
  *   @return
- * There is no activation queuing. If the aimed event is not yet done with processing its
- * previous triggering then the attempt is rejected. The function returns \a false and the
- * activation loss counter of the event is incremented. (See rtos_getNoActivationLoss().)
+ * There is no activation queuing. Consequently, triggering the event can fail if at least
+ * one of the associated tasks has not yet completed after the previous trigger of the
+ * event. The function returns \a false and the activation loss counter of the event is
+ * incremented. (See rtos_getNoActivationLoss().) In this situation, the new trigger is
+ * entirely lost, i.e. none of the associated tasks will be activated by the new trigger.
  *   @param idEvent
  * The ID of the event to activate as it had been got by the creation call for that event.
  * (See rtos_osCreateEvent().)

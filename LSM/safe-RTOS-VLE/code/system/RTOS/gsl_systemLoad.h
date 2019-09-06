@@ -7,7 +7,7 @@
  * This file has been downloaded from
  * https://svn.code.sf.net/p/rtuinos/code/trunk/code/RTOS/gsl_systemLoad.c on May 19, 2017.
  *
- * Copyright (C) 2012 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2012-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -67,7 +67,7 @@
  * The function is compiled only in VLE mode, use \a __builtin_ppc_get_timebase() instead
  * in Book E applications.
  */
-static inline uint64_t gsl_ppc_get_timebase()
+static inline uint64_t gsl_ppc_get_timebase(void)
 {
     uint32_t TBU, TBU2nd, TBL;
     while(true)

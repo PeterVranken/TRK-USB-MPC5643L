@@ -49,7 +49,7 @@ extern void rtos_scBscHdlr_terminateUserTask(int32_t result);
 #else
 # error System call 0000 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
-   make the compiler emit a message with the location of the conflicting previous
+   makes the compiler emit a message with the location of the conflicting previous
    definition.*/
 # define RTOS_SYSCALL_TABLE_ENTRY_0000    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif

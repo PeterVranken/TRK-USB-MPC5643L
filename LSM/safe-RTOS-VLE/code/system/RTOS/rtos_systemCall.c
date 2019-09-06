@@ -404,7 +404,7 @@ const systemCallDesc_t rtos_systemCallDescAry[RTOS_NO_SYSTEM_CALLS]
  * statement for double-checking the binary built-up of the interface for system calls
  * between assembly code and C code -  a check, which is neither done implicitly by C
  * compiler nor by assembler.\n
- *   The linker shall recognize that the function i snowhere called and discard it from the
+ *   The linker shall recognize that the function is nowhere called and discard it from the
  * flashed binary files.
  *   @remark
  * Do never call this function. It's just needed for the compilation process.

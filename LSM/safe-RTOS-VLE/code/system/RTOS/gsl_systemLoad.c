@@ -120,7 +120,7 @@ static uint32_t gsl_tiCalResult[32];
  * execution time of that code is not considered by the measurement, it does not contribute
  * to the returned CPU load result.
  */
-unsigned int gsl_getSystemLoad()
+unsigned int gsl_getSystemLoad(void)
 {
     unsigned int step = 0;
     uint64_t tiEnd;

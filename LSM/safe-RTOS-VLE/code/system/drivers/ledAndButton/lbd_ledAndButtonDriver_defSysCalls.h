@@ -43,7 +43,7 @@
 #else
 # error System call 0016 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
-   make the compiler emit a message with the location of the conflicting previous
+   makes the compiler emit a message with the location of the conflicting previous
    definition.*/
 # define RTOS_SYSCALL_TABLE_ENTRY_0016    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
@@ -57,7 +57,7 @@
 #else
 # error System call 0017 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
-   make the compiler emit a message with the location of the conflicting previous
+   makes the compiler emit a message with the location of the conflicting previous
    definition.*/
 # define RTOS_SYSCALL_TABLE_ENTRY_0017    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif

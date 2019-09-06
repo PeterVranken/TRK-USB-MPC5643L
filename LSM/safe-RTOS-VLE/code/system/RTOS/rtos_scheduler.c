@@ -1328,9 +1328,11 @@ rtos_errorCode_t rtos_osInitKernel(void)
  * task is immediately preempted to the advantage of the activated task. Otherwise the
  * activated task is chained and executed after the activating task.
  *   @return
- * There is no activation queueing. If the aimed event is not yet done with processing its
- * previous triggering then the attempt is rejected. The function returns \a false and the
- * activation loss counter of the event is incremented. (See rtos_getNoActivationLoss().)
+ * There is no activation queuing. Consequently, triggering the event can fail if at least
+ * one of the associated tasks has not yet completed after the previous trigger of the
+ * event. The function returns \a false and the activation loss counter of the event is
+ * incremented. (See rtos_getNoActivationLoss().) In this situation, the new trigger is
+ * entirely lost, i.e. none of the associated tasks will be activated by the new trigger.
  *   @param idEvent
  * The ID of the event to activate as it had been got by the creation call for that event.
  * (See rtos_osCreateEvent().)
@@ -1356,7 +1358,7 @@ bool rtos_osTriggerEvent(unsigned int idEvent)
     vuint8_t * const pINTC_SSCIR = (vuint8_t*)&INTC.SSCIR0_3.R + idEvent;
 
     /* To make this function reentrant with respect to one and the same target SW IRQ, we
-       need to encapsulate the flag-test-and-test operation in a critical section.
+       need to encapsulate the flag-test-and-set operation in a critical section.
          As a side effect, we can use the same critical section for race condition free
        increment of the error counter in case. */
     const uint32_t msr = rtos_osEnterCriticalSection();
@@ -1559,8 +1561,8 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
  * software (using rtos_triggerEvent()). The scheduler counts the failing activations on a
  * per event base. The current value can be queried with this function.
  *   @return
- * Get the current number of failed task activations since start of the RTOS scheduler. The
- * counter is saturated and will not wrap around.\n
+ * Get the current number of triggers of the given event, which have failed since start of
+ * the RTOS scheduler. The counter is saturated and will not wrap around.\n
  *   The returned count can be understood as number of task overrun events for all
  * associated tasks.
  *   @param idEvent
