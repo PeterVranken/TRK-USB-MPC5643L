@@ -848,8 +848,8 @@ The RTOS API makes a distinction between functions available to
 application tasks and those, which are intended for the operating system
 only, which is built on top of the RTOS:
 
-* OS run-time functions are named `rtos_os<FctName>`
-* Application run-time functions are named `rtos_<fctName>`
+* OS functions are named `rtos_os<FctName>`
+* Application functions are named `rtos_<fctName>`
   
 OS functions must be used in supervisor mode only, i.e. from ISRs or OS
 tasks. Application tasks are executed in user mode. If they try to call an

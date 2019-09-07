@@ -1,4 +1,4 @@
-= Sample "safe-RTOS" (VLE) - A simple RTOS with safety support for MPC5643L
+= "safe-RTOS" (VLE) - A simple RTOS with safety support for MPC5643L
 :Author:            Peter Vranken 
 :Email:             mailto:Peter_Vranken@Yahoo.de
 :toc:               left
@@ -11,14 +11,16 @@
 :tip-caption:       :bulb:
 :warning-caption:   :warning:
 
-== About this sample
+== About this application
 
-This sample implements an easy to reuse RTOS for the NXP MPC5643L. The
-sample started as a copy of sample "RTOS-VLE". The RTOS implementation has
-been reworked (folder `code\system\RTOS`) with respect to the demands of
-safety-critical software. The concept of processes has been added with the
-intention to run applications of different criticality levels in different
-processes without fearing harmful interferences between them. Features:
+This TRK-USB-MPC5643L sample application implements an easy to reuse RTOS
+for the NXP MPC5643L and other microcontroller derivates with e200z4/7
+core. The sample application started as a copy of sample "RTOS-VLE". The
+RTOS implementation has been reworked (folder `code\system\RTOS`) with
+respect to the demands of safety-critical software. The concept of
+processes has been added with the intention to run applications of
+different criticality levels in different processes without fearing
+harmful interferences between them. Features:
 
 * Preemptive, priority controlled scheduling
 * Up to five processes (including kernel) with disjunct memory address
@@ -280,9 +282,9 @@ recognized.
 === Kernel vs. Operating System
 
 safe-RTOS implements an operating system kernel but not an operating
-system (OS). Additional code has to be added to make it an OS. The
-majority of this code will be the configuration and setup of processes
-and tasks and a set of I/O device drivers.
+system (OS). Additional code has to be added to let it become an OS. The
+majority of this code will be the configuration and setup of processes and
+tasks and a set of I/O device drivers.
 
 The implementation of such drivers needs to make use of privileged
 instructions and needs to access the I/O address space, which both is not
@@ -295,11 +297,12 @@ how to implement an I/O driver. These rules are called the "driver model".
 Any programmer of an I/O driver, who disregards only a single rule will
 break the entire safety concept and the RTOS implementation can't help it.
 
-safe-RTOS's driver model specifies three "conformance classes", basic,
-simple and full. They offer a trade off between driver performance in
-terms of CPU load and attainable behavior and ease of programming. The by
-far leanest and most powerful "basic" implementation needs to be done in
-assembler, the other two classes can be implemented in C.
+safe-RTOS's driver model specifies memory mapped drivers, safe callbacks
+and system calls of three "conformance classes", basic, simple and full.
+They offer a trade off between driver performance in terms of CPU load and
+attainable behavior and ease of programming. The by far leanest and most
+powerful "basic" implementation needs to be done in assembler, the other
+two classes can be implemented in C.
 
 Note, adding an I/O driver to the RTOS is not only a matter of complying
 with the driver model. Any programming error can potentially break the
