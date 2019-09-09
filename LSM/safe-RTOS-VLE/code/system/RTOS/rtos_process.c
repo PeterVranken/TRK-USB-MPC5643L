@@ -19,7 +19,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   rtos_grantPermissionSuspendProcess
+ *   rtos_osGrantPermissionSuspendProcess
  *   rtos_scSmplHdlr_suspendProcess
  *   rtos_osReleaseProcess
  *   rtos_osSuspendProcess
@@ -310,7 +310,7 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
     if(errCode == rtos_err_noError)
     {
         /* Caution: Maintenance of this code is required consistently with
-           rtos_grantPermissionSuspendProcess() and rtos_scSmplHdlr_suspendProcess(). */
+           rtos_osGrantPermissionSuspendProcess() and rtos_scSmplHdlr_suspendProcess(). */
         assert(maxPIDInUse >= 1  &&  maxPIDInUse <= 4);
         const uint16_t mask = 0x1111 << (maxPIDInUse-1);
         if((_suspendProcess_permissions & mask) != 0)
@@ -352,7 +352,9 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
  * operating system initialization phase. It is not reentrant. The function needs to be
  * called prior to rtos_osInitKernel().
  */
-void rtos_grantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID)
+void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCallingTask
+                                         , unsigned int targetPID
+                                         )
 {
     /* targetPID <= 3: Necessary but not sufficient to double-check
        "targetPID <= maxPIDInUse-1". */
@@ -369,7 +371,7 @@ void rtos_grantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned 
     const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
     _suspendProcess_permissions |= mask;
 
-} /* End of rtos_grantPermissionSuspendProcess */
+} /* End of rtos_osGrantPermissionSuspendProcess */
 
 
 
@@ -400,7 +402,7 @@ void rtos_scSmplHdlr_suspendProcess(uint32_t pidOfCallingTask, uint32_t PID)
 {
     /* This code depends on specific number of processes, we need a check. The
        implementation requires consistent maintenance with other function
-       rtos_grantPermissionSuspendProcess() */
+       rtos_osGrantPermissionSuspendProcess() */
 #if RTOS_NO_PROCESSES != 4
 # error Implementation requires the number of processes to be four
 #endif
@@ -408,7 +410,7 @@ void rtos_scSmplHdlr_suspendProcess(uint32_t pidOfCallingTask, uint32_t PID)
     /* Now we can check the index of the target process. */
     const unsigned int idxCalledPrc = PID - 1u;
     if(idxCalledPrc > 3)
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
 
     const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
     if((_suspendProcess_permissions & mask) != 0)
@@ -419,7 +421,7 @@ void rtos_scSmplHdlr_suspendProcess(uint32_t pidOfCallingTask, uint32_t PID)
            This is a severe user code error, which is handled with an exception, task abort
            and counted error.
              Note, this function does not return. */
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
     }
 } /* End of rtos_scSmplHdlr_suspendProcess */
 

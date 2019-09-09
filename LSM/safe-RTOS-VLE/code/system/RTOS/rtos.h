@@ -184,7 +184,7 @@
  */
 
 /** Type of a single interrupt service as registered with function
-    rtos_installInterruptHandler(). */
+    rtos_osInstallInterruptHandler(). */
 typedef void (*rtos_interruptServiceRoutine_t)(void);
 
 
@@ -336,29 +336,18 @@ uint32_t rtos_systemCall(uint32_t idxSysCall, ...);
  * implementation of a system call and only if the abortion is due to a clear fault in the
  * calling user code.
  */
-_Noreturn void rtos_systemCallBadArgument(void);
+_Noreturn void rtos_osSystemCallBadArgument(void);
 
 
 /** Initialize the interrupt controller INTC. */
-void rtos_initINTCInterruptController(void);
+void rtos_osInitINTCInterruptController(void);
 
 /** Install an interrupt service for a given I/O device. */
-void rtos_installInterruptHandler( rtos_interruptServiceRoutine_t interruptServiceRoutine
-                                 , unsigned int vectorNum
-                                 , unsigned int psrPriority
-                                 , bool isPreemptable
-                                 );
-
-/** Grant permission to particular processes for using the service rtos_suspendProcess(). */
-void rtos_grantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID);
-
-/** Check if a pointer value is valid for writing in the context of a given process. */
-bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes);
-
-
-/*
- * Inline functions
- */
+void rtos_osInstallInterruptHandler( rtos_interruptServiceRoutine_t interruptServiceRoutine
+                                   , unsigned int vectorNum
+                                   , unsigned int psrPriority
+                                   , bool isPreemptable
+                                   );
 
 /**
  * Operating system initialization function: Grant permissions for using the service
@@ -389,16 +378,17 @@ bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t no
  * operating system initialization phase. It is not reentrant. The function needs to be
  * called prior to rtos_osInitKernel().
  */
-static inline void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCallingTask
-                                                       , unsigned int targetPID
-                                                       )
-{
-    /// @todo Double-check, why we use osGrantPermission as an alias of grantPermission instead of directly naming the function according to our naming scheme
-    extern void rtos_grantPermissionSuspendProcess(unsigned int, unsigned int);
-    rtos_grantPermissionSuspendProcess(pidOfCallingTask, targetPID);
+void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCallingTask
+                                         , unsigned int targetPID
+                                         );
 
-} /* End of rtos_osGrantPermissionSuspendProcess */
+/** Check if a pointer value is valid for writing in the context of a given process. */
+bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes);
 
+
+/*
+ * Inline functions
+ */
 
 /**
  * Start a user task. A user task is a C function, which is executed in user mode and in a
@@ -427,9 +417,13 @@ static inline int32_t rtos_osRunTask( const rtos_taskDesc_t *pUserTaskConfig
                                     )
 {
     /* The function is assembler implemented, the C function is just a wrapper for
-       convenient calling within the expected namespace. */
-    extern int32_t rtos_runUserTask(const struct rtos_taskDesc_t *, uint32_t);
-    return rtos_runUserTask(pUserTaskConfig, taskParam);
+       convenient calling within the expected namespace. Direct calling of the assembly
+       code function is unwanted because of the name: In the assembler module the name "run
+       user task" makes sense but for the user of the RTOS it doesn't: To him there is no
+       distinction of starting either OS or user tasks, all tasks he knows are "user
+       tasks". */
+    extern int32_t rtos_osRunUserTask(const struct rtos_taskDesc_t *, uint32_t);
+    return rtos_osRunUserTask(pUserTaskConfig, taskParam);
 
 } /* End of rtos_osRunTask */
 

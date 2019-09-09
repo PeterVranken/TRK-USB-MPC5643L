@@ -27,11 +27,11 @@
  *   rtos_ivor2Handler
  *   rtos_ivor3Handler
  *   rtos_ivor4Handler
- *   rtos_runInitTask
- *   rtos_runUserTask
+ *   rtos_osRunInitTask
+ *   rtos_osRunUserTask
  *   rtos_terminateUserTask
  *   rtos_scBscHdlr_terminateUserTask
- *   rtos_systemCallBadArgument
+ *   rtos_osSystemCallBadArgument
  *   rtos_scBscHdlr_sysCallUndefined
  *   rtos_ivor5Handler
  *   rtos_ivor6Handler
@@ -708,14 +708,14 @@ iv4_retToPreemptedCtxt:
 
 
 /**
- *   @func rtos_runUserTask
- * Entry point from C source code: Function rtos_runUserTask.\n
+ *   @func rtos_osRunUserTask
+ * Entry point from C source code: Function rtos_osRunUserTask.\n
  *   Some C code running in SV mode can call this function to execute a C function as
  * single-shot user task. The function is executed once in user mode and under given PID.
- * rtos_runUserTask handles the return from this executed C function, which requires a
+ * rtos_osRunUserTask handles the return from this executed C function, which requires a
  * switch back to supervisor mode and it implements the unconditional abortion of the
  * function (in case of errors or on explicit demand).\n
- *   rtos_runUserTask can be called from the OS context only, e.g. ISRs and or the OS owned
+ *   rtos_osRunUserTask can be called from the OS context only, e.g. ISRs and or the OS owned
  * idle task.
  *   @return
  * The function normally returns the return value got from the C executed function in r3.\n
@@ -736,7 +736,7 @@ iv4_retToPreemptedCtxt:
  */
 
     .section    .text.ivor
-    .global     rtos_runUserTask, rtos_runInitTask
+    .global     rtos_osRunUserTask, rtos_osRunInitTask
     .balign     2
 
     /* The stack frame of this function is accessed from different code locations, e.g. to
@@ -746,7 +746,7 @@ iv4_retToPreemptedCtxt:
     #define SIZE_OF_SF      ((((RUT_SIZE_OF_SF_PAYLOAD)+15)/8)*8)
     #define O_LR            (SIZE_OF_SF+4)
 
-rtos_runUserTask:
+rtos_osRunUserTask:
     /* Compute the pointer to the process descriptor from the PID in the task configuration. */
     se_lbz      r6, O_TCONF_pid(r3)
     se_mtar     r8, r6                  /* r8: Aimed PID for task */
@@ -773,7 +773,7 @@ rtos_runUserTask:
     e_li        r3, ~RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT /* Load agreed function result */
     se_blr                          /* Do not execute function, return immediately */
 
-rtos_runInitTask:
+rtos_osRunInitTask:
     /* Compute the pointer to the process descriptor from the PID in the task configuration. */
     se_lbz      r6, O_TCONF_pid(r3)
     se_mtar     r8, r6                  /* r8: Aimed PID for task */
@@ -907,11 +907,11 @@ rtos_scBscHdlr_terminateUserTask:
     se_cmpi     r4, 0               /* Arg of sys call < 0: User reported errore */
     se_bge      rut_endWithoutErr   /* Skip counting cause of termination: Normal situation */
     se_li       r3, RTOS_CAUSE_TASK_ABBORTION_USER_ABORT     /* Array idx for err counter */
-    e_li        r4, ~RTOS_CAUSE_TASK_ABBORTION_USER_ABORT    /* r4: ret code of runUserTask() */
+    e_li        r4, ~RTOS_CAUSE_TASK_ABBORTION_USER_ABORT /* r4: ret code of osRunUserTask() */
     se_b        rut_endWithErr
 
-    .global     rtos_systemCallBadArgument
-rtos_systemCallBadArgument:
+    .global     rtos_osSystemCallBadArgument
+rtos_osSystemCallBadArgument:
     /* Here we can jump from a system call handler implementation if an error appears,
        which is a) anticipatable by the calling user task and b) hinders the system call
        from succesful completion. The result is that the user task is aborted and the error
@@ -931,10 +931,11 @@ rut_endUserTaskByException:
        termination. */
     mfspr       sp, SPR_G0_SVSP     /* Restore SV sp */
 
-    /* In case of unexpected task termination, runUsertask returns the negative errorCode.
-       A negative number is chosen to have a intuitive distinction from user code returned
-       normal (=positive) return values. Note, we need to use the one's complement since the
-       error codes form a zero based index. 0: return -1, 1: return -2, a.s.o. */
+    /* In case of unexpected task termination, rtos_osRunUserTask returns the negative
+       errorCode. A negative number is chosen to have a intuitive distinction from user
+       code returned normal (=positive) return values. Note, we need to use the one's
+       complement since the error codes form a zero based index. 0: return -1, 1: return
+       -2, a.s.o. */
     se_mr       r4, r3
     se_not      r4
 
@@ -1022,7 +1023,7 @@ rut_endWithoutErr:
     #undef SIZE_OF_SF
     #undef O_LR
 
-/* End of rtos_runUserTask */
+/* End of rtos_osRunUserTask */
 
 
 
@@ -1174,7 +1175,7 @@ ivr8_isSVEnabledSysCall:
 #else
 # error Number of system calls out of range
 #endif
-    se_bge      rtos_systemCallBadArgument   /* Index out of range: Abort task */
+    se_bge      rtos_osSystemCallBadArgument  /* Index out of range: Abort task */
 
 #if SIZE_OF_SC_DESC != 8
 # error Assembler code requires adaptation. (Multiplication index with size of struct)

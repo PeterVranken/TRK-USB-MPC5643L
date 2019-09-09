@@ -99,7 +99,7 @@ del_delayMicroseconds:
 # elif IS_ENABLE_ICACHE && IS_ENABLE_BRANCH_PREDICTION
 #  define NO_CYCLES_PER_US   60     /* I-cache and branch prediction on. */
 # else
-#  error Module del_delay.S needs calibration for chosen confguration
+#  error Module del_delay.S needs calibration for chosen configuration
 # endif
 
     e_mulli     r3, r3, NO_CYCLES_PER_US    /* Rescale us to CPU clock ticks. */
@@ -128,7 +128,7 @@ exitDelayMicroseconds:
 #  define NO_CYCLES_PER_US_DEN   1
 #  define NO_CYCLES_OVERHEAD     9
 # else
-#  error Module del_delay.S needs calibration for chosen confguration
+#  error Module del_delay.S needs calibration for chosen configuration
 # endif
 
     li          r4, NO_CYCLES_PER_US_DEN    /* Rescale us to CPU clock ticks. */

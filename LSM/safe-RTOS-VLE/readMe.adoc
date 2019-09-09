@@ -39,13 +39,14 @@ harmful interferences between them. Features:
 * I/O driver model for safe implementation of a complete operating system
 
 The RTOS itself is not a runnable piece of software. It requires some
-application code. The demo application file from the elder sample RTOS-VLE
-has been modified as `code\application\default\mai_main.c` in order to
-make use of some of the new features of the RTOS. The functionality is
-similar to sample "startup" with its blinking LEDs. Several tasks are
-running concurrently and the LEDs are driven by different tasks. Some
-progress information is printed to the serial output but much of the
-operation can be observed only in the debugger.
+application code. The demo application file from the elder
+TRK-USB-MPC5643L sample RTOS-VLE has been modified as
+`code\application\default\mai_main.c` in order to make use of some of the
+new features of the RTOS. The functionality is similar to sample "startup"
+with its blinking LEDs. Several tasks are running concurrently and the
+LEDs are driven by different tasks. Some progress information is printed
+to the serial output but much of the operation can be observed only in the
+debugger.
 
 To see how the sample works you need to open a terminal software on your
 host machine. You can find a terminal as part of the CodeWarrior Eclipse
@@ -343,12 +344,12 @@ safe operation state.
 The RTOS mechanisms guarantee that faults in the user code cannot do any
 harm -- but this relates only to the definition of "harm" in the RTOS
 context: OS configuration, I/O configuration or state, memory of other
-processes, execution of their tasks can't be touched. The same mechanisms
-can not hinder the user task code from doing all kind of things, which are not
-harmful in this sense but still harmful to the system under control. Not
-allowing this is of course a top-level requirement of the aimed software.
-It needs to be tackled mainly by the architecture of the software. Here's
-a single example:
+processes, timely execution of their tasks can't be touched. The same
+mechanisms can not hinder the user task code from doing all kind of
+things, which are not harmful in this sense but still harmful to the
+system under control. Not allowing this is of course a top-level
+requirement of the aimed software. It needs to be tackled mainly by the
+architecture of the software. Here's a single example:
 
 Commonly, the functional code in the software computes I/O commands, which
 go to the I/O drivers and control the connected actuators -- which can mean
@@ -525,3 +526,14 @@ Only the code of the idle task is executed any longer.
 +
 Workaround: Don't open the view of the INTC0 in the debugger when
 debugging a safe-RTOS application. Then the INTC and the code work fine.
+
+. Debugger: It is not possible to hinder the P&E debugger from halting at
+an se_illegal instruction. (See https://community.nxp.com/thread/497533)
+This makes it impossible to debug the fault catching capabilities of the
+RTOS. All severe code errors, which lead to the execution of an arbitrary
+address, will sooner or later encounter a zero word in the instruction
+stream and the debugger will break -- before the RTOS can catch the error.
+It is possible to continue the code execution from the debugger and to
+see, what the RTOS will do but this is an interactive process and
+systematic testing of error catching code is not possible this way. We can
+only do it without connected debugger.

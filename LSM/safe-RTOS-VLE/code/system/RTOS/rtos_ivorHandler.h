@@ -84,7 +84,7 @@
 #define E_SCDESC_simpleHdlr     RTOS_HDLR_CONF_CLASS_SIMPLE
 #define E_SCDESC_fullHdlr       RTOS_HDLR_CONF_CLASS_FULL
 
-/* Define the offsets of the stack frame of function rtos_runUserTask. Note the minimum
+/* Define the offsets of the stack frame of function rtos_osRunUserTask. Note the minimum
    offset of 8 due to the storage of stack pointer and link register.
      The pointer to this stack frame is globally stored and used from different code
    locations to implement exceptions and task termination. Therefore we define it globally. */
@@ -144,38 +144,38 @@ struct rtos_taskDesc_t;
     task termination and counted error. Must be used solely from within the implementation
     of a system call and only if the abortion is due to a clear fault in the calling user
     code. */
-_Noreturn void rtos_systemCallBadArgument(void);
+_Noreturn void rtos_osSystemCallBadArgument(void);
 
 /** C signature for doing a system call. Note, the signature doesn't ... @TODOC */
 uint32_t rtos_systemCall(uint32_t idxSysCall, ...);
 
 /** C signature to execute a process init function. Must be called from OS context only.
-    Basically identical to rtos_runUserTask() but disregards the process status. It will
+    Basically identical to rtos_osRunUserTask() but disregards the process status. It will
     create and run the task even if the process did not start yet.
       @remark The assembly code is such that it would pass a further argument as task param
     to the init function. Just by uncommenting the second argument it would work. We have
     the function argument commented as there's currently no use case for it and it saves us
     from loading a dummy value into register GPR4 at the calling code location. */
-int32_t rtos_runInitTask(const struct rtos_taskDesc_t *pUserTaskConfig);
+int32_t rtos_osRunInitTask(const struct rtos_taskDesc_t *pUserTaskConfig);
 
 /** C signature to call a C function in a user process context. Must be called from OS
     context only.
       @return
     The created task may return a (positive) value. If it is aborted because of failures
-    rtos_runUserTask() returns #RTOS_CAUSE_TASK_ABBORTION_USER_ABORT.
+    rtos_osRunUserTask() returns #RTOS_CAUSE_TASK_ABBORTION_USER_ABORT.
       @param pUserTaskConfig
     Descriptor of the created task. Mainly function pointer and ID of process to start the
     task in.
       @param taskParam
-    A value meaningless to rtos_runUserTask(), only propagated to the invoked task
+    A value meaningless to rtos_osRunUserTask(), only propagated to the invoked task
     function. */
-int32_t rtos_runUserTask(const struct rtos_taskDesc_t *pUserTaskConfig, uint32_t taskParam);
+int32_t rtos_osRunUserTask(const struct rtos_taskDesc_t *pUserTaskConfig, uint32_t taskParam);
 
 /** C signature to terminate a user task. Can be called from any nested sub-routine in the
     user task.
       @param taskReturnValue
-    If positive, the value is returned to the task creation function rtos_runUserTask(). If
-    negative, rtos_runUserTask() receives #RTOS_CAUSE_TASK_ABBORTION_USER_ABORT and an error
+    If positive, the value is returned to the task creation function rtos_osRunUserTask(). If
+    negative, rtos_osRunUserTask() receives #RTOS_CAUSE_TASK_ABBORTION_USER_ABORT and an error
     is counted in the process. */
 _Noreturn void rtos_terminateUserTask(int32_t taskReturnValue);
 

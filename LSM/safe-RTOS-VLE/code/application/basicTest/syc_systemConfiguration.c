@@ -200,21 +200,21 @@ static void installInterruptServiceRoutines(void)
 
     /* Install the ISRs now that all timers are stopped.
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
-    rtos_installInterruptHandler( &isrPit1
-                                , /* vectorNum */ 60
-                                , /* psrPriority */ syc_prioISRPit1
-                                , /* isPreemptable */ true
-                                );
-    rtos_installInterruptHandler( &isrPit2
-                                , /* vectorNum */ 61
-                                , /* psrPriority */ syc_prioISRPit2
-                                , /* isPreemptable */ true
-                                );
-    rtos_installInterruptHandler( &isrPit3
-                                , /* vectorNum */ 127
-                                , /* psrPriority */ syc_prioISRPit3
-                                , /* isPreemptable */ true
-                                );
+    rtos_osInstallInterruptHandler( &isrPit1
+                                  , /* vectorNum */ 60
+                                  , /* psrPriority */ syc_prioISRPit1
+                                  , /* isPreemptable */ true
+                                  );
+    rtos_osInstallInterruptHandler( &isrPit2
+                                  , /* vectorNum */ 61
+                                  , /* psrPriority */ syc_prioISRPit2
+                                  , /* isPreemptable */ true
+                                  );
+    rtos_osInstallInterruptHandler( &isrPit3
+                                  , /* vectorNum */ 127
+                                  , /* psrPriority */ syc_prioISRPit3
+                                  , /* isPreemptable */ true
+                                  );
 
     /* Peripheral clock has been initialized to 120 MHz. The timer counts at this rate. The
        RTOS operates in ticks of 1ms. Here, we use prime numbers to get good asynchronicity
@@ -260,7 +260,7 @@ void main(void)
     ihw_initMcuCoreHW();
 
     /* The interrupt controller is configured. */
-    rtos_initINTCInterruptController();
+    rtos_osInitINTCInterruptController();
 
     /* Initialize the button and LED driver for the eval board. */
     lbd_initLEDAndButtonDriver( /* onButtonChangeCallback */ NULL

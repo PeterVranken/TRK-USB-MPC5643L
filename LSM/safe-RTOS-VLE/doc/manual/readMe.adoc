@@ -920,7 +920,7 @@ for the list of recognized configuration errors.
 The RTOS communicates intensively with the interrupt controller of the MCU.
 Therefore it has its own initialization routine for this MCU device. You
 will need to call this function prior to the first call of
-`rtos_installInterruptHandler` and prior to the kernel startup,
+`rtos_osInstallInterruptHandler` and prior to the kernel startup,
 `rtos_osInitKernel`.
 
 Your own MCU initialization code must not contain any further or
@@ -928,7 +928,7 @@ alternative code, which accesses the registers of the interrupt
 controller.
 
     #include "rtos.h"
-    void rtos_initINTCInterruptController(void);
+    void rtos_osInitINTCInterruptController(void);
 
 Most of the MCU hardware initialization required by the RTOS is integrated
 into the function to start the kernel and doesn't appear in the API. The
@@ -1032,7 +1032,7 @@ This function lets your application define a handler (ISR) for all needed
 interrupt sources.
 
     #include "rtos.h"
-    void rtos_installInterruptHandler
+    void rtos_osInstallInterruptHandler
                 ( rtos_interruptServiceRoutine_t interruptServiceRoutine
                 , unsigned int vectorNum
                 , unsigned int psrPriority
@@ -1174,7 +1174,7 @@ then the system call implementation will call this API to report the
 problem to the kernel. It raises an exception in the calling process.
 
     #include "rtos.h"
-    _Noreturn void rtos_systemCallBadArgument(void);
+    _Noreturn void rtos_osSystemCallBadArgument(void);
 
 ==== Inter-process function call
 

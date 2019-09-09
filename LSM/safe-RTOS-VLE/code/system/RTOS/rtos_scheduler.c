@@ -59,7 +59,7 @@
  * period time.\n
  *   The RTOS implementation is tightly connected to the implementation of interrupt
  * services. Interrupt services, e.g. to implement I/O operations for the tasks, are
- * registered with rtos_installInterruptHandler().\n
+ * registered with rtos_osInstallInterruptHandler().\n
  *   Any I/O interrupts can be combined with the tasks. Different to most RTOS we don't
  * impose a priority ordering between tasks and interrupts. A conventional design would put
  * interrupt service routines (ISR) at higher priorities than the highest task priority but
@@ -1173,11 +1173,11 @@ rtos_errorCode_t rtos_osInitKernel(void)
             {                                                                       \
                 /* Reset a possibly pending interrupt bit of the SW interrupt. */   \
                 *((vuint8_t*)&INTC.SSCIR0_3.R + (idEv)) = 0x01;                     \
-                rtos_installInterruptHandler( &swInt##idEv                          \
-                                            , /* vectorNum */ idEv                  \
-                                            , _eventAry[idEv].priority              \
-                                            , /* isPreemptable */ true              \
-                                            );                                      \
+                rtos_osInstallInterruptHandler( &swInt##idEv                        \
+                                              , /* vectorNum */ idEv                \
+                                              , _eventAry[idEv].priority            \
+                                              , /* isPreemptable */ true            \
+                                              );                                    \
             }
         INSTALL_SW_IRQ(0)
         INSTALL_SW_IRQ(1)
@@ -1194,11 +1194,11 @@ rtos_errorCode_t rtos_osInitKernel(void)
 
         /* Install the interrupt service routine for cyclic timer PIT 0. It drives the OS
            scheduler for cyclic task activation. */
-        rtos_installInterruptHandler( &onOsTimerTick
-                                    , /* vectorNum */ 59
-                                    , RTOS_KERNEL_PRIORITY
-                                    , /* isPremptable */ true
-                                    );
+        rtos_osInstallInterruptHandler( &onOsTimerTick
+                                      , /* vectorNum */ 59
+                                      , RTOS_KERNEL_PRIORITY
+                                      , /* isPremptable */ true
+                                      );
 
         /* Peripheral clock has been initialized to 120 MHz. To get a 1ms interrupt tick we
            need to count till 120000. We configure an interrupt rate of RTOS_CLOCK_TICK_IN_MS
@@ -1267,7 +1267,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
                     /* The initialization function of a process is run as a task in that
                        process, which involves full exception handling and possible abort
                        causes. */
-                    resultInit = rtos_runInitTask(&_initTaskCfgAry[idxP]);
+                    resultInit = rtos_osRunInitTask(&_initTaskCfgAry[idxP]);
                 }
                 if(resultInit < 0)
                     errCode = rtos_err_initTaskFailed;
@@ -1424,7 +1424,7 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
         /* The user specified task ID is not in range. This is a severe user code error,
            which is handled with an exception, task abort and counted error.
              Note, this function does not return. */
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
     }
 } /* End of rtos_scFlHdlr_triggerEvent */
 
@@ -1470,7 +1470,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
     {
         /* User code passed in an invalid pointer. We must not even touch the contents.
              Note, the next function won't return. */
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
     }
 
     /* This code depends on specific number of processes, we need a check. The
@@ -1483,7 +1483,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
     /* Now we can check the index of the target process. */
     const unsigned int idxCalledPrc = pUserTaskConfig->PID - 1u;
     if(idxCalledPrc > 3)
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
 
     const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
     if((_runTask_permissions & mask) != 0)
@@ -1517,7 +1517,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
         if(isEnabled)
         {
             /* All preconditions fulfilled, lock is set, run the task. */
-            const int32_t taskResult = rtos_runUserTask(pUserTaskConfig, taskParam);
+            const int32_t taskResult = rtos_osRunUserTask(pUserTaskConfig, taskParam);
 
             /* Restore the pre-requisite for future use of this system call. */
             rtos_osSuspendAllInterrupts();
@@ -1538,7 +1538,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
         {
             /* Bad use of function, penalty is task abortion.
                  Note, this function does not return. */
-            rtos_systemCallBadArgument();
+            rtos_osSystemCallBadArgument();
         }
     }
     else
@@ -1547,7 +1547,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
            user code error, which is handled with an exception, task abort and counted
            error.
              Note, this function does not return. */
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
     }
 } /* End of rtos_scFlHdlr_runTask */
 

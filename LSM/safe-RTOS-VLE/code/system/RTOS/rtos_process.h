@@ -60,7 +60,9 @@
 rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCESSES]);
 
 /** Grant permission to particular processes for using the service rtos_suspendProcess(). */
-void rtos_grantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID);
+void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCallingTask
+                                         , unsigned int targetPID
+                                         );
 
 /** Kernel function to initially release a process. */
 void rtos_osReleaseProcess(uint32_t PID);

@@ -162,7 +162,7 @@ uint32_t lbd_scSmplHdlr_setLED( uint32_t pidOfCallingTask ATTRIB_UNUSED
     {
         /* Abort this system call and the calling user task and count this event as an
            error in the process the failing task belongs to. */
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
     }
 
     lbd_osSetLED(led, isOn);
@@ -201,7 +201,7 @@ uint32_t lbd_scSmplHdlr_getButton( uint32_t pidOfCallingTask ATTRIB_UNUSED
     {
         /* Abort this system call and the calling user task and count this event as an
            error in the process the failing task belongs to. */
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
     }
 } /* End of lbd_scSmplHdlr_getButton */
 

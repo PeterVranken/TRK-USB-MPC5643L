@@ -86,7 +86,7 @@
  * executed with EE=0 and must not rely on sp, r2 and r13
  */
     .section    .text.ivor
-    .extern     rtos_systemCallBadArgument
+    .extern     rtos_osSystemCallBadArgument
     .globl      rtos_scBscHdlr_suspendAllInterruptsByPriority
     .align      2
 
@@ -97,10 +97,10 @@ rtos_scBscHdlr_suspendAllInterruptsByPriority:
     /* The user code demanded interrupt level must be within the permitted range: Not at
        level of safety task and not below the level we had at entry into the task. */
     se_cmpli    r4, RTOS_PCP_KERNEL_PRIO-1   /* -1: One level is reserved for safety tasks */
-    e_bge       rtos_systemCallBadArgument   /* Abort task: Demanded prio too high */
+    e_bge       rtos_osSystemCallBadArgument    /* Abort task: Demanded prio too high */
     se_lwz      r3, RUT_O_CPR(sp)       /* r3: Prio of task start */
     se_cmpl     r4, r3
-    e_blt       rtos_systemCallBadArgument  /* Abort task: Demanded prio too low */
+    e_blt       rtos_osSystemCallBadArgument    /* Abort task: Demanded prio too low */
     e_lis       r5, INTC_CPR_PRC0@ha    /* Load upper half of INTC_CPR address */
     e_lwz       r3, INTC_CPR_PRC0@l(r5) /* r3: Current prio value, before change. For return */
     e_stw       r4, INTC_CPR_PRC0@l(r5) /* Store checked, demanded priority in INTC */

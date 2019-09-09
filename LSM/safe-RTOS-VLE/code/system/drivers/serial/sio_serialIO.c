@@ -580,11 +580,11 @@ static void registerInterrupts(void)
 #define IDX_LINFLEX_RX_IRQ  (79 + 20*IDX_LINFLEX_D)
 
     /* Register our IRQ handler. */
-    rtos_installInterruptHandler( &linFlexRxInterrupt
-                                , /* vectorNum */ IDX_LINFLEX_RX_IRQ
-                                , /* psrPriority */ INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT
-                                , /* isPreemptable */ true
-                                );
+    rtos_osInstallInterruptHandler( &linFlexRxInterrupt
+                                  , /* vectorNum */ IDX_LINFLEX_RX_IRQ
+                                  , /* psrPriority */ INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT
+                                  , /* isPreemptable */ true
+                                  );
 #undef IDX_LINFLEX_RX_IRQ
 } /* End of registerInterrupts */
 
@@ -658,7 +658,7 @@ unsigned int sio_scFlHdlr_writeSerial( uint32_t PID ATTRIB_UNUSED
         /* The user specified memory region is not entirely inside the permitted,
            accessible range. This is a severe user code error, which is handeld with an
            exception, task abort and counted error. */
-        rtos_systemCallBadArgument();
+        rtos_osSystemCallBadArgument();
     }
     
     /* After checking the potentially bad user input we may delegate it to the "normal"
