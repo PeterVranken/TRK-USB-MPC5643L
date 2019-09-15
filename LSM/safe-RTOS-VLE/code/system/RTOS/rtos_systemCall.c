@@ -257,11 +257,10 @@
 # define RTOS_SYSCALL_TABLE_ENTRY_0063    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
-/* Here we have a very weak further test for inconsistencies. It aims at finding too many
-   specified system calls. It will however not detect if one specifies further system calls
-   with non consecutive indexes. */
-#ifdef RTOS_SYSCALL_TABLE_ENTRY_0064
-# error More system calls defined than declared table size. See #RTOS_NO_SYSTEM_CALLS
+/* Here we have a weak further test for inconsistencies. */
+#if defined(RTOS_SYSCALL_TABLE_ENTRY_0064) ||  RTOS_NO_SYSTEM_CALLS != 64
+# error The number of system calls has been inconsistently changed. Code maintenance \
+        is required. See #RTOS_NO_SYSTEM_CALLS and definition of rtos_systemCallDescAry
 #endif
 
 
@@ -323,7 +322,9 @@ void rtos_checkInterfaceAssemblerToC(void);
  * Data definitions
  */
 
-/** The global, constant table of system call descriptors. */
+/** The global, constant table of system call descriptors.
+      Note, the initializer expression requires maintenance if the size
+    #RTOS_NO_SYSTEM_CALLS of the system call table is changed */
 const systemCallDesc_t rtos_systemCallDescAry[RTOS_NO_SYSTEM_CALLS]
     SECTION(.text.ivor.rtos_systemCallDescAry) =
 {

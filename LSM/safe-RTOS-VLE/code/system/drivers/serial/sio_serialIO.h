@@ -35,7 +35,7 @@
  */
 
 /** Index of system call for writing into serial output. */
-#define SIO_SYSCALL_WRITE_SERIAL    4
+#define SIO_SYSCALL_WRITE_SERIAL    20
 
 
 /*

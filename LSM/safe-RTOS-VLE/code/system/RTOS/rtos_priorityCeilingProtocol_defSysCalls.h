@@ -46,7 +46,7 @@
    style prototype, this is not a C callable function. The calling convention is different
    to C. This is the reason, why we declare it here instead of publishing it globally in
    rtos_priorityCeilingProtocol.h. */
-extern uint32_t rtos_scBscHdlr_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority);
+extern uint32_t rtos_scBscHdlr_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPrio);
 # define RTOS_SYSCALL_TABLE_ENTRY_0001  \
                 RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_suspendAllInterruptsByPriority, BASIC)
 #else
@@ -55,6 +55,26 @@ extern uint32_t rtos_scBscHdlr_suspendAllInterruptsByPriority(uint32_t suspendUp
    makes the compiler emit a message with the location of the conflicting previous
    definition.*/
 # define RTOS_SYSCALL_TABLE_ENTRY_0001    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+#endif
+
+
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0002
+# if RTOS_SYSCALL_RESUME_ALL_INTERRUPTS_BY_PRIORITY != 2
+#  error Inconsistent definition of system call
+# endif
+/* Assembler implemented code in rtos_priorityCeilingProtocol.S. Note, despite of the C
+   style prototype, this is not a C callable function. The calling convention is different
+   to C. This is the reason, why we declare it here instead of publishing it globally in
+   rtos_priorityCeilingProtocol.h. */
+extern uint32_t rtos_scBscHdlr_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPrio);
+# define RTOS_SYSCALL_TABLE_ENTRY_0002  \
+                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_resumeAllInterruptsByPriority, BASIC)
+#else
+# error System call 0002 is ambiguously defined
+/* We purposely redefine the table entry and despite of the already reported error; this
+   makes the compiler emit a message with the location of the conflicting previous
+   definition.*/
+# define RTOS_SYSCALL_TABLE_ENTRY_0002    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 

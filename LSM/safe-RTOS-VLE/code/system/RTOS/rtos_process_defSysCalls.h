@@ -35,18 +35,18 @@
  * Defines
  */
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0009
-# if RTOS_SYSCALL_SUSPEND_PROCESS != 9
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0005
+# if RTOS_SYSCALL_SUSPEND_PROCESS != 5
 #  error Inconsistent definition of system call
 # endif
-# define RTOS_SYSCALL_TABLE_ENTRY_0009  \
+# define RTOS_SYSCALL_TABLE_ENTRY_0005  \
                     RTOS_SC_TABLE_ENTRY(rtos_scSmplHdlr_suspendProcess, SIMPLE)
 #else
-# error System call 0009 is ambiguously defined
+# error System call 0005 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    makes the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0009    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0005    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 

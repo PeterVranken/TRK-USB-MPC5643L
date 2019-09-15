@@ -33,15 +33,12 @@
  * Include files
  */
 
+#include "rtos_ivorHandler.h"
+
 
 /*
  * Defines
  */
- 
-/** The definition of the system call to report an error an to halt the SW execution is
-    locally re-defined here. This requires a consistency check but is tolerable for a pure
-    testing file. */
-#define ASSERT_SYSCALL_ASSERT_FUNC      63
 
 
 /*
@@ -79,8 +76,8 @@ tcx_waitTimePerCycleInUS:
  *   @func fillRegisters
  * Fill all accessible registers with the value in r3.
  */
-    .section    .text
-    .balign     2
+    .section .text
+    .balign  2
 
 #define SIZE_OF_STACKFRAME  0
 
@@ -295,7 +292,7 @@ tcx_testFailed:
        configured.
          However, even in PRODUCTION compilation, we have some kind of error reporting
        through the process error counts. */
-    se_li       r3, ASSERT_SYSCALL_ASSERT_FUNC
+    se_li       r3, RTOS_SYSCALL_ASSERT_FUNC
     e_lis       r4, tr_fileName@ha
     e_add16i    r4, r4, tr_fileName@l
     e_li        r5, __LINE__

@@ -36,8 +36,8 @@
  * Defines
  */
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0063
-# define ASSERT_SYSCALL_ASSERT_FUNC 63
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0006
+# define ASSERT_SYSCALL_ASSERT_FUNC 6
 
 /* Assembler implemented code in assert_sysCall.S. Note, despite of the C style prototype,
    this is not a C callable function. The calling convention is different to C. */
@@ -46,13 +46,13 @@ extern void _Noreturn assert_scBscHdlr_assert_func( const char *fileName
                                                   , const char *funcName
                                                   , const char *expression
                                                   );
-# define RTOS_SYSCALL_TABLE_ENTRY_0063 RTOS_SC_TABLE_ENTRY(assert_scBscHdlr_assert_func, BASIC)
+# define RTOS_SYSCALL_TABLE_ENTRY_0006 RTOS_SC_TABLE_ENTRY(assert_scBscHdlr_assert_func, BASIC)
 #else
-# error System call 0063 is ambiguously defined
+# error System call 0006 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    make the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0063    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0006    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 

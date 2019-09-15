@@ -40,10 +40,15 @@
     according definition in the C code. */
 #define RTOS_PCP_KERNEL_PRIO    12
 
-/** Index of implemented system call for setting a user context's current priority. The
+/** Index of implemented system call for raising a user context's current priority. The
     system call is wrapped in the inline function rtos_suspendAllInterruptsByPriority().
     Please refer to this function for details. */
-#define RTOS_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY  1
+#define RTOS_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY     1
+
+/** Index of implemented system call for lowering a user context's current priority. The
+    system call is wrapped in the inline function rtos_resumeAllInterruptsByPriority().
+    Please refer to this function for details. */
+#define RTOS_SYSCALL_RESUME_ALL_INTERRUPTS_BY_PRIORITY      2
 
 
 #ifdef __STDC_VERSION__

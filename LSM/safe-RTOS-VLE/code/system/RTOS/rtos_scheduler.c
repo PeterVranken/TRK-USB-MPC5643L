@@ -128,18 +128,6 @@
  *   rtos_scFlHdlr_runTask
  *   rtos_getNoActivationLoss
  * Module inline interface
- *   rtos_osRunTask
- *   rtos_terminateTask
- *   rtos_osSuspendAllInterrupts
- *   rtos_osResumeAllInterrupts
- *   rtos_osEnterCriticalSection
- *   rtos_osLeaveCriticalSection
- *   rtos_osSuspendAllInterruptsByPriority
- *   rtos_suspendAllInterruptsByPriority
- *   rtos_osResumeAllInterruptsByPriority
- *   rtos_resumeAllInterruptsByPriority
- *   rtos_triggerEvent
- *   rtos_suspendProcess
  * Local functions
  *   registerTask
  *   checkEventDue
@@ -213,6 +201,8 @@
 #if RTOS_IDX_SC_RUN_TASK != RTOS_SYSCALL_RUN_TASK                                       \
     ||  RTOS_IDX_SC_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY                                  \
         != RTOS_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY                              \
+    ||  RTOS_IDX_SC_RESUME_ALL_INTERRUPTS_BY_PRIORITY                                   \
+        != RTOS_SYSCALL_RESUME_ALL_INTERRUPTS_BY_PRIORITY                               \
     ||  RTOS_IDX_SC_TRIGGER_EVENT != RTOS_SYSCALL_TRIGGER_EVENT                         \
     ||  RTOS_IDX_SC_SUSPEND_PROCESS != RTOS_SYSCALL_SUSPEND_PROCESS
 # error Inconsistent definitions made in C modules and RTOS API header file rtos.h
@@ -746,7 +736,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
                                    )
 {
     *pEventId = RTOS_INVALID_EVENT_ID;
-    
+
     /* The number of events is constraint by hardware (INTC) */
     if(_noEvents >= RTOS_MAX_NO_EVENTS)
         return rtos_err_tooManyEventsCreated;
@@ -784,10 +774,10 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     _eventAry[_noEvents].noActivationLoss = 0;
     _eventAry[_noEvents].taskAry = NULL;
     _eventAry[_noEvents].noTasks = 0;
-    
+
     /* Assign the next available event ID. */
     *pEventId = _noEvents++;
-    
+
     return rtos_err_noError;
 
 } /* End of rtos_osCreateEvent */
@@ -1236,7 +1226,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
        has the highest privileges. This requires a loop counter like 1, 2, ..., N, 0. */
     idxP = 0;
     do
-    {   
+    {
 #if RTOS_NO_PROCESSES > 0
         if(idxP < RTOS_NO_PROCESSES)
             ++ idxP;
@@ -1417,6 +1407,10 @@ bool rtos_osTriggerEvent(unsigned int idEvent)
  */
 uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int idEvent)
 {
+    /// @todo Do we really need a full handler here? Using the simple, non-preemptable
+    // handler would delay the preemption by an activated task of higher priority until we
+    // have entirely returned from the system call but we would burden the kernel stack
+    // less. Which counts more?
     if(idEvent < _noEvents  &&  pidOfCallingTask >= _eventAry[idEvent].minPIDForTrigger)
         return (uint32_t)rtos_osTriggerEvent(idEvent);
     else
@@ -1427,6 +1421,7 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
         rtos_osSystemCallBadArgument();
     }
 } /* End of rtos_scFlHdlr_triggerEvent */
+
 
 
 /**

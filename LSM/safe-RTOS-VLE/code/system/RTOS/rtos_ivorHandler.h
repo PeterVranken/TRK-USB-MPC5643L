@@ -105,7 +105,7 @@
     the definition here as the assembly code can't read the original C code definition. To
     ensure consistency, the C code implementation file reads this header and compares this
     duplicate with its original definition. */
-#define RTOS_SYSCALL_ASSERT_FUNC            (0x3f)
+#define RTOS_SYSCALL_ASSERT_FUNC    6
 
 /** SPR index of SPRG0. We use it for temporary storage of the SV stack pointer. It is
     possible to hold it in RAM, too, using the SPR is just to have more concise code for

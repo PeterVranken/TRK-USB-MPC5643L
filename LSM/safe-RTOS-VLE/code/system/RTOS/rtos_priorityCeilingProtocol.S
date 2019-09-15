@@ -24,6 +24,7 @@
  */
 /* Module interface
  *   rtos_scBscHdlr_suspendAllInterruptsByPriority
+ *   rtos_scBscHdlr_resumeAllInterruptsByPriority
  * Local functions
  */
 
@@ -76,6 +77,8 @@
  * On return, r3 contains the priority level at entry into this function (and into the
  * critical section). This priority level needs to be restored on exit from the critical
  * section.
+ *   @param addressOfHandler
+ * On entry, r3 holds the address of this system call handler. Not used.
  *   @param suspendUpToThisPriority
  * On entry, r4 holds the aimed priority level. All tasks/interrupts up to and including
  * this priority will be locked. The CPU will not handle them until the priority level is
@@ -85,12 +88,18 @@
  * directly. The system call handler is compliant with the basic conformance class. It is
  * executed with EE=0 and must not rely on sp, r2 and r13
  */
+    /// @todo Why would we need the ivor text page here?
     .section    .text.ivor
     .extern     rtos_osSystemCallBadArgument
     .globl      rtos_scBscHdlr_suspendAllInterruptsByPriority
+    .globl      rtos_scBscHdlr_resumeAllInterruptsByPriority
     .align      2
 
+rtos_scBscHdlr_resumeAllInterruptsByPriority:
+    //se_b        .                       /* assert(false): Not yet implemented */
+    se_rfi                              /* Do nothing in the system call */
 rtos_scBscHdlr_suspendAllInterruptsByPriority:
+    /// @todo Why don't we load SPR_G0_SVSP into a volatile GPR? Saves two instructions
     se_mr       r0, sp                  /* Temporary storage of user sp on entry. */
     mfspr       sp, SPR_G0_SVSP         /* Restore SV sp to access stack frame of task start
                                            code. */

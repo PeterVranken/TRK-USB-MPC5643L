@@ -35,31 +35,31 @@
  * Defines
  */
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0016
-# if LBD_SYSCALL_SET_LED != 16
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0025
+# if LBD_SYSCALL_SET_LED != 25
 #  error Inconsistent definition of system call
 # endif
-# define RTOS_SYSCALL_TABLE_ENTRY_0016  RTOS_SC_TABLE_ENTRY(lbd_scSmplHdlr_setLED, SIMPLE)
+# define RTOS_SYSCALL_TABLE_ENTRY_0025  RTOS_SC_TABLE_ENTRY(lbd_scSmplHdlr_setLED, SIMPLE)
 #else
-# error System call 0016 is ambiguously defined
+# error System call 0025 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    makes the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0016    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0025    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0017
-# if LBD_SYSCALL_GET_BUTTON != 17
+#ifndef RTOS_SYSCALL_TABLE_ENTRY_0026
+# if LBD_SYSCALL_GET_BUTTON != 26
 #  error Inconsistent definition of system call
 # endif
-# define RTOS_SYSCALL_TABLE_ENTRY_0017  RTOS_SC_TABLE_ENTRY(lbd_scSmplHdlr_getButton, SIMPLE)
+# define RTOS_SYSCALL_TABLE_ENTRY_0026  RTOS_SC_TABLE_ENTRY(lbd_scSmplHdlr_getButton, SIMPLE)
 #else
-# error System call 0017 is ambiguously defined
+# error System call 0026 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    makes the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0017    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_SYSCALL_TABLE_ENTRY_0026    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 

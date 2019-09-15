@@ -39,7 +39,7 @@
 /** Index of implemented system call for aborting running tasks belonging to a given
     process and stopping that process forever (i.e. no further task or I/O driver callback
     execution). */
-#define RTOS_SYSCALL_SUSPEND_PROCESS     9
+#define RTOS_SYSCALL_SUSPEND_PROCESS     5
 
 
 /*

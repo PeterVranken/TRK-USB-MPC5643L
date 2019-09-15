@@ -2,7 +2,22 @@
  * @file assert.c
  * The C standard macro assert is in case of GCC for PowerPC implemented by an external
  * function. This leaves it open, how the target platform should behave when an assertion
- * fires. This module implement the wanted behavior for this project.
+ * fires. This module implements the wanted behavior as a system call for the RTOS.
+ *
+ * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
  *   __assert_func

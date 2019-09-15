@@ -64,10 +64,10 @@
 #define LBD_MAX_CNT_BTN_DEBOUNCE    ((LBD_DEBOUNCE_TIME_BUTTONS)/2)
 
 /** Index of implemented system call for switching an LED on or off. */
-#define LBD_SYSCALL_SET_LED         16
+#define LBD_SYSCALL_SET_LED         25
 
 /** Index of system call for getting the button state, lbd_scSmplHdlr_getButton(). */
-#define LBD_SYSCALL_GET_BUTTON      17
+#define LBD_SYSCALL_GET_BUTTON      26
 
 /*
  * Global type definitions

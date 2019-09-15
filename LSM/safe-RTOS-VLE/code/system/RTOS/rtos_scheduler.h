@@ -33,10 +33,10 @@
  */
 
 /** System call index of function rtos_triggerEvent(), offered by this module. */
-#define RTOS_SYSCALL_TRIGGER_EVENT                      5
+#define RTOS_SYSCALL_TRIGGER_EVENT                      3
 
 /** System call index of function rtos_runTask(), offered by this module. */
-#define RTOS_SYSCALL_RUN_TASK                           10
+#define RTOS_SYSCALL_RUN_TASK                           4
 
 
 /*

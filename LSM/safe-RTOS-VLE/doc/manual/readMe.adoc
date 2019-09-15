@@ -3,7 +3,7 @@
 :Email:               mailto:Peter_Vranken@Yahoo.de[P. Vranken]
 :Revision:            1
 :toc:                 left
-:toclevels:           3
+:toclevels:           4
 :numbered:
 :xrefstyle:           short
 ifndef::env-github[:icons: font]
@@ -822,6 +822,73 @@ can compile the table. The file is named _mnm_driverName_defSysCalls.h_.
 This involves mechanisms to safely avoid both, conflicting, doubly defined
 table entries and undefined, empty table entries.
 
+TIP: After successful compilation of module _rtos_systemCall.c_ and if you
+specify `SAVE_TMP=1` on the command line of _make_ then you can find the
+actual, complete system call table in file
+_bin/(..)/obj/rtos_systemCall.i_. Open the file in a text editor and
+search for `const systemCallDesc_t rtos_systemCallDescAry`.
+
+The table of system calls has a fixed, maximum number of entries. The
+table size is a compile time constant, see macro _RTOS_NO_SYSTEM_CALLS_ in
+file _rtos_systemCall.h_. Note, more than one code location needs
+maintenance if the constant is changed. Follow the hints given in the
+source code comments.
+
+If you design your own I/O drivers it's good practice to reserve index
+ranges for each driver, e.g. start the indexes of a driver at multiples of
+five or ten. Extensions of the drivers become possible without index
+clashes (which are properly reported during the build) and without the
+need for reworking other drivers to sort them out.
+
+The system call indexes don't need to form a consecutive sequence of
+numbers. Not using certain indexes does no more harm than wasting 8 Byte
+of ROM for each unused entry. There's no runtime penalty and,
+particularly, no danger of breaking the safety concept due to undefined
+entries.
+
+===== System calls of RTOS
+
+The RTOS implementation itself makes use of a few system calls. The index
+range 0 .. 19 is reserved for extensions of the kernel and must therefore
+not be used by user added code.
+
+.System call indexes in use by RTOS
+[options="header",cols="^1,9,^3,15"]
+|=======
+|Index |Function |Class |Description
+|0  |rtos_scBscHdlr_terminateUserTask |Basic | (Premature) task abortion
+by user code
+|1  |rtos_scBscHdlr_suspendAllInterruptsByPriority |Basic | PCP: get 
+resource or enter critical section
+|2  |rtos_scBscHdlr_resumeAllInterruptsByPriority |Basic | PCP: release
+resource or leave critical section
+|3  |rtos_scFlHdlr_triggerEvent |Full | Event trigger by software
+|4  |rtos_scFlHdlr_runTask |Full | Run a user task or inter-process
+function call 
+|5  |rtos_scSmplHdlr_suspendProcess |Simple | Suspend a process forever
+|6  |assert_scBscHdlr_assert_func |Basic | Implementation of C assert macro
+|7-19 |rtos_scBscHdlr_sysCallUndefined |Basic | Index space reserved for
+RTOS extensions 
+|=======
+
+===== System calls of sample I/O drivers
+
+A few more system call indexes are used by the sample I/O drivers, LED and
+button driver and serial interface driver. If the drivers are not used by
+the client code then these indexes can be reused. Moreover, it is
+straightforward to put the drivers onto another index of your choice. Just
+have a look at the header files of the drivers.
+
+.System call indexes in use by sample I/O drivers
+[options="header",cols="^1,9,^3,15"]
+|=======
+|Index |Function |Class |Description
+|20 |sio_scFlHdlr_writeSerial |Full | Serial I/O driver: Write text string
+into serial port
+|25 |lbd_scSmplHdlr_setLED |Simple | LED driver: Control an LED
+|26 |lbd_scSmplHdlr_getButton |Simple | LED driver: Get button state
+|=======
+
 ==== Sample code
 
 Please refer to the sample I/O drivers
@@ -1404,6 +1471,20 @@ The load is returned in tens of percent.
 
 TODOC: Memory map, controlling ownership of data objects, code samples,
 typical programmming errors and how they appear to the developer
+
+//== Deadline monitoring
+//
+//TODOC: Principle and limitations
+//- Checked at task resume: Low resolution. Little use e.g. for limiting a
+//  regular 1ms task to 100us execution time. But even here useful for
+//  failure detection and shutdown
+//- Not working if there's no preempting ISR. Function can't be guaranteed
+//  for prio equal or above kernel prio
+//- Leaves tasks and data in inconsistent state. (Can abort task in the
+//  middle of a critical section.) Generally no reasonable means to limit
+//  execution time. Just an error recognition and worst case hindering tool
+//- If short latency times in error recognition path is not critical then
+//  relying only on activation loss is likely the better option
 
 == The sample applications
 

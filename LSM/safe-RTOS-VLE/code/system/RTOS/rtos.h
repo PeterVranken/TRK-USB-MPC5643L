@@ -392,7 +392,7 @@ bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t no
 
 /**
  * Start a user task. A user task is a C function, which is executed in user mode and in a
- * given process context. The call is synchronous; the calling OS cpontext is immediately
+ * given process context. The call is synchronous; the calling OS context is immediately
  * preempted and superseded by the started task. The calling OS context is resumed when the
  * task function ends - be it gracefully or by exception/abortion.\n
  *   The started task inherits the priority of the calling OS context. It can be preempted
@@ -434,13 +434,12 @@ static inline int32_t rtos_osRunTask( const rtos_taskDesc_t *pUserTaskConfig
  * given process context. The call is synchronous; the calling user context is immediately
  * preempted and superseded by the started task. The calling user context is resumed when the
  * task function ends - be it gracefully or by exception/abortion.\n
- *   The started task inherits the priority of the calling OS context. It can be preempted
+ *   The started task inherits the priority of the calling context. It can be preempted
  * only by contexts of higher priority.\n
- *   The function requires sufficient privileges. The invoking task needs to belong to a
- * process with an ID greater then the target process. The task cannot be started in the OS
- * context.\n
+ *   The function requires sufficient privileges. See rtos_osGrantPermissionRunTask() for
+ * details. The task cannot be started in the OS context.\n
  *   The function cannot be used recursively. The created task cannot in turn make use of
- * rtos_osRunTask().
+ * rtos_runTask().
  *   @return
  * The executed task function can return a value, which is propagated to the calling user
  * context if it is positive. A returned negative task function result is interpreted as
@@ -460,7 +459,7 @@ static inline int32_t rtos_runTask( const rtos_taskDesc_t *pUserTaskConfig
                                   , uintptr_t taskParam
                                   )
 {
-    #define RTOS_IDX_SC_RUN_TASK    10
+    #define RTOS_IDX_SC_RUN_TASK    4
     return (int32_t)rtos_systemCall(RTOS_IDX_SC_RUN_TASK, pUserTaskConfig, taskParam);
 
 } /* End of rtos_runTask */
@@ -774,7 +773,6 @@ static inline uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToT
 
 
 
-
 /**
  * This function is called to end a critical section of code, which requires mutual
  * exclusion of two or more tasks/ISRs. It is the counterpart of function
@@ -836,6 +834,8 @@ static inline void rtos_osResumeAllInterruptsByPriority(uint32_t resumeDownToThi
  */
 static inline void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)
 {
+    #define RTOS_IDX_SC_RESUME_ALL_INTERRUPTS_BY_PRIORITY  2
+    /// @todo Change System call to new, dedicated one and adapt documentation of this function and suspend
     rtos_systemCall(RTOS_IDX_SC_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY, resumeDownToThisPriority);
 
 } /* End of rtos_resumeAllInterruptsByPriority */
@@ -883,7 +883,7 @@ static inline void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisP
  */
 static inline bool rtos_triggerEvent(unsigned int idEvent)
 {
-    #define RTOS_IDX_SC_TRIGGER_EVENT   5
+    #define RTOS_IDX_SC_TRIGGER_EVENT   3
     return (bool)rtos_systemCall(RTOS_IDX_SC_TRIGGER_EVENT, idEvent);
 
 } /* End of rtos_triggerEvent */
@@ -951,7 +951,7 @@ static inline bool rtos_checkUserCodeReadPtr(const void *address, size_t noBytes
  */
 static inline void rtos_suspendProcess(uint32_t PID)
 {
-    #define RTOS_IDX_SC_SUSPEND_PROCESS 9
+    #define RTOS_IDX_SC_SUSPEND_PROCESS     5
     rtos_systemCall(RTOS_IDX_SC_SUSPEND_PROCESS, PID);
 
 } /* End of rtos_suspendProcess */
