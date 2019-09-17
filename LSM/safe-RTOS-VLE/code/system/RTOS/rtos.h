@@ -28,9 +28,7 @@
  *   rtos_osEnterCriticalSection
  *   rtos_osLeaveCriticalSection
  *   rtos_osSuspendAllInterruptsByPriority
- *   rtos_suspendAllInterruptsByPriority
  *   rtos_osResumeAllInterruptsByPriority
- *   rtos_resumeAllInterruptsByPriority
  *   rtos_triggerEvent
  *   rtos_checkUserCodeReadPtr
  *   rtos_suspendProcess
@@ -80,6 +78,16 @@
     somewhat difficult in use. */
 #define RTOS_KERNEL_PRIORITY        12
 
+/** This the highest priority that ISRs and tasks can have, which user code can shape a
+    critical section with. If a task or ISR has a higher priority then user code can't
+    hinder it from being scheduled at any time and race conditions with these ISRs or tasks
+    can't be avoided.\n
+      The configured value needs to be at least two less than #RTOS_KERNEL_PRIORITY and at
+    least one safety supervisory task needs to have a priority between
+    #RTOS_MAX_LOCKABLE_PRIORITY and #RTOS_KERNEL_PRIORITY (neither including) - otherwise
+    the safety concept is broken. */
+#define RTOS_MAX_LOCKABLE_PRIORITY  ((RTOS_KERNEL_PRIORITY)-2)
+
 /** A user task is activated by an event. The implementation of events as software
     interrupts limits their maximum number to eight. Note, this is not a configuration
     setting, the value cannot be changed. */
@@ -91,14 +99,14 @@
 
 /** The maximum number of user tasks, which can be activated by an event. The chosen number
     is a compile time configuration setting and there are no constraints in changing it
-    besides the ammout of reserved RAM space for the resulting table size.\n
+    besides the amount of reserved RAM space for the resulting table size.\n
       The configured limit applies to the tasks registered with rtos_osRegisterUserTask()
-    and rtos_osRegisterOSTask() only; callbacks from I/O driver, which are much of a user
-    task, too, are not counted here. */
+    and rtos_osRegisterOSTask() only; process initialization tasks and callbacks from I/O
+    drivers, which are much of a user task, too, are not counted here. */
 #define RTOS_MAX_NO_USER_TASKS      20
 
 /** Deadline monitoring for tasks is supported up to a task maximum execution time of this
-    number of Microseconds: (2^31-1)*T_c/1e-6, T_c is 120e6 (CPU clock rate).\n
+    number of Microseconds: (2^31-1)*1e6/f_c, f_c is 120e6 (CPU clock rate).\n
       The macro denotes a technical limitation. It is not a configurable item and must not
     be changed. */
 #define RTOS_TI_DEADLINE_MAX_IN_US  17895697
@@ -156,10 +164,9 @@
 
 /** Helper macro for I/O driver implementation. If the driver wants to declare a system
     call then it'll define RTOS_SYSCALL_TABLE_ENTRY_dddd to be
-    #RTOS_SC_TABLE_ENTRY(driversSysCallHandlerImplementation, conformanceClass), where dddd
-    is the decimal representation of the system call index,
-    driversSysCallHandlerImplementation is the address of the handler and conformanceClass
-    one out of basic, simple or full conformance.
+    #RTOS_SC_TABLE_ENTRY(addrOfFct, confClass), where \a dddd is the decimal representation
+    of the system call index, \a addrOfFct is the address of the handler, which implements
+    the system call, and \a confClass its conformance class.
       @param addrOfFct Address of handler implementation
       @param confClass One out of BASIC (see #RTOS_HDLR_CONF_CLASS_BASIC), SIMPLE (see
     #RTOS_HDLR_CONF_CLASS_SIMPLE) or FULL (see #RTOS_HDLR_CONF_CLASS_FULL) */
@@ -194,7 +201,7 @@ typedef enum rtos_errorCode_t
 {
     rtos_err_noError = 0        /// Not an error, function cuceeded
     , rtos_err_tooManyEventsCreated /// Can't create no more than #RTOS_MAX_NO_EVENTS events
-    , rtos_err_invalidEventPrio /// Priority needs to be in range [1; #RTOS_KERNEL_PRIORITY)
+    , rtos_err_invalidEventPrio /// Priority needs to be in range [1; #RTOS_MAX_LOCKABLE_PRIORITY)
     , rtos_err_badEventTiming   /// Inconsistent or bad timing configuration stated for event
     , rtos_err_eventNotTriggerable  /// Bad configuration makes event unusable
     , rtos_err_configurationOfRunningKernel /// Attempt to (re-)configure a running kernel
@@ -284,61 +291,6 @@ rtos_errorCode_t rtos_osRegisterUserTask( unsigned int idEvent
 /** Task registration for scheduled operating system tasks. */
 rtos_errorCode_t rtos_osRegisterOSTask(unsigned int idEvent, void (*osTaskFct)(void));
 
-/** Grant permission to particular processes for using the service rtos_runTask(). */
-void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID);
-
-/** Kernel initialization. */
-rtos_errorCode_t rtos_osInitKernel(void);
-
-/** Software triggered task activation. Can be called from OS context (incl. interrupts). */
-bool rtos_osTriggerEvent(unsigned int idEvent);
-
-/** Get the current number of failed event triggers since start of the RTOS scheduler. */
-unsigned int rtos_getNoActivationLoss(unsigned int idEvent);
-
-/** Get the number of task failures counted for the given process since start of the kernel. */
-unsigned int rtos_getNoTotalTaskFailure(unsigned int PID);
-
-/** Get the number of task failures of given category for the given process. */
-unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr);
-
-/** Compute how many bytes of the stack area are still unused. */
-unsigned int rtos_getStackReserve(unsigned int PID);
-
-/** Kernel function to suspend a process. */
-void rtos_osSuspendProcess(uint32_t PID);
-
-/** Kernel function to read the suspend status of a process. */
-bool rtos_isProcessSuspended(uint32_t PID);
-
-/**
- * System call; entry point into operating system function for user code.
- *   @return
- * The return value depends on the system call.
- *   @param idxSysCall
- * Each system call is identified by an index. The index is an unsigned integer. The number
- * is the index into system call descriptor table \a rtos_systemCallDescAry.\n
- *   The further function arguments depend on the particular system call.
- *   @remark
- * The C signature for system calls is formally not correct. The assembly code, which
- * implements this function, only supports function arguments in CPU registers, which
- * limits the total number to eight. The ... stands for 0..7 arguments of up to 32 Bit. If
- * a system call function has more arguments or if it are 64 Bit arguments then the
- * assembly code may not propagate all arguments properly to the actually implementing
- * system call handler and the behavior will be undefined!
- */
-uint32_t rtos_systemCall(uint32_t idxSysCall, ...);
-
-
-/**
- * C signature for an assembler entry point, which ends a system call handler with user
- * task termination and counted process error. Must be used solely from within the
- * implementation of a system call and only if the abortion is due to a clear fault in the
- * calling user code.
- */
-_Noreturn void rtos_osSystemCallBadArgument(void);
-
-
 /** Initialize the interrupt controller INTC. */
 void rtos_osInitINTCInterruptController(void);
 
@@ -348,6 +300,9 @@ void rtos_osInstallInterruptHandler( rtos_interruptServiceRoutine_t interruptSer
                                    , unsigned int psrPriority
                                    , bool isPreemptable
                                    );
+
+/** Grant permission to particular processes for using the service rtos_runTask(). */
+void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID);
 
 /**
  * Operating system initialization function: Grant permissions for using the service
@@ -382,8 +337,164 @@ void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCallingTask
                                          , unsigned int targetPID
                                          );
 
+/** Kernel initialization. */
+rtos_errorCode_t rtos_osInitKernel(void);
+
+/** Software triggered task activation. Can be called from OS context (incl. interrupts). */
+bool rtos_osTriggerEvent(unsigned int idEvent);
+
+/**
+ * Priority ceiling protocol, partial interrupt lock: All interrupts up to the specified
+ * priority level won't be handled by the CPU. This function is intended for implementing
+ * mutual exclusion of sub-sets of tasks: Call it with the highest priority of all tasks,
+ * which should be locked, i.e. which compete for the resource or critical section to
+ * protect. This may still lock other, not competing tasks, but at least all non competing
+ * tasks of higher priority will be served (and this will likely include most interrupt
+ * handlers).\n
+ *   To release the protected resource or to leave the critical section, call the
+ * counterpart function rtos_resumeAllInterruptsByPriority(), which restores the original
+ * interrupt/task priority level.\n
+ *   The principal difference to the OS function rtos_osSuspendAllInterruptsByPriority():\n
+ *   The priority can be raised only up to #RTOS_MAX_LOCKABLE_PRIORITY, which is at least
+ * two less than the kernel priority, #RTOS_KERNEL_PRIORITY. An attempt to raise it beyond
+ * this limit will lead to an #RTOS_ERR_PRC_SYS_CALL_BAD_ARG exception.\n
+ *   Safety rationale: A critical section cannot be shaped with the RTOS scheduler and nor
+ * with the user task of priority above #RTOS_MAX_LOCKABLE_PRIORITY and below
+ * #RTOS_KERNEL_PRIORITY. The intention is to inhibit a task from blocking a safety task,
+ * which is assumed to be the only task running at this high priority. (The attempt to
+ * shape a critical section with this task is caught in DEBUG compilation, see
+ * rtos_osResumeAllInterruptsByPriority().)
+ *   @return
+ * Get the priority level at entry into this function (and into the critical section). This
+ * priority level needs to be restored on exit from the critical section using system call
+ * rtos_resumeAllInterruptsByPriority().
+ *   @param suspendUpToThisPriority
+ * \a suspendUpToThisPriority is the aimed priority level. All tasks/interrupts up to and
+ * including this priority will be locked. The CPU will not handle them until the priority
+ * level is lowered again.
+ *   @remark
+ * To support the use case of nested calls of OSEK/VDX like GetResource/ReleaseResource
+ * functions, this function compares the stated value to the current priority level. If \a
+ * suspendUpToThisPriority is less than the current value then the current value is not
+ * altered. The function still returns the current value and the calling code doesn't need
+ * to take care: It can unconditionally end a critical section with
+ * rtos_osResumeAllInterruptsByPriority() stating the returned priority level value. (The
+ * resume function will have no effect in this case.) This makes the OSEK like functions
+ * usable without deep inside or full transparency of the priority levels behind the scene;
+ * just use the pairs of Get-/ResumeResource, be they nested or not.
+ *   @remark
+ * The use of this function to implement critical sections is usually quite static. For any
+ * protected entity (usually a data object or I/O device) the set of competing tasks
+ * normally is a compile time known. The priority level to set for entry into the critical
+ * section is the maximum of the priorities of all tasks in the set. The priority level to
+ * restore on exit from the critical section is the priority of the calling task. All of
+ * this static knowledge would typically be put into encapsulating macros that actually
+ * invoke this function. (OSEK/VDX like environments would use this function pair to
+ * implement the GetResource/ReleaseResource concept.)
+ *   @remark
+ * The expense in terms of CPU consumption of using this function is significant enough to
+ * better avoid nested pairs of Get-/ResumeResource. As long as all resource and task
+ * relationsships are static, it'll be possible to replace nested pairs of function calls
+ * by a single one with combined, maximum priority.
+ *   @remark
+ * The raised priority is implicitly restored at the end of the task. It is not possible to
+ * consider this function a mutex, which can be acquired in one task activation and which
+ * can be releases in an arbitrary later task activation or from another task.
+ *   @remark
+ * This function must be called from the user task context only. Any attempt to use it from
+ * OS code will lead to a crash.
+ */
+extern uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority);
+ 
+
+/**
+ * This function is called to end a critical section of code, which requires mutual
+ * exclusion of two or more tasks/ISRs. It is the counterpart of function
+ * rtos_suspendAllInterruptsByPriority(), refer to that function for more details.\n
+ *   The principal difference to the OS function rtos_osResumeAllInterruptsByPriority():\n
+ *   The priority can be lowered only down to the initial task priority. An attempt to
+ * lower it below the initial task priority will lead to an #RTOS_ERR_PRC_SYS_CALL_BAD_ARG
+ * exception.
+ *   @param resumeDownToThisPriority
+ * All tasks/interrupts above this priority level are resumed again. All tasks/interrupts
+ * up to and including this priority remain locked.\n
+ *   The intended use of this function is to restore the priority level of a task after use
+ * of a resource, which had been protected by an earlier call of the counterpart function
+ * rtos_suspendAllInterruptsByPriority(). Normally, \a resumeDownToThisPriority will be set
+ * to the value returned by the other function (or by a constant since this value is a
+ * compile-time known in most use cases).
+ *   @remark
+ * To support the use case of nested calls of OSEK/VDX like GetResource/ReleaseResource
+ * functions, this function compares the stated prioity value to the current priority
+ * level. If \a resumeDownToThisPriority is greater than the current value then the current
+ * value is not altered.
+ *   @remark
+ * It is impossible to shape a critical section with the safety task of priority above
+ * #RTOS_MAX_LOCKABLE_PRIORITY and the attempt will always mean a functional error in the
+ * design of the application code. To support debugging, this error is caught in DEBUG
+ * compilation: Then the function throws a #RTOS_ERR_PRC_SYS_CALL_BAD_ARG exception if \a
+ * resumeDownToThisPriority is greater than #RTOS_MAX_LOCKABLE_PRIORITY. In PRODUCTION
+ * compilation, we have the normal behavior of silently ignoring attempts to actually raise
+ * the priority.
+ *   @remark
+ * It doesn't harm if a user task calls rtos_suspendAllInterruptsByPriority() to raise the
+ * priority but doesn't lower it later using this function. The effect of
+ * rtos_suspendAllInterruptsByPriority() will end with the termination of the task.
+ *   @remark
+ * This function must be called from the user task context only. Any attempt to use it from
+ * OS code will lead to a crash.
+ */
+extern void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority);
+
+
+/**
+ * System call; entry point into operating system function for user code.
+ *   @return
+ * The return value depends on the system call.
+ *   @param idxSysCall
+ * Each system call is identified by an index. The index is an unsigned integer. The number
+ * is the index into system call descriptor table \a rtos_systemCallDescAry.\n
+ *   The further function arguments depend on the particular system call.
+ *   @remark
+ * The C signature for system calls is formally not correct. The assembly code, which
+ * implements this function, only supports function arguments in CPU registers, which
+ * limits the total number to eight. The ... stands for 0..7 arguments of up to 32 Bit. If
+ * a system call function has more arguments or if it are 64 Bit arguments then the
+ * assembly code may not propagate all arguments properly to the actually implementing
+ * system call handler and the behavior will be undefined!
+ */
+uint32_t rtos_systemCall(uint32_t idxSysCall, ...);
+
+
 /** Check if a pointer value is valid for writing in the context of a given process. */
 bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes);
+
+/**
+ * C signature for an assembler entry point, which ends a system call handler with user
+ * task termination and counted process error. Must be used solely from within the
+ * implementation of a system call and only if the abortion is due to a clear fault in the
+ * calling user code.
+ */
+_Noreturn void rtos_osSystemCallBadArgument(void);
+
+
+/** Get the current number of failed event triggers since start of the RTOS scheduler. */
+unsigned int rtos_getNoActivationLoss(unsigned int idEvent);
+
+/** Get the number of task failures counted for the given process since start of the kernel. */
+unsigned int rtos_getNoTotalTaskFailure(unsigned int PID);
+
+/** Get the number of task failures of given category for the given process. */
+unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr);
+
+/** Compute how many bytes of the stack area are still unused. */
+unsigned int rtos_getStackReserve(unsigned int PID);
+
+/** Kernel function to suspend a process. */
+void rtos_osSuspendProcess(uint32_t PID);
+
+/** Kernel function to read the suspend status of a process. */
+bool rtos_isProcessSuspended(uint32_t PID);
 
 
 /*
@@ -485,7 +596,8 @@ static inline int32_t rtos_runTask( const rtos_taskDesc_t *pUserTaskConfig
  * this function call.
  *   @remark
  * This function must be called from the user task context only. Any attempt to use it from
- * OS code will lead to a crash.
+ * OS code will lead to a crash. There's no equivalent of this function for OS code. An OS
+ * task can't be ended prematurely.
  */
 static inline _Noreturn void rtos_terminateTask(int32_t taskReturnValue)
 {
@@ -614,7 +726,7 @@ static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)
  * Priority ceiling protocol, partial interrupt lock: All interrupts up to the specified
  * priority level won't be handled by the CPU. This function is intended for implementing
  * mutual exclusion of sub-sets of tasks.\n
- *   Note, the use of\n
+ *   Note, the use of the other function pairs\n
  *   - rtos_osEnterCriticalSection() and\n
  *   - rtos_osLeaveCriticalSection()\n
  * or\n
@@ -622,10 +734,10 @@ static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)
  *   - rtos_osResumeAllInterrupts()\n
  * locks all interrupt processing and no other task (or interrupt handler) can become
  * active while the task is inside the critical section code. Using this function is much
- * better: Call it with the highest priority of all tasks, which should be locked, i.e. which
- * compete for the resource or critical section to protect. This may still lock other, not
- * competing tasks, but at least all non competing tasks of higher priority will still be
- * served (and this will likely include most interrupt handlers).\n
+ * better: Call it with the highest priority of all tasks, which should be locked, i.e.
+ * which compete for the resource or critical section to protect. This may still lock
+ * other, not competing tasks, but at least all non competing tasks of higher priority will
+ * be served (and this will likely include most interrupt handlers).\n
  *   To release the protected resource or to leave the critical section, call the
  * counterpart function rtos_osResumeAllInterruptsByPriority(), which restores the original
  * interrupt/task priority level.
@@ -660,10 +772,13 @@ static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)
  * invoke this function. (OSEK/VDX like environments would use this function pair to
  * implement the GetResource/ReleaseResource concept.)
  *   @remark
- * The ceiled priority is implicitly restored at the end of the interrupt, which triggered
- * the task and before it ends. It is not possible to consider this function a mutex, which
- * can be acquired in one task activation and which can be releases in an arbitrary later
- * task activation or from another task.
+ * The raised priority is implicitly restored at the end of the handler of the event, which
+ * triggered the task. It is not possible to consider this function a mutex, which can be
+ * acquired in one task activation and which can be releases in an arbitrary later task
+ * activation or from another task.\n
+ *   Moreover, it is not allowed to rely on the priority restoration at the end of the
+ * event handler - if the same event would trigger more than one task then all subsequent
+ * tasks would faulty inherit the raised priority.
  *   @remark
  * This function must be called from the OS context only. Any attempt to use it in user
  * code will lead to a privileged exception.
@@ -728,55 +843,9 @@ static inline uint32_t rtos_osSuspendAllInterruptsByPriority(uint32_t suspendUpT
 
 
 /**
- * See function rtos_osSuspendAllInterruptsByPriority(), which has the same functionality
- * but offered to the OS context only. Differences to the OS function are:\n
- *   The priority can be raised only up to #RTOS_KERNEL_PRIORITY-2. An attempt to raise it
- * beyond this limit will lead to an #RTOS_ERR_PRC_SYS_CALL_BAD_ARG exception. The same
- * exception is thrown if \a suspendUpToThisPriority would be lower than the basic priority
- * of the calling task, i.e. the priority which had been configured for the event, which
- * triggers the task.\n
- *   Safety rationale: A critical section cannot be shaped with the RTOS scheduler and nor
- * with the user task of highest priority. The intention is to inhibit a task from blocking
- * a safety task, which is assumed to be the only task running at highest priority.\n
- *   Note, since it is impossible to shape a critical section with the safety task of
- * highest priority, it is in turn not possible to let this very task make use of this
- * function: it would unavoidably try to set the priority level to a value outside the
- * permitted range and cause an exception.\n
- *   @todo One and the same system call is used to implement the suspend and the resume
- * operation. This means a significant difference to the operating system variants of the
- * function pair: Nestable pairs of GetResource/ReleaseResource can't be build for user
- * code. rtos_suspendAllInterruptsByPriority() doesn't reject lowering the current priority
- * level (as long as it remains in the permitted boudaries) and nested use of the function
- * pairs would require an order of calls to suspend in monotonic rising order of priority -
- * which is practically impossible with respect to code maintainability and likelihood of
- * making errors. We will need to have two different system calls, one for suspend and one
- * for resume.
- *   @return
- * Get the priority level at entry into this function (and into the critical section). This
- * priority level needs to be restored on exit from the critical section using system call
- * rtos_resumeAllInterruptsByPriority().
- *   @param suspendUpToThisPriority
- * \a suspendUpToThisPriority is the aimed priority level. All tasks/interrupts up to and
- * including this priority will be locked. The CPU will not handle them until the priority
- * level is lowered again.
- *   @remark
- * This function must be called from the user task context only. Any attempt to use it from
- * OS code will lead to a crash.
- */
-static inline uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority)
-{
-    #define RTOS_IDX_SC_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY  1
-    return rtos_systemCall( RTOS_IDX_SC_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY
-                          , suspendUpToThisPriority
-                          );
-} /* End of rtos_suspendAllInterruptsByPriority */
-
-
-
-/**
  * This function is called to end a critical section of code, which requires mutual
  * exclusion of two or more tasks/ISRs. It is the counterpart of function
- * rtos_osSuspendAllInterruptsByPriority(), refer to this function for more details.\n
+ * rtos_osSuspendAllInterruptsByPriority(), refer to that function for more details.\n
  *   Note, this function simply and unconditionally sets the current task/interrupt
  * priority level to the stated value. It can therefore be used to build further optimized
  * mutual exclusion code if it is applied to begin \a and to end a critical section. This
@@ -811,34 +880,6 @@ static inline void rtos_osResumeAllInterruptsByPriority(uint32_t resumeDownToThi
 
 
 
-/**
- * See function rtos_osResumeAllInterruptsByPriority(), too, which has the same
- * functionality but offered to the OS context only. Differences to the OS function are:\n
- *   The priority can be raised only down to the initial task priority. An attempt to lower
- * it belower than the initial task priority will lead to an
- * #RTOS_ERR_PRC_SYS_CALL_BAD_ARG exception.
- *   @param resumeDownToThisPriority
- * All tasks/interrupts above this priority level are resumed again. All tasks/interrupts
- * up to and including this priority remain locked.\n
- *   The intended use of this function is to restore the priority level of a task after use
- * of a resource, which had been protected by an earlier call of the counterpart function
- * rtos_suspendAllInterruptsByPriority(). Normally, \a resumeDownToThisPriority will be set
- * to the value returned by the other function.
- *   @remark
- * It doesn't harm if a user tasks calls rtos_suspendAllInterruptsByPriority() to raise the
- * priority but doesn't lower it later using this function. The effect of
- * rtos_suspendAllInterruptsByPriority() will end with the termination of the task.
- *   @remark
- * This function must be called from the user task context only. Any attempt to use it from
- * OS code will lead to a crash.
- */
-static inline void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)
-{
-    #define RTOS_IDX_SC_RESUME_ALL_INTERRUPTS_BY_PRIORITY  2
-    /// @todo Change System call to new, dedicated one and adapt documentation of this function and suspend
-    rtos_systemCall(RTOS_IDX_SC_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY, resumeDownToThisPriority);
-
-} /* End of rtos_resumeAllInterruptsByPriority */
 
 
 

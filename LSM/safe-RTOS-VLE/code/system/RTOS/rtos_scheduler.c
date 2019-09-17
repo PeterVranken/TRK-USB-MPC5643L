@@ -177,6 +177,7 @@
    This makes it essential to have a cross check here, were we can access the definitions
    from both spheres. */
 #if RTOS_KERNEL_PRIORITY != RTOS_PCP_KERNEL_PRIO                                        \
+    ||  RTOS_MAX_LOCKABLE_PRIORITY != RTOS_PCP_MAX_LOCKABLE_PRIO                        \
     ||  RTOS_NO_ERR_PRC != RTOS_NO_CAUSES_TASK_ABORTION                                 \
     ||  RTOS_ERR_PRC_PROCESS_ABORT != RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT           \
     ||  RTOS_ERR_PRC_MACHINE_CHECK != RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK           \
@@ -191,7 +192,7 @@
     ||  RTOS_ERR_PRC_TRAP != RTOS_CAUSE_TASK_ABBORTION_TRAP                             \
     ||  RTOS_ERR_PRC_SPE_INSTRUCTION != RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION       \
     ||  RTOS_ERR_PRC_USER_ABORT != RTOS_CAUSE_TASK_ABBORTION_USER_ABORT
-# error Inconsistent definitions made in C and assembler code
+# error Inconsistencies found between definitions made in C and assembler code
 #endif
 
 /* The user API header file rtos.h doesn't recursively include all headers of all
@@ -199,10 +200,6 @@
    but normally never changed constants. These assumptions need of course to be double
    checked. We do this here at compile time of the RTOS. */
 #if RTOS_IDX_SC_RUN_TASK != RTOS_SYSCALL_RUN_TASK                                       \
-    ||  RTOS_IDX_SC_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY                                  \
-        != RTOS_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY                              \
-    ||  RTOS_IDX_SC_RESUME_ALL_INTERRUPTS_BY_PRIORITY                                   \
-        != RTOS_SYSCALL_RESUME_ALL_INTERRUPTS_BY_PRIORITY                               \
     ||  RTOS_IDX_SC_TRIGGER_EVENT != RTOS_SYSCALL_TRIGGER_EVENT                         \
     ||  RTOS_IDX_SC_SUSPEND_PROCESS != RTOS_SYSCALL_SUSPEND_PROCESS
 # error Inconsistent definitions made in C modules and RTOS API header file rtos.h
@@ -235,7 +232,7 @@ typedef struct eventDesc_t
         prioritry) in the range 1..(#RTOS_KERNEL_PRIORITY-1). Different events can share
         the same priority or have different priorities: The execution of their associated
         tasks, will then be sequenced when they become due at same time or with overlap.\n
-          Note, if the event has the highest priority #RTOS_KERNEL_PRIORITY-1 then only
+          Note, if the event has a priority above #RTOS_MAX_LOCKABLE_PRIORITY then only
         those tasks can be associated, which belong to the process with highest PID in use.
         This is a safety constraint. */
     unsigned int priority;
@@ -640,10 +637,10 @@ static inline void checkEventDue(void)
  * priority plus one".\n
  *   An important aspect in this discussion is the availablity of the priority ceiling
  * protocol (PCP) for mutual exclusion of contexts. It is available only up to and
- * including priority level #RTOS_KERNEL_PRIORITY-2 (#RTOS_KERNEL_PRIORITY-1 is reserved
- * for non-suppressible safety tasks). An ISR running above this level cannot have a
- * critical section with user code and data exchange needs to appy more complicated
- * techniques, e.g. double-buffering.
+ * including priority level #RTOS_MAX_LOCKABLE_PRIORITY (The range till
+ * #RTOS_KERNEL_PRIORITY-1 is reserved for non-suppressible safety tasks). An ISR running
+ * above this level cannot have a critical section with user code and data exchange needs
+ * to appy more complicated techniques, e.g. double-buffering.
  */
 static void onOsTimerTick(void)
 {
@@ -704,9 +701,10 @@ static void onOsTimerTick(void)
  * the priority of all associated tasks at the same time. The execution of tasks, which
  * share the priority will be serialized when they are activated at same time or with
  * overlap.\n
- *   Note the safety constraint that the highest permitted priority,
- * #RTOS_KERNEL_PRIORITY-1, is available only to events, which solely have tasks associated
- * that belong to the process with highest process ID in use.\n
+ *   Note the safety constraint that the highest permitted priorities,
+ * #RTOS_MAX_LOCKABLE_PRIORITY+1 till #RTOS_KERNEL_PRIORITY-1, are available only to
+ * events, which solely have tasks associated that belong to the process with highest
+ * process ID in use.\n
  *   Note, the order in which events are created can affect the priority in a certain
  * sense. If two events are created with same priority and when they at runtime become due
  * at the same OS time tick then the earlier created event will trigger its associated user
@@ -1107,10 +1105,10 @@ rtos_errorCode_t rtos_osInitKernel(void)
             if(_eventAry[idxEv].noTasks == 0)
                 errCode = rtos_err_eventWithoutTask;
 
-            /* If an event has the highest possible priority #RTOS_KERNEL_PRIORITY-1 then
-               only those tasks can be associated, which belong to the process with highest
-               PID in use or OS tasks. This is a safety constraint. */
-            if(_eventAry[idxEv].priority == RTOS_KERNEL_PRIORITY-1)
+            /* If an event has a priority above #RTOS_MAX_LOCKABLE_PRIORITY then only those
+               tasks can be associated, which belong to the process with highest PID in use
+               or OS tasks. This is a safety constraint. */
+            if(_eventAry[idxEv].priority > RTOS_MAX_LOCKABLE_PRIORITY)
             {
                 for(idxTask=0; idxTask<_eventAry[idxEv].noTasks; ++idxTask)
                 {

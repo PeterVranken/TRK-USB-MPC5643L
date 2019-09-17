@@ -21,6 +21,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
+ *   prs_taskCommandError
+ *   prs_taskEvaluateError
+ *   prs_taskWatchdog
  * Local functions
  */
 

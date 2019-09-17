@@ -99,8 +99,8 @@
  * Local type definitions
  */
 
-/* Run-time data describing a process. An object of this type must be allocated in RAM,
-   which is not write-permitted for user code. */
+/** Run-time data describing a process. An object of this type must be allocated in RAM,
+    which is not write-permitted for user code. */
 typedef struct processDesc_t
 {
     /** When preempting a task that belongs to this process then the IVOR #4 handler will
@@ -484,6 +484,8 @@ void rtos_osSuspendProcess(uint32_t PID)
  * Kernel function to read the suspend status of a process. This function is a simple
  * counterpart to rtos_osSuspendProcess(). It will return \a true after the other function
  * had been called for the given process ID or if the process is not at all in use.
+ *   @return
+ * Get \a false as long as the process is still active, \a true otherwise.
  *   @param PID
  * The ID of the queried process in the range 1..4. Checked by assertion.
  *   @remark

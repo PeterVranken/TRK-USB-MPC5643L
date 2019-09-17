@@ -96,6 +96,7 @@ volatile int8_t assert_PID SECTION(.data.OS.assert_PID) = -1;
  */
 
 /**
+ *   @fn __assert_func
  * This is the function, which is invoked by the assert macro if the condition is false. We
  * write the information about the location of the problem into global variables, where
  * they can be inspected with the debugger, disable all external interrupts and go into an
@@ -113,7 +114,7 @@ void _EXFUN(__assert_func, (const char *fileName, int line, const char *funcName
        compiled behavior is either #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_FIRST or
        #ASSERT_FAILURE_BEHAVIOR_CONTINUE_SW_AND_STORE_LAST. Unfortunately, we can't return
        from this function to the C code, which placed the assertion because this function
-       is decalred _Noreturn and we can't rely on the compiler to implement the right
+       is declared _Noreturn and we can't rely on the compiler to implement the right
        instructions for continuing the calling function. Instead, we place an infinite loop
        here. The promise to continue the SW execution is held in this way:
          The user task spins in the loop either forever or until a specified time budget is

@@ -49,9 +49,9 @@
    of the test cases are enabled and due to the frequent appearance of illegal instructions
    in the code flow. Therefore it is important to have the possibility to selectively
    disable those test cases during development. */
+#define PRF_ENA_TC_PRF_KOF_NO_FAILURE                           1
 #define PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR                 1
 #define PRF_ENA_TC_PRF_KOF_JUMP_TO_ILLEGAL_INSTR                1
-#define PRF_ENA_TC_PRF_KOF_NO_FAILURE                           1
 #define PRF_ENA_TC_PRF_KOF_USER_TASK_ERROR                      1
 #define PRF_ENA_TC_PRF_KOF_PRIVILEGED_INSTR                     1
 #define PRF_ENA_TC_PRF_KOF_CALL_OS_API                          1

@@ -1193,14 +1193,16 @@ ivr8_isSVEnabledSysCall:
 
     /* Start of an assembler implemented, basic handler: No stack, no preemption. Intended
        for short, efficient handlers, which consist of only a few machine instructions in
-       supervisor mode. No return here, they will normally take care for the se_rfi
-       themselves. */
+       supervisor mode. No return here, they will have to take care for the se_rfi
+       themselves. 
+         Note, we jump on the volatile CTR register in order to not destroy the LR
+       register. This allows having short system calling code without stack frame for the
+       most efficient basic system call handlers. */
 ivr8_startBasicHandler:
     se_lwz      r3, O_SCDESC_sr(r3) /* r3: Address of handler implementation, replaces 1st */
-    se_mtlr     r3                  /* function argument, which is anyway obsolete inside
+    se_mtctr    r3                  /* function argument, which is anyway obsolete inside
                                        the handler */
-    se_blrl             /* Nothing to clean up, callee should terminate with se_rfi ... */
-    se_rfi              /* but it's not an issue to have one here, too. */
+    se_bctr             /* Nothing to clean up, callee should terminate with se_rfi ... */
 
 ivr8_noStartBasicHandler:
     se_bgt      ivr8_startFullHandler
@@ -1345,14 +1347,14 @@ ivr8_startFullHandler:
 
 /**
  *   @func rtos_systemCall
- * General system call code, useable for all system call handlers. The system call \a
- * idxSysCall code can be invoked as C function:\n
+ * General system call code, useable for all system call handlers. The system call index \a
+ * idxSysCall is expected in r3, the variable function argument list in the remaining
+ * volatile EABI registers r4..r10. The system call code can be invoked as C function using
+ * the following signature:\n
  *   extern uint32_t rtos_systemCall(uint32_t idxSysCall, ...);\n
  * where ... are the function specific arguments of the call. Only register passing in the
- * volatile GPR is supported.
- *   The C API of the RTOS offers a wrapper for this assembler implemented function. Please
- * refer to #rtos_systemCall for details. The latter is the function signature to use from
- * C code.
+ * volatile GPR is supported.\n
+ *   The C API of the RTOS offers this C prototpye to the client code of the RTOS.
  *   @remark
  * This function must be called from the user task context only. Any attempt to use it from
  * OS code will lead to undefined behavior.

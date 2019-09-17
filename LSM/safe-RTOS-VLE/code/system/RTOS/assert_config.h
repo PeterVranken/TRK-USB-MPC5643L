@@ -54,23 +54,13 @@
       See #ASSERT_FAILURE_BEHAVIOR, too. */
 #define ASSERT_FAILURE_BEHAVIOR_HALT_SW                             1
 
-/// @todo We can't continue after an assert macro: The function is considered _Noreturn by
-// the compiler. We need to re-define the behavior, e.g. store_and_wait. wait != halt: We
-// spin in an endless loop but only in problem state and with MSR[EE]=1 so that scheduler
-// and deadline monitoring are still operational. The failing task won't proceed (just wait
-// for its deadline failure abort) and the chance to catch this in a debugger is quite
-// high.
-//   Change impact on code is little but we have to rename and re-doc the macros.
-//   todoc: In typical situations, the macro exposes the traditional behavior: If placed in
-// SV code, if placed in supervisory task (has highest prio)
-
 /** "Safe" behavior of assert: The occurrence of assert macros with \a false condition is
     counted. The assert information is stored only for the very first occurrence of an
     assert macro with \a false condition. The SW execution is halted if the assert macro is
     placed in operating system code but continues if it is placed in user task code.
       @remark This behavior can be used with SW compilations, which are to be used for
     testing of the software's failure handling capabilities, if failure exceptions are
-    expected and proper catching and processing them is subject the test.
+    expected and proper catching and processing them is subject of the test.
       @remark The C assert function is declared _Noreturn and we cannot continue the user
     code after the C assert macro by just returning from the assert function. Instead, the
     assert function enters an infinite loop. The promise to continue the SW execution is

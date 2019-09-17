@@ -48,8 +48,8 @@
 #  define ATTRIB_DBG_ONLY
 # endif
 
-/** We need function pointers to be exchanged with assembler code. Maybe better to
-    explicitly disable inlining here. */
+/** Sometimes inlining functions is counterproductive, e.g. where we need function pointers
+    in interfaces. This macro can hinder the compiler from inlining (static) functions. */
 # define NO_INLINE __attribute__((noinline))
 
 /** Some function may better be inlined even if the optimizer rates code size higher and
@@ -170,12 +170,10 @@
 
 /* Some more basic types are defined using the naming scheme of stdint.h. */
 
-/** Definition of Boolean values.
-      @remark The definition of \a boolean needs to become unsigned char if using Windows
-    stuff, otherwise the definition is incompatible with the header file windows.h. */
-typedef bool boolean_t;
-
+/** 4 Byte, single precision floating point number type. */
 typedef float float32_t;
+
+/** 8 Byte, double precision floating point number type. */
 typedef double float64_t;
 
 

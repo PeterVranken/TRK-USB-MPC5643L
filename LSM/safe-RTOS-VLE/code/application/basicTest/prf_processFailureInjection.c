@@ -21,7 +21,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   prf_nestStackInjectError
  *   prf_taskInjectError
  *   prf_task17ms
  *   prf_task1ms
@@ -29,6 +28,7 @@
  *   random
  *   testCheckUserCodePtr
  *   injectError
+ *   nestStackInjectError
  */
 
 /*
@@ -66,7 +66,6 @@
  * Local prototypes
  */
  
-void prf_nestStackInjectError(unsigned int remainingLevels);
  
  
 /*
@@ -859,20 +858,25 @@ static void injectError(void)
     case prf_kof_invalidCritSec:
         {
             uint32_t prioLvlBefore ATTRIB_DBG_ONLY =
-                                rtos_suspendAllInterruptsByPriority
-                                        (/* suspendUpToThisPriority */ RTOS_KERNEL_PRIORITY-2);
+                            rtos_suspendAllInterruptsByPriority
+                                  (/* suspendUpToThisPriority */ RTOS_MAX_LOCKABLE_PRIORITY);
             assert(prioLvlBefore == syc_prioEvTest);
-            prioLvlBefore = rtos_suspendAllInterruptsByPriority
-                                        (/* suspendUpToThisPriority */ syc_prioEvTest);
-            assert(prioLvlBefore == RTOS_KERNEL_PRIORITY-2);
-            
-            /* This call needs to fail: We demand the values beyond the permitted limits. */
-            rtos_suspendAllInterruptsByPriority
-                                (/* suspendUpToThisPriority */
-                                 (prs_cntTestCycles/prf_kof_noFailureTypes & 1) != 0
-                                 ? RTOS_KERNEL_PRIORITY - 1
-                                 : syc_prioEvTest - 1
-                                );
+            rtos_resumeAllInterruptsByPriority(/* suspendUpToThisPriority */ syc_prioEvTest);
+
+            /* One of the next calls needs to fail: We demand the values beyond the
+               permitted limits.
+                 If we try raising the priority (i.e. suspend) then violating the upper
+               limit yields an exception, while violating the lower limit is silently
+               ignaored (and no priority change takes place).
+                 If we try lowering the priority (i.e. resume) then violating the lower
+               limit yields an exception. Violating the upper limit is silently
+               ignored in PRODUCTION compilation and yields an exception in DEBUG
+               compilation (and no priority change takes place in either case). */
+            const uint32_t prio = (prs_cntTestCycles/prf_kof_noFailureTypes & 1) != 0
+                                  ? RTOS_KERNEL_PRIORITY - 1
+                                  : syc_prioEvTest - 1;
+            rtos_suspendAllInterruptsByPriority(/* suspendUpToThisPriority */ prio);
+            rtos_resumeAllInterruptsByPriority(/* suspendUpToThisPriority */ prio);
             assert(false);
         }
         break;
@@ -882,11 +886,11 @@ static void injectError(void)
     case prf_kof_leaveCritSec:
         {
             uint32_t prioLvlBefore ATTRIB_DBG_ONLY =
-                                rtos_suspendAllInterruptsByPriority
-                                        (/* suspendUpToThisPriority */ syc_prioISRPit1);
+                            rtos_suspendAllInterruptsByPriority
+                                    (/* suspendUpToThisPriority */ syc_prioISRPit1);
             assert(prioLvlBefore == syc_prioEvTest);
             prioLvlBefore = rtos_suspendAllInterruptsByPriority
-                                        (/* suspendUpToThisPriority */ RTOS_KERNEL_PRIORITY-2);
+                                    (/* suspendUpToThisPriority */ RTOS_MAX_LOCKABLE_PRIORITY);
             assert(prioLvlBefore == syc_prioISRPit1);
 
             /* Leaving this task with strongest possible lock of other tasks must not
@@ -1026,7 +1030,7 @@ static void nestStackInjectError(unsigned int remainingLevels)
     else
         injectError();
         
-} /* End of prf_nestStackInjectError */
+} /* End of nestStackInjectError */
 #pragma GCC pop_options
 
 

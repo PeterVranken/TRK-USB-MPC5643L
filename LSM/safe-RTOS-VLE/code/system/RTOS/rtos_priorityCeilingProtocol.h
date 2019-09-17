@@ -38,7 +38,17 @@
     priority ceiling protocol.
       @remark The C code contains preprocessor code that ensures consistency with the
     according definition in the C code. */
-#define RTOS_PCP_KERNEL_PRIO    12
+#define RTOS_PCP_KERNEL_PRIO        12
+
+/** This the highest priority that ISRs and tasks can have, which user code can shape a
+    critical section with. If a task or ISR has a higher priority then user code can't
+    hinder it from being scheduled at any time and race conditions with these ISRs or tasks
+    can't be avoided.\n
+      The configured value needs to be at least two less than #RTOS_PCP_KERNEL_PRIO and at
+    least one safety supervisory task needs to have a priority between
+    #RTOS_PCP_MAX_LOCKABLE_PRIO and RTOS_PCP_KERNEL_PRIO (neither including) - otherwise
+    the safety concept is broken. */
+#define RTOS_PCP_MAX_LOCKABLE_PRIO  ((RTOS_PCP_KERNEL_PRIO)-2)
 
 /** Index of implemented system call for raising a user context's current priority. The
     system call is wrapped in the inline function rtos_suspendAllInterruptsByPriority().

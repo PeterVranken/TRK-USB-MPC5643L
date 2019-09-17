@@ -35,6 +35,9 @@
  */
 
 #ifdef __VLE__
+/** Preprocessor switch dependend implementation of global, hardware based system time in
+    CPU clock ticks. See gsl_ppc_get_timebase() for details. This macro can be used in
+    source code, which should not depend on the instruction set, VLE or BOOK E. */
 # define GSL_PPC_GET_TIMEBASE() gsl_ppc_get_timebase()
 #else
 # define GSL_PPC_GET_TIMEBASE() __builtin_ppc_get_timebase()

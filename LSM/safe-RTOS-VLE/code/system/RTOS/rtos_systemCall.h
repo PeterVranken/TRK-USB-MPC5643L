@@ -35,30 +35,32 @@
  * Defines
  */
 
-/** The number of supported system calls.\n
-      If this define is increased than the initializer expression of \a
+/** The number of supported system calls.
+      @remark If this define is increased than the initializer expression of \a
     rtos_systemCallDescAry and the list of conditional defines #RTOS_SYSCALL_TABLE_ENTRY_0000,
     #RTOS_SYSCALL_TABLE_ENTRY_0001, and so on, found in file rtos_systemCall.c, need to be
     extended, too. */
 #define RTOS_NO_SYSTEM_CALLS  64
 
 /** Definition of the enumeration of the supported conformance classes for system call
-    handlers. We have:\n
+    handlers. We have:\n\n
       Basic conformance class: The handler is a raw assembler implementation. The system
     call exception branches to the assembler code and it has full responsibility for stack
     switching, memory protection, return from interrupt, etc. This class is not usable with
-    C code.\n
-      Simple handler class: Such a handler can be implemented as C function. The system call
+    C code.\n\n
+      Simple handler class: Such a handler can be implemented as C function. The system
+    call arguments are accessible as arguments 2, 3, ... of this C function. (The first
+    argument of the C function provides the ID of the calling process to support the
+    implementation of privileges management.) The function is executed with all interrupt
+    processing suspended and therefore it needs to be short. This handler type must be used
+    for fast, immediate actions only, like a set or get function.\n\n
+      Full handler class: Such a handler can be implemented as C function. The system call
     arguments are accessible as arguments 2, 3, ... of this C function. (The first argument
-    of the C function is reserved and must not be used.) The function is executed with all
-    interrupt processing suspended and therefore it needs to be short. This handler type
-    must be used for fast, immediate actions only, like a set or get function.\n
-      Full handler class:  Such a handler can be implemented as C function. The system call
-    arguments are accessible as arguments 2, 3, ... of this C function. (The first argument
-    of the C function is reserved and must not be used.) The function is executed under
-    normal conditions, it is for example preemptable by tasks and interruptsof higher
-    priority. This is the normal class of a system call handler.\n
-      Note, we need to use a define for this enumeration as the definition es shared with
+    of the C function provides the ID of the calling process to support the implementation
+    of privileges management.) The function is executed under normal conditions, it is for
+    example preemptable by tasks and interrupts of higher priority. This handler type should
+    be used longer lasting operations.\n\n
+      Note, we need to use a define for this enumeration as the definition is shared with
     the implementing assembler code.\n
       Here, we have the enumeration value to declare a basic handler. */
 #define RTOS_HDLR_CONF_CLASS_BASIC    0
