@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.8"/>
-<title>safe-RTOS(VLE): Globals</title>
+<title>safe-RTOS (VLE): Globals</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
-   <div id="projectname">safe-RTOS(VLE)
+   <div id="projectname">safe-RTOS (VLE)
    &#160;<span id="projectnumber">1.0</span>
    </div>
    <div id="projectbrief">safe-RTOS (VLE) - A simple RTOS with safety support for MPC5643L</div>
@@ -91,7 +91,6 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
       <li><a href="#index_f"><span>f</span></a></li>
       <li><a href="#index_g"><span>g</span></a></li>
       <li><a href="#index_n"><span>n</span></a></li>
-      <li><a href="#index_p"><span>p</span></a></li>
       <li><a href="#index_r"><span>r</span></a></li>
       <li><a href="#index_s"><span>s</span></a></li>
       <li class="current"><a href="#index_t"><span>t</span></a></li>
@@ -216,6 +215,9 @@ $(document).ready(function(){initNavTree('globals.html','');});
 <li>GSL_PPC_GET_TIMEBASE
 : <a class="el" href="gsl__system_load_8h.html#a19494c80cbff7aa94e48d3013f48dd4b">gsl_systemLoad.h</a>
 </li>
+<li>gsl_ppc_get_timebase()
+: <a class="el" href="gsl__system_load_8h.html#a430309f0ef8bb8d2e401f475820dfa24">gsl_systemLoad.h</a>
+</li>
 </ul>
 
 
@@ -226,18 +228,14 @@ $(document).ready(function(){initNavTree('globals.html','');});
 </ul>
 
 
-<h3><a class="anchor" id="index_p"></a>- p -</h3><ul>
-<li>processDesc_t
-: <a class="el" href="rtos__process_8c.html#a1d7459c1d8ddbd5542d7c0a751e2cc45">rtos_process.c</a>
-</li>
-</ul>
-
-
 <h3><a class="anchor" id="index_r"></a>- r -</h3><ul>
+<li>rtos_checkUserCodeReadPtr()
+: <a class="el" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos.h</a>
+</li>
 <li>rtos_checkUserCodeWritePtr()
 : <a class="el" href="rtos_8h.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos.h</a>
-, <a class="el" href="rtos__system_memory_protection_unit_8c.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos_systemMemoryProtectionUnit.c</a>
 , <a class="el" href="rtos__system_memory_protection_unit_8h.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos_systemMemoryProtectionUnit.h</a>
+, <a class="el" href="rtos__system_memory_protection_unit_8c.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos_systemMemoryProtectionUnit.c</a>
 </li>
 <li>RTOS_CLOCK_TICK_IN_MS
 : <a class="el" href="rtos_8h.html#adac6ecd4fb33ad903127c325c5aff1e0">rtos.h</a>
@@ -399,6 +397,9 @@ $(document).ready(function(){initNavTree('globals.html','');});
 <li>RTOS_MAX_NO_USER_TASKS
 : <a class="el" href="rtos_8h.html#a70565e1202ec02ce7048d39775cccb2d">rtos.h</a>
 </li>
+<li>RTOS_NO_CAUSES_TASK_ABORTION
+: <a class="el" href="rtos__ivor_handler_8h.html#a1416cacfeac328c2734d1b4bf473b6c3">rtos_ivorHandler.h</a>
+</li>
 <li>RTOS_NO_ERR_PRC
 : <a class="el" href="rtos_8h.html#a3e599fcdd6c1ffc7c78aa83bf3d890c6">rtos.h</a>
 </li>
@@ -410,13 +411,16 @@ $(document).ready(function(){initNavTree('globals.html','');});
 </li>
 <li>rtos_osCreateEvent()
 : <a class="el" href="rtos_8h.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos.h</a>
-, <a class="el" href="rtos__scheduler_8c.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos_scheduler.c</a>
 , <a class="el" href="rtos__scheduler_8h.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos_scheduler.h</a>
+, <a class="el" href="rtos__scheduler_8c.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos_scheduler.c</a>
+</li>
+<li>rtos_osEnterCriticalSection()
+: <a class="el" href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">rtos.h</a>
 </li>
 <li>rtos_osGrantPermissionRunTask()
-: <a class="el" href="rtos__scheduler_8c.html#aeaae84408e099b28495d703994100c16">rtos_scheduler.c</a>
+: <a class="el" href="rtos_8h.html#aeaae84408e099b28495d703994100c16">rtos.h</a>
 , <a class="el" href="rtos__scheduler_8h.html#aeaae84408e099b28495d703994100c16">rtos_scheduler.h</a>
-, <a class="el" href="rtos_8h.html#aeaae84408e099b28495d703994100c16">rtos.h</a>
+, <a class="el" href="rtos__scheduler_8c.html#aeaae84408e099b28495d703994100c16">rtos_scheduler.c</a>
 </li>
 <li>rtos_osGrantPermissionSuspendProcess()
 : <a class="el" href="rtos_8h.html#a68f8200c57d5390e8937fc2a78af55b6">rtos.h</a>
@@ -424,39 +428,57 @@ $(document).ready(function(){initNavTree('globals.html','');});
 , <a class="el" href="rtos__process_8h.html#a68f8200c57d5390e8937fc2a78af55b6">rtos_process.h</a>
 </li>
 <li>rtos_osInitINTCInterruptController()
-: <a class="el" href="rtos__external_interrupt_8h.html#a88a271864adecb3d629668674fa0815a">rtos_externalInterrupt.h</a>
-, <a class="el" href="rtos_8h.html#a88a271864adecb3d629668674fa0815a">rtos.h</a>
+: <a class="el" href="rtos_8h.html#a88a271864adecb3d629668674fa0815a">rtos.h</a>
 , <a class="el" href="rtos__external_interrupt_8c.html#a88a271864adecb3d629668674fa0815a">rtos_externalInterrupt.c</a>
+, <a class="el" href="rtos__external_interrupt_8h.html#a88a271864adecb3d629668674fa0815a">rtos_externalInterrupt.h</a>
 </li>
 <li>rtos_osInitKernel()
-: <a class="el" href="rtos__scheduler_8h.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_scheduler.h</a>
-, <a class="el" href="rtos_8h.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos.h</a>
+: <a class="el" href="rtos_8h.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos.h</a>
 , <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_scheduler.c</a>
+, <a class="el" href="rtos__scheduler_8h.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_scheduler.h</a>
 </li>
 <li>rtos_osInstallInterruptHandler()
 : <a class="el" href="rtos_8h.html#a72c496a57feceb72a84ce41895e179c9">rtos.h</a>
-, <a class="el" href="rtos__external_interrupt_8c.html#a8d6df097b205bd4d0d595ebc40e18fd8">rtos_externalInterrupt.c</a>
 , <a class="el" href="rtos__external_interrupt_8h.html#a72c496a57feceb72a84ce41895e179c9">rtos_externalInterrupt.h</a>
+, <a class="el" href="rtos__external_interrupt_8c.html#a8d6df097b205bd4d0d595ebc40e18fd8">rtos_externalInterrupt.c</a>
+</li>
+<li>rtos_osLeaveCriticalSection()
+: <a class="el" href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">rtos.h</a>
 </li>
 <li>rtos_osRegisterInitTask()
-: <a class="el" href="rtos__scheduler_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos_scheduler.h</a>
-, <a class="el" href="rtos_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos.h</a>
+: <a class="el" href="rtos_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos.h</a>
+, <a class="el" href="rtos__scheduler_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos_scheduler.h</a>
 , <a class="el" href="rtos__scheduler_8c.html#ad638a1d6495b0948343a90257e6410d4">rtos_scheduler.c</a>
 </li>
 <li>rtos_osRegisterOSTask()
-: <a class="el" href="rtos__scheduler_8c.html#a68096423d941e1dc670a6ec2e37d5275">rtos_scheduler.c</a>
+: <a class="el" href="rtos_8h.html#a68096423d941e1dc670a6ec2e37d5275">rtos.h</a>
+, <a class="el" href="rtos__scheduler_8c.html#a68096423d941e1dc670a6ec2e37d5275">rtos_scheduler.c</a>
 , <a class="el" href="rtos__scheduler_8h.html#a68096423d941e1dc670a6ec2e37d5275">rtos_scheduler.h</a>
-, <a class="el" href="rtos_8h.html#a68096423d941e1dc670a6ec2e37d5275">rtos.h</a>
 </li>
 <li>rtos_osRegisterUserTask()
 : <a class="el" href="rtos_8h.html#a8267fb6047b63c04640f2e78852c4574">rtos.h</a>
 , <a class="el" href="rtos__scheduler_8c.html#ad2f82142ad49b24808f65723a0842be8">rtos_scheduler.c</a>
 , <a class="el" href="rtos__scheduler_8h.html#a8267fb6047b63c04640f2e78852c4574">rtos_scheduler.h</a>
 </li>
+<li>rtos_osResumeAllInterrupts()
+: <a class="el" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos.h</a>
+</li>
+<li>rtos_osResumeAllInterruptsByPriority()
+: <a class="el" href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">rtos.h</a>
+</li>
+<li>rtos_osRunTask()
+: <a class="el" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos.h</a>
+</li>
+<li>rtos_osSuspendAllInterrupts()
+: <a class="el" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos.h</a>
+</li>
+<li>rtos_osSuspendAllInterruptsByPriority()
+: <a class="el" href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">rtos.h</a>
+</li>
 <li>rtos_osSuspendProcess()
-: <a class="el" href="rtos__process_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_process.h</a>
-, <a class="el" href="rtos_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos.h</a>
+: <a class="el" href="rtos_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos.h</a>
 , <a class="el" href="rtos__process_8c.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_process.c</a>
+, <a class="el" href="rtos__process_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_process.h</a>
 </li>
 <li>rtos_osSystemCallBadArgument()
 : <a class="el" href="rtos_8h.html#a42156b46c1f83c80cd7a1630d91e12cc">rtos.h</a>
@@ -468,11 +490,20 @@ $(document).ready(function(){initNavTree('globals.html','');});
 <li>rtos_resumeAllInterruptsByPriority()
 : <a class="el" href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos.h</a>
 </li>
+<li>rtos_runTask()
+: <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos.h</a>
+</li>
 <li>RTOS_SC_TABLE_ENTRY
 : <a class="el" href="rtos_8h.html#a7eac206295711ad1e5346d367f9ce74c">rtos.h</a>
 </li>
 <li>rtos_suspendAllInterruptsByPriority()
 : <a class="el" href="rtos_8h.html#a445845eb4a4fd8af883abc9a7f84ece2">rtos.h</a>
+</li>
+<li>rtos_suspendProcess()
+: <a class="el" href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">rtos.h</a>
+</li>
+<li>RTOS_SYSCALL_ASSERT_FUNC
+: <a class="el" href="rtos__ivor_handler_8h.html#a0fa698f1f0300eced6207a63c8a07ae1">rtos_ivorHandler.h</a>
 </li>
 <li>RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 : <a class="el" href="rtos__system_call_8c.html#a84aeb758bcdf0f1f3b53503464c3ae35">rtos_systemCall.c</a>
@@ -489,6 +520,9 @@ $(document).ready(function(){initNavTree('globals.html','');});
 <li>RTOS_SYSCALL_SUSPEND_PROCESS
 : <a class="el" href="rtos__process_8h.html#a643cf094ea71fd6e396ad6e7147bb23c">rtos_process.h</a>
 </li>
+<li>RTOS_SYSCALL_SUSPEND_TERMINATE_TASK
+: <a class="el" href="rtos__ivor_handler_8h.html#a15d8871ad805e54a86649b8b726df7fd">rtos_ivorHandler.h</a>
+</li>
 <li>RTOS_SYSCALL_TRIGGER_EVENT
 : <a class="el" href="rtos__scheduler_8h.html#a55b40fe48f3cd0222a446f0f6b559bbd">rtos_scheduler.h</a>
 </li>
@@ -498,6 +532,9 @@ $(document).ready(function(){initNavTree('globals.html','');});
 <li>rtos_taskDesc_t
 : <a class="el" href="rtos_8h.html#a594b547ccdf2a1d473ea55ef612d7558">rtos.h</a>
 </li>
+<li>rtos_terminateTask()
+: <a class="el" href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">rtos.h</a>
+</li>
 <li>RTOS_TI_DEADLINE_MAX_IN_US
 : <a class="el" href="rtos_8h.html#a1f387767ac5768e23a4a7aa1ef5084f7">rtos.h</a>
 </li>
@@ -506,6 +543,9 @@ $(document).ready(function(){initNavTree('globals.html','');});
 </li>
 <li>RTOS_TI_US2TICKS
 : <a class="el" href="rtos_8h.html#a50879c034063dd071531d12bc8c3f6d6">rtos.h</a>
+</li>
+<li>rtos_triggerEvent()
+: <a class="el" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos.h</a>
 </li>
 </ul>
 
@@ -541,6 +581,15 @@ $(document).ready(function(){initNavTree('globals.html','');});
 <li>sizeOfAry
 : <a class="el" href="typ__types_8h.html#a50c28e23c3930259953bf78ba200c87d">typ_types.h</a>
 </li>
+<li>SPR_G0_SVSP
+: <a class="el" href="rtos__ivor_handler_8h.html#ac8d55229388c64a2faf91949f8402d11">rtos_ivorHandler.h</a>
+</li>
+<li>SPR_G1_SDA
+: <a class="el" href="rtos__ivor_handler_8h.html#ad628fd1a196ebfe3c032e2803db5bd2d">rtos_ivorHandler.h</a>
+</li>
+<li>SPR_G2_SDA2
+: <a class="el" href="rtos__ivor_handler_8h.html#affedf16b0c715cc95a1360e85c38ce51">rtos_ivorHandler.h</a>
+</li>
 </ul>
 
 
@@ -554,7 +603,7 @@ $(document).ready(function(){initNavTree('globals.html','');});
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Tue Sep 17 2019 22:34:25 for safe-RTOS(VLE) by
+    <li class="footer">Generated on Wed Sep 18 2019 21:37:09 for safe-RTOS (VLE) by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.8 </li>
   </ul>

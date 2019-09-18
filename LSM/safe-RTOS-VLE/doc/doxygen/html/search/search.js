@@ -12,7 +12,7 @@ var indexSectionsWithContent =
   2: "adgrt",
   3: "dgr",
   4: "apt",
-  5: "fpr",
+  5: "fr",
   6: "r",
   7: "r",
   8: "abdgnrst",

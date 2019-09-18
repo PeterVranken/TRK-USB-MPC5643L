@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.8"/>
-<title>safe-RTOS(VLE): rtos_scheduler.h File Reference</title>
+<title>safe-RTOS (VLE): rtos_scheduler.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
-   <div id="projectname">safe-RTOS(VLE)
+   <div id="projectname">safe-RTOS (VLE)
    &#160;<span id="projectnumber">1.0</span>
    </div>
    <div id="projectbrief">safe-RTOS (VLE) - A simple RTOS with safety support for MPC5643L</div>
@@ -155,7 +155,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>System call index of function rtos_triggerEvent(), offered by this module. </p>
+<p>System call index of function <a class="el" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent()</a>, offered by this module. </p>
 
 </div>
 </div>
@@ -168,7 +168,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>System call index of function rtos_runTask(), offered by this module. </p>
+<p>System call index of function <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask()</a>, offered by this module. </p>
 
 </div>
 </div>
@@ -224,13 +224,13 @@ Functions</h2></td></tr>
     <tr><td class="paramname">pEventId</td><td>All events are identified by a positive integer. Normally this ID is returned by reference in * <em>pEventId</em>. If the event cannot be created then <a class="el" href="rtos_8h.html#ac4ea516ad4edd46b1088804cf463bc84">RTOS_INVALID_EVENT_ID</a> is returned in * <em>pEventId</em>.<br />
  Note, it is guaranteed to the caller that the returned ID is not an arbitrary, meaningless number. Instead, the ID is counted from zero in order of creating events. The first call of this function will return 0, the second 1, and so on. This simplifies ID handling in the application code, constants can mostly be applied as the IDs are effectively known at compile time. </td></tr>
     <tr><td class="paramname">tiCycleInMs</td><td>The period time for regularly triggering events in ms.<br />
- The permitted range is 0..2^30-1. 0 means no regular, timer controlled trigger and the event is only enabled for software trigger using rtos_triggerEvent() (permitted for interrupts or other tasks). </td></tr>
+ The permitted range is 0..2^30-1. 0 means no regular, timer controlled trigger and the event is only enabled for software trigger using <a class="el" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent()</a> (permitted for interrupts or other tasks). </td></tr>
     <tr><td class="paramname">tiFirstActivationInMs</td><td>The first trigger of the event in ms after start of kernel. The permitted range is 0..2^30-1.<br />
  Note, this setting is useless if a cycle time zero in <em>tiCycleInMs</em> specifies a non regular event. <em>tiFirstActivationInMs</em> needs to be zero in this case, too. </td></tr>
     <tr><td class="paramname">priority</td><td>The priority of the event in the range 1..(<a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">RTOS_KERNEL_PRIORITY</a>-1). Different events can share the same priority or have different priorities. The priotrity of an event is the priority of all associated tasks at the same time. The execution of tasks, which share the priority will be serialized when they are activated at same time or with overlap.<br />
  Note the safety constraint that the highest permitted priorities, <a class="el" href="rtos_8h.html#a9520f3e002688cbf786b1d0134350dbe">RTOS_MAX_LOCKABLE_PRIORITY</a>+1 till <a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">RTOS_KERNEL_PRIORITY</a>-1, are available only to events, which solely have tasks associated that belong to the process with highest process ID in use.<br />
  Note, the order in which events are created can affect the priority in a certain sense. If two events are created with same priority and when they at runtime become due at the same OS time tick then the earlier created event will trigger its associated user tasks before the later ceated event. </td></tr>
-    <tr><td class="paramname">minPIDToTriggerThisEvent</td><td>An event can be triggered by user code, using rtos_triggerEvent(). However, tasks belonging to less privileged processes must not generally have permission to trigger events that may activate tasks of higher privileged processes. Since an event is not process related, we make the minimum process ID, which is required to trigger this event, an explicitly configured property of the event.<br />
+    <tr><td class="paramname">minPIDToTriggerThisEvent</td><td>An event can be triggered by user code, using <a class="el" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent()</a>. However, tasks belonging to less privileged processes must not generally have permission to trigger events that may activate tasks of higher privileged processes. Since an event is not process related, we make the minimum process ID, which is required to trigger this event, an explicitly configured property of the event.<br />
  Only tasks belonging to a process with PID &gt;= <em>minPIDToTriggerThisEvent</em> are permitted to trigger this event.<br />
  The range of <em>minPIDToTriggerThisEvent</em> is 0 ... (<a class="el" href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a>+1). 0 and 1 both mean, all processes may trigger the event, (<a class="el" href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a>+1) means only OS code can trigger the event. (<a class="el" href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a>+1) is available as <a class="el" href="rtos_8h.html#a7c87eedf96c681bbc685574bfd5a6bc3">RTOS_EVENT_NOT_USER_TRIGGERABLE</a>, too. </td></tr>
   </table>
@@ -421,13 +421,13 @@ This function must be called by trusted code in supervisor mode only. </dd></dl>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Grant permission to particular processes for using the service rtos_runTask().</p>
+<p>Grant permission to particular processes for using the service <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask()</a>.</p>
 <p>Operating system initialization function: Grant permissions for using the service rtos_runTask to particular processes. By default, the use of that service is not allowed.<br />
  By principle, offering service rtos_runTask makes all processes vulnerable, which are allowed as target for the service. A failing, straying process can always hit some ROM code executing the system call with arbitrary register contents, which can then lead to errors in an otherwise correct process.<br />
  This does not generally break the safety concept, the potentially harmed process can for example be anyway supervised by another, unaccessible supervisory process. Consequently, we can offer the service at least on demand. A call of this function enables the service for a particular pair of calling process and targeted process. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">pidOfCallingTask</td><td>The tasks belonging to process with PID <em>pidOfCallingTask</em> are granted permission to run a task in another process. The range is 1 .. <a class="el" href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a>, which is double-checked by assertion. </td></tr>
-    <tr><td class="paramname">targetPID</td><td>The tasks started with service rtos_runTask() may be run in process with PID <em>targetPID</em>. The range is 1 .. maxPIDInUse-1, which is double-checked later.<br />
+    <tr><td class="paramname">targetPID</td><td>The tasks started with service <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask()</a> may be run in process with PID <em>targetPID</em>. The range is 1 .. maxPIDInUse-1, which is double-checked later.<br />
  <em>pidOfCallingTask</em> and <em>targetPID</em> must not be identical, which is double-checked by assertion. </td></tr>
   </table>
   </dd>
@@ -454,7 +454,7 @@ This function must be called from the OS context only. It is intended for use in
 <p>Kernel initialization.</p>
 <p>Initialization and start of the RTOS kernel.<br />
  The function initializes a hardware device to produce a regular clock tick and connects the OS schedule function onOsTimerTick() with the interrupt raised by this timer device. After return, the RTOS is running with a regular clock tick for scheduling the tasks. Period time is <a class="el" href="rtos_8h.html#adac6ecd4fb33ad903127c325c5aff1e0">RTOS_CLOCK_TICK_IN_MS</a> Milliseconds.<br />
- The function can be called before or after the External Interrupts are enabled at the CPU (see rtos_osResumeAllInterrupts()). Normal behavior is however, no to resume the interrupt processing before and let this be done by <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>. </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the scheduler could be started. The function returns a non zero value from enumeration <em>rtos_errorCode_t</em> if a configuration error is detected. The software must not start up in this case. Since it is only about static configuration, the returned error may be appropriately handled by an assertion. </dd></dl>
+ The function can be called before or after the External Interrupts are enabled at the CPU (see <a class="el" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts()</a>). Normal behavior is however, no to resume the interrupt processing before and let this be done by <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>. </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the scheduler could be started. The function returns a non zero value from enumeration <em>rtos_errorCode_t</em> if a configuration error is detected. The software must not start up in this case. Since it is only about static configuration, the returned error may be appropriately handled by an assertion. </dd></dl>
 <dl class="section remark"><dt>Remarks</dt><dd>The RTOS kernel applies the Periodic Interrupt Timer 0 (PIT0) as clock source. This timer is reserved to the RTOS and must not be used at all by some other code. </dd>
 <dd>
 All application tasks need to be registered before invoking this function, see <a class="el" href="rtos__scheduler_8c.html#ad638a1d6495b0948343a90257e6410d4">rtos_osRegisterInitTask()</a>, <a class="el" href="rtos__scheduler_8c.html#ad2f82142ad49b24808f65723a0842be8">rtos_osRegisterUserTask()</a> and <a class="el" href="rtos__scheduler_8c.html#a68096423d941e1dc670a6ec2e37d5275">rtos_osRegisterOSTask()</a>. </dd>
@@ -477,7 +477,7 @@ This function must be called from the OS context only. The call of this function
       </table>
 </div><div class="memdoc">
 <p>Get the current number of failed task activations since start of the RTOS scheduler.</p>
-<p>An event, which becomes due may not be able to activate all its associated tasks because they didn't terminate yet after their previous activation. It doesn't matter if this happens because a cyclic task becomes due or because an event task has been triggered by software (using rtos_triggerEvent()). The scheduler counts the failing activations on a per event base. The current value can be queried with this function. </p><dl class="section return"><dt>Returns</dt><dd>Get the current number of triggers of the given event, which have failed since start of the RTOS scheduler. The counter is saturated and will not wrap around.<br />
+<p>An event, which becomes due may not be able to activate all its associated tasks because they didn't terminate yet after their previous activation. It doesn't matter if this happens because a cyclic task becomes due or because an event task has been triggered by software (using <a class="el" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent()</a>). The scheduler counts the failing activations on a per event base. The current value can be queried with this function. </p><dl class="section return"><dt>Returns</dt><dd>Get the current number of triggers of the given event, which have failed since start of the RTOS scheduler. The counter is saturated and will not wrap around.<br />
  The returned count can be understood as number of task overrun events for all associated tasks. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -495,7 +495,7 @@ This function must be called from the OS context only. The call of this function
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_050edd66366d13764f98250ef6db77f6.html">code</a></li><li class="navelem"><a class="el" href="dir_9cd24f4fec2e6f6bedbcc5407321d78a.html">system</a></li><li class="navelem"><a class="el" href="dir_34effe5aae1be93d744f092611be46f1.html">RTOS</a></li><li class="navelem"><a class="el" href="rtos__scheduler_8h.html">rtos_scheduler.h</a></li>
-    <li class="footer">Generated on Tue Sep 17 2019 22:34:24 for safe-RTOS(VLE) by
+    <li class="footer">Generated on Wed Sep 18 2019 21:37:08 for safe-RTOS (VLE) by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.8 </li>
   </ul>

@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.8"/>
-<title>safe-RTOS(VLE): rtos_taskDesc_t Struct Reference</title>
+<title>safe-RTOS (VLE): rtos_taskDesc_t Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
-   <div id="projectname">safe-RTOS(VLE)
+   <div id="projectname">safe-RTOS (VLE)
    &#160;<span id="projectnumber">1.0</span>
    </div>
    <div id="projectbrief">safe-RTOS (VLE) - A simple RTOS with safety support for MPC5643L</div>
@@ -123,7 +123,7 @@ Data Fields</h2></td></tr>
 <tr class="separator:ab9a01a36bbb823cf2c2fbad709a7c0e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Specification of a task function. Objects of this type are used internally by the scheduler for the regularly or event triggered user mode and OS tasks but also visibly by the client code, when running a user mode task using rtos_runTask(). </p>
+<div class="textblock"><p>Specification of a task function. Objects of this type are used internally by the scheduler for the regularly or event triggered user mode and OS tasks but also visibly by the client code, when running a user mode task using <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask()</a>. </p>
 </div><h2 class="groupheader">Field Documentation</h2>
 <a class="anchor" id="a1fe2586c887a6c5902e38d2ef63bf297"></a>
 <div class="memitem">
@@ -135,7 +135,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Address of task function, which is run in user mode and with process ID <em>PID</em>.<br />
- Note, the signature of a task function differs. An initialization task and a user mode task function can signal an error by return value, while a scheduled OS task function can't. A task function started with rtos_runTask() or with rtos_osRunTask() has a caller provided argument, which is not available to regularly scheduled tasks.<br />
+ Note, the signature of a task function differs. An initialization task and a user mode task function can signal an error by return value, while a scheduled OS task function can't. A task function started with <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask()</a> or with <a class="el" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask()</a> has a caller provided argument, which is not available to regularly scheduled tasks.<br />
  In the assembler code, this field is addressed to by offset O_TCONF_pFct. </p>
 
 </div>
@@ -179,7 +179,7 @@ Data Fields</h2></td></tr>
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a></li>
-    <li class="footer">Generated on Tue Sep 17 2019 22:34:24 for safe-RTOS(VLE) by
+    <li class="footer">Generated on Wed Sep 18 2019 21:37:09 for safe-RTOS (VLE) by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.8 </li>
   </ul>

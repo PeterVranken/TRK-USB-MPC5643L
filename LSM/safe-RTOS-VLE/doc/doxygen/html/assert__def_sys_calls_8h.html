@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.8"/>
-<title>safe-RTOS(VLE): Globals</title>
+<title>safe-RTOS (VLE): assert_defSysCalls.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,8 +29,8 @@
  <tbody>
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
-   <div id="projectname">safe-RTOS(VLE)
-   &#160;<span id="projectnumber">0.9</span>
+   <div id="projectname">safe-RTOS (VLE)
+   &#160;<span id="projectnumber">1.0</span>
    </div>
    <div id="projectbrief">safe-RTOS (VLE) - A simple RTOS with safety support for MPC5643L</div>
   </td>
@@ -70,18 +70,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div id="navrow2" class="tabs2">
     <ul class="tablist">
       <li><a href="files.html"><span>File&#160;List</span></a></li>
-      <li class="current"><a href="globals.html"><span>Globals</span></a></li>
-    </ul>
-  </div>
-  <div id="navrow3" class="tabs2">
-    <ul class="tablist">
-      <li><a href="globals.html"><span>All</span></a></li>
-      <li><a href="globals_func.html"><span>Functions</span></a></li>
-      <li class="current"><a href="globals_vars.html"><span>Variables</span></a></li>
-      <li><a href="globals_type.html"><span>Typedefs</span></a></li>
-      <li><a href="globals_enum.html"><span>Enumerations</span></a></li>
-      <li><a href="globals_eval.html"><span>Enumerator</span></a></li>
-      <li><a href="globals_defs.html"><span>Macros</span></a></li>
+      <li><a href="globals.html"><span>Globals</span></a></li>
     </ul>
   </div>
 </div><!-- top -->
@@ -96,7 +85,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   </div>
 </div>
 <script type="text/javascript">
-$(document).ready(function(){initNavTree('globals_vars.html','');});
+$(document).ready(function(){initNavTree('assert__def_sys_calls_8h.html','');});
 </script>
 <div id="doc-content">
 <!-- window showing the filter options -->
@@ -113,18 +102,45 @@ $(document).ready(function(){initNavTree('globals_vars.html','');});
 </iframe>
 </div>
 
+<div class="header">
+  <div class="summary">
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Functions</a>  </div>
+  <div class="headertitle">
+<div class="title">assert_defSysCalls.h File Reference</div>  </div>
+</div><!--header-->
 <div class="contents">
-&#160;<ul>
-<li>rtos_INTCInterruptHandlerAry
-: <a class="el" href="rtos__external_interrupt_8c.html#abf5416afa788e58fc31fcea0651ad7e1">rtos_externalInterrupt.c</a>
-</li>
-</ul>
-</div><!-- contents -->
+<div class="textblock"><code>#include &lt;stdint.h&gt;</code><br />
+<code>#include &lt;stdbool.h&gt;</code><br />
+<code>#include &quot;<a class="el" href="rtos_8h_source.html">rtos.h</a>&quot;</code><br />
+</div>
+<p><a href="assert__def_sys_calls_8h_source.html">Go to the source code of this file.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a0dcceb69937c27414c7f3fc2cc37cfff"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a0dcceb69937c27414c7f3fc2cc37cfff"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>ASSERT_SYSCALL_ASSERT_FUNC</b>&#160;&#160;&#160;6</td></tr>
+<tr class="separator:a0dcceb69937c27414c7f3fc2cc37cfff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a73e72dcd786e6065098fd0aaf9e1ad3e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a73e72dcd786e6065098fd0aaf9e1ad3e"></a>
+void _Noreturn&#160;</td><td class="memItemRight" valign="bottom"><b>assert_scBscHdlr_assert_func</b> (const char *fileName, int line, const char *funcName, const char *expression)</td></tr>
+<tr class="separator:a73e72dcd786e6065098fd0aaf9e1ad3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Definition of global interface of module assert_defSysCalls.c</p>
+<p>Copyright (C) 2019 Peter Vranken (<a href="#" onclick="location.href='mai'+'lto:'+'Pet'+'er'+'_Vr'+'an'+'ken'+'@Y'+'aho'+'o.'+'de'; return false;">Peter<span style="display: none;">.nosp@m.</span>_Vra<span style="display: none;">.nosp@m.</span>nken@<span style="display: none;">.nosp@m.</span>Yaho<span style="display: none;">.nosp@m.</span>o.de</a>)</p>
+<p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.</p>
+<p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License along with this program. If not, see <a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Tue Sep 17 2019 20:52:21 for safe-RTOS(VLE) by
+    <li class="navelem"><a class="el" href="dir_050edd66366d13764f98250ef6db77f6.html">code</a></li><li class="navelem"><a class="el" href="dir_9cd24f4fec2e6f6bedbcc5407321d78a.html">system</a></li><li class="navelem"><a class="el" href="dir_34effe5aae1be93d744f092611be46f1.html">RTOS</a></li><li class="navelem"><a class="el" href="assert__def_sys_calls_8h.html">assert_defSysCalls.h</a></li>
+    <li class="footer">Generated on Wed Sep 18 2019 21:37:07 for safe-RTOS (VLE) by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.8 </li>
   </ul>

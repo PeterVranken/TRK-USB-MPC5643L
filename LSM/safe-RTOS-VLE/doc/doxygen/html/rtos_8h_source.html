@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.8"/>
-<title>safe-RTOS(VLE): rtos.h Source File</title>
+<title>safe-RTOS (VLE): rtos.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
-   <div id="projectname">safe-RTOS(VLE)
+   <div id="projectname">safe-RTOS (VLE)
    &#160;<span id="projectnumber">1.0</span>
    </div>
    <div id="projectbrief">safe-RTOS (VLE) - A simple RTOS with safety support for MPC5643L</div>
@@ -325,7 +325,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00501"></a><span class="lineno">  501</span>&#160;<span class="comment"> * Inline functions</span></div>
 <div class="line"><a name="l00502"></a><span class="lineno">  502</span>&#160;<span class="comment"> */</span></div>
 <div class="line"><a name="l00503"></a><span class="lineno">  503</span>&#160;</div>
-<div class="line"><a name="l00526"></a><span class="lineno">  526</span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> int32_t rtos_osRunTask( <span class="keyword">const</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig</div>
+<div class="line"><a name="l00526"></a><span class="lineno"><a class="line" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">  526</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> int32_t <a class="code" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask</a>( <span class="keyword">const</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig</div>
 <div class="line"><a name="l00527"></a><span class="lineno">  527</span>&#160;                                    , uintptr_t taskParam</div>
 <div class="line"><a name="l00528"></a><span class="lineno">  528</span>&#160;                                    )</div>
 <div class="line"><a name="l00529"></a><span class="lineno">  529</span>&#160;{</div>
@@ -342,7 +342,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00540"></a><span class="lineno">  540</span>&#160;</div>
 <div class="line"><a name="l00541"></a><span class="lineno">  541</span>&#160;</div>
 <div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;</div>
-<div class="line"><a name="l00569"></a><span class="lineno">  569</span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> int32_t rtos_runTask( <span class="keyword">const</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig</div>
+<div class="line"><a name="l00569"></a><span class="lineno"><a class="line" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">  569</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> int32_t <a class="code" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask</a>( <span class="keyword">const</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig</div>
 <div class="line"><a name="l00570"></a><span class="lineno">  570</span>&#160;                                  , uintptr_t taskParam</div>
 <div class="line"><a name="l00571"></a><span class="lineno">  571</span>&#160;                                  )</div>
 <div class="line"><a name="l00572"></a><span class="lineno">  572</span>&#160;{</div>
@@ -353,7 +353,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00577"></a><span class="lineno">  577</span>&#160;</div>
 <div class="line"><a name="l00578"></a><span class="lineno">  578</span>&#160;</div>
 <div class="line"><a name="l00579"></a><span class="lineno">  579</span>&#160;</div>
-<div class="line"><a name="l00602"></a><span class="lineno">  602</span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> _Noreturn <span class="keywordtype">void</span> rtos_terminateTask(int32_t taskReturnValue)</div>
+<div class="line"><a name="l00602"></a><span class="lineno"><a class="line" href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">  602</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> _Noreturn <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">rtos_terminateTask</a>(int32_t taskReturnValue)</div>
 <div class="line"><a name="l00603"></a><span class="lineno">  603</span>&#160;{</div>
 <div class="line"><a name="l00604"></a><span class="lineno">  604</span>&#160;    <span class="keyword">extern</span> _Noreturn <span class="keywordtype">void</span> rtos_terminateUserTask(int32_t);</div>
 <div class="line"><a name="l00605"></a><span class="lineno">  605</span>&#160;    rtos_terminateUserTask(taskReturnValue);</div>
@@ -362,7 +362,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00608"></a><span class="lineno">  608</span>&#160;</div>
 <div class="line"><a name="l00609"></a><span class="lineno">  609</span>&#160;</div>
 <div class="line"><a name="l00610"></a><span class="lineno">  610</span>&#160;</div>
-<div class="line"><a name="l00620"></a><span class="lineno">  620</span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> rtos_osSuspendAllInterrupts(<span class="keywordtype">void</span>)</div>
+<div class="line"><a name="l00620"></a><span class="lineno"><a class="line" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">  620</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>(<span class="keywordtype">void</span>)</div>
 <div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;{</div>
 <div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrteei instruction forms the memory</span></div>
 <div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160;<span class="comment">       barrier, which ensures that all memory operations before the now entered critical</span></div>
@@ -379,7 +379,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00634"></a><span class="lineno">  634</span>&#160;</div>
 <div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160;</div>
 <div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160;</div>
-<div class="line"><a name="l00644"></a><span class="lineno">  644</span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> rtos_osResumeAllInterrupts(<span class="keywordtype">void</span>)</div>
+<div class="line"><a name="l00644"></a><span class="lineno"><a class="line" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">  644</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>(<span class="keywordtype">void</span>)</div>
 <div class="line"><a name="l00645"></a><span class="lineno">  645</span>&#160;{</div>
 <div class="line"><a name="l00646"></a><span class="lineno">  646</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrteei instruction forms the memory</span></div>
 <div class="line"><a name="l00647"></a><span class="lineno">  647</span>&#160;<span class="comment">       barrier, which ensures that all memory operations inside the now left critical</span></div>
@@ -396,7 +396,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00658"></a><span class="lineno">  658</span>&#160;</div>
 <div class="line"><a name="l00659"></a><span class="lineno">  659</span>&#160;</div>
 <div class="line"><a name="l00660"></a><span class="lineno">  660</span>&#160;</div>
-<div class="line"><a name="l00676"></a><span class="lineno">  676</span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> uint32_t rtos_osEnterCriticalSection(<span class="keywordtype">void</span>)</div>
+<div class="line"><a name="l00676"></a><span class="lineno"><a class="line" href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">  676</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> uint32_t <a class="code" href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">rtos_osEnterCriticalSection</a>(<span class="keywordtype">void</span>)</div>
 <div class="line"><a name="l00677"></a><span class="lineno">  677</span>&#160;{</div>
 <div class="line"><a name="l00678"></a><span class="lineno">  678</span>&#160;    <span class="comment">/* The completion synchronizing character of the mfmsr instruction forms the memory</span></div>
 <div class="line"><a name="l00679"></a><span class="lineno">  679</span>&#160;<span class="comment">       barrier, which ensures that all memory operations before the now entered critical</span></div>
@@ -417,7 +417,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00694"></a><span class="lineno">  694</span>&#160;</div>
 <div class="line"><a name="l00695"></a><span class="lineno">  695</span>&#160;</div>
 <div class="line"><a name="l00696"></a><span class="lineno">  696</span>&#160;</div>
-<div class="line"><a name="l00708"></a><span class="lineno">  708</span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> rtos_osLeaveCriticalSection(uint32_t msr)</div>
+<div class="line"><a name="l00708"></a><span class="lineno"><a class="line" href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">  708</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">rtos_osLeaveCriticalSection</a>(uint32_t msr)</div>
 <div class="line"><a name="l00709"></a><span class="lineno">  709</span>&#160;{</div>
 <div class="line"><a name="l00710"></a><span class="lineno">  710</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrtee instruction forms the memory</span></div>
 <div class="line"><a name="l00711"></a><span class="lineno">  711</span>&#160;<span class="comment">       barrier, which ensures that all memory operations inside the now left critical</span></div>
@@ -434,7 +434,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00722"></a><span class="lineno">  722</span>&#160;</div>
 <div class="line"><a name="l00723"></a><span class="lineno">  723</span>&#160;</div>
 <div class="line"><a name="l00724"></a><span class="lineno">  724</span>&#160;</div>
-<div class="line"><a name="l00788"></a><span class="lineno">  788</span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> uint32_t rtos_osSuspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority)</div>
+<div class="line"><a name="l00788"></a><span class="lineno"><a class="line" href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">  788</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> uint32_t <a class="code" href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">rtos_osSuspendAllInterruptsByPriority</a>(uint32_t suspendUpToThisPriority)</div>
 <div class="line"><a name="l00789"></a><span class="lineno">  789</span>&#160;{</div>
 <div class="line"><a name="l00790"></a><span class="lineno">  790</span>&#160;    <span class="comment">/* All priorities are in the range 0..15. Everything else points to an application</span></div>
 <div class="line"><a name="l00791"></a><span class="lineno">  791</span>&#160;<span class="comment">       error even if the hardware wouldn&#39;t mind. */</span></div>
@@ -442,7 +442,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00793"></a><span class="lineno">  793</span>&#160;</div>
 <div class="line"><a name="l00794"></a><span class="lineno">  794</span>&#160;    <span class="comment">/* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority</span></div>
 <div class="line"><a name="l00795"></a><span class="lineno">  795</span>&#160;<span class="comment">       in the INTC should be done under global interrupt lock. */</span></div>
-<div class="line"><a name="l00796"></a><span class="lineno">  796</span>&#160;    rtos_osSuspendAllInterrupts();</div>
+<div class="line"><a name="l00796"></a><span class="lineno">  796</span>&#160;    <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>();</div>
 <div class="line"><a name="l00797"></a><span class="lineno">  797</span>&#160;    <span class="keyword">const</span> uint32_t priorityLevelSoFar = INTC.CPR_PRC0.R;</div>
 <div class="line"><a name="l00798"></a><span class="lineno">  798</span>&#160;</div>
 <div class="line"><a name="l00799"></a><span class="lineno">  799</span>&#160;    <span class="comment">/* It is useless and a waste of CPU but not a severe error to let this function set the</span></div>
@@ -468,7 +468,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00819"></a><span class="lineno">  819</span>&#160;        INTC.CPR_PRC0.R = suspendUpToThisPriority;</div>
 <div class="line"><a name="l00820"></a><span class="lineno">  820</span>&#160;</div>
 <div class="line"><a name="l00821"></a><span class="lineno">  821</span>&#160;    <span class="comment">/* Leave the critical section. */</span></div>
-<div class="line"><a name="l00822"></a><span class="lineno">  822</span>&#160;    rtos_osResumeAllInterrupts();</div>
+<div class="line"><a name="l00822"></a><span class="lineno">  822</span>&#160;    <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>();</div>
 <div class="line"><a name="l00823"></a><span class="lineno">  823</span>&#160;</div>
 <div class="line"><a name="l00824"></a><span class="lineno">  824</span>&#160;    <span class="comment">/* Note, the next interrupt can still be a last one of priority less than or equal to</span></div>
 <div class="line"><a name="l00825"></a><span class="lineno">  825</span>&#160;<span class="comment">       suspendUpToThisPriority. This happens occasionally when the interrupt has asserted,</span></div>
@@ -491,13 +491,13 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00842"></a><span class="lineno">  842</span>&#160;</div>
 <div class="line"><a name="l00843"></a><span class="lineno">  843</span>&#160;</div>
 <div class="line"><a name="l00844"></a><span class="lineno">  844</span>&#160;</div>
-<div class="line"><a name="l00871"></a><span class="lineno">  871</span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> rtos_osResumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)</div>
+<div class="line"><a name="l00871"></a><span class="lineno"><a class="line" href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">  871</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">rtos_osResumeAllInterruptsByPriority</a>(uint32_t resumeDownToThisPriority)</div>
 <div class="line"><a name="l00872"></a><span class="lineno">  872</span>&#160;{</div>
 <div class="line"><a name="l00873"></a><span class="lineno">  873</span>&#160;    <span class="comment">/* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority</span></div>
 <div class="line"><a name="l00874"></a><span class="lineno">  874</span>&#160;<span class="comment">       in the INTC should be done under global interrupt lock. */</span></div>
-<div class="line"><a name="l00875"></a><span class="lineno">  875</span>&#160;    rtos_osSuspendAllInterrupts();</div>
+<div class="line"><a name="l00875"></a><span class="lineno">  875</span>&#160;    <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>();</div>
 <div class="line"><a name="l00876"></a><span class="lineno">  876</span>&#160;    INTC.CPR_PRC0.R = resumeDownToThisPriority;</div>
-<div class="line"><a name="l00877"></a><span class="lineno">  877</span>&#160;    rtos_osResumeAllInterrupts();</div>
+<div class="line"><a name="l00877"></a><span class="lineno">  877</span>&#160;    <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>();</div>
 <div class="line"><a name="l00878"></a><span class="lineno">  878</span>&#160;</div>
 <div class="line"><a name="l00879"></a><span class="lineno">  879</span>&#160;} <span class="comment">/* End of rtos_osResumeAllInterruptsByPriority */</span></div>
 <div class="line"><a name="l00880"></a><span class="lineno">  880</span>&#160;</div>
@@ -506,7 +506,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00883"></a><span class="lineno">  883</span>&#160;</div>
 <div class="line"><a name="l00884"></a><span class="lineno">  884</span>&#160;</div>
 <div class="line"><a name="l00885"></a><span class="lineno">  885</span>&#160;</div>
-<div class="line"><a name="l00925"></a><span class="lineno">  925</span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> rtos_triggerEvent(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent)</div>
+<div class="line"><a name="l00925"></a><span class="lineno"><a class="line" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">  925</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent)</div>
 <div class="line"><a name="l00926"></a><span class="lineno">  926</span>&#160;{</div>
 <div class="line"><a name="l00927"></a><span class="lineno">  927</span>&#160;<span class="preprocessor">    #define RTOS_IDX_SC_TRIGGER_EVENT   3</span></div>
 <div class="line"><a name="l00928"></a><span class="lineno">  928</span>&#160;    <span class="keywordflow">return</span> (<span class="keywordtype">bool</span>)<a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(RTOS_IDX_SC_TRIGGER_EVENT, idEvent);</div>
@@ -514,7 +514,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00930"></a><span class="lineno">  930</span>&#160;} <span class="comment">/* End of rtos_triggerEvent */</span></div>
 <div class="line"><a name="l00931"></a><span class="lineno">  931</span>&#160;</div>
 <div class="line"><a name="l00932"></a><span class="lineno">  932</span>&#160;</div>
-<div class="line"><a name="l00964"></a><span class="lineno">  964</span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> rtos_checkUserCodeReadPtr(<span class="keyword">const</span> <span class="keywordtype">void</span> *address, <span class="keywordtype">size_t</span> noBytes)</div>
+<div class="line"><a name="l00964"></a><span class="lineno"><a class="line" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">  964</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr</a>(<span class="keyword">const</span> <span class="keywordtype">void</span> *address, <span class="keywordtype">size_t</span> noBytes)</div>
 <div class="line"><a name="l00965"></a><span class="lineno">  965</span>&#160;{</div>
 <div class="line"><a name="l00966"></a><span class="lineno">  966</span>&#160;    <span class="keyword">const</span> uint8_t * <span class="keyword">const</span> p = (uint8_t*)address;</div>
 <div class="line"><a name="l00967"></a><span class="lineno">  967</span>&#160;    <span class="keyword">extern</span> uint8_t ld_ramStart[0], ld_ramEnd[0], ld_romStart[0], ld_romEnd[0];</div>
@@ -526,7 +526,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00973"></a><span class="lineno">  973</span>&#160;</div>
 <div class="line"><a name="l00974"></a><span class="lineno">  974</span>&#160;</div>
 <div class="line"><a name="l00975"></a><span class="lineno">  975</span>&#160;</div>
-<div class="line"><a name="l00993"></a><span class="lineno">  993</span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> rtos_suspendProcess(uint32_t PID)</div>
+<div class="line"><a name="l00993"></a><span class="lineno"><a class="line" href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">  993</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">rtos_suspendProcess</a>(uint32_t PID)</div>
 <div class="line"><a name="l00994"></a><span class="lineno">  994</span>&#160;{</div>
 <div class="line"><a name="l00995"></a><span class="lineno">  995</span>&#160;<span class="preprocessor">    #define RTOS_IDX_SC_SUSPEND_PROCESS     5</span></div>
 <div class="line"><a name="l00996"></a><span class="lineno">  996</span>&#160;    <a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(RTOS_IDX_SC_SUSPEND_PROCESS, PID);</div>
@@ -543,7 +543,9 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="ttc" id="rtos_8h_html_a9e214eed5eb27fd51e72227fb62f9b8a"><div class="ttname"><a href="rtos_8h.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos_osCreateEvent</a></div><div class="ttdeci">rtos_errorCode_t rtos_osCreateEvent(unsigned int *pEventId, unsigned int tiCycleInMs, unsigned int tiFirstActivationInMs, unsigned int priority, unsigned int minPIDToTriggerThisEvent)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:729</div></div>
 <div class="ttc" id="rtos_8h_html_aeaae84408e099b28495d703994100c16"><div class="ttname"><a href="rtos_8h.html#aeaae84408e099b28495d703994100c16">rtos_osGrantPermissionRunTask</a></div><div class="ttdeci">void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:969</div></div>
 <div class="ttc" id="rtos_8h_html_a5f63a85fcf6b79022d8039ae974aba96"><div class="ttname"><a href="rtos_8h.html#a5f63a85fcf6b79022d8039ae974aba96">rtos_getNoActivationLoss</a></div><div class="ttdeci">unsigned int rtos_getNoActivationLoss(unsigned int idEvent)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:1567</div></div>
+<div class="ttc" id="rtos_8h_html_a8c4026e0f4129e07d3cf4fa46c6e1dac"><div class="ttname"><a href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">rtos_osSuspendAllInterruptsByPriority</a></div><div class="ttdeci">static uint32_t rtos_osSuspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority)</div><div class="ttdef"><b>Definition:</b> rtos.h:788</div></div>
 <div class="ttc" id="rtos_8h_html_a5d61ad8cb2aced31246ad1fdbb44faa7"><div class="ttname"><a href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a></div><div class="ttdeci">uint32_t rtos_systemCall(uint32_t idxSysCall,...)</div></div>
+<div class="ttc" id="rtos_8h_html_a585062ee728ec5d30b078964aa1f0862"><div class="ttname"><a href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask</a></div><div class="ttdeci">static int32_t rtos_osRunTask(const rtos_taskDesc_t *pUserTaskConfig, uintptr_t taskParam)</div><div class="ttdef"><b>Definition:</b> rtos.h:526</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a998a63eb85afdba5f8dbdfd1bdd15d0e"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a998a63eb85afdba5f8dbdfd1bdd15d0e">rtos_err_suspendPrcBadPermission</a></div><div class="ttdoc">"Unsafe" permissions granted to rtos_suspendProcess() </div><div class="ttdef"><b>Definition:</b> rtos.h:221</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1ad285146c97ddb0e2318b0e58c0f4644b"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1ad285146c97ddb0e2318b0e58c0f4644b">rtos_err_initTaskRedefined</a></div><div class="ttdoc">Attempt to redefine an already defined initialization task. </div><div class="ttdef"><b>Definition:</b> rtos.h:215</div></div>
 <div class="ttc" id="rtos_8h_html_a445845eb4a4fd8af883abc9a7f84ece2"><div class="ttname"><a href="rtos_8h.html#a445845eb4a4fd8af883abc9a7f84ece2">rtos_suspendAllInterruptsByPriority</a></div><div class="ttdeci">uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority)</div></div>
@@ -551,15 +553,20 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="ttc" id="structrtos__task_desc__t_html"><div class="ttname"><a href="structrtos__task_desc__t.html">rtos_taskDesc_t</a></div><div class="ttdef"><b>Definition:</b> rtos.h:232</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a30eeebbb9e9807fcd75e7359cf358953"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a30eeebbb9e9807fcd75e7359cf358953">rtos_err_taskBelongsToInvalidPrc</a></div><div class="ttdoc">Task assigned to not configured process. </div><div class="ttdef"><b>Definition:</b> rtos.h:218</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a0a3176c426b81c3eed1a4b7cbd5ef371"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a0a3176c426b81c3eed1a4b7cbd5ef371">rtos_err_noEvOrTaskRegistered</a></div><div class="ttdoc">No event and/or no task defined at start of system. </div><div class="ttdef"><b>Definition:</b> rtos.h:211</div></div>
+<div class="ttc" id="rtos_8h_html_ae1f6778a3742632e1d754dc916a1aeff"><div class="ttname"><a href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask</a></div><div class="ttdeci">static int32_t rtos_runTask(const rtos_taskDesc_t *pUserTaskConfig, uintptr_t taskParam)</div><div class="ttdef"><b>Definition:</b> rtos.h:569</div></div>
 <div class="ttc" id="rtos_8h_html_a72c496a57feceb72a84ce41895e179c9"><div class="ttname"><a href="rtos_8h.html#a72c496a57feceb72a84ce41895e179c9">rtos_osInstallInterruptHandler</a></div><div class="ttdeci">void rtos_osInstallInterruptHandler(rtos_interruptServiceRoutine_t interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</div><div class="ttdef"><b>Definition:</b> rtos_externalInterrupt.c:236</div></div>
+<div class="ttc" id="rtos_8h_html_a4a9eb6b285b58c2e2f8f6f02e995bf59"><div class="ttname"><a href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">rtos_osEnterCriticalSection</a></div><div class="ttdeci">static ALWAYS_INLINE uint32_t rtos_osEnterCriticalSection(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:676</div></div>
 <div class="ttc" id="rtos_8h_html_ab0f1e1a247f858577c1d9d04e4a4331c"><div class="ttname"><a href="rtos_8h.html#ab0f1e1a247f858577c1d9d04e4a4331c">rtos_getNoTotalTaskFailure</a></div><div class="ttdeci">unsigned int rtos_getNoTotalTaskFailure(unsigned int PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:518</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a9d20065342c519702d9db027a9487ce6"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a9d20065342c519702d9db027a9487ce6">rtos_err_configurationOfRunningKernel</a></div><div class="ttdoc">Attempt to (re-)configure a running kernel. </div><div class="ttdef"><b>Definition:</b> rtos.h:207</div></div>
 <div class="ttc" id="structrtos__task_desc__t_html_a11f1b1e21a5277a406f92cff7525a982"><div class="ttname"><a href="structrtos__task_desc__t.html#a11f1b1e21a5277a406f92cff7525a982">rtos_taskDesc_t::tiTaskMax</a></div><div class="ttdeci">uint32_t tiTaskMax</div><div class="ttdef"><b>Definition:</b> rtos.h:250</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a4658c821f83b720ed7d7b4713a178e0d"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a4658c821f83b720ed7d7b4713a178e0d">rtos_err_taskBudgetTooBig</a></div><div class="ttdoc">Task budget greater than RTOS_TI_DEADLINE_MAX_IN_US. </div><div class="ttdef"><b>Definition:</b> rtos.h:214</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a6227d0116801a4e94ab0b613b747407f"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a6227d0116801a4e94ab0b613b747407f">rtos_err_badTaskFunction</a></div><div class="ttdoc">Bad task function NULL specified. </div><div class="ttdef"><b>Definition:</b> rtos.h:213</div></div>
 <div class="ttc" id="rtos_8h_html_addefdb75681eaad3fd2699f2dabf85ba"><div class="ttname"><a href="rtos_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos_osRegisterInitTask</a></div><div class="ttdeci">rtos_errorCode_t rtos_osRegisterInitTask(int32_t(*initTaskFct)(uint32_t PID), unsigned int PID, unsigned int tiMaxInUs)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:829</div></div>
+<div class="ttc" id="rtos_8h_html_a7ea8f15fbf4159dec1d3b53babbc3864"><div class="ttname"><a href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent</a></div><div class="ttdeci">static bool rtos_triggerEvent(unsigned int idEvent)</div><div class="ttdef"><b>Definition:</b> rtos.h:925</div></div>
 <div class="ttc" id="rtos_8h_html_a671a05cb46411e64b58a457394c3e749"><div class="ttname"><a href="rtos_8h.html#a671a05cb46411e64b58a457394c3e749">rtos_interruptServiceRoutine_t</a></div><div class="ttdeci">void(* rtos_interruptServiceRoutine_t)(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:195</div></div>
+<div class="ttc" id="rtos_8h_html_aac7a5ed04ef56818262cd5288d327648"><div class="ttname"><a href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr</a></div><div class="ttdeci">static bool rtos_checkUserCodeReadPtr(const void *address, size_t noBytes)</div><div class="ttdef"><b>Definition:</b> rtos.h:964</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a88b39e365c36b7864305b1020d167917"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a88b39e365c36b7864305b1020d167917">rtos_err_invalidEventPrio</a></div><div class="ttdoc">Priority needs to be in range [1; RTOS_MAX_LOCKABLE_PRIORITY) </div><div class="ttdef"><b>Definition:</b> rtos.h:204</div></div>
+<div class="ttc" id="rtos_8h_html_a50d3acde6c733f5dcf8decab6299e3ff"><div class="ttname"><a href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">rtos_suspendProcess</a></div><div class="ttdeci">static void rtos_suspendProcess(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos.h:993</div></div>
 <div class="ttc" id="rtos_8h_html_a68096423d941e1dc670a6ec2e37d5275"><div class="ttname"><a href="rtos_8h.html#a68096423d941e1dc670a6ec2e37d5275">rtos_osRegisterOSTask</a></div><div class="ttdeci">rtos_errorCode_t rtos_osRegisterOSTask(unsigned int idEvent, void(*osTaskFct)(void))</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:928</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a></div><div class="ttdeci">rtos_errorCode_t</div><div class="ttdef"><b>Definition:</b> rtos.h:200</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a19dd8bb137f08cb4484ba25522bfeaf4"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a19dd8bb137f08cb4484ba25522bfeaf4">rtos_err_eventNotTriggerable</a></div><div class="ttdoc">Bad configuration makes event unusable. </div><div class="ttdef"><b>Definition:</b> rtos.h:206</div></div>
@@ -567,13 +574,17 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="ttc" id="rtos_8h_html_a42156b46c1f83c80cd7a1630d91e12cc"><div class="ttname"><a href="rtos_8h.html#a42156b46c1f83c80cd7a1630d91e12cc">rtos_osSystemCallBadArgument</a></div><div class="ttdeci">_Noreturn void rtos_osSystemCallBadArgument(void)</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a218ea0e64c7b0278fa114aa3aac80d60"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a218ea0e64c7b0278fa114aa3aac80d60">rtos_err_badProcessId</a></div><div class="ttdoc">The ID of the process is invalid. No such process exists. </div><div class="ttdef"><b>Definition:</b> rtos.h:209</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a7997aabfed01a9d3dc744a0971b21292"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a7997aabfed01a9d3dc744a0971b21292">rtos_err_badEventTiming</a></div><div class="ttdoc">Inconsistent or bad timing configuration stated for event. </div><div class="ttdef"><b>Definition:</b> rtos.h:205</div></div>
+<div class="ttc" id="rtos_8h_html_ae6935dc959dd97bcbe04070a477c2ac3"><div class="ttname"><a href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">rtos_osLeaveCriticalSection</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)</div><div class="ttdef"><b>Definition:</b> rtos.h:708</div></div>
 <div class="ttc" id="rtos_8h_html_a594b547ccdf2a1d473ea55ef612d7558"><div class="ttname"><a href="rtos_8h.html#a594b547ccdf2a1d473ea55ef612d7558">rtos_taskDesc_t</a></div><div class="ttdeci">struct rtos_taskDesc_t rtos_taskDesc_t</div></div>
 <div class="ttc" id="rtos_8h_html_a240a9b010103563bb950b8d69017703b"><div class="ttname"><a href="rtos_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a></div><div class="ttdeci">unsigned int rtos_getStackReserve(unsigned int PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:608</div></div>
+<div class="ttc" id="rtos_8h_html_ab154b2923ad0d102fa1515e89d42c898"><div class="ttname"><a href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osSuspendAllInterrupts(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:620</div></div>
 <div class="ttc" id="structrtos__task_desc__t_html_a1fe2586c887a6c5902e38d2ef63bf297"><div class="ttname"><a href="structrtos__task_desc__t.html#a1fe2586c887a6c5902e38d2ef63bf297">rtos_taskDesc_t::addrTaskFct</a></div><div class="ttdeci">uintptr_t addrTaskFct</div><div class="ttdef"><b>Definition:</b> rtos.h:241</div></div>
 <div class="ttc" id="rtos_8h_html_ab24d0fa9208d5675e03cc931a08e52fd"><div class="ttname"><a href="rtos_8h.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel</a></div><div class="ttdeci">rtos_errorCode_t rtos_osInitKernel(void)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:1027</div></div>
 <div class="ttc" id="rtos_8h_html_ad0ffd077e9733a78d88eb202cedec590"><div class="ttname"><a href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos_resumeAllInterruptsByPriority</a></div><div class="ttdeci">void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)</div></div>
+<div class="ttc" id="rtos_8h_html_ad580381efb7808b37da052d3a51a7901"><div class="ttname"><a href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osResumeAllInterrupts(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:644</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1ab430b681a53eb533e44a6260874452fb"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1ab430b681a53eb533e44a6260874452fb">rtos_err_initTaskFailed</a></div><div class="ttdoc">Process initialization function failed or returned neg. value. </div><div class="ttdef"><b>Definition:</b> rtos.h:216</div></div>
 <div class="ttc" id="rtos_8h_html_aeddb4b88dd8c1052eb41763e7164e7fa"><div class="ttname"><a href="rtos_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_osSuspendProcess</a></div><div class="ttdeci">void rtos_osSuspendProcess(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:470</div></div>
+<div class="ttc" id="rtos_8h_html_a50aa791209542d3078b18c24acbb46c1"><div class="ttname"><a href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">rtos_terminateTask</a></div><div class="ttdeci">static _Noreturn void rtos_terminateTask(int32_t taskReturnValue)</div><div class="ttdef"><b>Definition:</b> rtos.h:602</div></div>
 <div class="ttc" id="structrtos__task_desc__t_html_ab9a01a36bbb823cf2c2fbad709a7c0e3"><div class="ttname"><a href="structrtos__task_desc__t.html#ab9a01a36bbb823cf2c2fbad709a7c0e3">rtos_taskDesc_t::PID</a></div><div class="ttdeci">uint8_t PID</div><div class="ttdef"><b>Definition:</b> rtos.h:256</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a5535320638a30f3fcdfc642712eb5c6f"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a5535320638a30f3fcdfc642712eb5c6f">rtos_err_prcStackInvalid</a></div><div class="ttdoc">Configured stack misaligned or too small. </div><div class="ttdef"><b>Definition:</b> rtos.h:217</div></div>
 <div class="ttc" id="typ__types_8h_html_aa1dec568e79152c892dcf63f445cbd7a"><div class="ttname"><a href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a></div><div class="ttdeci">#define ALWAYS_INLINE</div><div class="ttdef"><b>Definition:</b> typ_types.h:57</div></div>
@@ -581,6 +592,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1abc4fc258ab30b0be82f1d2c25e851712"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1abc4fc258ab30b0be82f1d2c25e851712">rtos_err_eventWithoutTask</a></div><div class="ttdoc">A useless event exists, which has no task to activate. </div><div class="ttdef"><b>Definition:</b> rtos.h:212</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1abae1c422a879faa29d9034e7a4db112c"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1abae1c422a879faa29d9034e7a4db112c">rtos_err_highPrioTaskInLowPrivPrc</a></div><div class="ttdoc">Task of highest prio belongs to process of low privileges. </div><div class="ttdef"><b>Definition:</b> rtos.h:219</div></div>
 <div class="ttc" id="rtos_8h_html_a8267fb6047b63c04640f2e78852c4574"><div class="ttname"><a href="rtos_8h.html#a8267fb6047b63c04640f2e78852c4574">rtos_osRegisterUserTask</a></div><div class="ttdeci">rtos_errorCode_t rtos_osRegisterUserTask(unsigned int idEvent, int32_t(*userModeTaskFct)(uint32_t PID), unsigned int PID, unsigned int tiMaxInUs)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:884</div></div>
+<div class="ttc" id="rtos_8h_html_a05c673d0abb8d67f4b18f615df72223d"><div class="ttname"><a href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">rtos_osResumeAllInterruptsByPriority</a></div><div class="ttdeci">static void rtos_osResumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)</div><div class="ttdef"><b>Definition:</b> rtos.h:871</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a19304aaba258a01530cb891f69fa78dc"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a19304aaba258a01530cb891f69fa78dc">rtos_err_tooManyEventsCreated</a></div><div class="ttdoc">Can&#39;t create no more than RTOS_MAX_NO_EVENTS events. </div><div class="ttdef"><b>Definition:</b> rtos.h:203</div></div>
 <div class="ttc" id="rtos_8h_html_abb25bad5cf1976808e7acb79c30290bd"><div class="ttname"><a href="rtos_8h.html#abb25bad5cf1976808e7acb79c30290bd">rtos_getNoTaskFailure</a></div><div class="ttdeci">unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:547</div></div>
 <div class="ttc" id="rtos_8h_html_a88a271864adecb3d629668674fa0815a"><div class="ttname"><a href="rtos_8h.html#a88a271864adecb3d629668674fa0815a">rtos_osInitINTCInterruptController</a></div><div class="ttdeci">void rtos_osInitINTCInterruptController(void)</div><div class="ttdef"><b>Definition:</b> rtos_externalInterrupt.c:151</div></div>
@@ -590,7 +602,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_050edd66366d13764f98250ef6db77f6.html">code</a></li><li class="navelem"><a class="el" href="dir_9cd24f4fec2e6f6bedbcc5407321d78a.html">system</a></li><li class="navelem"><a class="el" href="dir_34effe5aae1be93d744f092611be46f1.html">RTOS</a></li><li class="navelem"><a class="el" href="rtos_8h.html">rtos.h</a></li>
-    <li class="footer">Generated on Tue Sep 17 2019 22:34:23 for safe-RTOS(VLE) by
+    <li class="footer">Generated on Wed Sep 18 2019 21:37:07 for safe-RTOS (VLE) by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.8 </li>
   </ul>

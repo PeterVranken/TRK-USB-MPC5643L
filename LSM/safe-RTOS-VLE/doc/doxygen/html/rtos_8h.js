@@ -73,5 +73,17 @@ var rtos_8h =
     [ "rtos_getNoTaskFailure", "rtos_8h.html#abb25bad5cf1976808e7acb79c30290bd", null ],
     [ "rtos_getStackReserve", "rtos_8h.html#a240a9b010103563bb950b8d69017703b", null ],
     [ "rtos_osSuspendProcess", "rtos_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa", null ],
-    [ "rtos_isProcessSuspended", "rtos_8h.html#a63296923146f8dff5b8754ca1c6003dc", null ]
+    [ "rtos_isProcessSuspended", "rtos_8h.html#a63296923146f8dff5b8754ca1c6003dc", null ],
+    [ "rtos_osRunTask", "rtos_8h.html#a585062ee728ec5d30b078964aa1f0862", null ],
+    [ "rtos_runTask", "rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff", null ],
+    [ "rtos_terminateTask", "rtos_8h.html#a50aa791209542d3078b18c24acbb46c1", null ],
+    [ "rtos_osSuspendAllInterrupts", "rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898", null ],
+    [ "rtos_osResumeAllInterrupts", "rtos_8h.html#ad580381efb7808b37da052d3a51a7901", null ],
+    [ "rtos_osEnterCriticalSection", "rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59", null ],
+    [ "rtos_osLeaveCriticalSection", "rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3", null ],
+    [ "rtos_osSuspendAllInterruptsByPriority", "rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac", null ],
+    [ "rtos_osResumeAllInterruptsByPriority", "rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d", null ],
+    [ "rtos_triggerEvent", "rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864", null ],
+    [ "rtos_checkUserCodeReadPtr", "rtos_8h.html#aac7a5ed04ef56818262cd5288d327648", null ],
+    [ "rtos_suspendProcess", "rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff", null ]
 ];

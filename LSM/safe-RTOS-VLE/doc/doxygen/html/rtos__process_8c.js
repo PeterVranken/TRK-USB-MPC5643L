@@ -1,6 +1,5 @@
 var rtos__process_8c =
 [
-    [ "processDesc_t", "rtos__process_8c.html#a1d7459c1d8ddbd5542d7c0a751e2cc45", null ],
     [ "rtos_osGrantPermissionSuspendProcess", "rtos__process_8c.html#a68f8200c57d5390e8937fc2a78af55b6", null ],
     [ "rtos_osSuspendProcess", "rtos__process_8c.html#aeddb4b88dd8c1052eb41763e7164e7fa", null ],
     [ "rtos_isProcessSuspended", "rtos__process_8c.html#a63296923146f8dff5b8754ca1c6003dc", null ],

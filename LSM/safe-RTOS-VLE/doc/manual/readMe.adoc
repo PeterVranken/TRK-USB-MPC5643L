@@ -907,7 +907,8 @@ files in folder
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/RTOS[code/system/RTOS^]
 and particularly in the main
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/RTOS/rtos.h[header
-file^].
+file^]. Furthermore, there is the Doxygen API reference at
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/master/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[doc/doxygen/html^].
 
 === Naming conventions
 

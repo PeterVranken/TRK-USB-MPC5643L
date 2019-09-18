@@ -114,7 +114,7 @@ Many more details can be found in the manual, which is
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/readMe.adoc[online^]
 available here in GitHub, or available as
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/manual.pdf[printable^]
-document.
+document. The API is described in the online https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/master/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[Doxygen^] help, too.
 
 === Differences to the ancestor RTOS
 

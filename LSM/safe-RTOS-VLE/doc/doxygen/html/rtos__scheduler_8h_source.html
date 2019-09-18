@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.8"/>
-<title>safe-RTOS(VLE): rtos_scheduler.h Source File</title>
+<title>safe-RTOS (VLE): rtos_scheduler.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
-   <div id="projectname">safe-RTOS(VLE)
+   <div id="projectname">safe-RTOS (VLE)
    &#160;<span id="projectnumber">1.0</span>
    </div>
    <div id="projectbrief">safe-RTOS (VLE) - A simple RTOS with safety support for MPC5643L</div>
@@ -148,13 +148,13 @@ $(document).ready(function(){initNavTree('rtos__scheduler_8h_source.html','');})
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;                                   , <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> minPIDToTriggerThisEvent</div>
 <div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;                                   );</div>
 <div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;<a class="code" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a> <a class="code" href="rtos__scheduler_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos_osRegisterInitTask</a>( int32_t (*initTaskFct)(uint32_t PID)</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;<a class="code" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a> <a class="code" href="rtos__scheduler_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos_osRegisterInitTask</a>( int32_t (*initTaskFct)(uint32_t <a class="code" href="structrtos__task_desc__t.html#ab9a01a36bbb823cf2c2fbad709a7c0e3">PID</a>)</div>
 <div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;                                        , <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID</div>
 <div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;                                        , <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> tiMaxInUs</div>
 <div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;                                        );</div>
 <div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;</div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<a class="code" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a> <a class="code" href="rtos__scheduler_8h.html#a8267fb6047b63c04640f2e78852c4574">rtos_osRegisterUserTask</a>( <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;                                        , int32_t (*userModeTaskFct)(uint32_t PID)</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;                                        , int32_t (*userModeTaskFct)(uint32_t <a class="code" href="structrtos__task_desc__t.html#ab9a01a36bbb823cf2c2fbad709a7c0e3">PID</a>)</div>
 <div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;                                        , <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID</div>
 <div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;                                        , <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> tiMaxInUs</div>
 <div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;                                        );</div>
@@ -176,6 +176,7 @@ $(document).ready(function(){initNavTree('rtos__scheduler_8h_source.html','');})
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a></div><div class="ttdeci">rtos_errorCode_t</div><div class="ttdef"><b>Definition:</b> rtos.h:200</div></div>
 <div class="ttc" id="rtos__scheduler_8h_html_ab24d0fa9208d5675e03cc931a08e52fd"><div class="ttname"><a href="rtos__scheduler_8h.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel</a></div><div class="ttdeci">rtos_errorCode_t rtos_osInitKernel(void)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:1027</div></div>
 <div class="ttc" id="rtos__scheduler_8h_html_a9e214eed5eb27fd51e72227fb62f9b8a"><div class="ttname"><a href="rtos__scheduler_8h.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos_osCreateEvent</a></div><div class="ttdeci">rtos_errorCode_t rtos_osCreateEvent(unsigned int *pEventId, unsigned int tiCycleInMs, unsigned int tiFirstActivationInMs, unsigned int priority, unsigned int minPIDToTriggerThisEvent)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:729</div></div>
+<div class="ttc" id="structrtos__task_desc__t_html_ab9a01a36bbb823cf2c2fbad709a7c0e3"><div class="ttname"><a href="structrtos__task_desc__t.html#ab9a01a36bbb823cf2c2fbad709a7c0e3">rtos_taskDesc_t::PID</a></div><div class="ttdeci">uint8_t PID</div><div class="ttdef"><b>Definition:</b> rtos.h:256</div></div>
 <div class="ttc" id="rtos__scheduler_8h_html_aeaae84408e099b28495d703994100c16"><div class="ttname"><a href="rtos__scheduler_8h.html#aeaae84408e099b28495d703994100c16">rtos_osGrantPermissionRunTask</a></div><div class="ttdeci">void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:969</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
@@ -183,7 +184,7 @@ $(document).ready(function(){initNavTree('rtos__scheduler_8h_source.html','');})
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_050edd66366d13764f98250ef6db77f6.html">code</a></li><li class="navelem"><a class="el" href="dir_9cd24f4fec2e6f6bedbcc5407321d78a.html">system</a></li><li class="navelem"><a class="el" href="dir_34effe5aae1be93d744f092611be46f1.html">RTOS</a></li><li class="navelem"><a class="el" href="rtos__scheduler_8h.html">rtos_scheduler.h</a></li>
-    <li class="footer">Generated on Tue Sep 17 2019 22:34:24 for safe-RTOS(VLE) by
+    <li class="footer">Generated on Wed Sep 18 2019 21:37:07 for safe-RTOS (VLE) by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.8 </li>
   </ul>
