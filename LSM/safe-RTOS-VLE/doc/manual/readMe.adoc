@@ -960,15 +960,16 @@ MCU resources are:
 
 All of the API functions, which are called at system initialization time to
 configure the RTOS appropriately for the implemented operating system,
-return an enumeration value, rtos_errorCode_t, indicating, which problem
+return an enumeration value, `rtos_errorCode_t`, indicating, which problem
 appeared.
 
-The configuration of the RTOS is generally static, i.e. the sets
-of events and tasks and the granted privileges will not depend on variable
-input data. Consequently, there's no need for a dynamic, intelligent error
-handling strategy. The implemented strategy will simply be to start the
-application software if and only if all RTOS configuration and
-initialization calls return "no error".
+The configuration of the RTOS is generally static, i.e. the sets of events
+and tasks and the granted privileges will not depend on variable input
+data and so the success of the RTOS initialization neither won't.
+Consequently, there's no need for a dynamic, intelligent error handling
+strategy. The implemented strategy will simply be to start the application
+software if and only if all RTOS configuration and initialization calls
+return "no error".
 
 The added value of the enumeration only is development support. Having the
 error code it's much easier to find or identify the bad configuration
@@ -1469,6 +1470,104 @@ most of the idle time for load computation.
 The load is returned in tens of percent.
 
 == The memory layout
+
+The RTOS comes along with a linker script, that organizes the memories of
+the software (kernel, OS and application) in a way, which is compatible
+with its static use of the MPU. The chosen memory map ensures that all the
+RAM memories, which are owned by a process, form exactly three solid
+memory areas. Per process, we have one area with SDA data, one area with
+SDA2 data (both accessible through short addressing modes) and one with
+all the other, normal data. Initialized and uninitialized data are laid
+one after another inside these areas. The three areas correspond to three
+memory area descriptors in the MPU, and so allow the sixteen available
+descriptors having up to four processes (the remaining descriptors are
+required for kernel RAM, ROM, I/O and shared RAM).
+
+=== Linker script
+
+An excerpt from the linker script demonstrates, how input section filters
+are used to form the three memory areas of a process. It doesn't matter,
+which or how many input sections are mapped into such an area, you may add
+more of them. Let's have a look at the definition of the memory area for
+normally addressed data owned by process 4:
+
+-------
+    /* Data sections for process 4. */
+    . = ALIGN(32);
+    ld_dataP4Start = ABSOLUTE(.);
+    *_P4_*.o(.data)
+    *_P4_*.o(.data.*)
+    *(.data.P4)
+    *(.data.P4.*)
+    *_P4_*.o(.bss)
+    *_P4_*.o(.bss.*)
+    *(.bss.P4)
+    *(.bss.P4.*)
+    
+    /* Stack of process 4. */
+    . = ALIGN(8); /* Stacks need to be 8 Byte aligned.  */
+    ld_stackStartP4 = ABSOLUTE(.);
+    . += ld_stackSizeP4;
+    . = ALIGN(32);
+    ld_stackEndP4 = ABSOLUTE(.);
+    
+    . = ALIGN(32);
+    ld_dataP4End = ABSOLUTE(.);
+-------
+
+The shown, pre-defined filters put all input sections, which are
+considered to be owned by process 4, between two addresses, which are
+labeled _ld_dataP4Start_ and _ld_dataP4End_:
+
+* Input sections named _.data.P4_ or _.data.P4.*_
+* Input sections named _.bss.P4_ or _.bss.P4.*_
+* Standard sections for initialized and uninitialized data (_.data_,
+  _.data.*_, _.bss_, _.bss.*_), if they come from a compilation unit with a name
+  containing _&#x5f;P4&#x5f;_
+* Stack memory for process 4 is placed here, too, by moving the current address
+  (`. += ld_stackSizeP4`) 
+
+You may add additional input section filters to assign memory to the
+given process as long as they appear between the two labels
+_ld_dataP4Start_ and _ld_dataP4End_.
+
+Similar constructs can be found for SDA and SDA2 data:
+
+-------
+    /* Small data sections for process 4. */
+    . = ALIGN(32);
+    ld_sdaP4Start = ABSOLUTE(.);
+    *_P4_*.o(.sdata)
+    (...)
+    *(.sbss.P4.*)
+    . = ALIGN(32);
+    ld_sdaP4End = ABSOLUTE(.);
+    
+    /* Small data 2 sections for process 4. */
+    . = ALIGN(32);
+    ld_sda2P4Start = ABSOLUTE(.);
+    *_P4_*.o(.sdata2)
+    (...)
+    *(.sbss2.P4.*)
+    . = ALIGN(32);
+    ld_sda2P4End = ABSOLUTE(.);
+-------
+
+In the MPU configuration code (file
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/RTOS/rtos_systemMemoryProtectionUnit.c[rtos_systemMemoryProtectionUnit.c^]),
+you can find the initialization of three memory area descriptors, which
+are based on the address boundaries:
+
+* [_ld_dataP4Start_, _ld_dataP4End_-1]
+* [_ld_sdaP4Start_, _ld_sdaP4End_-1]
+* [_ld_sda2P4Start_, _ld_sda2P4End_-1]
+
+The frequently appearing statements `. = ALIGN(32);` are required for the
+MPU, it supports an address resolution of 5 Bit.
+
+=== Defining data objects
+
+=== The C library
 
 TODOC: Memory map, controlling ownership of data objects, code samples,
 typical programmming errors and how they appear to the developer
