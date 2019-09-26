@@ -1567,10 +1567,137 @@ MPU, it supports an address resolution of 5 Bit.
 
 === Defining data objects
 
+The filters route the input section to the process memory areas. So if we
+want a particular data object to be owned by a particular process, e.g.
+_P4_, then we need to make it reside in one of the filtered sections. The
+compiler offers a type decoration for this purpose (see
+https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gcc/Variable-Attributes.html#Variable-Attributes[GCC
+manual^]): A term like
+`&#x5f;&#x5f;attribute__({zwsp}(section(".data.P4")))` would be
+added to the variable definition, e.g.:
+
+    static uint16_t myVariable __attribute__((section(".data.P4.myVariable"))) = 99;
+
+Two remarks: Firstly, the section name contains ".data.P4": This makes the
+variable go into process _P4_'s memory area for normally addressed data.
+Secondly, the chosen section name ends on the name of the variable. This
+is optional and it has no impact on the code but it makes the variable
+appear in the linker generated map file -- which is often useful to
+double-check the locating of data objects.
+
+The type decoration makes a variable definition somewhat bulky,
+particularly when using the section name with contained variable name.
+Therefore the RTOS offers some convenience macros to hide it. Consider
+typing: 
+
+    static uint16_t DATA_P4(myVariable) = 99;
+
+instead of the previous example. Both are equivalent.
+
+Similar macros are defined for uninitialized data objects or to place a
+variable in the SDA or SDA2 RAM or accordingly in the other processes'
+memory areas (including OS memory). They are defined in file
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/startup/typ_types.h[typ_types.h^],
+please #include this header file.
+
+If the macros are applied to arrays then the array index(es) are placed
+behind the closing parenthesis of the macro:
+
+    int8_t DATA_P1(myByteAry)[2][3] = { [0]={[0]=1, [1]=2, [2]=0}
+                                      , [1]={[0]=2, [1]=0, [2]=1}
+                                      };
+
+A function pointer definition could look like this:
+
+    static uint8_t (* SBSS_P2(myFctPtr))(uint16_t);
+
+A data object, which should be changeable by all processes, needs to be
+located in the shared RAM area:
+
+    uint32_t BSS_SHARED(mySharedDataObj);
+
+Normally, the type decoration is required only for the object definition,
+but rarely you will need to place the same at a publicly visible
+declaration in the header file, too. This will happen if you force a data
+object to be in a data or bss section, which would normally go into a
+small data area. "Normally" means decided by the compiler's internal rules.
+Data objects with a size of up than 8 Byte would for example be normally
+placed in the small data area. If the declaration of such a data object
+doesn't contain the section attribute and when compiling another source
+file, which only reads the declaration, then the compiler will emit code
+with short addressing mode while the variable is not in a small data area.
+The linker will refuse to resolve the address offsets in the
+short-addressing-{zwsp}mode-instructions in the object file of that other
+source file.
+
+Note, there's no support for shared objects in small data areas.
+Therefore, the sketched situation will mainly occur with shared data
+objects.
+
+TIP: If you write your first code samples and use these macros the first
+time then you are strongly encouraged to inspect the map file after the
+build to see the effect. Make some spot checks to see whether your data
+objects really go into the memory area of the aimed processes.
+
+If your code executes with exceptions then the most likely reason is a
+wrong or missing type decoration for a data objects. A variable without
+decoration is basically fine, it goes into the memory area of process _P1_,
+but if that variable is written by any other process then an exception is
+raised.
+
+Another typical reason for exceptions is the use of a static variable
+inside a function, which is called by different processes. This will fail
+even if your code handles the race conditions; the variable will not be
+accessible by all calling processes. Maybe, the solution is the use of the
+shared memory area but this can easily break the safety concept.
+
+=== Legacy code
+
+The linker script routes all unspecified data objects into the memory
+areas of process _P1_. This process has the lowest privileges and is
+intended to host the functional code, which normally is the majority of
+code. This code can still be used with the RTOS without the need to "grep"
+for all data definitions in order to add the type decoration.
+
+If there's already some legacy safety code, which should run in a higher
+privileged process, e.g. _P2_, then you have two choices:
+
+. Look for all data definitions and add the macros to make the objects be
+  owned by process _P2_.
+. Rename the source files such that their names contain the pattern
+  _&#x5f;P2&#x5f;_. This makes unspecified data objects go into the memory
+  areas of process _P2_.
+
+Note, automatic variables, which are placed on the stack, are not
+affected. Each process has its own stack in its own memory area.
+
 === The C library
 
-TODOC: Memory map, controlling ownership of data objects, code samples,
-typical programmming errors and how they appear to the developer
+The C library places all its static data objects in the normal data and
+bss sections. Its source code does of course not make use of our macros
+and all static data objects are owned by process _P1_. Therefore, _P1_
+is the only process, which can make safe use of the C lib functions.
+
+Many, if not most functions from the library won't make use of static
+data and could therefore be used from other processes, too. Regardless, this
+is not recommended for these reasons:
+
+* The C library is an imported, untrusted, potentially unsafe piece of
+  code, which should not be applied just like that from a safety process
+* The compilation of the C library requires care if it is going to be used
+  in a multi-threading environment. We use the original, pre-compiled
+  binaries, which have not been compiled considering the particularities
+  of our multi-threading environment. This makes its concurrent use from
+  more than one thread potentially unsafe -- which may be tolerated for the
+  functional code in _P1_ but surely not for higher privileged safety
+  processes
+
+Summarizing, a reasonable safety requirement would be allowing the use of
+the C library in process _P1_ (as a matter of experience, we never faced a
+problem with concurrent use) but not allowing its use in operating system
+code or in a safety process.
+
+TODOC: ROM, I/O space, RAM shared for reading
 
 //== Deadline monitoring
 //
