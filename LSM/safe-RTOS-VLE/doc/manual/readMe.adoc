@@ -1473,15 +1473,28 @@ The load is returned in tens of percent.
 
 The RTOS comes along with a linker script, that organizes the memories of
 the software (kernel, OS and application) in a way, which is compatible
-with its static use of the MPU. The chosen memory map ensures that all the
-RAM memories, which are owned by a process, form exactly three solid
-memory areas. Per process, we have one area with SDA data, one area with
+with its static use of the MPU. The complete address space, we have to
+control is depicted in <<figMemMap>>. With respect to flash ROM and
+address space of the peripherals, the shown map is already detailed
+enough; the used flash ROM and the entire peripheral space are memory
+chunks, which are not further divided and which are controlled with one
+memory area descriptor in the MPU each.
+
+[[figMemMap]]
+.Memory Map of MPC5643L
+image::readMe_resources/memoryMap.svg[Memory Map of MPC5643L, pdfwidth=50%, width=50%, align="center"]
+
+With respect to RAM, the chosen memory map ensures that all the memories,
+which are owned by a process, form exactly three solid memory areas in the
+address space. Per process, we have one area with SDA data, one area with
 SDA2 data (both accessible through short addressing modes) and one with
 all the other, normal data. Initialized and uninitialized data are laid
 one after another inside these areas. The three areas correspond to three
 memory area descriptors in the MPU, and so allow the sixteen available
-descriptors having up to four processes (the remaining descriptors are
-required for kernel RAM, ROM, I/O and shared RAM).
+descriptors having up to four user processes (the remaining descriptors are
+required for kernel RAM, ROM, peripherals and shared RAM).
+
+//<<figMemMapRAM>> details how the used RAM is further divided into process related memory chunks.
 
 === Linker script
 
