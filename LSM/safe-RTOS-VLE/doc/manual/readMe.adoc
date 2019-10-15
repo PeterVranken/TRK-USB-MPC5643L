@@ -1469,32 +1469,40 @@ most of the idle time for load computation.
 
 The load is returned in tens of percent.
 
-== The memory layout
+== Memory layout
 
 The RTOS comes along with a linker script, that organizes the memories of
 the software (kernel, OS and application) in a way, which is compatible
 with its static use of the MPU. The complete address space, we have to
-control is depicted in <<figMemMap>>. With respect to flash ROM and
-address space of the peripherals, the shown map is already detailed
-enough; the used flash ROM and the entire peripheral space are memory
-chunks, which are not further divided and which are controlled with one
-memory area descriptor in the MPU each.
+control, is depicted in the left part of <<figMemMap>>. With respect to
+flash ROM and address space of the peripherals, this part of the image is
+already detailed enough; the used flash ROM and the entire peripheral
+space are memory chunks, which are not further divided and which are
+controlled with one memory area descriptor in the MPU each.
 
 [[figMemMap]]
-.Memory Map of MPC5643L
-image::readMe_resources/memoryMap.svg[Memory Map of MPC5643L, pdfwidth=50%, width=50%, align="center"]
+.Memory Map of MPC5643L with safe-RTOS
+image::readMe_resources/memoryMap.svg[Memory Map of MPC5643L with safe-RTOS, pdfwidth=90%, width=90%, align="center"]
 
 With respect to RAM, the chosen memory map ensures that all the memories,
 which are owned by a process, form exactly three solid memory areas in the
 address space. Per process, we have one area with SDA data, one area with
 SDA2 data (both accessible through short addressing modes) and one with
-all the other, normal data. Initialized and uninitialized data are laid
-one after another inside these areas. The three areas correspond to three
-memory area descriptors in the MPU, and so allow the sixteen available
-descriptors having up to four user processes (the remaining descriptors are
-required for kernel RAM, ROM, peripherals and shared RAM).
+all the other, normal data. This is depicted in the right part of
+<<figMemMap>>. Initialized and uninitialized data are laid one after
+another inside these areas.
 
-//<<figMemMapRAM>> details how the used RAM is further divided into process related memory chunks.
+The three areas of a process correspond to three memory area descriptors
+in the MPU; the sixteen available descriptors allow having up to four user
+processes together with the descriptors for ROM, operating system RAM,
+shared RAM and peripherals. The sixteen memory areas specified in the MPU
+are shown as dark blue fields in both parts of <<figMemMap>>.
+
+Note that the OS process doesn't have the three areas. There are no access
+restrictions for this process and it uses a single memory area descriptor
+to access all of the used RAM space.
+
+// TODOC Did we mention the C heap? Only available to P1? In section C lib?
 
 === Linker script
 
@@ -1632,7 +1640,7 @@ located in the shared RAM area:
 Normally, the type decoration is required only for the object definition,
 but rarely you will need to place the same at a publicly visible
 declaration in the header file, too. This will happen if you force a data
-object to be in a data or bss section, which would normally go into a
+object to be in a _data_ or _bss_ section, which would normally go into a
 small data area. "Normally" means decided by the compiler's internal rules.
 Data objects with a size of up than 8 Byte would for example be normally
 placed in the small data area. If the declaration of such a data object
@@ -1686,14 +1694,19 @@ affected. Each process has its own stack in its own memory area.
 
 === The C library
 
-The C library places all its static data objects in the normal data and
-bss sections. Its source code does of course not make use of our macros
+The C library places all its static data objects in the normal _data_ and
+_bss_ sections. Its source code does of course not make use of our macros
 and all static data objects are owned by process _P1_. Therefore, _P1_
 is the only process, which can make safe use of the C lib functions.
 
-Many, if not most functions from the library won't make use of static
-data and could therefore be used from other processes, too. Regardless, this
-is not recommended for these reasons:
+The memory, which is reserved to the heap functions, has been placed in
+process _P1_, too. All memory, which is got from the C lib's _malloc_
+functions, is implicitly owned by process _P1_ and can't be written from
+other processes.
+
+Many, if not most functions from the library won't make use of static data
+and do not depend on heap memory. They could therefore be used from other
+processes, too. Regardless, this is not recommended for these reasons:
 
 * The C library is an imported, untrusted, potentially unsafe piece of
   code, which should not be applied just like that from a safety process
