@@ -41,10 +41,10 @@ INTC vector table, printf ringbuffer</y:NodeLabel>
     <node id="n2">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="42.0" width="232.0" x="-66.0" y="-657.0"/>
+          <y:Geometry height="145.03943661971834" width="232.0" x="-66.0" y="-657.0"/>
           <y:Fill color="#99CCFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="2.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="132.75390625" x="49.623046875" xml:space="preserve" y="4.298828125">0xf000_0000 .. 0xffff_ffff
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="129.4140625" x="51.29296875" xml:space="preserve" y="55.81854643485917">0x8ff0_0000 .. 0xffff_ffff
 I/O, peripherals</y:NodeLabel>
           <y:Shape type="rectangle"/>
         </y:ShapeNode>
@@ -53,10 +53,10 @@ I/O, peripherals</y:NodeLabel>
     <node id="n3">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="158.0" width="232.0" x="-66.0" y="-615.0"/>
+          <y:Geometry height="94.46056338028166" width="232.0" x="-66.0" y="-511.96056338028166"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="2.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="126.7421875" x="52.62890625" xml:space="preserve" y="69.6494140625">Unused address space</y:NodeLabel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="126.7421875" x="52.62890625" xml:space="preserve" y="37.87969575264083">Unused address space</y:NodeLabel>
           <y:Shape type="rectangle"/>
         </y:ShapeNode>
       </data>
@@ -64,7 +64,7 @@ I/O, peripherals</y:NodeLabel>
     <node id="n4">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="42.0" width="232.0" x="-66.0" y="-457.0"/>
+          <y:Geometry height="42.0" width="232.0" x="-66.0" y="-417.5"/>
           <y:Fill color="#99FFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="2.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="134.74609375" x="48.626953125" xml:space="preserve" y="4.298828125">ld_ramEnd .. 0x4001_ffff
@@ -76,7 +76,7 @@ Unused RAM space</y:NodeLabel>
     <node id="n5">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="64.0" width="232.0" x="-66.0" y="-415.0"/>
+          <y:Geometry height="64.0" width="232.0" x="-66.0" y="-375.0"/>
           <y:Fill color="#99CCFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="2.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="209.453125" x="11.2734375" xml:space="preserve" y="15.298828125">0x4000_0000 - ld_ramEnd-1 (variable)
@@ -99,10 +99,10 @@ RAM space used by application</y:NodeLabel>
     <node id="n7">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="104.0" width="232.0" x="-66.0" y="-351.0"/>
+          <y:Geometry height="64.0" width="232.0" x="-66.0" y="-311.0"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="2.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="126.7421875" x="52.62890625" xml:space="preserve" y="42.6494140625">Unused address space</y:NodeLabel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="126.7421875" x="52.62890625" xml:space="preserve" y="22.6494140625">Unused address space</y:NodeLabel>
           <y:Shape type="rectangle"/>
         </y:ShapeNode>
       </data>
@@ -329,7 +329,7 @@ heap, *.data, *.bss (legacy code, C lib)</y:NodeLabel>
     <edge id="e0" source="n7" target="n1">
       <data key="d10">
         <y:PolyLineEdge>
-          <y:Path sx="116.0" sy="-52.0" tx="-17.0" ty="400.0"/>
+          <y:Path sx="116.0" sy="-32.0" tx="-17.0" ty="400.0"/>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
           <y:BendStyle smoothed="false"/>
@@ -347,7 +347,6 @@ heap, *.data, *.bss (legacy code, C lib)</y:NodeLabel>
       </data>
     </edge>
     <edge id="e2" source="n5" target="n1">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="116.0" sy="-32.0" tx="-17.0" ty="-324.0"/>

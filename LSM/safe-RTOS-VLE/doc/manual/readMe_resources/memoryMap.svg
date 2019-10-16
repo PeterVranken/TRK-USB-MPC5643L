@@ -38,30 +38,30 @@
       <text x="2" xml:space="preserve" y="14.0645" clip-path="url(#clipPath3)" stroke="none">CPU's RAM address space, 0x4000_0000 .. 0x4001_ffff</text>
     </g>
     <g fill="rgb(153,204,255)" text-rendering="geometricPrecision" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke="rgb(153,204,255)">
-      <rect x="-66" width="232" height="42" y="-657" clip-path="url(#clipPath2)" stroke="none"/>
+      <rect x="-66" width="232" height="145.0394" y="-657" clip-path="url(#clipPath2)" stroke="none"/>
     </g>
     <g text-rendering="geometricPrecision" stroke-miterlimit="1.45" stroke-width="2" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke-linecap="butt">
-      <rect fill="none" x="-66" width="232" height="42" y="-657" clip-path="url(#clipPath2)"/>
-      <text x="-14.377" y="-638.6367" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">0xf000_0000 .. 0xffff_ffff</text>
-      <text x="8.9814" y="-623.9355" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">I/O, peripherals</text>
-      <rect fill="none" x="-66" width="232" height="158" y="-615" clip-path="url(#clipPath2)"/>
-      <text x="-11.3711" y="-531.2861" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">Unused address space</text>
+      <rect fill="none" x="-66" width="232" height="145.0394" y="-657" clip-path="url(#clipPath2)"/>
+      <text x="-12.707" y="-587.117" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">0x8ff0_0000 .. 0xffff_ffff</text>
+      <text x="8.9814" y="-572.4158" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">I/O, peripherals</text>
+      <rect fill="none" x="-66" width="232" height="94.4606" y="-511.9606" clip-path="url(#clipPath2)"/>
+      <text x="-11.3711" y="-460.0164" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">Unused address space</text>
     </g>
     <g fill="rgb(153,255,255)" text-rendering="geometricPrecision" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke="rgb(153,255,255)">
-      <rect x="-66" width="232" height="42" y="-457" clip-path="url(#clipPath2)" stroke="none"/>
+      <rect x="-66" width="232" height="42" y="-417.5" clip-path="url(#clipPath2)" stroke="none"/>
     </g>
     <g text-rendering="geometricPrecision" stroke-miterlimit="1.45" stroke-width="2" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke-linecap="butt">
-      <rect fill="none" x="-66" width="232" height="42" y="-457" clip-path="url(#clipPath2)"/>
-      <text x="-15.373" y="-438.6367" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">ld_ramEnd .. 0x4001_ffff</text>
-      <text x="-3.3584" y="-423.9355" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">Unused RAM space</text>
+      <rect fill="none" x="-66" width="232" height="42" y="-417.5" clip-path="url(#clipPath2)"/>
+      <text x="-15.373" y="-399.1367" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">ld_ramEnd .. 0x4001_ffff</text>
+      <text x="-3.3584" y="-384.4355" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">Unused RAM space</text>
     </g>
     <g fill="rgb(153,204,255)" text-rendering="geometricPrecision" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke="rgb(153,204,255)">
-      <rect x="-66" width="232" height="64" y="-415" clip-path="url(#clipPath2)" stroke="none"/>
+      <rect x="-66" width="232" height="64" y="-375" clip-path="url(#clipPath2)" stroke="none"/>
     </g>
     <g text-rendering="geometricPrecision" stroke-miterlimit="1.45" stroke-width="2" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke-linecap="butt">
-      <rect fill="none" x="-66" width="232" height="64" y="-415" clip-path="url(#clipPath2)"/>
-      <text x="-52.7266" y="-385.6367" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">0x4000_0000 - ld_ramEnd-1 (variable)</text>
-      <text x="-34.0469" y="-370.9355" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">RAM space used by application</text>
+      <rect fill="none" x="-66" width="232" height="64" y="-375" clip-path="url(#clipPath2)"/>
+      <text x="-52.7266" y="-345.6367" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">0x4000_0000 - ld_ramEnd-1 (variable)</text>
+      <text x="-34.0469" y="-330.9355" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">RAM space used by application</text>
     </g>
     <g fill="rgb(255,255,204)" text-rendering="geometricPrecision" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke="rgb(255,255,204)">
       <rect x="-100" width="34" height="521" y="-657" clip-path="url(#clipPath2)" stroke="none"/>
@@ -73,8 +73,8 @@
       <text x="2" xml:space="preserve" y="14.0645" clip-path="url(#clipPath4)" stroke="none">CPU's 32 Bit address space, 0x0000_0000 .. 0xffff_ffff</text>
     </g>
     <g text-rendering="geometricPrecision" stroke-miterlimit="1.45" stroke-width="2" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke-linecap="butt">
-      <rect fill="none" x="-66" width="232" height="104" y="-351" clip-path="url(#clipPath2)"/>
-      <text x="-11.3711" y="-294.2861" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">Unused address space</text>
+      <rect fill="none" x="-66" width="232" height="64" y="-311" clip-path="url(#clipPath2)"/>
+      <text x="-11.3711" y="-274.2861" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">Unused address space</text>
     </g>
     <g fill="rgb(153,255,255)" text-rendering="geometricPrecision" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,115,812)" stroke="rgb(153,255,255)">
       <rect x="-66" width="232" height="42" y="-247" clip-path="url(#clipPath2)" stroke="none"/>
@@ -217,9 +217,9 @@
       <rect fill="none" x="313" width="232" height="42" y="-623" clip-path="url(#clipPath2)"/>
       <text x="328.9248" y="-604.6367" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">ld_sdata2P4End .. ld_sdata2P3End-1</text>
       <text x="365.9619" y="-589.9355" clip-path="url(#clipPath2)" font-family="sans-serif" stroke="none" stroke-width="1" xml:space="preserve">*.sdata2.P3, *.sbss2.P3</text>
-      <path fill="none" d="M166 -457 L278.9862 -796.4586" stroke-width="1" clip-path="url(#clipPath2)"/>
-      <path fill="none" stroke-dasharray="0,8" d="M166 -415 L278.9862 -720.4627" stroke-dashoffset="2" clip-path="url(#clipPath2)" stroke-linecap="round"/>
-      <path fill="none" d="M166 -351 L279 3.5" stroke-width="1" clip-path="url(#clipPath2)"/>
+      <path fill="none" d="M166 -417.5 L278.9862 -796.4537" stroke-width="1" clip-path="url(#clipPath2)"/>
+      <path fill="none" stroke-dasharray="0,8" d="M166 -375 L278.9862 -720.4578" stroke-dashoffset="2" clip-path="url(#clipPath2)" stroke-linecap="round"/>
+      <path fill="none" d="M166 -311 L279 3.5" stroke-width="1" clip-path="url(#clipPath2)"/>
     </g>
   </g>
 </svg>
