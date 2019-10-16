@@ -297,244 +297,244 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;<span class="keyword">extern</span> uint32_t <a class="code" href="rtos_8h.html#a445845eb4a4fd8af883abc9a7f84ece2">rtos_suspendAllInterruptsByPriority</a>(uint32_t suspendUpToThisPriority);</div>
 <div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160; </div>
 <div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;</div>
-<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160;<span class="keyword">extern</span> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos_resumeAllInterruptsByPriority</a>(uint32_t resumeDownToThisPriority);</div>
-<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160;</div>
+<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160;<span class="keyword">extern</span> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos_resumeAllInterruptsByPriority</a>(uint32_t resumeDownToThisPriority);</div>
 <div class="line"><a name="l00449"></a><span class="lineno">  449</span>&#160;</div>
-<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160;uint32_t <a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(uint32_t idxSysCall, ...);</div>
-<div class="line"><a name="l00467"></a><span class="lineno">  467</span>&#160;</div>
+<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160;</div>
+<div class="line"><a name="l00467"></a><span class="lineno">  467</span>&#160;uint32_t <a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(uint32_t idxSysCall, ...);</div>
 <div class="line"><a name="l00468"></a><span class="lineno">  468</span>&#160;</div>
-<div class="line"><a name="l00470"></a><span class="lineno">  470</span>&#160;<span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos_checkUserCodeWritePtr</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID, <span class="keyword">const</span> <span class="keywordtype">void</span> *address, <span class="keywordtype">size_t</span> noBytes);</div>
-<div class="line"><a name="l00471"></a><span class="lineno">  471</span>&#160;</div>
-<div class="line"><a name="l00478"></a><span class="lineno">  478</span>&#160;_Noreturn <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a42156b46c1f83c80cd7a1630d91e12cc">rtos_osSystemCallBadArgument</a>(<span class="keywordtype">void</span>);</div>
-<div class="line"><a name="l00479"></a><span class="lineno">  479</span>&#160;</div>
+<div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160;</div>
+<div class="line"><a name="l00471"></a><span class="lineno">  471</span>&#160;<span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos_checkUserCodeWritePtr</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID, <span class="keyword">const</span> <span class="keywordtype">void</span> *address, <span class="keywordtype">size_t</span> noBytes);</div>
+<div class="line"><a name="l00472"></a><span class="lineno">  472</span>&#160;</div>
+<div class="line"><a name="l00479"></a><span class="lineno">  479</span>&#160;_Noreturn <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a42156b46c1f83c80cd7a1630d91e12cc">rtos_osSystemCallBadArgument</a>(<span class="keywordtype">void</span>);</div>
 <div class="line"><a name="l00480"></a><span class="lineno">  480</span>&#160;</div>
-<div class="line"><a name="l00482"></a><span class="lineno">  482</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos_8h.html#a5f63a85fcf6b79022d8039ae974aba96">rtos_getNoActivationLoss</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent);</div>
-<div class="line"><a name="l00483"></a><span class="lineno">  483</span>&#160;</div>
-<div class="line"><a name="l00485"></a><span class="lineno">  485</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos_8h.html#ab0f1e1a247f858577c1d9d04e4a4331c">rtos_getNoTotalTaskFailure</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID);</div>
-<div class="line"><a name="l00486"></a><span class="lineno">  486</span>&#160;</div>
-<div class="line"><a name="l00488"></a><span class="lineno">  488</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos_8h.html#abb25bad5cf1976808e7acb79c30290bd">rtos_getNoTaskFailure</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> kindOfErr);</div>
-<div class="line"><a name="l00489"></a><span class="lineno">  489</span>&#160;</div>
-<div class="line"><a name="l00491"></a><span class="lineno">  491</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID);</div>
-<div class="line"><a name="l00492"></a><span class="lineno">  492</span>&#160;</div>
-<div class="line"><a name="l00494"></a><span class="lineno">  494</span>&#160;<span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_osSuspendProcess</a>(uint32_t PID);</div>
-<div class="line"><a name="l00495"></a><span class="lineno">  495</span>&#160;</div>
-<div class="line"><a name="l00497"></a><span class="lineno">  497</span>&#160;<span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#a63296923146f8dff5b8754ca1c6003dc">rtos_isProcessSuspended</a>(uint32_t PID);</div>
-<div class="line"><a name="l00498"></a><span class="lineno">  498</span>&#160;</div>
+<div class="line"><a name="l00481"></a><span class="lineno">  481</span>&#160;</div>
+<div class="line"><a name="l00483"></a><span class="lineno">  483</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos_8h.html#a5f63a85fcf6b79022d8039ae974aba96">rtos_getNoActivationLoss</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent);</div>
+<div class="line"><a name="l00484"></a><span class="lineno">  484</span>&#160;</div>
+<div class="line"><a name="l00486"></a><span class="lineno">  486</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos_8h.html#ab0f1e1a247f858577c1d9d04e4a4331c">rtos_getNoTotalTaskFailure</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID);</div>
+<div class="line"><a name="l00487"></a><span class="lineno">  487</span>&#160;</div>
+<div class="line"><a name="l00489"></a><span class="lineno">  489</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos_8h.html#abb25bad5cf1976808e7acb79c30290bd">rtos_getNoTaskFailure</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> kindOfErr);</div>
+<div class="line"><a name="l00490"></a><span class="lineno">  490</span>&#160;</div>
+<div class="line"><a name="l00492"></a><span class="lineno">  492</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID);</div>
+<div class="line"><a name="l00493"></a><span class="lineno">  493</span>&#160;</div>
+<div class="line"><a name="l00495"></a><span class="lineno">  495</span>&#160;<span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_osSuspendProcess</a>(uint32_t PID);</div>
+<div class="line"><a name="l00496"></a><span class="lineno">  496</span>&#160;</div>
+<div class="line"><a name="l00498"></a><span class="lineno">  498</span>&#160;<span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#a63296923146f8dff5b8754ca1c6003dc">rtos_isProcessSuspended</a>(uint32_t PID);</div>
 <div class="line"><a name="l00499"></a><span class="lineno">  499</span>&#160;</div>
-<div class="line"><a name="l00500"></a><span class="lineno">  500</span>&#160;<span class="comment">/*</span></div>
-<div class="line"><a name="l00501"></a><span class="lineno">  501</span>&#160;<span class="comment"> * Inline functions</span></div>
-<div class="line"><a name="l00502"></a><span class="lineno">  502</span>&#160;<span class="comment"> */</span></div>
-<div class="line"><a name="l00503"></a><span class="lineno">  503</span>&#160;</div>
-<div class="line"><a name="l00526"></a><span class="lineno"><a class="line" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">  526</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> int32_t <a class="code" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask</a>( <span class="keyword">const</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig</div>
-<div class="line"><a name="l00527"></a><span class="lineno">  527</span>&#160;                                    , uintptr_t taskParam</div>
-<div class="line"><a name="l00528"></a><span class="lineno">  528</span>&#160;                                    )</div>
-<div class="line"><a name="l00529"></a><span class="lineno">  529</span>&#160;{</div>
-<div class="line"><a name="l00530"></a><span class="lineno">  530</span>&#160;    <span class="comment">/* The function is assembler implemented, the C function is just a wrapper for</span></div>
-<div class="line"><a name="l00531"></a><span class="lineno">  531</span>&#160;<span class="comment">       convenient calling within the expected namespace. Direct calling of the assembly</span></div>
-<div class="line"><a name="l00532"></a><span class="lineno">  532</span>&#160;<span class="comment">       code function is unwanted because of the name: In the assembler module the name &quot;run</span></div>
-<div class="line"><a name="l00533"></a><span class="lineno">  533</span>&#160;<span class="comment">       user task&quot; makes sense but for the user of the RTOS it doesn&#39;t: To him there is no</span></div>
-<div class="line"><a name="l00534"></a><span class="lineno">  534</span>&#160;<span class="comment">       distinction of starting either OS or user tasks, all tasks he knows are &quot;user</span></div>
-<div class="line"><a name="l00535"></a><span class="lineno">  535</span>&#160;<span class="comment">       tasks&quot;. */</span></div>
-<div class="line"><a name="l00536"></a><span class="lineno">  536</span>&#160;    <span class="keyword">extern</span> int32_t rtos_osRunUserTask(<span class="keyword">const</span> <span class="keyword">struct</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *, uint32_t);</div>
-<div class="line"><a name="l00537"></a><span class="lineno">  537</span>&#160;    <span class="keywordflow">return</span> rtos_osRunUserTask(pUserTaskConfig, taskParam);</div>
-<div class="line"><a name="l00538"></a><span class="lineno">  538</span>&#160;</div>
-<div class="line"><a name="l00539"></a><span class="lineno">  539</span>&#160;} <span class="comment">/* End of rtos_osRunTask */</span></div>
-<div class="line"><a name="l00540"></a><span class="lineno">  540</span>&#160;</div>
-<div class="line"><a name="l00541"></a><span class="lineno">  541</span>&#160;</div>
-<div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;</div>
-<div class="line"><a name="l00569"></a><span class="lineno"><a class="line" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">  569</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> int32_t <a class="code" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask</a>( <span class="keyword">const</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig</div>
-<div class="line"><a name="l00570"></a><span class="lineno">  570</span>&#160;                                  , uintptr_t taskParam</div>
-<div class="line"><a name="l00571"></a><span class="lineno">  571</span>&#160;                                  )</div>
-<div class="line"><a name="l00572"></a><span class="lineno">  572</span>&#160;{</div>
-<div class="line"><a name="l00573"></a><span class="lineno">  573</span>&#160;<span class="preprocessor">    #define RTOS_IDX_SC_RUN_TASK    4</span></div>
-<div class="line"><a name="l00574"></a><span class="lineno">  574</span>&#160;    <span class="keywordflow">return</span> (int32_t)<a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(RTOS_IDX_SC_RUN_TASK, pUserTaskConfig, taskParam);</div>
-<div class="line"><a name="l00575"></a><span class="lineno">  575</span>&#160;</div>
-<div class="line"><a name="l00576"></a><span class="lineno">  576</span>&#160;} <span class="comment">/* End of rtos_runTask */</span></div>
-<div class="line"><a name="l00577"></a><span class="lineno">  577</span>&#160;</div>
-<div class="line"><a name="l00578"></a><span class="lineno">  578</span>&#160;</div>
-<div class="line"><a name="l00579"></a><span class="lineno">  579</span>&#160;</div>
-<div class="line"><a name="l00602"></a><span class="lineno"><a class="line" href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">  602</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> _Noreturn <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">rtos_terminateTask</a>(int32_t taskReturnValue)</div>
-<div class="line"><a name="l00603"></a><span class="lineno">  603</span>&#160;{</div>
-<div class="line"><a name="l00604"></a><span class="lineno">  604</span>&#160;    <span class="keyword">extern</span> _Noreturn <span class="keywordtype">void</span> rtos_terminateUserTask(int32_t);</div>
-<div class="line"><a name="l00605"></a><span class="lineno">  605</span>&#160;    rtos_terminateUserTask(taskReturnValue);</div>
-<div class="line"><a name="l00606"></a><span class="lineno">  606</span>&#160;</div>
-<div class="line"><a name="l00607"></a><span class="lineno">  607</span>&#160;} <span class="comment">/* End of rtos_terminateTask */</span></div>
-<div class="line"><a name="l00608"></a><span class="lineno">  608</span>&#160;</div>
-<div class="line"><a name="l00609"></a><span class="lineno">  609</span>&#160;</div>
-<div class="line"><a name="l00610"></a><span class="lineno">  610</span>&#160;</div>
-<div class="line"><a name="l00620"></a><span class="lineno"><a class="line" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">  620</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>(<span class="keywordtype">void</span>)</div>
-<div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;{</div>
-<div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrteei instruction forms the memory</span></div>
-<div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160;<span class="comment">       barrier, which ensures that all memory operations before the now entered critical</span></div>
-<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;<span class="comment">       section are completed before we enter (see core RM, 4.6.1, p. 151). The &quot;memory&quot;</span></div>
-<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;<span class="comment">       constraint ensures that the compiler won&#39;t reorder instructions from behind the</span></div>
-<div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160;<span class="comment">       wrteei to before it. */</span></div>
-<div class="line"><a name="l00627"></a><span class="lineno">  627</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> ( <span class="comment">/* AssemblerTemplate */</span></div>
-<div class="line"><a name="l00628"></a><span class="lineno">  628</span>&#160;                   <span class="stringliteral">&quot;wrteei 0\n&quot;</span></div>
-<div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160;                 : <span class="comment">/* OutputOperands */</span></div>
-<div class="line"><a name="l00630"></a><span class="lineno">  630</span>&#160;                 : <span class="comment">/* InputOperands */</span></div>
-<div class="line"><a name="l00631"></a><span class="lineno">  631</span>&#160;                 : <span class="comment">/* Clobbers */</span> <span class="stringliteral">&quot;memory&quot;</span></div>
-<div class="line"><a name="l00632"></a><span class="lineno">  632</span>&#160;                 );</div>
-<div class="line"><a name="l00633"></a><span class="lineno">  633</span>&#160;} <span class="comment">/* End of rtos_osSuspendAllInterrupts */</span></div>
-<div class="line"><a name="l00634"></a><span class="lineno">  634</span>&#160;</div>
-<div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160;</div>
-<div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160;</div>
-<div class="line"><a name="l00644"></a><span class="lineno"><a class="line" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">  644</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>(<span class="keywordtype">void</span>)</div>
-<div class="line"><a name="l00645"></a><span class="lineno">  645</span>&#160;{</div>
-<div class="line"><a name="l00646"></a><span class="lineno">  646</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrteei instruction forms the memory</span></div>
-<div class="line"><a name="l00647"></a><span class="lineno">  647</span>&#160;<span class="comment">       barrier, which ensures that all memory operations inside the now left critical</span></div>
-<div class="line"><a name="l00648"></a><span class="lineno">  648</span>&#160;<span class="comment">       section are completed before we leave (see core RM, 4.6.1, p. 151). The &quot;memory&quot;</span></div>
-<div class="line"><a name="l00649"></a><span class="lineno">  649</span>&#160;<span class="comment">       constraint ensures that the compiler won&#39;t reorder instructions from before the</span></div>
-<div class="line"><a name="l00650"></a><span class="lineno">  650</span>&#160;<span class="comment">       wrteei to behind it. */</span></div>
-<div class="line"><a name="l00651"></a><span class="lineno">  651</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> ( <span class="comment">/* AssemblerTemplate */</span></div>
-<div class="line"><a name="l00652"></a><span class="lineno">  652</span>&#160;                   <span class="stringliteral">&quot;wrteei 1\n&quot;</span></div>
-<div class="line"><a name="l00653"></a><span class="lineno">  653</span>&#160;                 : <span class="comment">/* OutputOperands */</span></div>
-<div class="line"><a name="l00654"></a><span class="lineno">  654</span>&#160;                 : <span class="comment">/* InputOperands */</span></div>
-<div class="line"><a name="l00655"></a><span class="lineno">  655</span>&#160;                 : <span class="comment">/* Clobbers */</span> <span class="stringliteral">&quot;memory&quot;</span></div>
-<div class="line"><a name="l00656"></a><span class="lineno">  656</span>&#160;                 );</div>
-<div class="line"><a name="l00657"></a><span class="lineno">  657</span>&#160;} <span class="comment">/* End of rtos_osResumeAllInterrupts */</span></div>
-<div class="line"><a name="l00658"></a><span class="lineno">  658</span>&#160;</div>
-<div class="line"><a name="l00659"></a><span class="lineno">  659</span>&#160;</div>
-<div class="line"><a name="l00660"></a><span class="lineno">  660</span>&#160;</div>
-<div class="line"><a name="l00676"></a><span class="lineno"><a class="line" href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">  676</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> uint32_t <a class="code" href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">rtos_osEnterCriticalSection</a>(<span class="keywordtype">void</span>)</div>
-<div class="line"><a name="l00677"></a><span class="lineno">  677</span>&#160;{</div>
-<div class="line"><a name="l00678"></a><span class="lineno">  678</span>&#160;    <span class="comment">/* The completion synchronizing character of the mfmsr instruction forms the memory</span></div>
-<div class="line"><a name="l00679"></a><span class="lineno">  679</span>&#160;<span class="comment">       barrier, which ensures that all memory operations before the now entered critical</span></div>
-<div class="line"><a name="l00680"></a><span class="lineno">  680</span>&#160;<span class="comment">       section are completed before we enter (see core RM, 4.6.1, p. 151). The &quot;memory&quot;</span></div>
-<div class="line"><a name="l00681"></a><span class="lineno">  681</span>&#160;<span class="comment">       constraint ensures that the compiler won&#39;t reorder instructions from behind the</span></div>
-<div class="line"><a name="l00682"></a><span class="lineno">  682</span>&#160;<span class="comment">       wrteei to before it. */</span></div>
-<div class="line"><a name="l00683"></a><span class="lineno">  683</span>&#160;    uint32_t msr;</div>
-<div class="line"><a name="l00684"></a><span class="lineno">  684</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> ( <span class="comment">/* AssemblerTemplate */</span></div>
-<div class="line"><a name="l00685"></a><span class="lineno">  685</span>&#160;                   <span class="stringliteral">&quot;mfmsr %0\n\t&quot;</span></div>
-<div class="line"><a name="l00686"></a><span class="lineno">  686</span>&#160;                   <span class="stringliteral">&quot;wrteei 0\n\t&quot;</span></div>
-<div class="line"><a name="l00687"></a><span class="lineno">  687</span>&#160;                 : <span class="comment">/* OutputOperands */</span> <span class="stringliteral">&quot;=r&quot;</span> (msr)</div>
-<div class="line"><a name="l00688"></a><span class="lineno">  688</span>&#160;                 : <span class="comment">/* InputOperands */</span></div>
-<div class="line"><a name="l00689"></a><span class="lineno">  689</span>&#160;                 : <span class="comment">/* Clobbers */</span> <span class="stringliteral">&quot;memory&quot;</span></div>
-<div class="line"><a name="l00690"></a><span class="lineno">  690</span>&#160;                 );</div>
-<div class="line"><a name="l00691"></a><span class="lineno">  691</span>&#160;    <span class="keywordflow">return</span> msr;</div>
-<div class="line"><a name="l00692"></a><span class="lineno">  692</span>&#160;</div>
-<div class="line"><a name="l00693"></a><span class="lineno">  693</span>&#160;} <span class="comment">/* End of rtos_osEnterCriticalSection */</span></div>
-<div class="line"><a name="l00694"></a><span class="lineno">  694</span>&#160;</div>
-<div class="line"><a name="l00695"></a><span class="lineno">  695</span>&#160;</div>
-<div class="line"><a name="l00696"></a><span class="lineno">  696</span>&#160;</div>
-<div class="line"><a name="l00708"></a><span class="lineno"><a class="line" href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">  708</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">rtos_osLeaveCriticalSection</a>(uint32_t msr)</div>
-<div class="line"><a name="l00709"></a><span class="lineno">  709</span>&#160;{</div>
-<div class="line"><a name="l00710"></a><span class="lineno">  710</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrtee instruction forms the memory</span></div>
-<div class="line"><a name="l00711"></a><span class="lineno">  711</span>&#160;<span class="comment">       barrier, which ensures that all memory operations inside the now left critical</span></div>
-<div class="line"><a name="l00712"></a><span class="lineno">  712</span>&#160;<span class="comment">       section are completed before we leave (see core RM, 4.6.1, p. 151). The &quot;memory&quot;</span></div>
-<div class="line"><a name="l00713"></a><span class="lineno">  713</span>&#160;<span class="comment">       constraint ensures that the compiler won&#39;t reorder instructions from before the</span></div>
-<div class="line"><a name="l00714"></a><span class="lineno">  714</span>&#160;<span class="comment">       wrtee to behind it. */</span></div>
-<div class="line"><a name="l00715"></a><span class="lineno">  715</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> ( <span class="comment">/* AssemblerTemplate */</span></div>
-<div class="line"><a name="l00716"></a><span class="lineno">  716</span>&#160;                   <span class="stringliteral">&quot;wrtee %0\n&quot;</span></div>
-<div class="line"><a name="l00717"></a><span class="lineno">  717</span>&#160;                 : <span class="comment">/* OutputOperands */</span></div>
-<div class="line"><a name="l00718"></a><span class="lineno">  718</span>&#160;                 : <span class="comment">/* InputOperands */</span> <span class="stringliteral">&quot;r&quot;</span> (msr)</div>
-<div class="line"><a name="l00719"></a><span class="lineno">  719</span>&#160;                 : <span class="comment">/* Clobbers */</span> <span class="stringliteral">&quot;memory&quot;</span></div>
-<div class="line"><a name="l00720"></a><span class="lineno">  720</span>&#160;                 );</div>
-<div class="line"><a name="l00721"></a><span class="lineno">  721</span>&#160;} <span class="comment">/* End of rtos_osLeaveCriticalSection */</span></div>
-<div class="line"><a name="l00722"></a><span class="lineno">  722</span>&#160;</div>
-<div class="line"><a name="l00723"></a><span class="lineno">  723</span>&#160;</div>
-<div class="line"><a name="l00724"></a><span class="lineno">  724</span>&#160;</div>
-<div class="line"><a name="l00788"></a><span class="lineno"><a class="line" href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">  788</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> uint32_t <a class="code" href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">rtos_osSuspendAllInterruptsByPriority</a>(uint32_t suspendUpToThisPriority)</div>
-<div class="line"><a name="l00789"></a><span class="lineno">  789</span>&#160;{</div>
-<div class="line"><a name="l00790"></a><span class="lineno">  790</span>&#160;    <span class="comment">/* All priorities are in the range 0..15. Everything else points to an application</span></div>
-<div class="line"><a name="l00791"></a><span class="lineno">  791</span>&#160;<span class="comment">       error even if the hardware wouldn&#39;t mind. */</span></div>
-<div class="line"><a name="l00792"></a><span class="lineno">  792</span>&#160;    assert((suspendUpToThisPriority &amp; ~0xfu) == 0);</div>
-<div class="line"><a name="l00793"></a><span class="lineno">  793</span>&#160;</div>
-<div class="line"><a name="l00794"></a><span class="lineno">  794</span>&#160;    <span class="comment">/* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority</span></div>
-<div class="line"><a name="l00795"></a><span class="lineno">  795</span>&#160;<span class="comment">       in the INTC should be done under global interrupt lock. */</span></div>
-<div class="line"><a name="l00796"></a><span class="lineno">  796</span>&#160;    <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>();</div>
-<div class="line"><a name="l00797"></a><span class="lineno">  797</span>&#160;    <span class="keyword">const</span> uint32_t priorityLevelSoFar = INTC.CPR_PRC0.R;</div>
-<div class="line"><a name="l00798"></a><span class="lineno">  798</span>&#160;</div>
-<div class="line"><a name="l00799"></a><span class="lineno">  799</span>&#160;    <span class="comment">/* It is useless and a waste of CPU but not a severe error to let this function set the</span></div>
-<div class="line"><a name="l00800"></a><span class="lineno">  800</span>&#160;<span class="comment">       same priority level we already have.</span></div>
-<div class="line"><a name="l00801"></a><span class="lineno">  801</span>&#160;<span class="comment">         It leads to immediate failure of the RTOS if we lower the level; however, from the</span></div>
-<div class="line"><a name="l00802"></a><span class="lineno">  802</span>&#160;<span class="comment">       perspective of the application code it is not necessarily an error to do so: If an</span></div>
-<div class="line"><a name="l00803"></a><span class="lineno">  803</span>&#160;<span class="comment">       application is organized in OSEK/VDX like resources it may be stringent (not</span></div>
-<div class="line"><a name="l00804"></a><span class="lineno">  804</span>&#160;<span class="comment">       optimal) to acquire different resources before an operation on them is started. These</span></div>
-<div class="line"><a name="l00805"></a><span class="lineno">  805</span>&#160;<span class="comment">       resources may be mapped onto different priority ceilings and the application may use</span></div>
-<div class="line"><a name="l00806"></a><span class="lineno">  806</span>&#160;<span class="comment">       nested calls of GetResource to acquire all of them. We must not force the</span></div>
-<div class="line"><a name="l00807"></a><span class="lineno">  807</span>&#160;<span class="comment">       application code to order the calls in order of increasing priority ceiling -- this</span></div>
-<div class="line"><a name="l00808"></a><span class="lineno">  808</span>&#160;<span class="comment">       will be untransparent to the application.</span></div>
-<div class="line"><a name="l00809"></a><span class="lineno">  809</span>&#160;<span class="comment">         These considerations leads to different strategies, and all of them are justified:</span></div>
-<div class="line"><a name="l00810"></a><span class="lineno">  810</span>&#160;<span class="comment">         To force the application be optimal in terms of CPU consumption, we would place an</span></div>
-<div class="line"><a name="l00811"></a><span class="lineno">  811</span>&#160;<span class="comment">       assertion: assert(suspendUpToThisPriority &gt; priorityLevelSoFar);</span></div>
-<div class="line"><a name="l00812"></a><span class="lineno">  812</span>&#160;<span class="comment">         To be relaxed about setting the same priority ceiling, we would place another</span></div>
-<div class="line"><a name="l00813"></a><span class="lineno">  813</span>&#160;<span class="comment">       assertion: assert(suspendUpToThisPriority &gt;= priorityLevelSoFar);</span></div>
-<div class="line"><a name="l00814"></a><span class="lineno">  814</span>&#160;<span class="comment">         If we want to build an OSEK/VDX like GetResource on top of this function, we</span></div>
-<div class="line"><a name="l00815"></a><span class="lineno">  815</span>&#160;<span class="comment">       should place a run-time condition: if(suspendUpToThisPriority &gt; priorityLevelSoFar) */</span></div>
-<div class="line"><a name="l00816"></a><span class="lineno">  816</span>&#160;    <span class="comment">//assert(suspendUpToThisPriority &gt; priorityLevelSoFar);</span></div>
-<div class="line"><a name="l00817"></a><span class="lineno">  817</span>&#160;    <span class="comment">//assert(suspendUpToThisPriority &gt;= priorityLevelSoFar);</span></div>
-<div class="line"><a name="l00818"></a><span class="lineno">  818</span>&#160;    <span class="keywordflow">if</span>(suspendUpToThisPriority &gt; priorityLevelSoFar)</div>
-<div class="line"><a name="l00819"></a><span class="lineno">  819</span>&#160;        INTC.CPR_PRC0.R = suspendUpToThisPriority;</div>
-<div class="line"><a name="l00820"></a><span class="lineno">  820</span>&#160;</div>
-<div class="line"><a name="l00821"></a><span class="lineno">  821</span>&#160;    <span class="comment">/* Leave the critical section. */</span></div>
-<div class="line"><a name="l00822"></a><span class="lineno">  822</span>&#160;    <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>();</div>
-<div class="line"><a name="l00823"></a><span class="lineno">  823</span>&#160;</div>
-<div class="line"><a name="l00824"></a><span class="lineno">  824</span>&#160;    <span class="comment">/* Note, the next interrupt can still be a last one of priority less than or equal to</span></div>
-<div class="line"><a name="l00825"></a><span class="lineno">  825</span>&#160;<span class="comment">       suspendUpToThisPriority. This happens occasionally when the interrupt has asserted,</span></div>
-<div class="line"><a name="l00826"></a><span class="lineno">  826</span>&#160;<span class="comment">       while we were inside the critical section. Incrementing CPR does not un-assert an</span></div>
-<div class="line"><a name="l00827"></a><span class="lineno">  827</span>&#160;<span class="comment">       already asserted interrupt. The isync instruction ensures that this last interrupt</span></div>
-<div class="line"><a name="l00828"></a><span class="lineno">  828</span>&#160;<span class="comment">       has completed prior to the execution of the first code inside the critical section.</span></div>
-<div class="line"><a name="l00829"></a><span class="lineno">  829</span>&#160;<span class="comment">       See https://community.nxp.com/message/993795 for more. */</span></div>
-<div class="line"><a name="l00830"></a><span class="lineno">  830</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> (</div>
-<div class="line"><a name="l00831"></a><span class="lineno">  831</span>&#160;<span class="preprocessor">#ifdef __VLE__</span></div>
-<div class="line"><a name="l00832"></a><span class="lineno">  832</span>&#160;                   <span class="stringliteral">&quot;se_isync\n&quot;</span></div>
-<div class="line"><a name="l00833"></a><span class="lineno">  833</span>&#160;<span class="preprocessor">#else</span></div>
-<div class="line"><a name="l00834"></a><span class="lineno">  834</span>&#160;                   <span class="stringliteral">&quot;isync\n&quot;</span></div>
-<div class="line"><a name="l00835"></a><span class="lineno">  835</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00836"></a><span class="lineno">  836</span>&#160;                   ::: <span class="stringliteral">&quot;memory&quot;</span></div>
-<div class="line"><a name="l00837"></a><span class="lineno">  837</span>&#160;                 );</div>
-<div class="line"><a name="l00838"></a><span class="lineno">  838</span>&#160;</div>
-<div class="line"><a name="l00839"></a><span class="lineno">  839</span>&#160;    <span class="keywordflow">return</span> priorityLevelSoFar;</div>
-<div class="line"><a name="l00840"></a><span class="lineno">  840</span>&#160;</div>
-<div class="line"><a name="l00841"></a><span class="lineno">  841</span>&#160;} <span class="comment">/* End of rtos_osSuspendAllInterruptsByPriority */</span></div>
-<div class="line"><a name="l00842"></a><span class="lineno">  842</span>&#160;</div>
-<div class="line"><a name="l00843"></a><span class="lineno">  843</span>&#160;</div>
-<div class="line"><a name="l00844"></a><span class="lineno">  844</span>&#160;</div>
-<div class="line"><a name="l00871"></a><span class="lineno"><a class="line" href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">  871</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">rtos_osResumeAllInterruptsByPriority</a>(uint32_t resumeDownToThisPriority)</div>
-<div class="line"><a name="l00872"></a><span class="lineno">  872</span>&#160;{</div>
-<div class="line"><a name="l00873"></a><span class="lineno">  873</span>&#160;    <span class="comment">/* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority</span></div>
-<div class="line"><a name="l00874"></a><span class="lineno">  874</span>&#160;<span class="comment">       in the INTC should be done under global interrupt lock. */</span></div>
-<div class="line"><a name="l00875"></a><span class="lineno">  875</span>&#160;    <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>();</div>
-<div class="line"><a name="l00876"></a><span class="lineno">  876</span>&#160;    INTC.CPR_PRC0.R = resumeDownToThisPriority;</div>
-<div class="line"><a name="l00877"></a><span class="lineno">  877</span>&#160;    <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>();</div>
-<div class="line"><a name="l00878"></a><span class="lineno">  878</span>&#160;</div>
-<div class="line"><a name="l00879"></a><span class="lineno">  879</span>&#160;} <span class="comment">/* End of rtos_osResumeAllInterruptsByPriority */</span></div>
-<div class="line"><a name="l00880"></a><span class="lineno">  880</span>&#160;</div>
-<div class="line"><a name="l00881"></a><span class="lineno">  881</span>&#160;</div>
-<div class="line"><a name="l00882"></a><span class="lineno">  882</span>&#160;</div>
-<div class="line"><a name="l00883"></a><span class="lineno">  883</span>&#160;</div>
-<div class="line"><a name="l00884"></a><span class="lineno">  884</span>&#160;</div>
-<div class="line"><a name="l00885"></a><span class="lineno">  885</span>&#160;</div>
-<div class="line"><a name="l00925"></a><span class="lineno"><a class="line" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">  925</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent)</div>
-<div class="line"><a name="l00926"></a><span class="lineno">  926</span>&#160;{</div>
-<div class="line"><a name="l00927"></a><span class="lineno">  927</span>&#160;<span class="preprocessor">    #define RTOS_IDX_SC_TRIGGER_EVENT   3</span></div>
-<div class="line"><a name="l00928"></a><span class="lineno">  928</span>&#160;    <span class="keywordflow">return</span> (<span class="keywordtype">bool</span>)<a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(RTOS_IDX_SC_TRIGGER_EVENT, idEvent);</div>
-<div class="line"><a name="l00929"></a><span class="lineno">  929</span>&#160;</div>
-<div class="line"><a name="l00930"></a><span class="lineno">  930</span>&#160;} <span class="comment">/* End of rtos_triggerEvent */</span></div>
-<div class="line"><a name="l00931"></a><span class="lineno">  931</span>&#160;</div>
-<div class="line"><a name="l00932"></a><span class="lineno">  932</span>&#160;</div>
-<div class="line"><a name="l00964"></a><span class="lineno"><a class="line" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">  964</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr</a>(<span class="keyword">const</span> <span class="keywordtype">void</span> *address, <span class="keywordtype">size_t</span> noBytes)</div>
-<div class="line"><a name="l00965"></a><span class="lineno">  965</span>&#160;{</div>
-<div class="line"><a name="l00966"></a><span class="lineno">  966</span>&#160;    <span class="keyword">const</span> uint8_t * <span class="keyword">const</span> p = (uint8_t*)address;</div>
-<div class="line"><a name="l00967"></a><span class="lineno">  967</span>&#160;    <span class="keyword">extern</span> uint8_t ld_ramStart[0], ld_ramEnd[0], ld_romStart[0], ld_romEnd[0];</div>
-<div class="line"><a name="l00968"></a><span class="lineno">  968</span>&#160;</div>
-<div class="line"><a name="l00969"></a><span class="lineno">  969</span>&#160;    <span class="keywordflow">return</span> p &gt;= ld_ramStart  &amp;&amp;  p+noBytes &lt;= ld_ramEnd</div>
-<div class="line"><a name="l00970"></a><span class="lineno">  970</span>&#160;           ||  p &gt;= ld_romStart  &amp;&amp;  p+noBytes &lt;= ld_romEnd;</div>
-<div class="line"><a name="l00971"></a><span class="lineno">  971</span>&#160;</div>
-<div class="line"><a name="l00972"></a><span class="lineno">  972</span>&#160;} <span class="comment">/* End of rtos_checkUserCodeReadPtr */</span></div>
-<div class="line"><a name="l00973"></a><span class="lineno">  973</span>&#160;</div>
-<div class="line"><a name="l00974"></a><span class="lineno">  974</span>&#160;</div>
-<div class="line"><a name="l00975"></a><span class="lineno">  975</span>&#160;</div>
-<div class="line"><a name="l00993"></a><span class="lineno"><a class="line" href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">  993</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">rtos_suspendProcess</a>(uint32_t PID)</div>
-<div class="line"><a name="l00994"></a><span class="lineno">  994</span>&#160;{</div>
-<div class="line"><a name="l00995"></a><span class="lineno">  995</span>&#160;<span class="preprocessor">    #define RTOS_IDX_SC_SUSPEND_PROCESS     5</span></div>
-<div class="line"><a name="l00996"></a><span class="lineno">  996</span>&#160;    <a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(RTOS_IDX_SC_SUSPEND_PROCESS, PID);</div>
-<div class="line"><a name="l00997"></a><span class="lineno">  997</span>&#160;</div>
-<div class="line"><a name="l00998"></a><span class="lineno">  998</span>&#160;} <span class="comment">/* End of rtos_suspendProcess */</span></div>
-<div class="line"><a name="l00999"></a><span class="lineno">  999</span>&#160;</div>
-<div class="line"><a name="l01000"></a><span class="lineno"> 1000</span>&#160;</div>
-<div class="line"><a name="l01001"></a><span class="lineno"> 1001</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">/* RTOS_INCLUDED */</span><span class="preprocessor"></span></div>
+<div class="line"><a name="l00500"></a><span class="lineno">  500</span>&#160;</div>
+<div class="line"><a name="l00501"></a><span class="lineno">  501</span>&#160;<span class="comment">/*</span></div>
+<div class="line"><a name="l00502"></a><span class="lineno">  502</span>&#160;<span class="comment"> * Inline functions</span></div>
+<div class="line"><a name="l00503"></a><span class="lineno">  503</span>&#160;<span class="comment"> */</span></div>
+<div class="line"><a name="l00504"></a><span class="lineno">  504</span>&#160;</div>
+<div class="line"><a name="l00534"></a><span class="lineno"><a class="line" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">  534</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> int32_t <a class="code" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask</a>( <span class="keyword">const</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig</div>
+<div class="line"><a name="l00535"></a><span class="lineno">  535</span>&#160;                                    , uintptr_t taskParam</div>
+<div class="line"><a name="l00536"></a><span class="lineno">  536</span>&#160;                                    )</div>
+<div class="line"><a name="l00537"></a><span class="lineno">  537</span>&#160;{</div>
+<div class="line"><a name="l00538"></a><span class="lineno">  538</span>&#160;    <span class="comment">/* The function is assembler implemented, the C function is just a wrapper for</span></div>
+<div class="line"><a name="l00539"></a><span class="lineno">  539</span>&#160;<span class="comment">       convenient calling within the expected namespace. Direct calling of the assembly</span></div>
+<div class="line"><a name="l00540"></a><span class="lineno">  540</span>&#160;<span class="comment">       code function is unwanted because of the name: In the assembler module the name &quot;run</span></div>
+<div class="line"><a name="l00541"></a><span class="lineno">  541</span>&#160;<span class="comment">       user task&quot; makes sense but for the user of the RTOS it doesn&#39;t: To him there is no</span></div>
+<div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;<span class="comment">       distinction of starting either OS or user tasks, all tasks he knows are &quot;user</span></div>
+<div class="line"><a name="l00543"></a><span class="lineno">  543</span>&#160;<span class="comment">       tasks&quot;. */</span></div>
+<div class="line"><a name="l00544"></a><span class="lineno">  544</span>&#160;    <span class="keyword">extern</span> int32_t rtos_osRunUserTask(<span class="keyword">const</span> <span class="keyword">struct</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *, uint32_t);</div>
+<div class="line"><a name="l00545"></a><span class="lineno">  545</span>&#160;    <span class="keywordflow">return</span> rtos_osRunUserTask(pUserTaskConfig, taskParam);</div>
+<div class="line"><a name="l00546"></a><span class="lineno">  546</span>&#160;</div>
+<div class="line"><a name="l00547"></a><span class="lineno">  547</span>&#160;} <span class="comment">/* End of rtos_osRunTask */</span></div>
+<div class="line"><a name="l00548"></a><span class="lineno">  548</span>&#160;</div>
+<div class="line"><a name="l00549"></a><span class="lineno">  549</span>&#160;</div>
+<div class="line"><a name="l00550"></a><span class="lineno">  550</span>&#160;</div>
+<div class="line"><a name="l00577"></a><span class="lineno"><a class="line" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">  577</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> int32_t <a class="code" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask</a>( <span class="keyword">const</span> <a class="code" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig</div>
+<div class="line"><a name="l00578"></a><span class="lineno">  578</span>&#160;                                  , uintptr_t taskParam</div>
+<div class="line"><a name="l00579"></a><span class="lineno">  579</span>&#160;                                  )</div>
+<div class="line"><a name="l00580"></a><span class="lineno">  580</span>&#160;{</div>
+<div class="line"><a name="l00581"></a><span class="lineno">  581</span>&#160;<span class="preprocessor">    #define RTOS_IDX_SC_RUN_TASK    4</span></div>
+<div class="line"><a name="l00582"></a><span class="lineno">  582</span>&#160;    <span class="keywordflow">return</span> (int32_t)<a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(RTOS_IDX_SC_RUN_TASK, pUserTaskConfig, taskParam);</div>
+<div class="line"><a name="l00583"></a><span class="lineno">  583</span>&#160;</div>
+<div class="line"><a name="l00584"></a><span class="lineno">  584</span>&#160;} <span class="comment">/* End of rtos_runTask */</span></div>
+<div class="line"><a name="l00585"></a><span class="lineno">  585</span>&#160;</div>
+<div class="line"><a name="l00586"></a><span class="lineno">  586</span>&#160;</div>
+<div class="line"><a name="l00587"></a><span class="lineno">  587</span>&#160;</div>
+<div class="line"><a name="l00610"></a><span class="lineno"><a class="line" href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">  610</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> _Noreturn <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">rtos_terminateTask</a>(int32_t taskReturnValue)</div>
+<div class="line"><a name="l00611"></a><span class="lineno">  611</span>&#160;{</div>
+<div class="line"><a name="l00612"></a><span class="lineno">  612</span>&#160;    <span class="keyword">extern</span> _Noreturn <span class="keywordtype">void</span> rtos_terminateUserTask(int32_t);</div>
+<div class="line"><a name="l00613"></a><span class="lineno">  613</span>&#160;    rtos_terminateUserTask(taskReturnValue);</div>
+<div class="line"><a name="l00614"></a><span class="lineno">  614</span>&#160;</div>
+<div class="line"><a name="l00615"></a><span class="lineno">  615</span>&#160;} <span class="comment">/* End of rtos_terminateTask */</span></div>
+<div class="line"><a name="l00616"></a><span class="lineno">  616</span>&#160;</div>
+<div class="line"><a name="l00617"></a><span class="lineno">  617</span>&#160;</div>
+<div class="line"><a name="l00618"></a><span class="lineno">  618</span>&#160;</div>
+<div class="line"><a name="l00628"></a><span class="lineno"><a class="line" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">  628</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>(<span class="keywordtype">void</span>)</div>
+<div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160;{</div>
+<div class="line"><a name="l00630"></a><span class="lineno">  630</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrteei instruction forms the memory</span></div>
+<div class="line"><a name="l00631"></a><span class="lineno">  631</span>&#160;<span class="comment">       barrier, which ensures that all memory operations before the now entered critical</span></div>
+<div class="line"><a name="l00632"></a><span class="lineno">  632</span>&#160;<span class="comment">       section are completed before we enter (see core RM, 4.6.1, p. 151). The &quot;memory&quot;</span></div>
+<div class="line"><a name="l00633"></a><span class="lineno">  633</span>&#160;<span class="comment">       constraint ensures that the compiler won&#39;t reorder instructions from behind the</span></div>
+<div class="line"><a name="l00634"></a><span class="lineno">  634</span>&#160;<span class="comment">       wrteei to before it. */</span></div>
+<div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> ( <span class="comment">/* AssemblerTemplate */</span></div>
+<div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160;                   <span class="stringliteral">&quot;wrteei 0\n&quot;</span></div>
+<div class="line"><a name="l00637"></a><span class="lineno">  637</span>&#160;                 : <span class="comment">/* OutputOperands */</span></div>
+<div class="line"><a name="l00638"></a><span class="lineno">  638</span>&#160;                 : <span class="comment">/* InputOperands */</span></div>
+<div class="line"><a name="l00639"></a><span class="lineno">  639</span>&#160;                 : <span class="comment">/* Clobbers */</span> <span class="stringliteral">&quot;memory&quot;</span></div>
+<div class="line"><a name="l00640"></a><span class="lineno">  640</span>&#160;                 );</div>
+<div class="line"><a name="l00641"></a><span class="lineno">  641</span>&#160;} <span class="comment">/* End of rtos_osSuspendAllInterrupts */</span></div>
+<div class="line"><a name="l00642"></a><span class="lineno">  642</span>&#160;</div>
+<div class="line"><a name="l00643"></a><span class="lineno">  643</span>&#160;</div>
+<div class="line"><a name="l00644"></a><span class="lineno">  644</span>&#160;</div>
+<div class="line"><a name="l00652"></a><span class="lineno"><a class="line" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">  652</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>(<span class="keywordtype">void</span>)</div>
+<div class="line"><a name="l00653"></a><span class="lineno">  653</span>&#160;{</div>
+<div class="line"><a name="l00654"></a><span class="lineno">  654</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrteei instruction forms the memory</span></div>
+<div class="line"><a name="l00655"></a><span class="lineno">  655</span>&#160;<span class="comment">       barrier, which ensures that all memory operations inside the now left critical</span></div>
+<div class="line"><a name="l00656"></a><span class="lineno">  656</span>&#160;<span class="comment">       section are completed before we leave (see core RM, 4.6.1, p. 151). The &quot;memory&quot;</span></div>
+<div class="line"><a name="l00657"></a><span class="lineno">  657</span>&#160;<span class="comment">       constraint ensures that the compiler won&#39;t reorder instructions from before the</span></div>
+<div class="line"><a name="l00658"></a><span class="lineno">  658</span>&#160;<span class="comment">       wrteei to behind it. */</span></div>
+<div class="line"><a name="l00659"></a><span class="lineno">  659</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> ( <span class="comment">/* AssemblerTemplate */</span></div>
+<div class="line"><a name="l00660"></a><span class="lineno">  660</span>&#160;                   <span class="stringliteral">&quot;wrteei 1\n&quot;</span></div>
+<div class="line"><a name="l00661"></a><span class="lineno">  661</span>&#160;                 : <span class="comment">/* OutputOperands */</span></div>
+<div class="line"><a name="l00662"></a><span class="lineno">  662</span>&#160;                 : <span class="comment">/* InputOperands */</span></div>
+<div class="line"><a name="l00663"></a><span class="lineno">  663</span>&#160;                 : <span class="comment">/* Clobbers */</span> <span class="stringliteral">&quot;memory&quot;</span></div>
+<div class="line"><a name="l00664"></a><span class="lineno">  664</span>&#160;                 );</div>
+<div class="line"><a name="l00665"></a><span class="lineno">  665</span>&#160;} <span class="comment">/* End of rtos_osResumeAllInterrupts */</span></div>
+<div class="line"><a name="l00666"></a><span class="lineno">  666</span>&#160;</div>
+<div class="line"><a name="l00667"></a><span class="lineno">  667</span>&#160;</div>
+<div class="line"><a name="l00668"></a><span class="lineno">  668</span>&#160;</div>
+<div class="line"><a name="l00684"></a><span class="lineno"><a class="line" href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">  684</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> uint32_t <a class="code" href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">rtos_osEnterCriticalSection</a>(<span class="keywordtype">void</span>)</div>
+<div class="line"><a name="l00685"></a><span class="lineno">  685</span>&#160;{</div>
+<div class="line"><a name="l00686"></a><span class="lineno">  686</span>&#160;    <span class="comment">/* The completion synchronizing character of the mfmsr instruction forms the memory</span></div>
+<div class="line"><a name="l00687"></a><span class="lineno">  687</span>&#160;<span class="comment">       barrier, which ensures that all memory operations before the now entered critical</span></div>
+<div class="line"><a name="l00688"></a><span class="lineno">  688</span>&#160;<span class="comment">       section are completed before we enter (see core RM, 4.6.1, p. 151). The &quot;memory&quot;</span></div>
+<div class="line"><a name="l00689"></a><span class="lineno">  689</span>&#160;<span class="comment">       constraint ensures that the compiler won&#39;t reorder instructions from behind the</span></div>
+<div class="line"><a name="l00690"></a><span class="lineno">  690</span>&#160;<span class="comment">       wrteei to before it. */</span></div>
+<div class="line"><a name="l00691"></a><span class="lineno">  691</span>&#160;    uint32_t msr;</div>
+<div class="line"><a name="l00692"></a><span class="lineno">  692</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> ( <span class="comment">/* AssemblerTemplate */</span></div>
+<div class="line"><a name="l00693"></a><span class="lineno">  693</span>&#160;                   <span class="stringliteral">&quot;mfmsr %0\n\t&quot;</span></div>
+<div class="line"><a name="l00694"></a><span class="lineno">  694</span>&#160;                   <span class="stringliteral">&quot;wrteei 0\n\t&quot;</span></div>
+<div class="line"><a name="l00695"></a><span class="lineno">  695</span>&#160;                 : <span class="comment">/* OutputOperands */</span> <span class="stringliteral">&quot;=r&quot;</span> (msr)</div>
+<div class="line"><a name="l00696"></a><span class="lineno">  696</span>&#160;                 : <span class="comment">/* InputOperands */</span></div>
+<div class="line"><a name="l00697"></a><span class="lineno">  697</span>&#160;                 : <span class="comment">/* Clobbers */</span> <span class="stringliteral">&quot;memory&quot;</span></div>
+<div class="line"><a name="l00698"></a><span class="lineno">  698</span>&#160;                 );</div>
+<div class="line"><a name="l00699"></a><span class="lineno">  699</span>&#160;    <span class="keywordflow">return</span> msr;</div>
+<div class="line"><a name="l00700"></a><span class="lineno">  700</span>&#160;</div>
+<div class="line"><a name="l00701"></a><span class="lineno">  701</span>&#160;} <span class="comment">/* End of rtos_osEnterCriticalSection */</span></div>
+<div class="line"><a name="l00702"></a><span class="lineno">  702</span>&#160;</div>
+<div class="line"><a name="l00703"></a><span class="lineno">  703</span>&#160;</div>
+<div class="line"><a name="l00704"></a><span class="lineno">  704</span>&#160;</div>
+<div class="line"><a name="l00716"></a><span class="lineno"><a class="line" href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">  716</a></span>&#160;<span class="keyword">static</span> <a class="code" href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">rtos_osLeaveCriticalSection</a>(uint32_t msr)</div>
+<div class="line"><a name="l00717"></a><span class="lineno">  717</span>&#160;{</div>
+<div class="line"><a name="l00718"></a><span class="lineno">  718</span>&#160;    <span class="comment">/* The completion synchronizing character of the wrtee instruction forms the memory</span></div>
+<div class="line"><a name="l00719"></a><span class="lineno">  719</span>&#160;<span class="comment">       barrier, which ensures that all memory operations inside the now left critical</span></div>
+<div class="line"><a name="l00720"></a><span class="lineno">  720</span>&#160;<span class="comment">       section are completed before we leave (see core RM, 4.6.1, p. 151). The &quot;memory&quot;</span></div>
+<div class="line"><a name="l00721"></a><span class="lineno">  721</span>&#160;<span class="comment">       constraint ensures that the compiler won&#39;t reorder instructions from before the</span></div>
+<div class="line"><a name="l00722"></a><span class="lineno">  722</span>&#160;<span class="comment">       wrtee to behind it. */</span></div>
+<div class="line"><a name="l00723"></a><span class="lineno">  723</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> ( <span class="comment">/* AssemblerTemplate */</span></div>
+<div class="line"><a name="l00724"></a><span class="lineno">  724</span>&#160;                   <span class="stringliteral">&quot;wrtee %0\n&quot;</span></div>
+<div class="line"><a name="l00725"></a><span class="lineno">  725</span>&#160;                 : <span class="comment">/* OutputOperands */</span></div>
+<div class="line"><a name="l00726"></a><span class="lineno">  726</span>&#160;                 : <span class="comment">/* InputOperands */</span> <span class="stringliteral">&quot;r&quot;</span> (msr)</div>
+<div class="line"><a name="l00727"></a><span class="lineno">  727</span>&#160;                 : <span class="comment">/* Clobbers */</span> <span class="stringliteral">&quot;memory&quot;</span></div>
+<div class="line"><a name="l00728"></a><span class="lineno">  728</span>&#160;                 );</div>
+<div class="line"><a name="l00729"></a><span class="lineno">  729</span>&#160;} <span class="comment">/* End of rtos_osLeaveCriticalSection */</span></div>
+<div class="line"><a name="l00730"></a><span class="lineno">  730</span>&#160;</div>
+<div class="line"><a name="l00731"></a><span class="lineno">  731</span>&#160;</div>
+<div class="line"><a name="l00732"></a><span class="lineno">  732</span>&#160;</div>
+<div class="line"><a name="l00796"></a><span class="lineno"><a class="line" href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">  796</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> uint32_t <a class="code" href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">rtos_osSuspendAllInterruptsByPriority</a>(uint32_t suspendUpToThisPriority)</div>
+<div class="line"><a name="l00797"></a><span class="lineno">  797</span>&#160;{</div>
+<div class="line"><a name="l00798"></a><span class="lineno">  798</span>&#160;    <span class="comment">/* All priorities are in the range 0..15. Everything else points to an application</span></div>
+<div class="line"><a name="l00799"></a><span class="lineno">  799</span>&#160;<span class="comment">       error even if the hardware wouldn&#39;t mind. */</span></div>
+<div class="line"><a name="l00800"></a><span class="lineno">  800</span>&#160;    assert((suspendUpToThisPriority &amp; ~0xfu) == 0);</div>
+<div class="line"><a name="l00801"></a><span class="lineno">  801</span>&#160;</div>
+<div class="line"><a name="l00802"></a><span class="lineno">  802</span>&#160;    <span class="comment">/* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority</span></div>
+<div class="line"><a name="l00803"></a><span class="lineno">  803</span>&#160;<span class="comment">       in the INTC should be done under global interrupt lock. */</span></div>
+<div class="line"><a name="l00804"></a><span class="lineno">  804</span>&#160;    <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>();</div>
+<div class="line"><a name="l00805"></a><span class="lineno">  805</span>&#160;    <span class="keyword">const</span> uint32_t priorityLevelSoFar = INTC.CPR_PRC0.R;</div>
+<div class="line"><a name="l00806"></a><span class="lineno">  806</span>&#160;</div>
+<div class="line"><a name="l00807"></a><span class="lineno">  807</span>&#160;    <span class="comment">/* It is useless and a waste of CPU but not a severe error to let this function set the</span></div>
+<div class="line"><a name="l00808"></a><span class="lineno">  808</span>&#160;<span class="comment">       same priority level we already have.</span></div>
+<div class="line"><a name="l00809"></a><span class="lineno">  809</span>&#160;<span class="comment">         It leads to immediate failure of the RTOS if we lower the level; however, from the</span></div>
+<div class="line"><a name="l00810"></a><span class="lineno">  810</span>&#160;<span class="comment">       perspective of the application code it is not necessarily an error to do so: If an</span></div>
+<div class="line"><a name="l00811"></a><span class="lineno">  811</span>&#160;<span class="comment">       application is organized in OSEK/VDX like resources it may be stringent (not</span></div>
+<div class="line"><a name="l00812"></a><span class="lineno">  812</span>&#160;<span class="comment">       optimal) to acquire different resources before an operation on them is started. These</span></div>
+<div class="line"><a name="l00813"></a><span class="lineno">  813</span>&#160;<span class="comment">       resources may be mapped onto different priority ceilings and the application may use</span></div>
+<div class="line"><a name="l00814"></a><span class="lineno">  814</span>&#160;<span class="comment">       nested calls of GetResource to acquire all of them. We must not force the</span></div>
+<div class="line"><a name="l00815"></a><span class="lineno">  815</span>&#160;<span class="comment">       application code to order the calls in order of increasing priority ceiling -- this</span></div>
+<div class="line"><a name="l00816"></a><span class="lineno">  816</span>&#160;<span class="comment">       will be untransparent to the application.</span></div>
+<div class="line"><a name="l00817"></a><span class="lineno">  817</span>&#160;<span class="comment">         These considerations leads to different strategies, and all of them are justified:</span></div>
+<div class="line"><a name="l00818"></a><span class="lineno">  818</span>&#160;<span class="comment">         To force the application be optimal in terms of CPU consumption, we would place an</span></div>
+<div class="line"><a name="l00819"></a><span class="lineno">  819</span>&#160;<span class="comment">       assertion: assert(suspendUpToThisPriority &gt; priorityLevelSoFar);</span></div>
+<div class="line"><a name="l00820"></a><span class="lineno">  820</span>&#160;<span class="comment">         To be relaxed about setting the same priority ceiling, we would place another</span></div>
+<div class="line"><a name="l00821"></a><span class="lineno">  821</span>&#160;<span class="comment">       assertion: assert(suspendUpToThisPriority &gt;= priorityLevelSoFar);</span></div>
+<div class="line"><a name="l00822"></a><span class="lineno">  822</span>&#160;<span class="comment">         If we want to build an OSEK/VDX like GetResource on top of this function, we</span></div>
+<div class="line"><a name="l00823"></a><span class="lineno">  823</span>&#160;<span class="comment">       should place a run-time condition: if(suspendUpToThisPriority &gt; priorityLevelSoFar) */</span></div>
+<div class="line"><a name="l00824"></a><span class="lineno">  824</span>&#160;    <span class="comment">//assert(suspendUpToThisPriority &gt; priorityLevelSoFar);</span></div>
+<div class="line"><a name="l00825"></a><span class="lineno">  825</span>&#160;    <span class="comment">//assert(suspendUpToThisPriority &gt;= priorityLevelSoFar);</span></div>
+<div class="line"><a name="l00826"></a><span class="lineno">  826</span>&#160;    <span class="keywordflow">if</span>(suspendUpToThisPriority &gt; priorityLevelSoFar)</div>
+<div class="line"><a name="l00827"></a><span class="lineno">  827</span>&#160;        INTC.CPR_PRC0.R = suspendUpToThisPriority;</div>
+<div class="line"><a name="l00828"></a><span class="lineno">  828</span>&#160;</div>
+<div class="line"><a name="l00829"></a><span class="lineno">  829</span>&#160;    <span class="comment">/* Leave the critical section. */</span></div>
+<div class="line"><a name="l00830"></a><span class="lineno">  830</span>&#160;    <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>();</div>
+<div class="line"><a name="l00831"></a><span class="lineno">  831</span>&#160;</div>
+<div class="line"><a name="l00832"></a><span class="lineno">  832</span>&#160;    <span class="comment">/* Note, the next interrupt can still be a last one of priority less than or equal to</span></div>
+<div class="line"><a name="l00833"></a><span class="lineno">  833</span>&#160;<span class="comment">       suspendUpToThisPriority. This happens occasionally when the interrupt has asserted,</span></div>
+<div class="line"><a name="l00834"></a><span class="lineno">  834</span>&#160;<span class="comment">       while we were inside the critical section. Incrementing CPR does not un-assert an</span></div>
+<div class="line"><a name="l00835"></a><span class="lineno">  835</span>&#160;<span class="comment">       already asserted interrupt. The isync instruction ensures that this last interrupt</span></div>
+<div class="line"><a name="l00836"></a><span class="lineno">  836</span>&#160;<span class="comment">       has completed prior to the execution of the first code inside the critical section.</span></div>
+<div class="line"><a name="l00837"></a><span class="lineno">  837</span>&#160;<span class="comment">       See https://community.nxp.com/message/993795 for more. */</span></div>
+<div class="line"><a name="l00838"></a><span class="lineno">  838</span>&#160;    <span class="keyword">asm</span> <span class="keyword">volatile</span> (</div>
+<div class="line"><a name="l00839"></a><span class="lineno">  839</span>&#160;<span class="preprocessor">#ifdef __VLE__</span></div>
+<div class="line"><a name="l00840"></a><span class="lineno">  840</span>&#160;                   <span class="stringliteral">&quot;se_isync\n&quot;</span></div>
+<div class="line"><a name="l00841"></a><span class="lineno">  841</span>&#160;<span class="preprocessor">#else</span></div>
+<div class="line"><a name="l00842"></a><span class="lineno">  842</span>&#160;                   <span class="stringliteral">&quot;isync\n&quot;</span></div>
+<div class="line"><a name="l00843"></a><span class="lineno">  843</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00844"></a><span class="lineno">  844</span>&#160;                   ::: <span class="stringliteral">&quot;memory&quot;</span></div>
+<div class="line"><a name="l00845"></a><span class="lineno">  845</span>&#160;                 );</div>
+<div class="line"><a name="l00846"></a><span class="lineno">  846</span>&#160;</div>
+<div class="line"><a name="l00847"></a><span class="lineno">  847</span>&#160;    <span class="keywordflow">return</span> priorityLevelSoFar;</div>
+<div class="line"><a name="l00848"></a><span class="lineno">  848</span>&#160;</div>
+<div class="line"><a name="l00849"></a><span class="lineno">  849</span>&#160;} <span class="comment">/* End of rtos_osSuspendAllInterruptsByPriority */</span></div>
+<div class="line"><a name="l00850"></a><span class="lineno">  850</span>&#160;</div>
+<div class="line"><a name="l00851"></a><span class="lineno">  851</span>&#160;</div>
+<div class="line"><a name="l00852"></a><span class="lineno">  852</span>&#160;</div>
+<div class="line"><a name="l00879"></a><span class="lineno"><a class="line" href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">  879</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">rtos_osResumeAllInterruptsByPriority</a>(uint32_t resumeDownToThisPriority)</div>
+<div class="line"><a name="l00880"></a><span class="lineno">  880</span>&#160;{</div>
+<div class="line"><a name="l00881"></a><span class="lineno">  881</span>&#160;    <span class="comment">/* MCU reference manual, section 28.6.6.2, p. 932: The change of the current priority</span></div>
+<div class="line"><a name="l00882"></a><span class="lineno">  882</span>&#160;<span class="comment">       in the INTC should be done under global interrupt lock. */</span></div>
+<div class="line"><a name="l00883"></a><span class="lineno">  883</span>&#160;    <a class="code" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a>();</div>
+<div class="line"><a name="l00884"></a><span class="lineno">  884</span>&#160;    INTC.CPR_PRC0.R = resumeDownToThisPriority;</div>
+<div class="line"><a name="l00885"></a><span class="lineno">  885</span>&#160;    <a class="code" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a>();</div>
+<div class="line"><a name="l00886"></a><span class="lineno">  886</span>&#160;</div>
+<div class="line"><a name="l00887"></a><span class="lineno">  887</span>&#160;} <span class="comment">/* End of rtos_osResumeAllInterruptsByPriority */</span></div>
+<div class="line"><a name="l00888"></a><span class="lineno">  888</span>&#160;</div>
+<div class="line"><a name="l00889"></a><span class="lineno">  889</span>&#160;</div>
+<div class="line"><a name="l00890"></a><span class="lineno">  890</span>&#160;</div>
+<div class="line"><a name="l00891"></a><span class="lineno">  891</span>&#160;</div>
+<div class="line"><a name="l00892"></a><span class="lineno">  892</span>&#160;</div>
+<div class="line"><a name="l00893"></a><span class="lineno">  893</span>&#160;</div>
+<div class="line"><a name="l00933"></a><span class="lineno"><a class="line" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">  933</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent)</div>
+<div class="line"><a name="l00934"></a><span class="lineno">  934</span>&#160;{</div>
+<div class="line"><a name="l00935"></a><span class="lineno">  935</span>&#160;<span class="preprocessor">    #define RTOS_IDX_SC_TRIGGER_EVENT   3</span></div>
+<div class="line"><a name="l00936"></a><span class="lineno">  936</span>&#160;    <span class="keywordflow">return</span> (<span class="keywordtype">bool</span>)<a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(RTOS_IDX_SC_TRIGGER_EVENT, idEvent);</div>
+<div class="line"><a name="l00937"></a><span class="lineno">  937</span>&#160;</div>
+<div class="line"><a name="l00938"></a><span class="lineno">  938</span>&#160;} <span class="comment">/* End of rtos_triggerEvent */</span></div>
+<div class="line"><a name="l00939"></a><span class="lineno">  939</span>&#160;</div>
+<div class="line"><a name="l00940"></a><span class="lineno">  940</span>&#160;</div>
+<div class="line"><a name="l00972"></a><span class="lineno"><a class="line" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">  972</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> <a class="code" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr</a>(<span class="keyword">const</span> <span class="keywordtype">void</span> *address, <span class="keywordtype">size_t</span> noBytes)</div>
+<div class="line"><a name="l00973"></a><span class="lineno">  973</span>&#160;{</div>
+<div class="line"><a name="l00974"></a><span class="lineno">  974</span>&#160;    <span class="keyword">const</span> uint8_t * <span class="keyword">const</span> p = (uint8_t*)address;</div>
+<div class="line"><a name="l00975"></a><span class="lineno">  975</span>&#160;    <span class="keyword">extern</span> uint8_t ld_ramStart[0], ld_ramEnd[0], ld_romStart[0], ld_romEnd[0];</div>
+<div class="line"><a name="l00976"></a><span class="lineno">  976</span>&#160;</div>
+<div class="line"><a name="l00977"></a><span class="lineno">  977</span>&#160;    <span class="keywordflow">return</span> p &gt;= ld_ramStart  &amp;&amp;  p+noBytes &lt;= ld_ramEnd</div>
+<div class="line"><a name="l00978"></a><span class="lineno">  978</span>&#160;           ||  p &gt;= ld_romStart  &amp;&amp;  p+noBytes &lt;= ld_romEnd;</div>
+<div class="line"><a name="l00979"></a><span class="lineno">  979</span>&#160;</div>
+<div class="line"><a name="l00980"></a><span class="lineno">  980</span>&#160;} <span class="comment">/* End of rtos_checkUserCodeReadPtr */</span></div>
+<div class="line"><a name="l00981"></a><span class="lineno">  981</span>&#160;</div>
+<div class="line"><a name="l00982"></a><span class="lineno">  982</span>&#160;</div>
+<div class="line"><a name="l00983"></a><span class="lineno">  983</span>&#160;</div>
+<div class="line"><a name="l01001"></a><span class="lineno"><a class="line" href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff"> 1001</a></span>&#160;<span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code" href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">rtos_suspendProcess</a>(uint32_t PID)</div>
+<div class="line"><a name="l01002"></a><span class="lineno"> 1002</span>&#160;{</div>
+<div class="line"><a name="l01003"></a><span class="lineno"> 1003</span>&#160;<span class="preprocessor">    #define RTOS_IDX_SC_SUSPEND_PROCESS     5</span></div>
+<div class="line"><a name="l01004"></a><span class="lineno"> 1004</span>&#160;    <a class="code" href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a>(RTOS_IDX_SC_SUSPEND_PROCESS, PID);</div>
+<div class="line"><a name="l01005"></a><span class="lineno"> 1005</span>&#160;</div>
+<div class="line"><a name="l01006"></a><span class="lineno"> 1006</span>&#160;} <span class="comment">/* End of rtos_suspendProcess */</span></div>
+<div class="line"><a name="l01007"></a><span class="lineno"> 1007</span>&#160;</div>
+<div class="line"><a name="l01008"></a><span class="lineno"> 1008</span>&#160;</div>
+<div class="line"><a name="l01009"></a><span class="lineno"> 1009</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">/* RTOS_INCLUDED */</span><span class="preprocessor"></span></div>
 <div class="ttc" id="rtos_8h_html_a63296923146f8dff5b8754ca1c6003dc"><div class="ttname"><a href="rtos_8h.html#a63296923146f8dff5b8754ca1c6003dc">rtos_isProcessSuspended</a></div><div class="ttdeci">bool rtos_isProcessSuspended(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:494</div></div>
 <div class="ttc" id="rtos_8h_html_a2436c0e309c481d81292b149f22520aa"><div class="ttname"><a href="rtos_8h.html#a2436c0e309c481d81292b149f22520aa">rtos_osTriggerEvent</a></div><div class="ttdeci">bool rtos_osTriggerEvent(unsigned int idEvent)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:1340</div></div>
 <div class="ttc" id="rtos_8h_html_a4f1f4dbf31cbe5dd7c48a1f4ea2d594f"><div class="ttname"><a href="rtos_8h.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos_checkUserCodeWritePtr</a></div><div class="ttdeci">bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes)</div><div class="ttdef"><b>Definition:</b> rtos_systemMemoryProtectionUnit.c:393</div></div>
@@ -543,9 +543,9 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="ttc" id="rtos_8h_html_a9e214eed5eb27fd51e72227fb62f9b8a"><div class="ttname"><a href="rtos_8h.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos_osCreateEvent</a></div><div class="ttdeci">rtos_errorCode_t rtos_osCreateEvent(unsigned int *pEventId, unsigned int tiCycleInMs, unsigned int tiFirstActivationInMs, unsigned int priority, unsigned int minPIDToTriggerThisEvent)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:729</div></div>
 <div class="ttc" id="rtos_8h_html_aeaae84408e099b28495d703994100c16"><div class="ttname"><a href="rtos_8h.html#aeaae84408e099b28495d703994100c16">rtos_osGrantPermissionRunTask</a></div><div class="ttdeci">void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:969</div></div>
 <div class="ttc" id="rtos_8h_html_a5f63a85fcf6b79022d8039ae974aba96"><div class="ttname"><a href="rtos_8h.html#a5f63a85fcf6b79022d8039ae974aba96">rtos_getNoActivationLoss</a></div><div class="ttdeci">unsigned int rtos_getNoActivationLoss(unsigned int idEvent)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:1567</div></div>
-<div class="ttc" id="rtos_8h_html_a8c4026e0f4129e07d3cf4fa46c6e1dac"><div class="ttname"><a href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">rtos_osSuspendAllInterruptsByPriority</a></div><div class="ttdeci">static uint32_t rtos_osSuspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority)</div><div class="ttdef"><b>Definition:</b> rtos.h:788</div></div>
+<div class="ttc" id="rtos_8h_html_a8c4026e0f4129e07d3cf4fa46c6e1dac"><div class="ttname"><a href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">rtos_osSuspendAllInterruptsByPriority</a></div><div class="ttdeci">static uint32_t rtos_osSuspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority)</div><div class="ttdef"><b>Definition:</b> rtos.h:796</div></div>
 <div class="ttc" id="rtos_8h_html_a5d61ad8cb2aced31246ad1fdbb44faa7"><div class="ttname"><a href="rtos_8h.html#a5d61ad8cb2aced31246ad1fdbb44faa7">rtos_systemCall</a></div><div class="ttdeci">uint32_t rtos_systemCall(uint32_t idxSysCall,...)</div></div>
-<div class="ttc" id="rtos_8h_html_a585062ee728ec5d30b078964aa1f0862"><div class="ttname"><a href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask</a></div><div class="ttdeci">static int32_t rtos_osRunTask(const rtos_taskDesc_t *pUserTaskConfig, uintptr_t taskParam)</div><div class="ttdef"><b>Definition:</b> rtos.h:526</div></div>
+<div class="ttc" id="rtos_8h_html_a585062ee728ec5d30b078964aa1f0862"><div class="ttname"><a href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask</a></div><div class="ttdeci">static int32_t rtos_osRunTask(const rtos_taskDesc_t *pUserTaskConfig, uintptr_t taskParam)</div><div class="ttdef"><b>Definition:</b> rtos.h:534</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a998a63eb85afdba5f8dbdfd1bdd15d0e"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a998a63eb85afdba5f8dbdfd1bdd15d0e">rtos_err_suspendPrcBadPermission</a></div><div class="ttdoc">"Unsafe" permissions granted to rtos_suspendProcess() </div><div class="ttdef"><b>Definition:</b> rtos.h:221</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1ad285146c97ddb0e2318b0e58c0f4644b"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1ad285146c97ddb0e2318b0e58c0f4644b">rtos_err_initTaskRedefined</a></div><div class="ttdoc">Attempt to redefine an already defined initialization task. </div><div class="ttdef"><b>Definition:</b> rtos.h:215</div></div>
 <div class="ttc" id="rtos_8h_html_a445845eb4a4fd8af883abc9a7f84ece2"><div class="ttname"><a href="rtos_8h.html#a445845eb4a4fd8af883abc9a7f84ece2">rtos_suspendAllInterruptsByPriority</a></div><div class="ttdeci">uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPriority)</div></div>
@@ -553,20 +553,20 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="ttc" id="structrtos__task_desc__t_html"><div class="ttname"><a href="structrtos__task_desc__t.html">rtos_taskDesc_t</a></div><div class="ttdef"><b>Definition:</b> rtos.h:232</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a30eeebbb9e9807fcd75e7359cf358953"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a30eeebbb9e9807fcd75e7359cf358953">rtos_err_taskBelongsToInvalidPrc</a></div><div class="ttdoc">Task assigned to not configured process. </div><div class="ttdef"><b>Definition:</b> rtos.h:218</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a0a3176c426b81c3eed1a4b7cbd5ef371"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a0a3176c426b81c3eed1a4b7cbd5ef371">rtos_err_noEvOrTaskRegistered</a></div><div class="ttdoc">No event and/or no task defined at start of system. </div><div class="ttdef"><b>Definition:</b> rtos.h:211</div></div>
-<div class="ttc" id="rtos_8h_html_ae1f6778a3742632e1d754dc916a1aeff"><div class="ttname"><a href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask</a></div><div class="ttdeci">static int32_t rtos_runTask(const rtos_taskDesc_t *pUserTaskConfig, uintptr_t taskParam)</div><div class="ttdef"><b>Definition:</b> rtos.h:569</div></div>
+<div class="ttc" id="rtos_8h_html_ae1f6778a3742632e1d754dc916a1aeff"><div class="ttname"><a href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask</a></div><div class="ttdeci">static int32_t rtos_runTask(const rtos_taskDesc_t *pUserTaskConfig, uintptr_t taskParam)</div><div class="ttdef"><b>Definition:</b> rtos.h:577</div></div>
 <div class="ttc" id="rtos_8h_html_a72c496a57feceb72a84ce41895e179c9"><div class="ttname"><a href="rtos_8h.html#a72c496a57feceb72a84ce41895e179c9">rtos_osInstallInterruptHandler</a></div><div class="ttdeci">void rtos_osInstallInterruptHandler(rtos_interruptServiceRoutine_t interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</div><div class="ttdef"><b>Definition:</b> rtos_externalInterrupt.c:236</div></div>
-<div class="ttc" id="rtos_8h_html_a4a9eb6b285b58c2e2f8f6f02e995bf59"><div class="ttname"><a href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">rtos_osEnterCriticalSection</a></div><div class="ttdeci">static ALWAYS_INLINE uint32_t rtos_osEnterCriticalSection(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:676</div></div>
+<div class="ttc" id="rtos_8h_html_a4a9eb6b285b58c2e2f8f6f02e995bf59"><div class="ttname"><a href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">rtos_osEnterCriticalSection</a></div><div class="ttdeci">static ALWAYS_INLINE uint32_t rtos_osEnterCriticalSection(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:684</div></div>
 <div class="ttc" id="rtos_8h_html_ab0f1e1a247f858577c1d9d04e4a4331c"><div class="ttname"><a href="rtos_8h.html#ab0f1e1a247f858577c1d9d04e4a4331c">rtos_getNoTotalTaskFailure</a></div><div class="ttdeci">unsigned int rtos_getNoTotalTaskFailure(unsigned int PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:518</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a9d20065342c519702d9db027a9487ce6"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a9d20065342c519702d9db027a9487ce6">rtos_err_configurationOfRunningKernel</a></div><div class="ttdoc">Attempt to (re-)configure a running kernel. </div><div class="ttdef"><b>Definition:</b> rtos.h:207</div></div>
 <div class="ttc" id="structrtos__task_desc__t_html_a11f1b1e21a5277a406f92cff7525a982"><div class="ttname"><a href="structrtos__task_desc__t.html#a11f1b1e21a5277a406f92cff7525a982">rtos_taskDesc_t::tiTaskMax</a></div><div class="ttdeci">uint32_t tiTaskMax</div><div class="ttdef"><b>Definition:</b> rtos.h:250</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a4658c821f83b720ed7d7b4713a178e0d"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a4658c821f83b720ed7d7b4713a178e0d">rtos_err_taskBudgetTooBig</a></div><div class="ttdoc">Task budget greater than RTOS_TI_DEADLINE_MAX_IN_US. </div><div class="ttdef"><b>Definition:</b> rtos.h:214</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a6227d0116801a4e94ab0b613b747407f"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a6227d0116801a4e94ab0b613b747407f">rtos_err_badTaskFunction</a></div><div class="ttdoc">Bad task function NULL specified. </div><div class="ttdef"><b>Definition:</b> rtos.h:213</div></div>
 <div class="ttc" id="rtos_8h_html_addefdb75681eaad3fd2699f2dabf85ba"><div class="ttname"><a href="rtos_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos_osRegisterInitTask</a></div><div class="ttdeci">rtos_errorCode_t rtos_osRegisterInitTask(int32_t(*initTaskFct)(uint32_t PID), unsigned int PID, unsigned int tiMaxInUs)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:829</div></div>
-<div class="ttc" id="rtos_8h_html_a7ea8f15fbf4159dec1d3b53babbc3864"><div class="ttname"><a href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent</a></div><div class="ttdeci">static bool rtos_triggerEvent(unsigned int idEvent)</div><div class="ttdef"><b>Definition:</b> rtos.h:925</div></div>
+<div class="ttc" id="rtos_8h_html_a7ea8f15fbf4159dec1d3b53babbc3864"><div class="ttname"><a href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent</a></div><div class="ttdeci">static bool rtos_triggerEvent(unsigned int idEvent)</div><div class="ttdef"><b>Definition:</b> rtos.h:933</div></div>
 <div class="ttc" id="rtos_8h_html_a671a05cb46411e64b58a457394c3e749"><div class="ttname"><a href="rtos_8h.html#a671a05cb46411e64b58a457394c3e749">rtos_interruptServiceRoutine_t</a></div><div class="ttdeci">void(* rtos_interruptServiceRoutine_t)(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:195</div></div>
-<div class="ttc" id="rtos_8h_html_aac7a5ed04ef56818262cd5288d327648"><div class="ttname"><a href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr</a></div><div class="ttdeci">static bool rtos_checkUserCodeReadPtr(const void *address, size_t noBytes)</div><div class="ttdef"><b>Definition:</b> rtos.h:964</div></div>
+<div class="ttc" id="rtos_8h_html_aac7a5ed04ef56818262cd5288d327648"><div class="ttname"><a href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr</a></div><div class="ttdeci">static bool rtos_checkUserCodeReadPtr(const void *address, size_t noBytes)</div><div class="ttdef"><b>Definition:</b> rtos.h:972</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a88b39e365c36b7864305b1020d167917"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a88b39e365c36b7864305b1020d167917">rtos_err_invalidEventPrio</a></div><div class="ttdoc">Priority needs to be in range [1; RTOS_MAX_LOCKABLE_PRIORITY) </div><div class="ttdef"><b>Definition:</b> rtos.h:204</div></div>
-<div class="ttc" id="rtos_8h_html_a50d3acde6c733f5dcf8decab6299e3ff"><div class="ttname"><a href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">rtos_suspendProcess</a></div><div class="ttdeci">static void rtos_suspendProcess(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos.h:993</div></div>
+<div class="ttc" id="rtos_8h_html_a50d3acde6c733f5dcf8decab6299e3ff"><div class="ttname"><a href="rtos_8h.html#a50d3acde6c733f5dcf8decab6299e3ff">rtos_suspendProcess</a></div><div class="ttdeci">static void rtos_suspendProcess(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos.h:1001</div></div>
 <div class="ttc" id="rtos_8h_html_a68096423d941e1dc670a6ec2e37d5275"><div class="ttname"><a href="rtos_8h.html#a68096423d941e1dc670a6ec2e37d5275">rtos_osRegisterOSTask</a></div><div class="ttdeci">rtos_errorCode_t rtos_osRegisterOSTask(unsigned int idEvent, void(*osTaskFct)(void))</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:928</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a></div><div class="ttdeci">rtos_errorCode_t</div><div class="ttdef"><b>Definition:</b> rtos.h:200</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a19dd8bb137f08cb4484ba25522bfeaf4"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a19dd8bb137f08cb4484ba25522bfeaf4">rtos_err_eventNotTriggerable</a></div><div class="ttdoc">Bad configuration makes event unusable. </div><div class="ttdef"><b>Definition:</b> rtos.h:206</div></div>
@@ -574,17 +574,17 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="ttc" id="rtos_8h_html_a42156b46c1f83c80cd7a1630d91e12cc"><div class="ttname"><a href="rtos_8h.html#a42156b46c1f83c80cd7a1630d91e12cc">rtos_osSystemCallBadArgument</a></div><div class="ttdeci">_Noreturn void rtos_osSystemCallBadArgument(void)</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a218ea0e64c7b0278fa114aa3aac80d60"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a218ea0e64c7b0278fa114aa3aac80d60">rtos_err_badProcessId</a></div><div class="ttdoc">The ID of the process is invalid. No such process exists. </div><div class="ttdef"><b>Definition:</b> rtos.h:209</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a7997aabfed01a9d3dc744a0971b21292"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a7997aabfed01a9d3dc744a0971b21292">rtos_err_badEventTiming</a></div><div class="ttdoc">Inconsistent or bad timing configuration stated for event. </div><div class="ttdef"><b>Definition:</b> rtos.h:205</div></div>
-<div class="ttc" id="rtos_8h_html_ae6935dc959dd97bcbe04070a477c2ac3"><div class="ttname"><a href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">rtos_osLeaveCriticalSection</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)</div><div class="ttdef"><b>Definition:</b> rtos.h:708</div></div>
+<div class="ttc" id="rtos_8h_html_ae6935dc959dd97bcbe04070a477c2ac3"><div class="ttname"><a href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">rtos_osLeaveCriticalSection</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)</div><div class="ttdef"><b>Definition:</b> rtos.h:716</div></div>
 <div class="ttc" id="rtos_8h_html_a594b547ccdf2a1d473ea55ef612d7558"><div class="ttname"><a href="rtos_8h.html#a594b547ccdf2a1d473ea55ef612d7558">rtos_taskDesc_t</a></div><div class="ttdeci">struct rtos_taskDesc_t rtos_taskDesc_t</div></div>
 <div class="ttc" id="rtos_8h_html_a240a9b010103563bb950b8d69017703b"><div class="ttname"><a href="rtos_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a></div><div class="ttdeci">unsigned int rtos_getStackReserve(unsigned int PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:608</div></div>
-<div class="ttc" id="rtos_8h_html_ab154b2923ad0d102fa1515e89d42c898"><div class="ttname"><a href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osSuspendAllInterrupts(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:620</div></div>
+<div class="ttc" id="rtos_8h_html_ab154b2923ad0d102fa1515e89d42c898"><div class="ttname"><a href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osSuspendAllInterrupts(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:628</div></div>
 <div class="ttc" id="structrtos__task_desc__t_html_a1fe2586c887a6c5902e38d2ef63bf297"><div class="ttname"><a href="structrtos__task_desc__t.html#a1fe2586c887a6c5902e38d2ef63bf297">rtos_taskDesc_t::addrTaskFct</a></div><div class="ttdeci">uintptr_t addrTaskFct</div><div class="ttdef"><b>Definition:</b> rtos.h:241</div></div>
 <div class="ttc" id="rtos_8h_html_ab24d0fa9208d5675e03cc931a08e52fd"><div class="ttname"><a href="rtos_8h.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel</a></div><div class="ttdeci">rtos_errorCode_t rtos_osInitKernel(void)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:1027</div></div>
 <div class="ttc" id="rtos_8h_html_ad0ffd077e9733a78d88eb202cedec590"><div class="ttname"><a href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos_resumeAllInterruptsByPriority</a></div><div class="ttdeci">void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)</div></div>
-<div class="ttc" id="rtos_8h_html_ad580381efb7808b37da052d3a51a7901"><div class="ttname"><a href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osResumeAllInterrupts(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:644</div></div>
+<div class="ttc" id="rtos_8h_html_ad580381efb7808b37da052d3a51a7901"><div class="ttname"><a href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts</a></div><div class="ttdeci">static ALWAYS_INLINE void rtos_osResumeAllInterrupts(void)</div><div class="ttdef"><b>Definition:</b> rtos.h:652</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1ab430b681a53eb533e44a6260874452fb"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1ab430b681a53eb533e44a6260874452fb">rtos_err_initTaskFailed</a></div><div class="ttdoc">Process initialization function failed or returned neg. value. </div><div class="ttdef"><b>Definition:</b> rtos.h:216</div></div>
 <div class="ttc" id="rtos_8h_html_aeddb4b88dd8c1052eb41763e7164e7fa"><div class="ttname"><a href="rtos_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_osSuspendProcess</a></div><div class="ttdeci">void rtos_osSuspendProcess(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:470</div></div>
-<div class="ttc" id="rtos_8h_html_a50aa791209542d3078b18c24acbb46c1"><div class="ttname"><a href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">rtos_terminateTask</a></div><div class="ttdeci">static _Noreturn void rtos_terminateTask(int32_t taskReturnValue)</div><div class="ttdef"><b>Definition:</b> rtos.h:602</div></div>
+<div class="ttc" id="rtos_8h_html_a50aa791209542d3078b18c24acbb46c1"><div class="ttname"><a href="rtos_8h.html#a50aa791209542d3078b18c24acbb46c1">rtos_terminateTask</a></div><div class="ttdeci">static _Noreturn void rtos_terminateTask(int32_t taskReturnValue)</div><div class="ttdef"><b>Definition:</b> rtos.h:610</div></div>
 <div class="ttc" id="structrtos__task_desc__t_html_ab9a01a36bbb823cf2c2fbad709a7c0e3"><div class="ttname"><a href="structrtos__task_desc__t.html#ab9a01a36bbb823cf2c2fbad709a7c0e3">rtos_taskDesc_t::PID</a></div><div class="ttdeci">uint8_t PID</div><div class="ttdef"><b>Definition:</b> rtos.h:256</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a5535320638a30f3fcdfc642712eb5c6f"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a5535320638a30f3fcdfc642712eb5c6f">rtos_err_prcStackInvalid</a></div><div class="ttdoc">Configured stack misaligned or too small. </div><div class="ttdef"><b>Definition:</b> rtos.h:217</div></div>
 <div class="ttc" id="typ__types_8h_html_aa1dec568e79152c892dcf63f445cbd7a"><div class="ttname"><a href="typ__types_8h.html#aa1dec568e79152c892dcf63f445cbd7a">ALWAYS_INLINE</a></div><div class="ttdeci">#define ALWAYS_INLINE</div><div class="ttdef"><b>Definition:</b> typ_types.h:57</div></div>
@@ -592,7 +592,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1abc4fc258ab30b0be82f1d2c25e851712"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1abc4fc258ab30b0be82f1d2c25e851712">rtos_err_eventWithoutTask</a></div><div class="ttdoc">A useless event exists, which has no task to activate. </div><div class="ttdef"><b>Definition:</b> rtos.h:212</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1abae1c422a879faa29d9034e7a4db112c"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1abae1c422a879faa29d9034e7a4db112c">rtos_err_highPrioTaskInLowPrivPrc</a></div><div class="ttdoc">Task of highest prio belongs to process of low privileges. </div><div class="ttdef"><b>Definition:</b> rtos.h:219</div></div>
 <div class="ttc" id="rtos_8h_html_a8267fb6047b63c04640f2e78852c4574"><div class="ttname"><a href="rtos_8h.html#a8267fb6047b63c04640f2e78852c4574">rtos_osRegisterUserTask</a></div><div class="ttdeci">rtos_errorCode_t rtos_osRegisterUserTask(unsigned int idEvent, int32_t(*userModeTaskFct)(uint32_t PID), unsigned int PID, unsigned int tiMaxInUs)</div><div class="ttdef"><b>Definition:</b> rtos_scheduler.c:884</div></div>
-<div class="ttc" id="rtos_8h_html_a05c673d0abb8d67f4b18f615df72223d"><div class="ttname"><a href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">rtos_osResumeAllInterruptsByPriority</a></div><div class="ttdeci">static void rtos_osResumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)</div><div class="ttdef"><b>Definition:</b> rtos.h:871</div></div>
+<div class="ttc" id="rtos_8h_html_a05c673d0abb8d67f4b18f615df72223d"><div class="ttname"><a href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">rtos_osResumeAllInterruptsByPriority</a></div><div class="ttdeci">static void rtos_osResumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority)</div><div class="ttdef"><b>Definition:</b> rtos.h:879</div></div>
 <div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1a19304aaba258a01530cb891f69fa78dc"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1a19304aaba258a01530cb891f69fa78dc">rtos_err_tooManyEventsCreated</a></div><div class="ttdoc">Can&#39;t create no more than RTOS_MAX_NO_EVENTS events. </div><div class="ttdef"><b>Definition:</b> rtos.h:203</div></div>
 <div class="ttc" id="rtos_8h_html_abb25bad5cf1976808e7acb79c30290bd"><div class="ttname"><a href="rtos_8h.html#abb25bad5cf1976808e7acb79c30290bd">rtos_getNoTaskFailure</a></div><div class="ttdeci">unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:547</div></div>
 <div class="ttc" id="rtos_8h_html_a88a271864adecb3d629668674fa0815a"><div class="ttname"><a href="rtos_8h.html#a88a271864adecb3d629668674fa0815a">rtos_osInitINTCInterruptController</a></div><div class="ttdeci">void rtos_osInitINTCInterruptController(void)</div><div class="ttdef"><b>Definition:</b> rtos_externalInterrupt.c:151</div></div>
@@ -602,7 +602,7 @@ $(document).ready(function(){initNavTree('rtos_8h_source.html','');});
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_050edd66366d13764f98250ef6db77f6.html">code</a></li><li class="navelem"><a class="el" href="dir_9cd24f4fec2e6f6bedbcc5407321d78a.html">system</a></li><li class="navelem"><a class="el" href="dir_34effe5aae1be93d744f092611be46f1.html">RTOS</a></li><li class="navelem"><a class="el" href="rtos_8h.html">rtos.h</a></li>
-    <li class="footer">Generated on Wed Sep 18 2019 21:37:07 for safe-RTOS (VLE) by
+    <li class="footer">Generated by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.8 </li>
   </ul>

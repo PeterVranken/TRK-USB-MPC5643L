@@ -344,13 +344,13 @@ rtos_errorCode_t rtos_osInitKernel(void);
 bool rtos_osTriggerEvent(unsigned int idEvent);
 
 /**
- * Priority ceiling protocol, partial interrupt lock: All interrupts up to the specified
- * priority level won't be handled by the CPU. This function is intended for implementing
- * mutual exclusion of sub-sets of tasks: Call it with the highest priority of all tasks,
- * which should be locked, i.e. which compete for the resource or critical section to
- * protect. This may still lock other, not competing tasks, but at least all non competing
- * tasks of higher priority will be served (and this will likely include most interrupt
- * handlers).\n
+ * Priority ceiling protocol, partial interrupt lock: All tasks and interrupts up to the
+ * specified priority level won't be served by the CPU. This function is intended for
+ * implementing mutual exclusion of sub-sets of tasks: Call it with the highest priority of
+ * all tasks, which should be locked, i.e. which compete for the resource or critical
+ * section to protect. This may still lock other, not competing tasks, but at least all non
+ * competing tasks of higher priority will be served (and this will likely include most
+ * interrupt handlers).\n
  *   To release the protected resource or to leave the critical section, call the
  * counterpart function rtos_resumeAllInterruptsByPriority(), which restores the original
  * interrupt/task priority level.\n
@@ -363,7 +363,7 @@ bool rtos_osTriggerEvent(unsigned int idEvent);
  * #RTOS_KERNEL_PRIORITY. The intention is to inhibit a task from blocking a safety task,
  * which is assumed to be the only task running at this high priority. (The attempt to
  * shape a critical section with this task is caught in DEBUG compilation, see
- * rtos_osResumeAllInterruptsByPriority().)
+ * rtos_resumeAllInterruptsByPriority().)
  *   @return
  * Get the priority level at entry into this function (and into the critical section). This
  * priority level needs to be restored on exit from the critical section using system call
@@ -437,9 +437,10 @@ extern uint32_t rtos_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPrio
  * compilation, we have the normal behavior of silently ignoring attempts to actually raise
  * the priority.
  *   @remark
- * It doesn't harm if a user task calls rtos_suspendAllInterruptsByPriority() to raise the
- * priority but doesn't lower it later using this function. The effect of
- * rtos_suspendAllInterruptsByPriority() will end with the termination of the task.
+ * Besides the likely unwanted impact on the scheduling, it doesn't harm if a user task
+ * calls rtos_suspendAllInterruptsByPriority() to raise the priority but doesn't lower it
+ * later using this function. The effect of rtos_suspendAllInterruptsByPriority() will end
+ * with the termination of the task.
  *   @remark
  * This function must be called from the user task context only. Any attempt to use it from
  * OS code will lead to a crash.
@@ -522,6 +523,13 @@ bool rtos_isProcessSuspended(uint32_t PID);
  *   @remark
  * This function must be called from the OS context only. Any attempt to use it in user
  * code will lead to a privileged exception.
+ *   @remark
+ * The function is intended to implement safe user code callbacks from interrupt events.
+ * However, deadline monitoring fails for the task execution if the ISR, which makes use of
+ * this API has a priority equal to or above the kernel priority #RTOS_KERNEL_PRIORITY.
+ * This would likely break the aimed safety concept; an infinite loop in the user code would
+ * make the system hang. In most situations, a reasonable safety requirement will prohibit
+ * the use of this function from any ISR with such a high priority.
  */
 static inline int32_t rtos_osRunTask( const rtos_taskDesc_t *pUserTaskConfig
                                     , uintptr_t taskParam

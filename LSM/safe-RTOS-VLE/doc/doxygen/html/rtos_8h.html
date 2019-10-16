@@ -1262,11 +1262,11 @@ This function must be called from the OS context only. It may be called from an 
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Priority ceiling protocol, partial interrupt lock: All interrupts up to the specified priority level won't be handled by the CPU. This function is intended for implementing mutual exclusion of sub-sets of tasks: Call it with the highest priority of all tasks, which should be locked, i.e. which compete for the resource or critical section to protect. This may still lock other, not competing tasks, but at least all non competing tasks of higher priority will be served (and this will likely include most interrupt handlers).<br />
+<p>Priority ceiling protocol, partial interrupt lock: All tasks and interrupts up to the specified priority level won't be served by the CPU. This function is intended for implementing mutual exclusion of sub-sets of tasks: Call it with the highest priority of all tasks, which should be locked, i.e. which compete for the resource or critical section to protect. This may still lock other, not competing tasks, but at least all non competing tasks of higher priority will be served (and this will likely include most interrupt handlers).<br />
  To release the protected resource or to leave the critical section, call the counterpart function <a class="el" href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos_resumeAllInterruptsByPriority()</a>, which restores the original interrupt/task priority level.<br />
  The principal difference to the OS function <a class="el" href="rtos_8h.html#a8c4026e0f4129e07d3cf4fa46c6e1dac">rtos_osSuspendAllInterruptsByPriority()</a>:<br />
  The priority can be raised only up to <a class="el" href="rtos_8h.html#a9520f3e002688cbf786b1d0134350dbe">RTOS_MAX_LOCKABLE_PRIORITY</a>, which is at least two less than the kernel priority, <a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">RTOS_KERNEL_PRIORITY</a>. An attempt to raise it beyond this limit will lead to an <a class="el" href="rtos_8h.html#a6e76056aa81bac40477ab9beecb6c9c4">RTOS_ERR_PRC_SYS_CALL_BAD_ARG</a> exception.<br />
- Safety rationale: A critical section cannot be shaped with the RTOS scheduler and nor with the user task of priority above <a class="el" href="rtos_8h.html#a9520f3e002688cbf786b1d0134350dbe">RTOS_MAX_LOCKABLE_PRIORITY</a> and below <a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">RTOS_KERNEL_PRIORITY</a>. The intention is to inhibit a task from blocking a safety task, which is assumed to be the only task running at this high priority. (The attempt to shape a critical section with this task is caught in DEBUG compilation, see <a class="el" href="rtos_8h.html#a05c673d0abb8d67f4b18f615df72223d">rtos_osResumeAllInterruptsByPriority()</a>.) </p><dl class="section return"><dt>Returns</dt><dd>Get the priority level at entry into this function (and into the critical section). This priority level needs to be restored on exit from the critical section using system call <a class="el" href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos_resumeAllInterruptsByPriority()</a>. </dd></dl>
+ Safety rationale: A critical section cannot be shaped with the RTOS scheduler and nor with the user task of priority above <a class="el" href="rtos_8h.html#a9520f3e002688cbf786b1d0134350dbe">RTOS_MAX_LOCKABLE_PRIORITY</a> and below <a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">RTOS_KERNEL_PRIORITY</a>. The intention is to inhibit a task from blocking a safety task, which is assumed to be the only task running at this high priority. (The attempt to shape a critical section with this task is caught in DEBUG compilation, see <a class="el" href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos_resumeAllInterruptsByPriority()</a>.) </p><dl class="section return"><dt>Returns</dt><dd>Get the priority level at entry into this function (and into the critical section). This priority level needs to be restored on exit from the critical section using system call <a class="el" href="rtos_8h.html#ad0ffd077e9733a78d88eb202cedec590">rtos_resumeAllInterruptsByPriority()</a>. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">suspendUpToThisPriority</td><td><em>suspendUpToThisPriority</em> is the aimed priority level. All tasks/interrupts up to and including this priority will be locked. The CPU will not handle them until the priority level is lowered again. </td></tr>
@@ -1311,7 +1311,7 @@ This function must be called from the user task context only. Any attempt to use
 <dd>
 It is impossible to shape a critical section with the safety task of priority above <a class="el" href="rtos_8h.html#a9520f3e002688cbf786b1d0134350dbe">RTOS_MAX_LOCKABLE_PRIORITY</a> and the attempt will always mean a functional error in the design of the application code. To support debugging, this error is caught in DEBUG compilation: Then the function throws a <a class="el" href="rtos_8h.html#a6e76056aa81bac40477ab9beecb6c9c4">RTOS_ERR_PRC_SYS_CALL_BAD_ARG</a> exception if <em>resumeDownToThisPriority</em> is greater than <a class="el" href="rtos_8h.html#a9520f3e002688cbf786b1d0134350dbe">RTOS_MAX_LOCKABLE_PRIORITY</a>. In PRODUCTION compilation, we have the normal behavior of silently ignoring attempts to actually raise the priority. </dd>
 <dd>
-It doesn't harm if a user task calls <a class="el" href="rtos_8h.html#a445845eb4a4fd8af883abc9a7f84ece2">rtos_suspendAllInterruptsByPriority()</a> to raise the priority but doesn't lower it later using this function. The effect of <a class="el" href="rtos_8h.html#a445845eb4a4fd8af883abc9a7f84ece2">rtos_suspendAllInterruptsByPriority()</a> will end with the termination of the task. </dd>
+Besides the likely unwanted impact on the scheduling, it doesn't harm if a user task calls <a class="el" href="rtos_8h.html#a445845eb4a4fd8af883abc9a7f84ece2">rtos_suspendAllInterruptsByPriority()</a> to raise the priority but doesn't lower it later using this function. The effect of <a class="el" href="rtos_8h.html#a445845eb4a4fd8af883abc9a7f84ece2">rtos_suspendAllInterruptsByPriority()</a> will end with the termination of the task. </dd>
 <dd>
 This function must be called from the user task context only. Any attempt to use it from OS code will lead to a crash. </dd></dl>
 
@@ -1628,7 +1628,9 @@ This function must be called from the OS context only. Any attempt to use it in 
   </table>
   </dd>
 </dl>
-<dl class="section remark"><dt>Remarks</dt><dd>This function must be called from the OS context only. Any attempt to use it in user code will lead to a privileged exception. </dd></dl>
+<dl class="section remark"><dt>Remarks</dt><dd>This function must be called from the OS context only. Any attempt to use it in user code will lead to a privileged exception. </dd>
+<dd>
+The function is intended to implement safe user code callbacks from interrupt events. However, deadline monitoring fails for the task execution if the ISR, which makes use of this API has a priority equal to or above the kernel priority <a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">RTOS_KERNEL_PRIORITY</a>. This would likely break the aimed safety concept; an infinite loop in the user code would make the system hang. In most situations, a reasonable safety requirement will prohibit the use of this function from any ISR with such a high priority. </dd></dl>
 
 </div>
 </div>
@@ -2046,7 +2048,7 @@ This function must be called from the user task context only. Any attempt to use
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_050edd66366d13764f98250ef6db77f6.html">code</a></li><li class="navelem"><a class="el" href="dir_9cd24f4fec2e6f6bedbcc5407321d78a.html">system</a></li><li class="navelem"><a class="el" href="dir_34effe5aae1be93d744f092611be46f1.html">RTOS</a></li><li class="navelem"><a class="el" href="rtos_8h.html">rtos.h</a></li>
-    <li class="footer">Generated on Wed Sep 18 2019 21:37:08 for safe-RTOS (VLE) by
+    <li class="footer">Generated by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.8 </li>
   </ul>
