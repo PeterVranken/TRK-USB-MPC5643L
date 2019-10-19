@@ -1,4 +1,4 @@
-= image:doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="5%", pdfwidth="5%"] "safe-RTOS" (VLE) - A simple RTOS with safety support for MPC5643L
+= image:doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="3%", pdfwidth="5%"] "safe-RTOS" (VLE) - A simple RTOS with safety support for MPC5643L
 :Author:            Peter Vranken 
 :Email:             mailto:Peter_Vranken@Yahoo.de
 :toc:               left
