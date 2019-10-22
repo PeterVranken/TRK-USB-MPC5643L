@@ -52,10 +52,10 @@ void rtos_osInitINTCInterruptController(void);
 
 /** Install an interrupt service for a given I/O device. */
 /// @todo Make function disappear and have a ROM table as for system calls
-void rtos_osInstallInterruptHandler( rtos_interruptServiceRoutine_t interruptServiceRoutine
-                                   , unsigned int vectorNum
-                                   , unsigned int psrPriority
-                                   , bool isPreemptable
-                                   );
+void rtos_osRegisterInterruptHandler( rtos_interruptServiceRoutine_t interruptServiceRoutine
+                                    , unsigned int vectorNum
+                                    , unsigned int psrPriority
+                                    , bool isPreemptable
+                                    );
 
 #endif  /* RTOS_EXTERNALINTERRUPT_INCLUDED */

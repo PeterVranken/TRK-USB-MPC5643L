@@ -59,7 +59,7 @@
  * period time.\n
  *   The RTOS implementation is tightly connected to the implementation of interrupt
  * services. Interrupt services, e.g. to implement I/O operations for the tasks, are
- * registered with rtos_osInstallInterruptHandler().\n
+ * registered with rtos_osRegisterInterruptHandler().\n
  *   Any I/O interrupts can be combined with the tasks. Different to most RTOS we don't
  * impose a priority ordering between tasks and interrupts. A conventional design would put
  * interrupt service routines (ISR) at higher priorities than the highest task priority but
@@ -1161,11 +1161,11 @@ rtos_errorCode_t rtos_osInitKernel(void)
             {                                                                       \
                 /* Reset a possibly pending interrupt bit of the SW interrupt. */   \
                 *((vuint8_t*)&INTC.SSCIR0_3.R + (idEv)) = 0x01;                     \
-                rtos_osInstallInterruptHandler( &swInt##idEv                        \
-                                              , /* vectorNum */ idEv                \
-                                              , _eventAry[idEv].priority            \
-                                              , /* isPreemptable */ true            \
-                                              );                                    \
+                rtos_osRegisterInterruptHandler( &swInt##idEv                       \
+                                               , /* vectorNum */ idEv               \
+                                               , _eventAry[idEv].priority           \
+                                               , /* isPreemptable */ true           \
+                                               );                                   \
             }
         INSTALL_SW_IRQ(0)
         INSTALL_SW_IRQ(1)
@@ -1182,11 +1182,11 @@ rtos_errorCode_t rtos_osInitKernel(void)
 
         /* Install the interrupt service routine for cyclic timer PIT 0. It drives the OS
            scheduler for cyclic task activation. */
-        rtos_osInstallInterruptHandler( &onOsTimerTick
-                                      , /* vectorNum */ 59
-                                      , RTOS_KERNEL_PRIORITY
-                                      , /* isPremptable */ true
-                                      );
+        rtos_osRegisterInterruptHandler( &onOsTimerTick
+                                       , /* vectorNum */ 59
+                                       , RTOS_KERNEL_PRIORITY
+                                       , /* isPremptable */ true
+                                       );
 
         /* Peripheral clock has been initialized to 120 MHz. To get a 1ms interrupt tick we
            need to count till 120000. We configure an interrupt rate of RTOS_CLOCK_TICK_IN_MS

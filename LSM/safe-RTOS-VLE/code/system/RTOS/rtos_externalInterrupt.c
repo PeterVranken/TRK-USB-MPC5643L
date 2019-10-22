@@ -22,7 +22,7 @@
  */
 /* Module interface
  *   rtos_osInitINTCInterruptController
- *   rtos_osInstallInterruptHandler
+ *   rtos_osRegisterInterruptHandler
  *   rtos_dummyINTCInterruptHandler
  * Module inline interface
  * Local functions
@@ -111,12 +111,12 @@ volatile uint32_t SECTION(.data.OS.rtos_idxUnregisteredInterrupt)
  * initialization has given it a priority that will make the interrupt never be served at
  * all.\n
  *   To implement a real service, you would replace the default handler by your service
- * implementation using rtos_osInstallInterruptHandler().
+ * implementation using rtos_osRegisterInterruptHandler().
  */
 void rtos_dummyINTCInterruptHandler(void)
 {
     /* If this assertion fired then you enabled an interrupt on hardware level (I/O device
-       configuration) but you didn't use rtos_osInstallInterruptHandler() in your code to
+       configuration) but you didn't use rtos_osRegisterInterruptHandler() in your code to
        install an adequate service handler for it.
          You can find the address of the interrupt vector in register INTC_IACKR_PRC0, or
        0xfff48010. Subtract the address of the SW vector table rtos_INTCInterruptHandlerAry
@@ -143,7 +143,7 @@ void rtos_dummyINTCInterruptHandler(void)
  *   Note, this function temporarily clears the enable external interrupts bit in the
  * machine status register but doesn't have changed it on return. You will call it normally
  * at system startup time, when all interrupts are still disabled, then call
- * rtos_osInstallInterruptHandler() repeatedly for all interrupts your code is interested in
+ * rtos_osRegisterInterruptHandler() repeatedly for all interrupts your code is interested in
  * and eventually enable the interrupt processing at the CPU.
  *   @remark
  * This function must be called from supervisor mode only.
@@ -161,15 +161,15 @@ void rtos_osInitINTCInterruptController(void)
            interrupt configuration in the user code. (It's assumed that debugger is
            available during development time.) In PRODUCTION compilation, the dummy handler
            will never serve because of the priority being zero. */
-        rtos_osInstallInterruptHandler( &rtos_dummyINTCInterruptHandler
-                                      , /* vectorNum */ u
+        rtos_osRegisterInterruptHandler( &rtos_dummyINTCInterruptHandler
+                                       , /* vectorNum */ u
 #ifdef DEBUG
-                                      , /* psrPriority */ 1
+                                       , /* psrPriority */ 1
 #else
-                                      , /* psrPriority */ 0
+                                       , /* psrPriority */ 0
 #endif
-                                      , /* isPreemptable */ false
-                                      );
+                                       , /* isPreemptable */ false
+                                       );
     } /* for(All entries in the INTC vector table) */
 
     /* Normally, this function should always be called at the very first beginning, when
@@ -233,11 +233,11 @@ void rtos_osInitINTCInterruptController(void)
  *   @remark
  * This function must be called from supervisor mode only.
  */
-void rtos_osInstallInterruptHandler( const rtos_interruptServiceRoutine_t pInterruptHandler
-                                   , unsigned int vectorNum
-                                   , unsigned int psrPriority
-                                   , bool isPreemptable
-                                   )
+void rtos_osRegisterInterruptHandler( const rtos_interruptServiceRoutine_t pInterruptHandler
+                                    , unsigned int vectorNum
+                                    , unsigned int psrPriority
+                                    , bool isPreemptable
+                                    )
 {
     /* We permit to use this function at any time, i.e. even while interrupts may occur. We
        need to disable them shortly to avoid inconsistent states (vector and priority). */
@@ -253,7 +253,7 @@ void rtos_osInstallInterruptHandler( const rtos_interruptServiceRoutine_t pInter
 
     rtos_osLeaveCriticalSection(msr);
 
-} /* End of rtos_osInstallInterruptHandler */
+} /* End of rtos_osRegisterInterruptHandler */
 
 
 

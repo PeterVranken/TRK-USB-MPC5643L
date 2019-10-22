@@ -580,11 +580,11 @@ static void registerInterrupts(void)
 #define IDX_LINFLEX_RX_IRQ  (79 + 20*IDX_LINFLEX_D)
 
     /* Register our IRQ handler. */
-    rtos_osInstallInterruptHandler( &linFlexRxInterrupt
-                                  , /* vectorNum */ IDX_LINFLEX_RX_IRQ
-                                  , /* psrPriority */ INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT
-                                  , /* isPreemptable */ true
-                                  );
+    rtos_osRegisterInterruptHandler( &linFlexRxInterrupt
+                                   , /* vectorNum */ IDX_LINFLEX_RX_IRQ
+                                   , /* psrPriority */ INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT
+                                   , /* isPreemptable */ true
+                                   );
 #undef IDX_LINFLEX_RX_IRQ
 } /* End of registerInterrupts */
 

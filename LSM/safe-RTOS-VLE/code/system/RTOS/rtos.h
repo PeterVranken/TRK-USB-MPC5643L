@@ -191,7 +191,7 @@
  */
 
 /** Type of a single interrupt service as registered with function
-    rtos_osInstallInterruptHandler(). */
+    rtos_osRegisterInterruptHandler(). */
 typedef void (*rtos_interruptServiceRoutine_t)(void);
 
 
@@ -295,11 +295,11 @@ rtos_errorCode_t rtos_osRegisterOSTask(unsigned int idEvent, void (*osTaskFct)(v
 void rtos_osInitINTCInterruptController(void);
 
 /** Install an interrupt service for a given I/O device. */
-void rtos_osInstallInterruptHandler( rtos_interruptServiceRoutine_t interruptServiceRoutine
-                                   , unsigned int vectorNum
-                                   , unsigned int psrPriority
-                                   , bool isPreemptable
-                                   );
+void rtos_osRegisterInterruptHandler( rtos_interruptServiceRoutine_t interruptServiceRoutine
+                                    , unsigned int vectorNum
+                                    , unsigned int psrPriority
+                                    , bool isPreemptable
+                                    );
 
 /** Grant permission to particular processes for using the service rtos_runTask(). */
 void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID);

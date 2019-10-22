@@ -953,21 +953,21 @@ static void installInterruptServiceRoutines(void)
 
     /* Install the ISRs now that all timers are stopped.
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
-    rtos_osInstallInterruptHandler( &isrPit1
-                                  , /* vectorNum */ 60
-                                  , /* psrPriority */ prioISRPit1
-                                  , /* isPreemptable */ true
-                                  );
-    rtos_osInstallInterruptHandler( &isrPit2
-                                  , /* vectorNum */ 61
-                                  , /* psrPriority */ prioISRPit2
-                                  , /* isPreemptable */ true
-                                  );
-    rtos_osInstallInterruptHandler( &isrPit3
-                                  , /* vectorNum */ 127
-                                  , /* psrPriority */ prioISRPit3
-                                  , /* isPreemptable */ true
-                                  );
+    rtos_osRegisterInterruptHandler( &isrPit1
+                                   , /* vectorNum */ 60
+                                   , /* psrPriority */ prioISRPit1
+                                   , /* isPreemptable */ true
+                                   );
+    rtos_osRegisterInterruptHandler( &isrPit2
+                                   , /* vectorNum */ 61
+                                   , /* psrPriority */ prioISRPit2
+                                   , /* isPreemptable */ true
+                                   );
+    rtos_osRegisterInterruptHandler( &isrPit3
+                                   , /* vectorNum */ 127
+                                   , /* psrPriority */ prioISRPit3
+                                   , /* isPreemptable */ true
+                                   );
 
     /* Peripheral clock has been initialized to 120 MHz. The timer counts at this rate. The
        RTOS operates in ticks of 1ms we use prime numbers to get good asynchronity with the
