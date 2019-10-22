@@ -279,7 +279,7 @@ on Nov 19, 2017.]
 
 [[figSchemeOfPreemptions]]
 .Hierarchical task scheduling
-image::readMe_resources/taskSwitchesBCC.jpg[Hierarchical task scheduling, width="80%", pdfwidth="80%", align="center"]
+image::manual_resources/taskSwitchesBCC.jpg[Hierarchical task scheduling, width="80%", pdfwidth="80%", align="center"]
 
 For this RTOS, and different to most others, the priority scheme is shared
 with interrupts. The interrupt handlers behave like tasks with the only
@@ -1512,7 +1512,7 @@ memory area descriptor in the MPU each.
 
 [[figMemMap]]
 .Memory Map of MPC5643L with safe-RTOS
-image::readMe_resources/memoryMap.svg[Memory Map of MPC5643L with safe-RTOS, pdfwidth=90%, width=90%, align="center"]
+image::manual_resources/memoryMap.svg[Memory Map of MPC5643L with safe-RTOS, pdfwidth=90%, width=90%, align="center"]
 
 With respect to RAM, the chosen memory map ensures that all the memories,
 which are owned by a process, form exactly three solid memory areas in the
