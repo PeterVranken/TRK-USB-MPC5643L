@@ -58,7 +58,7 @@ var rtos_8h =
     [ "rtos_osRegisterUserTask", "rtos_8h.html#a8267fb6047b63c04640f2e78852c4574", null ],
     [ "rtos_osRegisterOSTask", "rtos_8h.html#a68096423d941e1dc670a6ec2e37d5275", null ],
     [ "rtos_osInitINTCInterruptController", "rtos_8h.html#a88a271864adecb3d629668674fa0815a", null ],
-    [ "rtos_osInstallInterruptHandler", "rtos_8h.html#a72c496a57feceb72a84ce41895e179c9", null ],
+    [ "rtos_osRegisterInterruptHandler", "rtos_8h.html#ae8a0bcc3633298cc478ceb73b2aebabc", null ],
     [ "rtos_osGrantPermissionRunTask", "rtos_8h.html#aeaae84408e099b28495d703994100c16", null ],
     [ "rtos_osGrantPermissionSuspendProcess", "rtos_8h.html#a68f8200c57d5390e8937fc2a78af55b6", null ],
     [ "rtos_osInitKernel", "rtos_8h.html#ab24d0fa9208d5675e03cc931a08e52fd", null ],

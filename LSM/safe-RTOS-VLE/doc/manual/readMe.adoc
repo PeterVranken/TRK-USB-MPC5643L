@@ -293,8 +293,8 @@ task or interrupt handler).
 The RTOS catches all possible MCU exceptions. Normal, failure free
 operation of OS and application tasks will not cause any exception; the
 RTOS doesn't make use of exceptions as principle of operation - like it
-would when using the MPU exception for reloading some memory descriptors.
-Therefore, an exception always means reporting an error.
+would for example when using the MPU exception for reloading some memory
+descriptors. Therefore, an exception always means reporting an error.
 
 Any exception handler will first check, which process the exception
 causing task belongs to. The RTOS maintains process related error counters
@@ -324,6 +324,26 @@ the exception handler enters an infinite loop to effectively halt the
 software execution. It's considered a matter of appropriate configuration
 of watchdogs and appropriate hardware design to ensure that this will keep
 the system, which the software is made for, in a safe state.
+
+=== Deadline monitoring
+
+Sorry, this section is still missing.
+
+TODOC: Principle and limitations
+
+* Checked at task resume: Low resolution. Little use e.g. for limiting a
+  regular 1ms task to 100us execution time. But even here useful for
+  failure detection and shutdown
+ ** Trick: Have a regular 100us timer interrupt with empty ISR. Now we
+    have a resume and check every 100us
+* Not working if there's no preempting ISR. Function can't be guaranteed
+  for prio equal or above kernel prio
+* Exception leaves tasks and data in inconsistent state. (Can abort task
+  in the middle of a critical section.) Generally no reasonable means to
+  limit execution time. Just an error recognition and worst case hindering
+  tool
+* If short latency times in error recognition path is not critical then
+  relying only on activation loss is likely the better option
 
 === Differences to the ancestor RTOS
 
@@ -1788,20 +1808,6 @@ Summarizing, a reasonable safety requirement would be allowing the use of
 the C library in process _P1_ (as a matter of experience, we never faced a
 problem with concurrent use) but not allowing its use in operating system
 code or in a safety process.
-
-//== Deadline monitoring
-//
-//TODOC: Principle and limitations
-//- Checked at task resume: Low resolution. Little use e.g. for limiting a
-//  regular 1ms task to 100us execution time. But even here useful for
-//  failure detection and shutdown
-//- Not working if there's no preempting ISR. Function can't be guaranteed
-//  for prio equal or above kernel prio
-//- Leaves tasks and data in inconsistent state. (Can abort task in the
-//  middle of a critical section.) Generally no reasonable means to limit
-//  execution time. Just an error recognition and worst case hindering tool
-//- If short latency times in error recognition path is not critical then
-//  relying only on activation loss is likely the better option
 
 == The sample applications
 

@@ -118,8 +118,8 @@ $(document).ready(function(){initNavTree('rtos__external_interrupt_8h.html','');
 Functions</h2></td></tr>
 <tr class="memitem:a88a271864adecb3d629668674fa0815a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__external_interrupt_8h.html#a88a271864adecb3d629668674fa0815a">rtos_osInitINTCInterruptController</a> (void)</td></tr>
 <tr class="separator:a88a271864adecb3d629668674fa0815a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a72c496a57feceb72a84ce41895e179c9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__external_interrupt_8h.html#a72c496a57feceb72a84ce41895e179c9">rtos_osInstallInterruptHandler</a> (<a class="el" href="rtos_8h.html#a671a05cb46411e64b58a457394c3e749">rtos_interruptServiceRoutine_t</a> interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</td></tr>
-<tr class="separator:a72c496a57feceb72a84ce41895e179c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae8a0bcc3633298cc478ceb73b2aebabc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__external_interrupt_8h.html#ae8a0bcc3633298cc478ceb73b2aebabc">rtos_osRegisterInterruptHandler</a> (<a class="el" href="rtos_8h.html#a671a05cb46411e64b58a457394c3e749">rtos_interruptServiceRoutine_t</a> interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</td></tr>
+<tr class="separator:ae8a0bcc3633298cc478ceb73b2aebabc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Definition of global interface of module <a class="el" href="rtos__external_interrupt_8c.html">rtos_externalInterrupt.c</a></p>
@@ -144,16 +144,16 @@ Functions</h2></td></tr>
 <p>Initialize the interrupt controller INTC.</p>
 <p>Initialize the interrupt controller INTC. The interrupt table with all interrupt service descriptors is initialized to contain a dummy ISR for all interrupts and it is then registered at the hardware device INTC for use.<br />
  The interrupt default handler is rtos_dummyINTCInterruptHandler(). It does nothing in PRODUCTION compilation but an assertion will fire in DEBUG compilation in order to indicate the missing true handler for an enabled interrupt.<br />
- Note, this function temporarily clears the enable external interrupts bit in the machine status register but doesn't have changed it on return. You will call it normally at system startup time, when all interrupts are still disabled, then call <a class="el" href="rtos__external_interrupt_8c.html#a8d6df097b205bd4d0d595ebc40e18fd8">rtos_osInstallInterruptHandler()</a> repeatedly for all interrupts your code is interested in and eventually enable the interrupt processing at the CPU. </p><dl class="section remark"><dt>Remarks</dt><dd>This function must be called from supervisor mode only. </dd></dl>
+ Note, this function temporarily clears the enable external interrupts bit in the machine status register but doesn't have changed it on return. You will call it normally at system startup time, when all interrupts are still disabled, then call <a class="el" href="rtos__external_interrupt_8c.html#a41214dac02ec9f2aef7284b4d40065c8">rtos_osRegisterInterruptHandler()</a> repeatedly for all interrupts your code is interested in and eventually enable the interrupt processing at the CPU. </p><dl class="section remark"><dt>Remarks</dt><dd>This function must be called from supervisor mode only. </dd></dl>
 
 </div>
 </div>
-<a class="anchor" id="a72c496a57feceb72a84ce41895e179c9"></a>
+<a class="anchor" id="ae8a0bcc3633298cc478ceb73b2aebabc"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void rtos_osInstallInterruptHandler </td>
+          <td class="memname">void rtos_osRegisterInterruptHandler </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="rtos_8h.html#a671a05cb46411e64b58a457394c3e749">rtos_interruptServiceRoutine_t</a>&#160;</td>
           <td class="paramname"><em>pInterruptHandler</em>, </td>
