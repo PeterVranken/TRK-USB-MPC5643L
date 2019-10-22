@@ -93,7 +93,7 @@ is the very lean implementation of a reusable real time operating system
 offering the functionality similar to an OSEK/VDX kernel of conformance
 class BCC1 or BCC2.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE["safe-RTOS"]
+image:LSM/safe-RTOS-VLE/doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="3%", pdfwidth="5%"] https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE["safe-RTOS"]
 is the not so lean technically ISO 26262 compliant variant of the previous
 with an additional process and privileges management concept that
 implements the _freedom-from-interference_ paradigm.
