@@ -1807,11 +1807,10 @@ code or in a safety process.
 
 The RTOS is a set of services, which permit the implementation of an
 operating system that runs some application code. It is not a
-self-contained, runnable piece of software. If you build it just like that
-then the build yields a library file for later use. However, the build
-process offers the option to specify some sample application code, which
-is compiled and linked with the RTOS code. If this option is chosen then
-the build process yields a flashable and runnable binary.
+self-contained, runnable piece of software. The build process requires the
+specification of some sample application code, which is compiled and
+linked with the RTOS code. Now, the build process yields a flashable and
+runnable binary.
 
 The concept is to specify an additional source code folder on the command
 line of the make processor. All source code, which is found in the folder or
