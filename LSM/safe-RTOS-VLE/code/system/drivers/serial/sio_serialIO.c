@@ -706,7 +706,7 @@ unsigned int sio_osWriteSerial( const char *msg
     uint32_t msr = rtos_osEnterCriticalSection();
     {
         /* Stop the (possibly) running DMA channel.
-            See 19.2.1.15 and RM of MPC5748G, 70.5.8.1: Coherently stop a DMA channel with
+             See 19.2.1.15 and RM of MPC5748G, 70.5.8.1: Coherently stop a DMA channel with
            the ability of resuming it later. */
         while((EDMA.DMAHRSL.R & (0x1<<DMA_CHN_FOR_SERIAL_OUTPUT)) != 0)
         {}

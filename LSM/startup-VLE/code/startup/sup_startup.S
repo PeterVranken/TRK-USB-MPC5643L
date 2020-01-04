@@ -48,6 +48,8 @@
  *   disableWatchdog
  *   initExceptionHandlers
  *   initMMU
+ *   writeMMUTableEntryS
+ *   writeMMUTableEntry
  *   initTimeBase
  *   zeroizeSRAM
  *   initSDataRegisters
@@ -669,7 +671,7 @@ initMMU:
     mflr        r27
 
     /* On entry we have a single valid MMU entry, which permits executing code from the
-       boot sector. This is entry 0. We must not overwrite this entry, whicle our code
+       boot sector. This is entry 0. We must not overwrite this entry, while our code
        execution still depends on it and the MMU documentation says that we must not have
        overlapping memory regions defined, neither. This makes the initiliazation sequence
        a bit complicated. We first install a temporary entry for the flash ROM section (to
@@ -887,7 +889,6 @@ writeMMUTableEntryS:
  * MPC5643L_HWInit.c, l. 241ff
  */
 writeMMUTableEntry:
-
 
     mtspr       624, r3 /* SPR 624: MMU Assist Register 0 (MAS0) */
     mtspr       625, r4 /* SPR 625: MMU Assist Register 1 (MAS1) */

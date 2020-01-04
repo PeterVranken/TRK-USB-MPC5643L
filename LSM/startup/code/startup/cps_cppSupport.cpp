@@ -1,7 +1,7 @@
 /**
  * @file cps_cppSupport.cpp
  * Some basic functions, which are called from the machine code emitted by gcc for C++
- * sources. The function permit to safely initialze static data objects.\n
+ * sources. The functions permit to safely initialze static data objects.\n
  *   This file is an alternative to using -fno-threadsafe-statics in this simple
  * single-threaded environment: We provide an implementation for the otherwise missing
  * synchronization functions. The implementation depends on the environment; here we assume
@@ -9,10 +9,20 @@
  * the single-threaded main context and the interrupt handlers.\n
  *   See e.g. www.opensource.apple.com/source/libcppabi/libcppabi-14/src/cxa_guard.cxx
  *
- * Copyright (C) 2019 FEV Europe GmbH (mailto:Peter.Vranken@FEV.com)
+ * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
- * All rights reserved. Reproduction in whole or in part is prohibited without the written
- * consent of the copyright owner.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
  * Local functions
