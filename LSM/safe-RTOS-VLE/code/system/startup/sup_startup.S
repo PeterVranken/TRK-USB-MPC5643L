@@ -40,13 +40,14 @@
  */
 /* Module interface
  *   sup_startup
- *   sup_IVOR0trap .. sup_IVOR15trap
- *   sup_IVOR32trap .. sup_IVOR34trap
+ *   sup_IVOR0trap, sup_IVOR9trap .. sup_IVOR12trap
  * Local functions
  *   zeroizeRegisters
  *   disableWatchdog
  *   initExceptionHandlers
  *   initMMU
+ *   writeMMUTableEntryS
+ *   writeMMUTableEntry
  *   initTimeBase
  *   zeroizeSRAM
  *   initSDataRegisters
@@ -507,7 +508,7 @@ initExceptionHandlers:
     /* The IVOR handlers require to restore the SDA pointers in r2 and r13 since they could
        have been clobbered by the preempted, untrusted user code. We place the values in
        the general purpose special registers, which are not accessible from user mode. In
-       these registers the value stay all time long. */
+       these registers the values stay all time long. */
     e_lis       r3, _SDA_BASE_@h
     e_or2i      r3, _SDA_BASE_@l
     mtspr       SPR_G1_SDA, r3
@@ -544,6 +545,7 @@ sup_IVOR1trap:
 #endif
 
 
+#if 0
 /**
  *   @func sup_IVOR2trap
  * Exception handler IVOR2 for the Data Storage interrupt. This trap is taken if the MMU
@@ -553,6 +555,7 @@ sup_IVOR1trap:
     .p2align    4
 sup_IVOR2trap:
     se_b        sup_IVOR2trap   /* Data Storage interrupt handler */
+#endif
 
 
 #if 0
@@ -569,7 +572,7 @@ sup_IVOR3trap:
 
 
 /* Note, there's no default IVOR4 trap since we always install a real trap handler for the
-   inevitable external interrupt handling. */
+   inevitable External Interrupt handling. */
 
 
 #if 0
@@ -734,7 +737,6 @@ sup_IVOR34trap:
 /* End of IVOR exception handlers 0..15 and 32..24 */
 
 
-
 /**
  *   @func initMMU
  * Shape an initial MMU configuration such that all addresses can be used without the
@@ -747,7 +749,7 @@ initMMU:
     mflr        r27
 
     /* On entry we have a single valid MMU entry, which permits executing code from the
-       boot sector. This is entry 0. We must not overwrite this entry, whicle our code
+       boot sector. This is entry 0. We must not overwrite this entry, while our code
        execution still depends on it and the MMU documentation says that we must not have
        overlapping memory regions defined, neither. This makes the initiliazation sequence
        a bit complicated. We first install a temporary entry for the flash ROM section (to
@@ -965,7 +967,6 @@ writeMMUTableEntryS:
  * MPC5643L_HWInit.c, l. 241ff
  */
 writeMMUTableEntry:
-
 
     mtspr       624, r3 /* SPR 624: MMU Assist Register 0 (MAS0) */
     mtspr       625, r4 /* SPR 625: MMU Assist Register 1 (MAS1) */
