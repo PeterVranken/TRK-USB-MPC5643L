@@ -229,7 +229,7 @@ rtos_ivor1Handler:
     e_lis       r3, rtos_cntIvor1PreemptsIvor4@ha
     e_lhz       r0, rtos_cntIvor1PreemptsIvor4@l(r3)
     e_cmpl16i   r0, 0xffff
-    se_b        ivr1_isUserCodeIvor1Exception
+    se_beq      ivr1_isUserCodeIvor1Exception
     se_addi     r0, 1
     e_sth       r0, rtos_cntIvor1PreemptsIvor4@l(r3)
     se_b        ivr1_isUserCodeIvor1Exception
