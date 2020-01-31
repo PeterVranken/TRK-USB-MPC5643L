@@ -113,9 +113,6 @@ static void (* const _pFctPrivilegedInstrInOSRAM)(void) =
  * Compute a random number in the range 0..#RAND_MAX.
  *   @return
  * Get the random number.
- *   @remark
- * The implementation of the function founds on a task call in another process, which makes
- * it quite expensive in terms of CPU load. Do not use it frequently.
  */
 static uint32_t random(void)
 {

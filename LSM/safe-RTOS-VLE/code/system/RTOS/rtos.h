@@ -455,7 +455,22 @@ extern void rtos_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPriority
  *   @param idxSysCall
  * Each system call is identified by an index. The index is an unsigned integer. The number
  * is the index into system call descriptor table \a rtos_systemCallDescAry.\n
+ *   See manual,
+ * https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/manual.pdf,
+ * section System calls of RTOS, Table 1, p. 17, for a list of system calls offered by the
+ * RTOS kernel. More system calls will be offered by your operating system, which builds on
+ * this safe-RTOS, please refer to your device driver documentation.\n
  *   The further function arguments depend on the particular system call.
+ *   @param ...
+ * The remaining arguments are passed register based to the system call implementation.
+ * "Register based" means that the number of arguments is restricted to 7 values of 8..32
+ * Bit each or accordingly lesser arguments if 64 Bit arguments are in use that require
+ * two registers each.
+ *   @remark
+ * It depends on the particular system call, which context this function may be called
+ * from. Nearly all system calls will be restricted to be called from user code. Only a few,
+ * like the assert function, are accessible from operating system code, too. Please, refer
+ * to the documentation of the particular system call.
  *   @remark
  * The C signature for system calls is formally not correct. The assembly code, which
  * implements this function, only supports function arguments in CPU registers, which
@@ -721,7 +736,7 @@ static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)
        constraint ensures that the compiler won't reorder instructions from before the
        wrtee to behind it. */
     asm volatile ( /* AssemblerTemplate */
-                   "wrtee %0\n"
+                   "wrtee %0 /* Restore MSR[EE] */\n\t"
                  : /* OutputOperands */
                  : /* InputOperands */ "r" (msr)
                  : /* Clobbers */ "memory"

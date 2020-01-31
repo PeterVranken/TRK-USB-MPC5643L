@@ -87,12 +87,12 @@ projectExe := $(target).s19
 .PHONY: h help targets usage
 .DEFAULT_GOAL := help
 h help targets usage:
-	$(info Usage: make [-s] [-k] [CONFIG=<configuration>] [APP=<sourceCodeFolder>] [SAVE_TMP=1] {<target>})
-	$(info CONFIG: <configuration> is one out of DEBUG (default) or PRODUCTION.)
+	$(info Usage: make [-s] [-k] [APP=<sourceCodeFolder>] [CONFIG=<configuration>] [SAVE_TMP=1] {<target>})
 	$(info APP: safe-RTOS-VLE is a library rather than a self-contained application. It \
            can be linked with some sample client code. <sourceCodeFolder> is a folder, \
            which contains the source files of the selected sample. Default is \
            code/application/default/)
+	$(info CONFIG: <configuration> is one out of DEBUG (default) or PRODUCTION.)
 	$(info SAVE_TMP: Set to one will make the preprocessed C(++) sources and the assembler \
            files appear in the target directory bin/ppc/<configuration>/obj/)
 	$(info Available targets are:)

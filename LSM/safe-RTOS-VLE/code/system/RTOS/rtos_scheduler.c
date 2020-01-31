@@ -129,6 +129,7 @@
  *   rtos_getNoActivationLoss
  * Module inline interface
  * Local functions
+ *   swInt0, ..., swInt7
  *   registerTask
  *   checkEventDue
  *   onOsTimerTick
@@ -640,7 +641,7 @@ static inline void checkEventDue(void)
  * including priority level #RTOS_MAX_LOCKABLE_PRIORITY (The range till
  * #RTOS_KERNEL_PRIORITY-1 is reserved for non-suppressible safety tasks). An ISR running
  * above this level cannot have a critical section with user code and data exchange needs
- * to appy more complicated techniques, e.g. double-buffering.
+ * to apply more complicated techniques, e.g. double-buffering.
  */
 static void onOsTimerTick(void)
 {
@@ -663,9 +664,9 @@ static void onOsTimerTick(void)
 
 
 /**
- * Creation of an event. The event can be cyclically triggering or software triggerd.
+ * Creation of an event. The event can be cyclically triggering or software triggered.
  * An event is needed to activate a user task. Therefore, any reasonable application will
- * ceate at least one event.\n
+ * create at least one event.\n
  *   This function is repeatedly called by the application code for each required event.
  * All calls of this function need to be done prior to the start of the kernel using
  * rtos_osInitKernel().\n

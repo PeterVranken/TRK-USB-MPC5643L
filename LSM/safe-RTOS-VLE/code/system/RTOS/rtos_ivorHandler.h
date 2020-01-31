@@ -146,7 +146,31 @@ struct rtos_taskDesc_t;
     code. */
 _Noreturn void rtos_osSystemCallBadArgument(void);
 
-/** C signature for doing a system call. Note, the signature doesn't ... @TODOC */
+/**
+ * C signature for doing a system call.\n
+ *   @return
+ * The return value depends on the system call.
+ *   @param idxSysCall
+ * The index of the system call. See manual,
+ * https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/manual.pdf,
+ * section System calls of RTOS, Table 1, p. 17, for a list of system calls offered by the
+ * RTOS kernel. More system calls will be offered by your operating system, see your
+ * device driver documentation.
+ *   @param ...
+ * The remaining arguments are passed register based to the system call implementation.
+ * "Register based" means that the number of arguments is restricted to 7 values of 8..32
+ * Bit each or accordingly lesser arguments if 64 Bit arguments are in use that require
+ * two registers each.
+ *   @remark
+ * It depends on the particular system call, which context this function may be called
+ * from. Nearly all system calls will be restricted to be called from user code. Only a few,
+ * like the assert function, are accessible from operating system code, too. Please, refer
+ * to the documentation of the particular system call.
+ *   @remark
+ * Note, the function is implemented in assmbler code and the doesn't implement all of what
+ * the C signature promises. No arguments are passed on the stack, which limits the number
+ * of possible system call arguments to 7 times 32 Bit.
+ */
 uint32_t rtos_systemCall(uint32_t idxSysCall, ...);
 
 /** C signature to execute a process init function. Must be called from OS context only.
