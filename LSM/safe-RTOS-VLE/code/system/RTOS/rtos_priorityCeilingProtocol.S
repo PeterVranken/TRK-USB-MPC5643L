@@ -226,7 +226,7 @@ rai_return:
  * can crash the system. In supervisor code, use rtos_osResumeAllInterruptsByPriority()
  * instead.
  */
-    .section    .text
+    .section    .text.rtos_resumeAllInterruptsByPriority
     .globl      rtos_resumeAllInterruptsByPriority
     .balign     2
 rtos_resumeAllInterruptsByPriority:
