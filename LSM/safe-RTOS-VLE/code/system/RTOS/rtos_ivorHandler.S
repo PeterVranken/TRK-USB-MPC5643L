@@ -4,10 +4,11 @@
  * #4 handler for external interrupts handled by the INTC.\n
  *   Used for MPC5643L in Lockstep Mode (LSM). The code has been designed for use with GCC
  * for PowerPC EABI.\n
- *   This module is based on and replaces the interrupt handler for External Interrupts
- * from the standard startup code (file int_INTCInterruptHandler.S).
+ *   This module is based on the interrupt handler for External Interrupts from the
+ * standard startup code (file int_INTCInterruptHandler.S). It replaces the IVOR #4 handler
+ * from this file and most of the other dummy IVOR handlers.
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -118,7 +119,7 @@
     constraints. */
     .section    .INTCInterruptServiceAry, "a"
     .extern     rtos_dummyINTCInterruptHandler
-    .global     rtos_INTCInterruptHandlerAry
+    .global     rtos_INTCInterruptHandlerAry, rtos_endOfINTCInterruptHandlerAry
     .p2align    11  /* 11 Bit alignment required by INTC hardware. The statement makes the
                        implementation safe but does not say anything about efficient memory
                        allocation. To avoid a big waste of memory the section allocation in
@@ -127,6 +128,7 @@ rtos_INTCInterruptHandlerAry:
     .rept       256
     .dc.l       rtos_dummyINTCInterruptHandler
     .endr
+rtos_endOfINTCInterruptHandlerAry:
 
 /* End of rtos_INTCInterruptHandlerAry */
 
@@ -146,7 +148,7 @@ rtos_INTCInterruptHandlerAry:
  * Table 5-2, p.162ff for the association of exception types to chosen IVOR handler and
  * Core RM, 5.7.7, p. 184, for this particular handler. In the context of this software,
  * this exception handler relates to memory access violations reported by the core-external
- * MPU.
+ * MPU. (There's no other source of machine check exceptions.)
  *   @remark
  * Different to all other exceptions in our context, the MPU raised external bus error
  * exceptions are "imprecise". They occur not as part of execution of the failing
@@ -171,19 +173,24 @@ rtos_INTCInterruptHandlerAry:
     .section    .text.ivor
     .global     rtos_ivor1Handler
     .p2align    4
+
 rtos_ivor1Handler:
-    /* We don't need a preamble with storage or register contexts of preempted context: We
+    /* We don't need a preamble with storage of register contents of preempted context: We
        are anyway going to abort the execution of that context.
          We must not rely on any register content as got from the preempted context: It
        can be corrupted as effect of the fault, which let to the exception. This holds in
        particular for the EABI registers r2 and r13 and the stack pointer. */
+
+    /* Usually, all MC exceptions will originate from user code - all supervisor code
+       belongs to the sphere of trusted code and is expected to be error-free. Check it. */
     mfspr       r0, SPR_MCSRR1
     se_btsti    r0, 17      /* Test bit "problem state" */
     se_bne      ivr1_isUserCodeIvor1Exception
 
-    /* The SV bit may be set if we encounter a double exception. A double exception will
-       occur if a core detected failure is made at an MPU protected, unavailable address.
-         Examples: Exceution of a privileged instruction in process RAM (no execution rights
+    /* Supervisor mode may be active if but only if we encounter a double exception. A
+       double exception will occur if a core detected failure is made at an MPU protected,
+       unavailable address.
+         Examples: Execution of a privileged instruction in process RAM (no execution rights
        for RAM granted by MPU) or misaligned data access in RAM of other process.
          The precise, synchronously appearing CPU exception is followed by an imprecise (CPU
        external) exception from the MPU. In which case the Machine Check exception here has
@@ -459,12 +466,7 @@ ivr1_testIvor33Or34:
  *  - Access control.
  *  - Byte ordering due to misaligned access across page boundary to pages with mismatched
  *    E bits
- *  - Cache locking exception
- *   Most likely, this exception cannot be caused by faulty user code and due to the chosen
- * system configuration, which is in the sphere of the OS code and unaccessible by user
- * code. We don't have any Book E pages defined and cache locking is not available to user
- * code. However, and because of the observed, also unexpected IVOR #3 exception, we better
- * have this handler available.
+ *  - Cache locking exception - this is forbidden in user code
  */
     .section    .text.ivor
     .global     rtos_ivor2Handler
@@ -674,7 +676,7 @@ rtos_isr_endIfPreemptable:
 
     mfspr       r4, SPR_TBL /* r4: Current time */
     se_sub      r3, r4      /* r3: Remaining time budget */
-    se_cmpi     r3, 0       /* Compare: Budget >= 0? Wraps only after 17s */
+    se_cmpi     r3, 0       /* Compare: Budget >= 0? Wraps only after about 17s at 120 Mhz */
     se_bge      iv4_retToPreemptedCtxt  /* Yes, end time >= current time, okay. */
     se_li       r3, RTOS_CAUSE_TASK_ABBORTION_DEADLINE
     se_b        rut_endUserTaskByException
@@ -715,14 +717,14 @@ iv4_retToPreemptedCtxt:
  * rtos_osRunUserTask handles the return from this executed C function, which requires a
  * switch back to supervisor mode and it implements the unconditional abortion of the
  * function (in case of errors or on explicit demand).\n
- *   rtos_osRunUserTask can be called from the OS context only, e.g. ISRs and or the OS owned
+ *   rtos_osRunUserTask can be called from the OS context only, e.g. ISRs and/or the OS owned
  * idle task.
  *   @return
  * The function normally returns the return value got from the C executed function in r3.\n
  *   If it is aborted by an exception, then the one's complement of the error code defined in
  * rtos_ivorHandler.h is returned instead (see #RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT and
  * following), which is the same as UINT_MAX-errorCode.\n
- *   The return value is declare signed in the C interface and user code should only return
+ *   The return value is declared signed in the C interface and user code should only return
  * positive integers. This convention allows to easily check for abnormal task termination:
  * A negative value is returned.
  *   @param pUserTaskConfig
@@ -734,8 +736,7 @@ iv4_retToPreemptedCtxt:
  * r4 contains a 32 Bit value, which is forwarded to the executed C function as second
  * argument. (Its first argument is the process ID.)
  */
-
-    .section    .text.ivor
+    .section    .text.rtos_osRunUserTask
     .global     rtos_osRunUserTask, rtos_osRunInitTask
     .balign     2
 
@@ -773,11 +774,24 @@ rtos_osRunUserTask:
     e_li        r3, ~RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT /* Load agreed function result */
     se_blr                          /* Do not execute function, return immediately */
 
+/**
+ * Continuation of code before and entry point from C source code: Function
+ * rtos_osRunInitTask().\n
+ *   This function is nearly the same as rtos_osRunUserTask() with the only exception that
+ * the process state is not evaluated; the init function must be called while the process
+ * is not yet enabled.\n
+ *   For copy the function entry code rather than making a dynmic descision - it are just a
+ * few instructions to duplicate.
+ */
 rtos_osRunInitTask:
     /* Compute the pointer to the process descriptor from the PID in the task configuration. */
     se_lbz      r6, O_TCONF_pid(r3)
     se_mtar     r8, r6                  /* r8: Aimed PID for task */
     se_subi     r6, 1                   /* r6: idxProcess */
+#ifdef DEBUG
+    se_cmpli    r6, 3
+    se_bgt      .                       /* assert(PID >= 1  &&  PID <= 4); */
+#endif
 #if SIZE_OF_PROCESS_DESC == 64
     se_slwi     r6, 6
 #else
@@ -886,6 +900,12 @@ rut_noTimeBudget:
     se_mfar     r3, r8  /* 1st argument: PID. r4 still holds C code specified 2nd argument */
     se_rfi
 
+
+/**
+ * Entry point from C source code: Function rtos_terminateUserTask(). See alias
+ * rtos_terminateTask() in rtos.h, too.
+ */
+    .section    .text.ivor
     .global     rtos_terminateUserTask
 rtos_terminateUserTask:
     se_mr       r4, r3  /* Return value of user function becomes argument of sys call */
@@ -1144,11 +1164,12 @@ rtos_ivor7Handler:
  * them needs to have up to 32 Bit. 64 Bit arguments are not supported for function calls.
  */
     .section    .text.ivor
+    .extern     rtos_systemCallDescAry
     .global     rtos_ivor8Handler
     .p2align    4
 
 rtos_ivor8Handler:
-    .extern     rtos_systemCallDescAry
+
     
     /* It is a most typically occuring error to make a system call from operating system
        code (as the system call instruction is somewhere hidden in a normally looking C
@@ -1175,7 +1196,11 @@ ivr8_isSVEnabledSysCall:
 #else
 # error Number of system calls out of range
 #endif
+#ifdef DEBUG
+    e_bge       rtos_osSystemCallBadArgument  /* Index out of range: Abort task */
+#else
     se_bge      rtos_osSystemCallBadArgument  /* Index out of range: Abort task */
+#endif
 
 #if SIZE_OF_SC_DESC != 8
 # error Assembler code requires adaptation. (Multiplication index with size of struct)
@@ -1432,8 +1457,8 @@ rtos_ivor13Handler:
 
 /**
  *   @func rtos_ivor14Handler
- * This is the interrupt handler for the MCU trap #14, Data TLB Error Interrupt. See Core
- * RM, 5.7.15, p. 189. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 165):
+ * This is the interrupt handler for the MCU trap #14, Instruction TLB Error Interrupt. See
+ * Core RM, 5.7.15, p. 189. This exception relates to (see CRM, 5.1.2, Table 5-3, p. 165):
  *   - Instruction translation lookup did not match a valid entry in the TLB
  */
     .section    .text.ivor
@@ -1469,11 +1494,10 @@ rtos_ivor14Handler:
  *   - Trap, instruction address compare, data address compare, instruction
  *     complete, branch taken, return from interrupt, interrupt taken, debug
  *     counter, external debug event, unconditional debug event
- *   We mainly need to catch the trap exceptions. We don't have the debug features enabled
- * so we will get the preemption status in CSRR0/1.
+ *   We don't have the debug APU features enabled (see HID0, CRM 2.4.11, p.48ff) and would
+ * get the preemption status in CSRR0/1. However MSR[DE] is always zero, so we will never
+ * see this exception.
  *   Note, the ESR, exception syndrome register, is not affected.
- *   Note, the implementation of this handler requires the HID0 setting such that MSR[EE]
- * is cleared on entry into the exception.
  */
     .section    .text.ivor
     .global     rtos_ivor15Handler
@@ -1548,12 +1572,12 @@ rtos_ivor32Handler:
  *   The exceptions #33 and #34 differ from others. We have disabled both of them by setting
  * (See CRM, 6.2.1 and Table 6-1, p. 205ff, for a description of the FPU control and status
  * bits):\n
+ *   - SPEFSCR[FINXE] = 0 (Embedded Floating-point Inexact Exception Enable)\n
  *   - SPEFSCR[FINVE] = 0 (Embedded Floating-point Invalid Operation / Input Error\n
  *     Exception Enable)\n
  *   - SPEFSCR[FDBZE] = 0 (Embedded Floating-point Divide by Zero Exception Enable)\n
  *   - SPEFSCR[FUNFE] = 0 (Embedded Floating-point Underflow Exception Enable)\n
  *   - SPEFSCR[FOVFE] = 0 (Embedded Floating-point Overflow Exception Enable)\n
- *   - SPEFSCR[FINXE] = 0 (Embedded Floating-point Inexact Exception Enable)\n
  *   Unfortunately, the configuration register is user accessible and user code can
  * reenable the exceptions. We implement the handler by returning to the failing context.
  * We must not punish the failing context by task abortion as usually done, since there's
@@ -1570,6 +1594,7 @@ rtos_ivor33And34Handler:
     se_bclri    r2, 24      /* 0x000000a0: Mask of possibly set ESR bits */
     se_bclri    r2, 26
     mtspr       SPR_ESR, r2 /* SPR 62 = ESR, exception syndrome register. Acknowledge excep. */
+    se_li       r2, 0
     mtspr       SPR_SPEFSCR, r2 /* r2: 0. Repair bad FPU configuration */
     mfspr       r2, SPR_G2_SDA2 /* Restore r2 after use */
     se_rfi      /* Continue exception causing context. The FPU instruction will be repeated. */
