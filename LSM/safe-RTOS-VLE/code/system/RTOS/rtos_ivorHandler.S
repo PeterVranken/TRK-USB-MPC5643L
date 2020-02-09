@@ -1170,7 +1170,6 @@ rtos_ivor7Handler:
 
 rtos_ivor8Handler:
 
-    
     /* It is a most typically occuring error to make a system call from operating system
        code (as the system call instruction is somewhere hidden in a normally looking C
        style function) and we add an according assertion here; if we wait until the code
@@ -1219,7 +1218,7 @@ ivr8_isSVEnabledSysCall:
     /* Start of an assembler implemented, basic handler: No stack, no preemption. Intended
        for short, efficient handlers, which consist of only a few machine instructions in
        supervisor mode. No return here, they will have to take care for the se_rfi
-       themselves. 
+       themselves.
          Note, we jump on the volatile CTR register in order to not destroy the LR
        register. This allows having short system calling code without stack frame for the
        most efficient basic system call handlers. */
@@ -1317,8 +1316,8 @@ ivr8_startFullHandler:
     e_stmvsrrw  O_SRRi(sp)      /* SRR0/SRR1: 2*4 Byte */
 
     /* Save process ID, then reset the PID in the CPU to kernel state. A sync instruction
-       is not required since we are and stay in supervisor mode, which is configured
-       regardless of PID. */
+       is not required since we are and stay in supervisor mode, which is configured in MMU
+       and MPU regardless of PID. */
     mfspr       r3, SPR_PID0
     se_stw      r3, O_PID(sp)
     se_li       r0, 0
@@ -1328,7 +1327,9 @@ ivr8_startFullHandler:
     wrteei      1
 
     /* Call specified handler function as a normal function call.
-         First function argument r3 is the process ID of the calling task. */
+         First function argument r3 is the process ID of the calling task.
+         Register r4 .. r10 have not been changed since entry into the system call IVOR #8
+       handler and still hold the user supplied function arguments of the system call. */
     se_blrl
 
     /* Restore status from the saved information in the stack frame. This requires a
