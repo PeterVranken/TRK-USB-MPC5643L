@@ -645,9 +645,6 @@ static inline void checkEventDue(void)
  */
 static void onOsTimerTick(void)
 {
-    /* Note, the scheduler function needs to run at highest priority, which means that no
-       task or ISR can preempt this code. No mutual exclusion code is required. */
-
     /* Update the system time. */
     _tiOs += _tiOsStep;
 
