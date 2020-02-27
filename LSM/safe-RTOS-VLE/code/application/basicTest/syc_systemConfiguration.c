@@ -152,8 +152,8 @@ static void isrPit1(void)
  */
 static void isrPit2(void)
 {
-    /* Indirectly start a user task. It is executed asynchronously to this ISR and on has its
-       own, irrelated priority level. */
+    /* Indirectly start a user task. It is executed asynchronously to this ISR and has its
+       own, irrelated task priority level. */
     rtos_osTriggerEvent(syc_idEvPIT2);
 
     /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
@@ -202,17 +202,17 @@ static void installInterruptServiceRoutines(void)
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
     rtos_osRegisterInterruptHandler( &isrPit1
                                    , /* vectorNum */ 60
-                                   , /* psrPriority */ syc_prioISRPit1
+                                   , /* psrPriority */ syc_prioIrqPit1
                                    , /* isPreemptable */ true
                                    );
     rtos_osRegisterInterruptHandler( &isrPit2
                                    , /* vectorNum */ 61
-                                   , /* psrPriority */ syc_prioISRPit2
+                                   , /* psrPriority */ syc_prioIrqPit2
                                    , /* isPreemptable */ true
                                    );
     rtos_osRegisterInterruptHandler( &isrPit3
                                    , /* vectorNum */ 127
-                                   , /* psrPriority */ syc_prioISRPit3
+                                   , /* psrPriority */ syc_prioIrqPit3
                                    , /* isPreemptable */ true
                                    );
 
@@ -263,12 +263,12 @@ void main(void)
     rtos_osInitINTCInterruptController();
 
     /* Initialize the button and LED driver for the eval board. */
-    lbd_initLEDAndButtonDriver( /* onButtonChangeCallback */ NULL
-                              , /* pidOnButtonChangeCallback */ 0
-                              );
+    lbd_osInitLEDAndButtonDriver( /* onButtonChangeCallback */ NULL
+                                , /* pidOnButtonChangeCallback */ 0
+                                );
 
     /* Initialize the serial output channel as prerequisite of using printf. */
-    sio_initSerialInterface(/* baudRate */ 115200);
+    sio_osInitSerialInterface(/* baudRate */ 115200);
 
     /* Register the process initialization tasks. Here, we used always the same function. */
     bool initOk = true;

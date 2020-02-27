@@ -551,6 +551,7 @@ rtos_ivor3Handler:
  */
     .section    .text.ivor
     .global     rtos_ivor4Handler
+    .extern     rtos_noEventsPending
     .p2align    4
 rtos_ivor4Handler:
 
@@ -561,7 +562,8 @@ rtos_ivor4Handler:
     #define O_SRRi          (8+8)   /* SRR0, SRR1: 2*4=8 Byte */
     #define O_CR            (8+16)  /* EABI volatile, CR, LR, CTR, XER: 4*4=16 Byte */
     #define O_R00           (8+32)  /* EABI volatile, r0, r3-r12: 11*4=44 Byte */
-    #define SIZE_OF_PAYLOAD 76      /* Size of user data in stack frame */
+    #define O_NOEV          (8+76)  /* Saved value of rtos_noEventsPending */
+    #define SIZE_OF_PAYLOAD 80      /* Size of user data in stack frame */
 
     /* Size of stack frame: Room for SP and LR and uprounding to multiple of 8. */
     #define S_I4_StFr   ((((SIZE_OF_PAYLOAD)+15)/8)*8)
@@ -633,6 +635,16 @@ ivr4_endSwitchSP:
     se_lwz      r3, 0x0(r3)         /* Read address of interrupt service routine from
                                        ISR Vector Table using pointer  */
 
+    /* Load the current count of pending events to see the difference at return from the
+       ISR of lowest nesting level: When we eventually return to INTC interrupt level
+       zero, then we will start the schedule if any of the (nested) ISRs should have
+       triggered at least one event.
+         Note, we need to capture the contributions from any potential nested ISR,
+       therefore we need to read the reference value here before we leave the critical
+       section and allow preemptions by interrupts of higher priority. */
+    e_lwz       r4, rtos_noEventsPending@sda21(r13) /* r4: Count of pending events */
+    e_stw       r4, O_NOEV(sp)      /* Store for evaluation at return from ISR */
+    
     /* For preemptable interrupt handlers set the EE bit in the MSR. The property
        preemptability of a handler is encoded as MSBit of the function pointer. */
     se_btsti    r3, 0
@@ -643,9 +655,6 @@ rtos_isr_endIfPreemptable:
     se_mtlr     r3      /* Branch to ISR handler address found in service descriptor */
     se_blrl             /* Branch to ISR, but return here */
 
-    se_lbz      r0, O_PID(sp)   /* PID0 (1 Byte) loaded from stack frame */
-    se_cmpi     r0, 0           /* Check can be done still outside critical section */
-
     /* Write 0 to INTC_EOIR, informing INTC to restore priority as it was on entry to this
        handler. */
     se_li       r3, 0
@@ -653,15 +662,43 @@ rtos_isr_endIfPreemptable:
     wrteei      0   /* Disable interrupt processing prior to IRQ acknowledge at INTC */
     e_stw       r3, INTC_EOIR_PRC0@l(r4)/* Write 0 to INTC_EOIR */
 
+    /* The decision about task switches is taken in the C code implementation of the
+       scheduler, rtos_processTriggeredEvents(). However, before we do the expensive
+       function call we evaluate a preliminary, simplified indicator. We compare the total
+       number of pending events before and after the ISR. */
+    e_lwz       r3, rtos_noEventsPending@sda21(r13)/* r3: Count of pending events after ISRs */
+    e_lwz       r4, O_NOEV(sp)      /* Load count of pending events before ISR */
+    se_cmpl     r3, r4              /* CR0: count after > count before, gt: has grown */
+#ifdef DEBUG
+    se_blt      .                   /* assert(after >= before); Check of indicator itself. */
+#endif
+    se_ble      iv4_noCallOfScheduler
+    
+    /* We check for possible task switch because of an event being set in the ISR only if
+       we return from the last ISR - but not (yet) if this is the return from a potential
+       preempting, nested ISR. Note, this is why the code evaluating the change of counts
+       of pending events needs to be inside a critical section. */
+    e_lis       r3, INTC_CPR_PRC0@ha    /* Load upper half of INTC_CPR address */
+    e_lwz       r3, INTC_CPR_PRC0@l(r3) /* r3: Current IRQ priority in INTC */
+    se_cmpli    r3, 1                   /* No activity if we are still in a nested ISR. */
+    
+    /* Run the scheduler if we have the indication of newly set events. This may involve a
+       recursion inside of which new tasks are run.
+         Note, to avoid stack overflow we need to enter the function within the critical
+       section, which we had started before signalling end of IRQ to the INTC. */
+    e_bltl      rtos_processTriggeredEvents
+    
+iv4_noCallOfScheduler:
     /* Restore the process ID. A sync operation is not required since we are not switching
        to another, PID-aware memory region. MMU and MPU grant all required permissions in
        SV mode. */
+    se_lbz      r0, O_PID(sp)   /* PID0 (1 Byte) loaded from stack frame */
+    se_cmpi     r0, 0           /* Check can be done still outside critical section */
     mtspr       SPR_PID0, r0
     se_beq      iv4_retToPreemptedCtxt  /* CR0: Holds PID0!=0. 0: Return to other OS context */
 
     /* If we get here then we need to check the abort conditions of the otherwise resumed
-       user task. Note, the evaluation could be done before entering the critical section,
-       but the conditional branch would need to stay here inside. */
+       user task. */
     e_lwz       r3, (RUT_O_pPDESC+S_I4_StFr)(sp)/* Find pProcessDesc in parent stack frame */
     se_lbz      r3, O_PDESC_ST(r3)      /* r3: Process state: 0=stopped */
     se_cmpi     r3, 0
@@ -698,6 +735,7 @@ iv4_retToPreemptedCtxt:
     #undef O_SRRi
     #undef O_CR
     #undef O_R00
+    #undef O_NOEV
     #undef SIZE_OF_PAYLOAD
     #undef S_I4_StFr
     #undef O_LR
@@ -829,10 +867,9 @@ rut_noTimeBudget:
        the volatile registers, now we do the same for the non volatile. */
     e_stmw      r14, RUT_O_NVGPR(sp)
 
-    /* Store the interrupt priority at task start. This is a prerequiste of a protected
+    /* Store the current task priority at task start. This is a prerequiste of a protected
        implementation of the system calls for the priority ceiling protocol. */
-    e_lis       r7, INTC_CPR_PRC0@ha    /* Load upper half of INTC_CPR address */
-    e_lwz       r7, INTC_CPR_PRC0@l(r7) /* r7: Current INTC interrupt priority */
+    e_lwz       r7, rtos_currentPrio@sda21(13)
     se_stw      r7, RUT_O_CPR(sp)       /* Store it for use by PCP system call */
 
     /* Let LR point to a system call for task termination. This permits the user code to
@@ -918,7 +955,7 @@ rtos_terminateUserTask:
        be trusted.
          It is essential that EE=0 still holds and until we have returned to the kernel
        mode (PID0=0) and have restored the global context data. */
-    .global     rtos_scBscHdlr_terminateUserTask     /* Global as it is element of table of
+    .global     rtos_scBscHdlr_terminateUserTask    /* Global as it is element of table of
                                                        system calls */
 rtos_scBscHdlr_terminateUserTask:
     /* Here we get from the common part of the IVOR #8 handler (system call).  */
@@ -926,7 +963,7 @@ rtos_scBscHdlr_terminateUserTask:
     e_lwz       r6, RUT_O_pPDESC(sp)/* r6: Retrieved address of process descriptor */
     se_cmpi     r4, 0               /* Arg of sys call < 0: User reported errore */
     se_bge      rut_endWithoutErr   /* Skip counting cause of termination: Normal situation */
-    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_USER_ABORT     /* Array idx for err counter */
+    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_USER_ABORT    /* Array idx for err counter */
     e_li        r4, ~RTOS_CAUSE_TASK_ABBORTION_USER_ABORT /* r4: ret code of osRunUserTask() */
     se_b        rut_endWithErr
 
@@ -1007,14 +1044,18 @@ rut_endWithoutErr:
 
     /* The end of the user task is not necessarily the end of the OS task; several user
        tasks can be associated with a single event, which means that they are consecutively
-       run in one and the same OS context. We can therefore not rely on the automatic,
-       hardware implemented mechanism to restore the current priority, which is effective
-       only at the end of the OS context. We need to restore already before a potential
-       entry in a subsequent user task. Unfortunately, because these operations are nearly
-       always useless and entirely useless in case of fault-free user code. */
+       run in one and the same OS context. We must not rely on the current priority value
+       as left by the ending task. We need to restore already before a potential entry in a
+       subsequent user task. Note, these operations are nearly always useless and entirely
+       useless in case of fault-free user code. */
+/// @todo Is this necessarily part of the critical section? It shouldn't: The normal reset
+// of the CS (by user code) is also not done synchronously with the end of the task
     se_lwz      r0, RUT_O_CPR(sp)       /* r0: Prio of user task start */
-    e_lis       r3, INTC_CPR_PRC0@ha    /* Load upper half of INTC_CPR address */
-    e_stw       r0, INTC_CPR_PRC0@l(r3) /* Restore priority in INTC */
+    e_stw       r0, rtos_currentPrio@sda21(13) /* Restore priority in global variable */
+/// @todo To still have correct scheduling in case of bad user code, we need to call the
+// scheduler if we lower the priority (not raising it can be an assertion). First, think
+// about a test case to see and prove the difference. The previous todo will become obsolete,
+// because the scheduler needs to be run from inside a critical section
 
     /* Process context is completely reset to kernel mode. We can again permit preemptions. */
     wrteei      1
@@ -1295,31 +1336,20 @@ ivr8_startFullHandler:
     mfspr       r2, SPR_G2_SDA2         /* Repair possibly destroyed .sdata2 base in r2 */
     mfspr       r13, SPR_G1_SDA         /* Repair possibly destroyed .sdata base in r13 */
 
-    /* Define the stack frame contents as offsets of data objects. Note the minimum offset
-       of 8 due to the storage of stack pointer and link register. */
-    #define O_USP           (8+0)
-    #define O_PID           (8+4)
-    #define O_SRRi          (8+8)   /* Two 32 Bit registers = 8 Byte */
-    #define SIZE_OF_PAYLOAD 16  /* Size of user data in stack frame */
-
-    /* Size of stack frame: Room for SP and LR and uprounding to multiple of 8. */
-    #define SIZE_OF_SF      ((((SIZE_OF_PAYLOAD)+15)/8)*8)
-    #define O_LR            (SIZE_OF_SF+4)
-
     /* Create stack frame and save stack pointer and stack pointer at entry into system
        call and return address/machine state. */
     se_lwz      r3, RUT_O_pPDESC(sp)/* r3: Pointer to process descriptor of calling task */
-    e_stwu      sp, -SIZE_OF_SF(sp)
-    se_stw      r0, O_USP(sp)   /* r0: Stack pointer value at entry into sys call */
+    e_stwu      sp, -IV8_SIZE_OF_SF(sp)
+    se_stw      r0, IV8_O_USP(sp)   /* r0: Stack pointer value at entry into sys call */
     se_stw      r0, O_PDESC_USP(r3) /* Publish current U sp in process descriptor: to be used
                                        when it comes to new task starts after EE=1 */
-    e_stmvsrrw  O_SRRi(sp)      /* SRR0/SRR1: 2*4 Byte */
+    e_stmvsrrw  IV8_O_SRRi(sp)      /* SRR0/SRR1: 2*4 Byte */
 
     /* Save process ID, then reset the PID in the CPU to kernel state. A sync instruction
        is not required since we are and stay in supervisor mode, which is configured in MMU
        and MPU regardless of PID. */
     mfspr       r3, SPR_PID0
-    se_stw      r3, O_PID(sp)
+    se_stw      r3, IV8_O_PID(sp)
     se_li       r0, 0
     mtspr       SPR_PID0, r0
 
@@ -1347,9 +1377,9 @@ ivr8_startFullHandler:
           @todo Remarks in rtos_scSmplHdlr_suspendProcess and rtos_suspendProcess point to
         this issue and should be removed if a check is added here. */
 
-    se_lwz      r0, O_PID(sp)
+    se_lwz      r0, IV8_O_PID(sp)
     mtspr       SPR_PID0, r0
-    e_lmvsrrw   O_SRRi(sp)      /* SRR0/SRR1: 2*4 Byte */
+    e_lmvsrrw   IV8_O_SRRi(sp)      /* SRR0/SRR1: 2*4 Byte */
 
     /* O_PDESC_USP or rtos_processAry.userSP doesn't need restauration: We will surely
        return to a user mode context and at its first future preemption the switch to SV sp
@@ -1357,15 +1387,7 @@ ivr8_startFullHandler:
        happens as next, which would make use of the bad, not restored field. */
 
     /* Remove the no longer needed stack frame by restoring the stack pointer at entry. */
-    se_lwz      sp, O_USP(sp)
-
-    #undef O_USP
-    #undef O_PID
-    #undef O_SRRi
-    #undef SIZE_OF_PAYLOAD
-    #undef SIZE_OF_SF
-    #undef O_LR
-
+    se_lwz      sp, IV8_O_USP(sp)
     se_rfi
 
 /* End of rtos_ivor8Handler */

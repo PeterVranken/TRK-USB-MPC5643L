@@ -115,12 +115,12 @@ enum
     syc_prioEvReporting = 1 /// Slow clock for printing results to the console
     , syc_prioEvTest = 3       /// Used for failure task and the controlling supervisor tasks
     , syc_prioEvTestCtxSw = 2  /// Used to drive independent test of context switching
-    , syc_prioEvPIT2 = (RTOS_KERNEL_PRIORITY-1) /// Used for high priority watchdog
+    , syc_prioEvPIT2 = (RTOS_MAX_LOCKABLE_TASK_PRIORITY+1)  /// Used for high priority watchdog
     , syc_prioEv17ms = 2       /// Used for low priority task in failure process
-    
-    , syc_prioISRPit1 = 4   /// Directly starts high priority task in failure process
-    , syc_prioISRPit2 = (RTOS_KERNEL_PRIORITY+1)  /// Triggers event syc_idEvPIT2
-    , syc_prioISRPit3 = 15  /// An asynchronous, unrelated ISR
+
+    , syc_prioIrqPit1 = 4   /// Directly starts high priority task in failure process
+    , syc_prioIrqPit2 = (RTOS_MAX_LOCKABLE_TASK_PRIORITY+1) /// Triggers event syc_idEvPIT2
+    , syc_prioIrqPit3 = 15  /// An asynchronous, unrelated ISR
 };
  
  

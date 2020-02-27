@@ -34,12 +34,6 @@
  * Defines
  */
 
-/** Interrupt priority of the scheduler. Needed here for assembler implementation of
-    priority ceiling protocol.
-      @remark The C code contains preprocessor code that ensures consistency with the
-    according definition in the C code. */
-#define RTOS_PCP_KERNEL_PRIO        12
-
 /** This the highest priority that ISRs and tasks can have, which user code can shape a
     critical section with. If a task or ISR has a higher priority then user code can't
     hinder it from being scheduled at any time and race conditions with these ISRs or tasks
@@ -51,14 +45,14 @@
 #define RTOS_PCP_MAX_LOCKABLE_PRIO  ((RTOS_PCP_KERNEL_PRIO)-2)
 
 /** Index of implemented system call for raising a user context's current priority. The
-    system call is wrapped in the inline function rtos_suspendAllInterruptsByPriority().
+    system call is wrapped in the inline function rtos_suspendAllTasksByPriority().
     Please refer to this function for details. */
-#define RTOS_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY     1
+#define RTOS_SYSCALL_SUSPEND_ALL_TASKS_BY_PRIORITY      1
 
 /** Index of implemented system call for lowering a user context's current priority. The
-    system call is wrapped in the inline function rtos_resumeAllInterruptsByPriority().
+    system call is wrapped in the inline function rtos_resumeAllTasksByPriority().
     Please refer to this function for details. */
-#define RTOS_SYSCALL_RESUME_ALL_INTERRUPTS_BY_PRIORITY      2
+#define RTOS_SYSCALL_RESUME_ALL_TASKS_BY_PRIORITY       2
 
 
 #ifdef __STDC_VERSION__

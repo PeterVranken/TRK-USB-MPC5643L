@@ -388,8 +388,8 @@ static void injectError(void)
 
 #if PRF_ENA_TC_PRF_KOF_NO_FAILURE == 1
     case prf_kof_noFailure:
-        /* We run a "normal" test case, whichis not connected to the exception mechanism of
-           the RTOS. The test function will always return but it can tell a testfailure by
+        /* We run a "normal" test case, which is not connected to the exception mechanism of
+           the RTOS. The test function will always return but it can tell a test failure by
            return value. The return value is caught by infinite loop, which would be seen
            as an (here unexpected) deadline exception. */
         if(!testCheckUserCodePtr())
@@ -415,7 +415,7 @@ static void injectError(void)
         
 #if PRF_ENA_TC_PRF_KOF_CALL_OS_API == 1
     case prf_kof_callOsAPI:
-        rtos_osSuspendAllInterruptsByPriority(15);
+        rtos_osSuspendAllTasksByPriority(RTOS_MAX_LOCKABLE_TASK_PRIORITY);
         break;
 #endif
 
@@ -855,10 +855,10 @@ static void injectError(void)
     case prf_kof_invalidCritSec:
         {
             uint32_t prioLvlBefore ATTRIB_DBG_ONLY =
-                            rtos_suspendAllInterruptsByPriority
-                                  (/* suspendUpToThisPriority */ RTOS_MAX_LOCKABLE_PRIORITY);
+                        rtos_suspendAllTasksByPriority
+                          (/* suspendUpToThisTaskPriority */ RTOS_MAX_LOCKABLE_TASK_PRIORITY);
             assert(prioLvlBefore == syc_prioEvTest);
-            rtos_resumeAllInterruptsByPriority(/* suspendUpToThisPriority */ syc_prioEvTest);
+            rtos_resumeAllTasksByPriority(/* resumeDownToThisTaskPriority */ syc_prioEvTest);
 
             /* One of the next calls needs to fail: We demand the values beyond the
                permitted limits.
@@ -870,10 +870,10 @@ static void injectError(void)
                ignored in PRODUCTION compilation and yields an exception in DEBUG
                compilation (and no priority change takes place in either case). */
             const uint32_t prio = (prs_cntTestCycles/prf_kof_noFailureTypes & 1) != 0
-                                  ? RTOS_KERNEL_PRIORITY - 1
+                                  ? RTOS_MAX_LOCKABLE_TASK_PRIORITY + 1
                                   : syc_prioEvTest - 1;
-            rtos_suspendAllInterruptsByPriority(/* suspendUpToThisPriority */ prio);
-            rtos_resumeAllInterruptsByPriority(/* suspendUpToThisPriority */ prio);
+            rtos_suspendAllTasksByPriority(/* suspendUpToThisTaskPriority */ prio);
+            rtos_resumeAllTasksByPriority(/* resumeDownToThisTaskPriority */ prio);
             assert(false);
         }
         break;
@@ -882,13 +882,19 @@ static void injectError(void)
 #if PRF_ENA_TC_PRF_KOF_LEAVE_CRIT_SEC == 1
     case prf_kof_leaveCritSec:
         {
+            #define INTERMEDIATE_PRIO (syc_prioEvTest+2)
+            _Static_assert( INTERMEDIATE_PRIO < RTOS_MAX_LOCKABLE_TASK_PRIORITY
+                          , "Bad test configuration"
+                          );
             uint32_t prioLvlBefore ATTRIB_DBG_ONLY =
-                            rtos_suspendAllInterruptsByPriority
-                                    (/* suspendUpToThisPriority */ syc_prioISRPit1);
+                            rtos_suspendAllTasksByPriority
+                                (/* suspendUpToThisTaskPriority */ INTERMEDIATE_PRIO);
             assert(prioLvlBefore == syc_prioEvTest);
-            prioLvlBefore = rtos_suspendAllInterruptsByPriority
-                                    (/* suspendUpToThisPriority */ RTOS_MAX_LOCKABLE_PRIORITY);
-            assert(prioLvlBefore == syc_prioISRPit1);
+            prioLvlBefore =
+                    rtos_suspendAllTasksByPriority
+                        (/* suspendUpToThisTaskPriority */ RTOS_MAX_LOCKABLE_TASK_PRIORITY);
+            assert(prioLvlBefore == INTERMEDIATE_PRIO);
+            #undef INTERMEDIATE_PRIO
 
             /* Leaving this task with strongest possible lock of other tasks must not
                hinder the test supervisor task to continue with the test evaluation and

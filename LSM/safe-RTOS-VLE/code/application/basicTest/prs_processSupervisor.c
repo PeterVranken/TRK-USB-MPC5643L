@@ -85,10 +85,10 @@ typedef struct failureStatus_t
 {
     /** The specification of the injected failure which didn't match the expectations. */
     prf_cmdFailure_t cmdFailure;
-
+    
     /** Expected but likely unmatched results of failing test case. */
     failureExpectation_t expectation; 
-
+    
     /** Status of failing test case. */
     prr_failureStatus_t status;
     

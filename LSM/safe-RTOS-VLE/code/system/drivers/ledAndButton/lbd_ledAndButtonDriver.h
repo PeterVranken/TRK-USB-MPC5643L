@@ -21,7 +21,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   lbd_initLEDAndButtonDriver
+ *   lbd_osInitLEDAndButtonDriver
  *   lbd_setLED
  *   lbd_osSetLED
  *   lbd_getButton
@@ -106,7 +106,7 @@ typedef enum lbd_buttonStateMask_t
 
 
 /** Type of function pointer to an optional callback, invoked whenever the button status
-    changes. See lbd_initLEDAndButtonDriver().\n
+    changes. See lbd_osInitLEDAndButtonDriver().\n
       The callback is invoked in the context of the specified process and at the same
     priority level as this I/O driver, i.e. the level at which lbd_task1ms() is regularly
     invoked.
@@ -320,9 +320,9 @@ static inline bool lbd_getButton(lbd_button_t button)
  */
 
 /** Initialization of LED driver. */
-void lbd_initLEDAndButtonDriver( lbd_onButtonChangeCallback_t onButtonChangeCallback
-                               , unsigned int idOfAimedProcess
-                               );
+void lbd_osInitLEDAndButtonDriver( lbd_onButtonChangeCallback_t onButtonChangeCallback
+                                 , unsigned int idOfAimedProcess
+                                 );
 
 /** Regularly called step function of the I/O driver. */
 void lbd_task1ms(void);

@@ -83,6 +83,12 @@ void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int t
 /** Kernel initialization. */
 rtos_errorCode_t rtos_osInitKernel(void);
 
+/** Enter critcal section; partially suspend task scheduling. */
+uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority);
+ 
+/** Leave critical section; resume scheduling of tasks. */
+void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority);
+
 /** Get the current number of failed task activations since start of the RTOS scheduler. */
 unsigned int rtos_getNoActivationLoss(unsigned int idTask);
 

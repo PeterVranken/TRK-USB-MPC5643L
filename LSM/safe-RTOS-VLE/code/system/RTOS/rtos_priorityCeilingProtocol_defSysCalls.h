@@ -39,16 +39,16 @@
  */
 
 #ifndef RTOS_SYSCALL_TABLE_ENTRY_0001
-# if RTOS_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY != 1
+# if RTOS_SYSCALL_SUSPEND_ALL_TASKS_BY_PRIORITY != 1
 #  error Inconsistent definition of system call
 # endif
 /* Assembler implemented code in rtos_priorityCeilingProtocol.S. Note, despite of the C
    style prototype, this is not a C callable function. The calling convention is different
    to C. This is the reason, why we declare it here instead of publishing it globally in
    rtos_priorityCeilingProtocol.h. */
-extern uint32_t rtos_scBscHdlr_suspendAllInterruptsByPriority(uint32_t suspendUpToThisPrio);
+extern uint32_t rtos_scBscHdlr_suspendAllTasksByPriority(uint32_t suspendUpToThisPrio);
 # define RTOS_SYSCALL_TABLE_ENTRY_0001  \
-                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_suspendAllInterruptsByPriority, BASIC)
+                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_suspendAllTasksByPriority, BASIC)
 #else
 # error System call 0001 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
@@ -59,16 +59,16 @@ extern uint32_t rtos_scBscHdlr_suspendAllInterruptsByPriority(uint32_t suspendUp
 
 
 #ifndef RTOS_SYSCALL_TABLE_ENTRY_0002
-# if RTOS_SYSCALL_RESUME_ALL_INTERRUPTS_BY_PRIORITY != 2
+# if RTOS_SYSCALL_RESUME_ALL_TASKS_BY_PRIORITY != 2
 #  error Inconsistent definition of system call
 # endif
 /* Assembler implemented code in rtos_priorityCeilingProtocol.S. Note, despite of the C
    style prototype, this is not a C callable function. The calling convention is different
    to C. This is the reason, why we declare it here instead of publishing it globally in
    rtos_priorityCeilingProtocol.h. */
-extern uint32_t rtos_scBscHdlr_resumeAllInterruptsByPriority(uint32_t resumeDownToThisPrio);
+extern uint32_t rtos_scFlHdlr_resumeAllTasksByPriority(uint32_t resumeDownToThisPrio);
 # define RTOS_SYSCALL_TABLE_ENTRY_0002  \
-                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_resumeAllInterruptsByPriority, BASIC)
+                RTOS_SC_TABLE_ENTRY(rtos_scFlHdlr_resumeAllTasksByPriority, FULL)
 #else
 # error System call 0002 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this

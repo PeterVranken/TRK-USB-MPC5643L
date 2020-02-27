@@ -29,7 +29,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   sio_initSerialInterface
+ *   sio_osInitSerialInterface
  *   sio_scFlHdlr_writeSerial
  *   sio_writeSerial (inline)
  *   sio_osWriteSerial
@@ -600,7 +600,7 @@ static void registerInterrupts(void)
  * This function needs to be called at system initialization phase, when all External
  * Interrupts are still suspended.
  */
-void sio_initSerialInterface(unsigned int baudRate)
+void sio_osInitSerialInterface(unsigned int baudRate)
 {
     /* Connect the LINFlexD device with the external MCU pins.
          If LINFlexD_0 is configured on the evaluation board TRK-USB-MPC5643L, then
@@ -621,7 +621,7 @@ void sio_initSerialInterface(unsigned int baudRate)
     _pWrSerialInRingBuf =
     _pRdSerialInRingBuf = &_serialInRingBuf[0];
     
-} /* End of sio_initSerialInterface */
+} /* End of sio_osInitSerialInterface */
 
 
 
@@ -675,7 +675,7 @@ unsigned int sio_scFlHdlr_writeSerial( uint32_t PID ATTRIB_UNUSED
  * interface. Actually, the bytes are queued for sending and the function is
  * non-blocking.\n
  *   The function can be called from any context. However, it must not be
- * called untill function sio_initSerialInterface() has completed.
+ * called untill function sio_osInitSerialInterface() has completed.
  *   @return
  * The number of queued bytes is returned. Normally, this is the same value as argument \a
  * noBytes. However, the byte sequence can be longer than the currently available space in

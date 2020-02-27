@@ -27,9 +27,9 @@
  *
  * Some observations:\n
  *   Blinking LEDs: Note the slight phase shift due to the differing task start times.\n
- *   Reported CPU load: At nominal 100% artificial load it drops to about 50%. The
- * execution time of the cyclic task that produces the load exceeds the nominal cycle time
- * of the task and every second activation is lost. The activation loss counter in the
+ *   Reported CPU load: At nominal 100% artificial load the actual load drops to about 50%.
+ * The execution time of the cyclic task that produces the load exceeds the nominal cycle
+ * time of the task and every second activation is lost. The activation loss counter in the
  * RTOS' task array constantly increases.\n
  *   Occasional activation losses can be reported for task taskNonCyclic. It can be
  * preempted by task task17ms and this task activates task taskNonCyclic. If it tries to
@@ -46,7 +46,7 @@
  * spheres of a) an operating system, b) the functional application code and c) some
  * supervisory safety code.
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -125,12 +125,13 @@
             {   uint32_t priorityLevelSoFar;                                                \
                 if((idTask) <= lastUserTaskId)                                              \
                 {                                                                           \
-                    priorityLevelSoFar = rtos_suspendAllInterruptsByPriority                \
+                    priorityLevelSoFar = rtos_suspendAllTasksByPriority                     \
                                                 (/* suspendUpToThisPriority */ (resource)); \
                 }                                                                           \
                 else                                                                        \
                 {                                                                           \
-                    priorityLevelSoFar = rtos_osSuspendAllInterruptsByPriority              \
+                    assert((idTask) < noRegisteredTasks ||  (idTask) == idTaskIdle);        \
+                    priorityLevelSoFar = rtos_osSuspendAllTasksByPriority              \
                                                 (/* suspendUpToThisPriority */ (resource)); \
                 }
 
@@ -139,14 +140,17 @@
       Here, for returning the resource, i.e. for leaving a critical section of code. */
 #define ReleaseResource(idTask)                                                             \
                 if((idTask) <= lastUserTaskId)                                              \
-                    rtos_resumeAllInterruptsByPriority(priorityLevelSoFar);                 \
+                    rtos_resumeAllTasksByPriority(priorityLevelSoFar);                      \
                 else                                                                        \
-                    rtos_osResumeAllInterruptsByPriority(priorityLevelSoFar);               \
+                {                                                                           \
+                    assert((idTask) < noRegisteredTasks ||  (idTask) == idTaskIdle);        \
+                    rtos_osResumeAllTasksByPriority(priorityLevelSoFar);               \
+                }                                                                           \
             }
 
 /** The task counter array is accessed by all tasks. Here it is modelled as an OSEK/VDX
     like resource to be used with #GetResource and #ReleaseResource. */
-#define RESOURCE_CNT_TASK_ARY   (MAXP(RESOURCE_ALL_TASKS,prioISRPit1))
+#define RESOURCE_CNT_TASK_ARY   (RESOURCE_ALL_TASKS)
 
 /** The priority level to set if all tasks should be mutually excluded from accessing a
     shared resource. The macro is named such that the code resembles the resource API from
@@ -173,7 +177,7 @@
 /** The enumeration of all events, tasks and priority, to have them as symbols in the
     source code. Most relevant are the event IDs. Actually, these IDs are provided by the
     RTOS at runtime, when creating the event. However, it is guaranteed that the IDs, which
-    are dealt out by rtos_osCreateEvent() form the series 0, 1, 2, ..., 7. So we don't need
+    are dealt out by rtos_osCreateEvent() form the series 0, 1, 2, .... So we don't need
     to have a dynamic storage of the IDs; we define them as constants and double-check by
     assertion that we got the correct, expected IDs from rtos_osCreateEvent(). Note, this
     requires that the order of creating the events follows the order here in the
@@ -212,28 +216,11 @@ enum
     /** The number of tasks to register. */
     , noRegisteredTasks
 
-    /** The interrupts that are applied mainly to produce system load for testing, continue
-        the sequence of ids, so that they can share the shared data container with test
-        data. */
-    , idISRPit1 = noRegisteredTasks
-    , idISRPit2
-    , idISRPit3
-
-    /** The number of registered tasks and ISRs. */
-    , noRegisteredTasksAndISRs
-
-    /** The number of ISRs. */
-    , noISRs = noRegisteredTasksAndISRs - noRegisteredTasks
-
     /** The idle task is not a task under control of the RTOS and it doesn't have an ID.
         We assign it a pseudo task ID that is used to store some task related data in the
         same array here in this sample application as we do by true task ID for all true
         tasks. */
-    , idTaskIdle = noRegisteredTasksAndISRs
-
-    /** The number of all concurrent excution threads: The ISRs, the application tasks and
-        the idle task. */
-    , noExecutionContexts
+    , idTaskIdle = noRegisteredTasks
 };
 
 
@@ -252,11 +239,11 @@ enum
     , prioTaskCpuLoad = 1
 
     , prioTaskOs1ms = prioTask1ms /* same event, cannot have other prio */
-    , prioTaskIdle = 0            /* Prio 0 is implicit, cannot be chosen explicitly */
+    , prioTaskIdle = 0      /** Prio 0 is implicit for idle, cannot be chosen explicitly */
 
-    , prioISRPit1 = 5
-    , prioISRPit2 = 6
-    , prioISRPit3 = 15
+    , prioIrqPit1 = 5       /** INTC priority of timer IRQ PIT1 */
+    , prioIrqPit2 = 6       /** INTC priority of timer IRQ PIT2 */
+    , prioIrqPit3 = 15      /** INTC priority of timer IRQ PIT3 */
 };
 
 
@@ -296,21 +283,25 @@ enum
 volatile unsigned long long _cntAllTasks SECTION(.bss.Shared) = 0;
 
 /** A cycle counter for each task. The last entry is meant for the idle task. */
-volatile unsigned long long _cntTaskAry[noExecutionContexts] SECTION(.bss.Shared) =
-                                                        {[0 ... noExecutionContexts-1] = 0};
+volatile unsigned long long _cntTaskAry[noRegisteredTasks+1] SECTION(.bss.Shared) =
+                                                        {[0 ... noRegisteredTasks] = 0};
 
-volatile unsigned long mai_cntTaskIdle SECTION(.bss.OS) = 0  /** Counter of cycles of infinite main loop. */
+volatile unsigned long mai_cntTaskIdle SECTION(.bss.OS) = 0  /** Counter of cycles of
+                                                                 infinite main loop. */ 
                      , mai_cntTask1ms SECTION(.bss.P1) = 0   /** Counter of cyclic task. */
                      , mai_cntTask3ms SECTION(.bss.P1) = 0   /** Counter of cyclic task. */
                      , mai_cntTask1s SECTION(.bss.P1) = 0    /** Counter of cyclic task. */
-                     , mai_cntTaskNonCyclic SECTION(.bss.P1) = 0  /** Counter of calls of software triggered
-                                                     task */
+                     , mai_cntTaskNonCyclic SECTION(.bss.P1) = 0 /** Counter of calls of
+                                                                     software triggered task */
                      , mai_cntTask17ms SECTION(.bss.P1) = 0  /** Counter of cyclic task. */
-                     , mai_cntTaskOnButtonDown SECTION(.bss.P1) = 0  /** Counter of button event task. */
+                     , mai_cntTaskOnButtonDown SECTION(.bss.P1) = 0 /** Counter of button
+                                                                        event task. */
                      , mai_cntTaskCpuLoad SECTION(.bss.P1) = 0   /** Counter of cyclic task. */
-                     , mai_cntActivationLossTaskNonCyclic SECTION(.bss.P1) = 0  /* Lost activations of non
-                                                                  cyclic task by 17ms
-                                                                  cyclic task. */
+                     , mai_cntActivationLossTaskNonCyclic SECTION(.bss.P1) = 0 /** Lost 
+                                                                                   activations
+                                                                                   of non
+                                                                                   cyclic
+                                                                                   task. */
                      , mai_cntISRPit1 SECTION(.bss.OS) = 0
                      , mai_cntISRPit2 SECTION(.bss.OS) = 0
                      , mai_cntISRPit3 SECTION(.bss.OS) = 0;
@@ -391,7 +382,7 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
     ReleaseResource(idTask);
 
     /* Get all task counters and the common counter in an atomic operation. */
-    unsigned long long cntTaskAryCpy[noExecutionContexts]
+    unsigned long long cntTaskAryCpy[noRegisteredTasks+1]
                      , cntAllTasksCpy;
     _Static_assert(sizeof(_cntTaskAry) == sizeof(cntTaskAryCpy), "Bad data definition");
     GetResource(idTask, RESOURCE_CNT_TASK_ARY);
@@ -403,7 +394,7 @@ static void checkAndIncrementTaskCnts(unsigned int idTask)
 
     /* Check consistency of got data. */
     unsigned int u;
-    for(u=0; u<noExecutionContexts; ++u)
+    for(u=0; u<sizeOfAry(cntTaskAryCpy); ++u)
         cntAllTasksCpy -= cntTaskAryCpy[u];
     if(cntAllTasksCpy != 0)
     {
@@ -526,10 +517,10 @@ static void testPCP(unsigned int idTask)
 } /* End of testPCP. */
 
 
+
 /**
  * A regularly triggered interrupt handler for the timer PIT1. The interrupt does nothing
- * but counting a variable. The ISR participates the test of safely sharing data with the
- * application tasks. It is triggered at medium frequency and asynchronously to the
+ * but counting a variable. It is triggered at medium frequency and asynchronously to the
  * kernel's clock tick to prove the system stability and properness of the context
  * switches.
  *   @remark
@@ -538,7 +529,15 @@ static void testPCP(unsigned int idTask)
  */
 static void isrPit1(void)
 {
+#if 0
+    /* The ancestor revision of the RTOS, which was based on the hardware scheduler in the
+       INTC, had been able to offer critical sections between ISRs and user tasks. The
+       software scheduler introduced in this branch strictly separates ISRs from tasks and
+       doesn't offer an API to user mode code to shape a critical section. We can't
+       integrate this ISR into the consistency check any more. */
     checkAndIncrementTaskCnts(idISRPit1);
+#endif
+       
     ++ mai_cntISRPit1;
 
     /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
@@ -615,10 +614,8 @@ static void taskOs1ms(void)
  *   @param buttonState
  * The new, changed button state. See lbd_onButtonChangeCallback_t for details.
  */
-static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_DBG_ONLY, uint8_t buttonState)
+static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_UNUSED, uint8_t buttonState)
 {
-    assert(PID == pidOnButtonChangeCallback);
-    
     /* Toggle the LED colors on button SW3 down. */
     if((buttonState & lbd_btStMask_btnSw3_down) != 0)
     {
@@ -666,10 +663,8 @@ static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_DBG_ONLY, uint8_t butt
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t task1ms(uint32_t PID ATTRIB_DBG_ONLY)
+static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
 {
-    assert(PID == pidTask1ms);
-    
     checkAndIncrementTaskCnts(idTask1ms);
     testPCP(idTask1ms);
 
@@ -706,10 +701,8 @@ static int32_t task1ms(uint32_t PID ATTRIB_DBG_ONLY)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t task3ms(uint32_t PID ATTRIB_DBG_ONLY)
+static int32_t task3ms(uint32_t PID ATTRIB_UNUSED)
 {
-    assert(PID == pidTask3ms);
-
     checkAndIncrementTaskCnts(idTask3ms);
     ++ mai_cntTask3ms;
 
@@ -732,10 +725,8 @@ static int32_t task3ms(uint32_t PID ATTRIB_DBG_ONLY)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t task1s(uint32_t PID ATTRIB_DBG_ONLY)
+static int32_t task1s(uint32_t PID ATTRIB_UNUSED)
 {
-    assert(PID == pidTask1s);
-
     checkAndIncrementTaskCnts(idTask1s);
 
     ++ mai_cntTask1s;
@@ -816,10 +807,8 @@ static int32_t task1s(uint32_t PID ATTRIB_DBG_ONLY)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t taskNonCyclic(uint32_t PID ATTRIB_DBG_ONLY)
+static int32_t taskNonCyclic(uint32_t PID ATTRIB_UNUSED)
 {
-    assert(PID == pidTaskNonCyclic);
-    
     checkAndIncrementTaskCnts(idTaskNonCyclic);
     ++ mai_cntTaskNonCyclic;
 
@@ -837,10 +826,8 @@ static int32_t taskNonCyclic(uint32_t PID ATTRIB_DBG_ONLY)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t task17ms(uint32_t PID ATTRIB_DBG_ONLY)
+static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
 {
-    assert(PID == pidTask17ms);
-
     checkAndIncrementTaskCnts(idTask17ms);
     ++ mai_cntTask17ms;
 
@@ -878,10 +865,8 @@ static int32_t task17ms(uint32_t PID ATTRIB_DBG_ONLY)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t taskOnButtonDown(uint32_t PID ATTRIB_DBG_ONLY)
+static int32_t taskOnButtonDown(uint32_t PID ATTRIB_UNUSED)
 {
-    assert(PID == pidTaskOnButtonDown);
-    
     checkAndIncrementTaskCnts(idTaskOnButtonDown);
     ++ mai_cntTaskOnButtonDown;
     iprintf("You pressed the button the %lu. time\r\n", mai_cntTaskOnButtonDown);
@@ -924,10 +909,8 @@ static int32_t taskOnButtonDown(uint32_t PID ATTRIB_DBG_ONLY)
  * observation window, which compensates for the effect of the discontinuous observation
  * window.
  */
-static int32_t taskCpuLoad(uint32_t PID ATTRIB_DBG_ONLY)
+static int32_t taskCpuLoad(uint32_t PID ATTRIB_UNUSED)
 {
-    assert(PID == pidTaskCpuLoad);
-    
     checkAndIncrementTaskCnts(idTaskCpuLoad);
     testPCP(idTaskCpuLoad);
 
@@ -971,17 +954,17 @@ static void installInterruptServiceRoutines(void)
          Vector numbers: See MCU reference manual, section 28.7, table 28-4. */
     rtos_osRegisterInterruptHandler( &isrPit1
                                    , /* vectorNum */ 60
-                                   , /* psrPriority */ prioISRPit1
+                                   , /* psrPriority */ prioIrqPit1
                                    , /* isPreemptable */ true
                                    );
     rtos_osRegisterInterruptHandler( &isrPit2
                                    , /* vectorNum */ 61
-                                   , /* psrPriority */ prioISRPit2
+                                   , /* psrPriority */ prioIrqPit2
                                    , /* isPreemptable */ true
                                    );
     rtos_osRegisterInterruptHandler( &isrPit3
                                    , /* vectorNum */ 127
-                                   , /* psrPriority */ prioISRPit3
+                                   , /* psrPriority */ prioIrqPit3
                                    , /* isPreemptable */ true
                                    );
 
@@ -1089,10 +1072,10 @@ void main(void)
     rtos_osInitINTCInterruptController();
 
     /* Initialize the button and LED driver for the eval board. */
-    lbd_initLEDAndButtonDriver(onButtonChangeCallback, pidOnButtonChangeCallback);
+    lbd_osInitLEDAndButtonDriver(onButtonChangeCallback, pidOnButtonChangeCallback);
 
     /* Initialize the serial output channel as prerequisite of using printf. */
-    sio_initSerialInterface(/* baudRate */ 115200);
+    sio_osInitSerialInterface(/* baudRate */ 115200);
 
     /* Register the process initialization tasks. */
     bool initOk = true;

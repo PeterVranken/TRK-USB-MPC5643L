@@ -37,6 +37,17 @@
 /** Index of system call for writing into serial output. */
 #define SIO_SYSCALL_WRITE_SERIAL    20
 
+/** A trivial helper for the use of sio_osWriteSerial() with literal strings: The typical
+    double use of the string literal in the argument list of the function, once as such,
+    once to calculate its length, is encapsulated in a macro. The readability of the source
+    code is improved. Example:\n
+      sio_osWriteSerial(SIO_STR(Hello World!));
+      @param text This is the text to write into the serial output. It is not enclosed into
+    quotes (they are added by the macro) and therefore it can't contain a comma -- the
+    preprocessor would take the text behind as a second macro argument.\n
+      The macro adds an end of line character to the text. */
+#define SIO_STR(text) #text"\r\n",(sizeof(#text"\r\n")-1)
+
 
 /*
  * Global type definitions
@@ -63,8 +74,8 @@ extern volatile unsigned long sio_serialOutNoTruncatedMsgs;
     trunction.
       @remark Because of the race conditions between serial I/O interrupt an application
     software can not clearly relate a change of \a sio_serialOutNoTruncatedMsgs to a
-    particular character or message it gets from the read functions sio_osGetChar or
-    sio_osGetLine. In particular, it must not try to reset the counter prior to a read
+    particular character or message it gets from the read functions sio_osGetChar() or
+    sio_osGetLine(). In particular, it must not try to reset the counter prior to a read
     operation in order to establish such a relation. The application will just know that
     there are garbled messages. */
 extern volatile unsigned long sio_serialOutNoLostMsgBytes;
@@ -90,7 +101,7 @@ extern volatile unsigned long sio_serialInNoRxBytes;
  */
 
 /** Module initialization. Configure the I/O devices for serial output. */
-void sio_initSerialInterface(unsigned int baudRate);
+void sio_osInitSerialInterface(unsigned int baudRate);
 
 /** Write a character string into the serial interface. Can be called from OS context. */
 unsigned int sio_osWriteSerial(const char *msg, unsigned int noBytes);

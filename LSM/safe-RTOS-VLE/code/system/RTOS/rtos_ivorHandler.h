@@ -59,6 +59,13 @@
 #define RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION   11 /* IVOR #32, use of SPE instruction */
 #define RTOS_CAUSE_TASK_ABBORTION_USER_ABORT        12 /* User code returned error code */
 
+/* Helper macro: Compute the size of a stack frame if the size of the contained user data
+   is known. The macro considers the additional space for stack pointer and link register
+   storage and the EABI constraint of a stack frame size being a multiple of eight.
+     @param sizeOfPayload Size of user data in stack frame. Stack pointer and link register
+   are not considered here. */
+#define RTOS_SIZE_OF_SF(sizeOfPayload)      ((((sizeOfPayload)+15)/8)*8)
+
 /* Define the offsets of fields in struct rtos_userTaskDesc_t. */
 #define SIZE_OF_TASK_DESC       4
 #define O_TDESC_ti              0
@@ -95,6 +102,17 @@
 #define RUT_O_CPR               (8+16)
 #define RUT_O_NVGPR             (8+20)  /* Non volatile GPR: r14 .. r31 = 18*4 = 72 Bytes */
 #define RUT_SIZE_OF_SF_PAYLOAD  92      /* Size of user data in stack frame */
+
+/* Define the offsets of the stack frame of the launch code for system  handlers of full
+   conformance class. The definitions have been made public as they are shared between the
+   implementations of the IVO #8 handler, system calls, and of the PCP, priority ceiling
+   protocol. */
+#define IV8_O_USP               (8+0)
+#define IV8_O_PID               (8+4)
+#define IV8_O_SRRi              (8+8)   /* Two 32 Bit registers = 8 Byte */
+#define IV8_O_LR                (IV8_SIZE_OF_SF+4)
+#define IV8_SIZE_OF_SF_PAYLOAD  16      /* Size of user data in stack frame */
+#define IV8_SIZE_OF_SF          RTOS_SIZE_OF_SF(IV8_SIZE_OF_SF_PAYLOAD)
 
 /** The index of the offered system call to terminate a user task. Note, this is not a
     configurable switch. Task termination needs to be system call zero. */

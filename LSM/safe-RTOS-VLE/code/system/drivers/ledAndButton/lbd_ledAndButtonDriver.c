@@ -90,9 +90,9 @@ static rtos_taskDesc_t OS_VAR(_onButtonChangeCallback) =
  * This function must be called from the OS context only. Any attempt to use it in user 
  * code will lead to a privileged exception.
  */
-void lbd_initLEDAndButtonDriver( lbd_onButtonChangeCallback_t onButtonChangeCallback
-                               , unsigned int PID
-                               )
+void lbd_osInitLEDAndButtonDriver( lbd_onButtonChangeCallback_t onButtonChangeCallback
+                                 , unsigned int PID
+                                 )
 {
     /* LEDs are initially off. */
     SIU.GPDO[lbd_led_D4_grn].B.PDO = 1;
@@ -131,7 +131,7 @@ void lbd_initLEDAndButtonDriver( lbd_onButtonChangeCallback_t onButtonChangeCall
            system in a safe state. */
         assert(_onButtonChangeCallback.tiTaskMax > 0);
     }    
-} /* End of lbd_initLEDAndButtonDriver */
+} /* End of lbd_osInitLEDAndButtonDriver */
 
 
 
