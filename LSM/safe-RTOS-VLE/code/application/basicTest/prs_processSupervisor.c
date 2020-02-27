@@ -5,7 +5,7 @@
  * operating system code and anything which relates to their configuration cannot be
  * changed anymore by user code.
  *
- * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2019-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -60,6 +60,15 @@
 /** The type of the prediction of the consequence of a command to inject the next error. */
 typedef struct failureExpectation
 {
+    /** Which error has been injected? */
+    enum prf_kindOfFailure_t kindOfFailure;
+
+    /** Address of operation failure causing operation. */
+    uint32_t address;
+    
+    /** Expected value for test case result. */
+    uint32_t expectedValue;
+
     /** Expected number of process errors resulting from the failure. */
     unsigned int expectedNoProcessFailures;
 
@@ -68,12 +77,26 @@ typedef struct failureExpectation
         increment by one of reported errors but tolerante a few more. */
     unsigned int expectedNoProcessFailuresTolerance;
 
-    /** Expected value for test case result. */
-    uint32_t expectedValue;
-
 } failureExpectation_t;
 
 
+/** Information, which is frozen in the instance of a failing test case. */
+typedef struct failureStatus_t
+{
+    /** The specification of the injected failure which didn't match the expectations. */
+    prf_cmdFailure_t cmdFailure;
+
+    /** Expected but likely unmatched results of failing test case. */
+    failureExpectation_t expectation; 
+
+    /** Status of failing test case. */
+    prr_failureStatus_t status;
+    
+    /** Total number of process errors in process syc_pidFailingTasks at the time of the
+        "failing failure". */
+    uint32_t noTotalTaskFailures;
+
+} failureStatus_t;
 
 
 /*
@@ -92,6 +115,10 @@ volatile long unsigned int SDATA_PRC_SV(prs_cntTestCycles) = 0;
     after run of failure injection task prf_taskInjectError. */
 static failureExpectation_t DATA_PRC_SV(_failureExpectation);
 
+/** Last recent result of system status check. If the failing process has been suspendend
+    then it is the status check result, which let to this decision. */
+static failureStatus_t BSS_PRC_SV(prs_status);
+
 
 /*
  * Function implementation
@@ -107,6 +134,11 @@ static failureExpectation_t DATA_PRC_SV(_failureExpectation);
  */
 int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 {
+    /* Don't inject more errors if an error had already been detected and the process had
+       been halted. Return zero, do not count the same situation repeatedly. */
+    if(rtos_getNoTotalTaskFailure(syc_pidSupervisor) > 0)
+        return 0;
+
     /* First cycles without any special action to prove basic operation of the software. */
     if(prs_cntTestCycles < 100)
     {
@@ -117,7 +149,6 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
                                                  , .noRecursionsBeforeFailure = 0
                                                  , .value = 0
                                                  , .address = 0
-                                                 , .expectedValue = 0
                                                };
         }
 
@@ -199,10 +230,14 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 
 #if PRF_ENA_TC_PRF_KOF_WRITE_ROM == 1
     case prf_kof_writeROM:
-        address = 0x00000100;
-        expectedValue = *(const uint32_t*)address;
-        value = ~expectedValue;
-        maxNoExpectedFailures = 1;
+        {
+            extern uint8_t ld_romStart[0], ld_romEnd[0];
+            address = (uint32_t)ld_romStart + 0x00000100;
+            assert(address < (uint32_t)ld_romEnd);
+            expectedValue = *(const uint32_t*)address;
+            value = ~expectedValue;
+            maxNoExpectedFailures = 1;
+        }
         break;
 #endif
 
@@ -391,7 +426,7 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 
 #if PRF_ENA_TC_PRF_KOF_RANDOM_READ == 1
     case prf_kof_randomRead:
-        minNoExpectedFailures = 0;
+        minNoExpectedFailures = 1;
         maxNoExpectedFailures = 1;
         break;
 #endif
@@ -470,15 +505,16 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
                                          , .noRecursionsBeforeFailure = stackDepth
                                          , .value = value
                                          , .address = address
-                                         , .expectedValue = expectedValue
                                        };
     _failureExpectation = (failureExpectation_t)
-                          { .expectedNoProcessFailures =
+                          { .kindOfFailure = kindOfFailure
+                            , .address = address
+                            , .expectedValue = expectedValue
+                            , .expectedNoProcessFailures =
                                             rtos_getNoTotalTaskFailure(syc_pidFailingTasks)
                                             + minNoExpectedFailures
                             , .expectedNoProcessFailuresTolerance = maxNoExpectedFailures
                                                                     - minNoExpectedFailures
-                            , .expectedValue = expectedValue
                           };
     return 0;
 
@@ -496,6 +532,11 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
  */
 int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
 {
+    /* Don't repeat the error evaluation if an error had already been detected and the
+       process had been halted. Return zero, do not count the same situation repeatedly. */
+    if(rtos_getNoTotalTaskFailure(syc_pidSupervisor) > 0)
+        return 0;
+
     /** A long lasting test could theoretically run into the saturation of the failure
         counter. We must not report this as an error. On the other hand it doesn't make
         much sense to continue. There's no true solution for this dilemma but taking the given
@@ -509,25 +550,25 @@ int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
             &&  noFailures <= _failureExpectation.expectedNoProcessFailures
                               + _failureExpectation.expectedNoProcessFailuresTolerance;
 
-    switch(prf_cmdFailure.kindOfFailure)
+    switch(_failureExpectation.kindOfFailure)
     {
 #if PRF_ENA_TC_PRF_KOF_WRITE_OS_DATA == 1
     case prf_kof_writeOsData:
-        if(_failureExpectation.expectedValue != *(const uint32_t*)prf_cmdFailure.address)
+        if(_failureExpectation.expectedValue != *(const uint32_t*)_failureExpectation.address)
             testOkThisTime = false;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_WRITE_OTHER_PROC_DATA == 1
     case prf_kof_writeOtherProcData:
-        if(_failureExpectation.expectedValue != *(const uint32_t*)prf_cmdFailure.address)
+        if(_failureExpectation.expectedValue != *(const uint32_t*)_failureExpectation.address)
             testOkThisTime = false;
         break;
 #endif
 
 #if PRF_ENA_TC_PRF_KOF_WRITE_ROM == 1
     case prf_kof_writeROM:
-        if(_failureExpectation.expectedValue != *(const uint32_t*)prf_cmdFailure.address)
+        if(_failureExpectation.expectedValue != *(const uint32_t*)_failureExpectation.address)
             testOkThisTime = false;
         break;
 #endif
@@ -537,13 +578,11 @@ int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
         break;
     }
 
-    /* In DEBUG compilation we can halt the software execution to point to the problem. */
+    /* Make the problem visible even if no debugger or terminal is connected. */
     if(!testOkThisTime)
     {
-        /* Make this visible even if no debugger or terminal is connected. */
         lbd_setLED(lbd_led_D4_grn, /* isOn */ false);
         lbd_setLED(lbd_led_D4_red, /* isOn */ true);
-        assert(false);
     }
 
     ++ prs_cntTestCycles;
@@ -574,36 +613,36 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
 {
     const bool isPrcFailingTasksSuspended = rtos_isProcessSuspended(syc_pidFailingTasks);
     
-    /// @todo Stack check every Millisecond costs about 15% CPU load. We don't need to do
-    // this so often: Pi stacks are anyway protected and OS could be checked every 100ms
-    /// @todo Add SW alive counters in all processes/tasks and add a need-to-change
-    // condition here
-    
-    /* The status variables don't need to be checked any more after suspending the failure
-       injection process after the first failure. However, we continue to do so for sake of
-       easier debugging in case of a problem. */
-    prr_failureStatus_t status;
-    status.noActLossEvTest = rtos_getNoActivationLoss(syc_idEvTest);
-    status.noActLossEvPIT2 = rtos_getNoActivationLoss(syc_idEvPIT2);
-    status.noTaskFailSV = rtos_getNoTotalTaskFailure(syc_pidSupervisor);
-    status.noTaskFailRep = rtos_getNoTotalTaskFailure(syc_pidReporting);
-    status.stackResSV = rtos_getStackReserve(syc_pidSupervisor);
-    status.stackResRep = rtos_getStackReserve(syc_pidReporting);
-    status.stackResOS = rtos_getStackReserve(/* PID */ 0 /* OS */);
-    
 #define TI_BLINK_IN_MS  750u
 #define CNT_STEP    ((int16_t)((float)(UINT16_MAX)/(TI_BLINK_IN_MS) + 0.5f))
     static int16_t SDATA_PRC_SV(cnt_) = 0;
 
     if(!isPrcFailingTasksSuspended)
     {
-        bool isOk = status.noActLossEvTest == 0
-                    &&  status.noActLossEvPIT2 == 0
-                    &&  status.noTaskFailSV == 0
-                    &&  status.noTaskFailRep == 0
-                    &&  status.stackResSV >= 512
-                    &&  status.stackResRep >= 512
-                    &&  status.stackResOS >= 3096;
+        /// @todo Add SW alive counters in all processes/tasks and add a need-to-change
+        // condition here
+
+        /* The status variables don't need to be checked any more after suspending the
+           failure injection process after the first failure. However, we continue to do so
+           for sake of easier debugging in case of a problem.
+             Note, the stack reserve computation every Millisecond costs about 15% CPU
+           load. */ 
+        prs_status.status.noTestCycles = prs_cntTestCycles;
+        prs_status.status.noActLossEvTest = rtos_getNoActivationLoss(syc_idEvTest);
+        prs_status.status.noActLossEvPIT2 = rtos_getNoActivationLoss(syc_idEvPIT2);
+        prs_status.status.noTaskFailSV = rtos_getNoTotalTaskFailure(syc_pidSupervisor);
+        prs_status.status.noTaskFailRep = rtos_getNoTotalTaskFailure(syc_pidReporting);
+        prs_status.status.stackResSV = rtos_getStackReserve(syc_pidSupervisor);
+        prs_status.status.stackResRep = rtos_getStackReserve(syc_pidReporting);
+        prs_status.status.stackResOS = rtos_getStackReserve(/* PID */ 0 /* OS */);
+        
+        bool isOk = prs_status.status.noActLossEvTest == 0
+                    &&  prs_status.status.noActLossEvPIT2 == 0
+                    &&  prs_status.status.noTaskFailSV == 0
+                    &&  prs_status.status.noTaskFailRep == 0
+                    &&  prs_status.status.stackResSV >= 512
+                    &&  prs_status.status.stackResRep >= 512
+                    &&  prs_status.status.stackResOS >= 3096;
 
         if(isOk)
         {
@@ -626,9 +665,14 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
         }
         else
         {
+            /* Keep a persistent copy of the information about the injected error for
+               inspection in the debugger. */
+            prs_status.cmdFailure = prf_cmdFailure;
+            prs_status.expectation = _failureExpectation;
+            prs_status.noTotalTaskFailures = rtos_getNoTotalTaskFailure(syc_pidFailingTasks);
+
             /* Run a task once in the reporting process to let it print the conditions,
                which caused the software halt. */
-            status.noTestCycles = prs_cntTestCycles;
             const rtos_taskDesc_t userTaskConfig =  
                                     { .addrTaskFct = (uintptr_t)prr_taskReportFailure
                                       , .PID = syc_pidReporting
@@ -636,7 +680,7 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
                                     };
             int32_t result ATTRIB_DBG_ONLY =
                             rtos_runTask( &userTaskConfig
-                                        , /* taskParam */ (uint32_t)&status
+                                        , /* taskParam */ (uint32_t)&prs_status.status
                                         );
             assert(result >= 0);
 

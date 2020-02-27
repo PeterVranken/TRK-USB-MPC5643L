@@ -5,7 +5,7 @@
  * operating system code and anything which relates to their configuration cannot be
  * changed anymore by user code.
  *
- * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2019-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -78,9 +78,6 @@ prf_cmdFailure_t DATA_SHARED(prf_cmdFailure) = { .kindOfFailure = prf_kof_noFail
                                                  , .noRecursionsBeforeFailure = 0
                                                  , .value = 0
                                                  , .address = 0
-                                                 , .expectedNoProcessFailures = 0
-                                                 , .expectedNoProcessFailuresTolerance = 0
-                                                 , .expectedValue = 0
                                                };
 
 /** Task invocation counter. Here for task1ms. */
@@ -376,7 +373,10 @@ static void injectError(void)
     {
 #if PRF_ENA_TC_PRF_KOF_JUMP_TO_RESET_VECTOR == 1
     case prf_kof_jumpToResetVector:
-        ((void (*)(void))0x00000010)();
+        {    
+            extern const uint8_t sup_startUp[0];
+            ((void (*)(void))sup_startUp)();
+        }
         break;
 #endif
 
@@ -590,7 +590,7 @@ static void injectError(void)
 #if PRF_ENA_TC_PRF_KOF_CLEAR_SDA_PTRS_AND_WAIT == 1
     case prf_kof_clearSDAPtrsAndWait:
         asm volatile ("se_neg   %%r2\n\t"
-                      "sub      %%r13, %%r13, %%r2\n\t"
+                      "sub      %%r13, %%r13, %%r2 /* sub: alias of the supported subf */\n\t"
                       "se_b   .\n\t"
                      ::: /* Clobbers */ "r2", "r13"
                      );
@@ -709,8 +709,10 @@ static void injectError(void)
 #if PRF_ENA_TC_PRF_KOF_RANDOM_WRITE == 1
     case prf_kof_randomWrite:
         {
-            unsigned int u;
-            for(u=0; u<500; ++u)
+            /* A random write can hit a permitted memory area and doesn't need to cause an
+               exception. We repeat the operation until we get an MPU or MMU exception or
+               - very, very unlikely to ever happen - a deadline violation. */
+            while(true)
             {
                 /* We have three interesting address areas to write to, ROM: 0, 2^20 Byte,
                    RAM: 0x40000000, 2^17 Byte, peripheral: 0xf0000000, 2^28 Byte. We use 2
@@ -745,7 +747,7 @@ static void injectError(void)
                 default:
                     assert(false);
                 }
-            } /* End for(Several write attempts, until first exception) */                
+            } /* End while(Repeat write attempts until first exception) */
         }
         break;
 #endif
@@ -753,9 +755,8 @@ static void injectError(void)
 #if PRF_ENA_TC_PRF_KOF_RANDOM_READ == 1
     case prf_kof_randomRead:
         {
-            unsigned int u;
             volatile unsigned int u32Dummy ATTRIB_UNUSED;
-            for(u=0; u<500; ++u)
+            while(true)
             {
                 /* Random address is identical to test case prf_kof_randomWrite. */
                 uint32_t address = random()
@@ -781,7 +782,7 @@ static void injectError(void)
                 default:
                     assert(false);
                 }
-            } /* End for(Several read attempts, until first exception) */                
+            } /* End while(Repeated read attempts, until first exception or task deadline) */
         }
         break;
 #endif
@@ -790,11 +791,10 @@ static void injectError(void)
     case prf_kof_randomJump:
         {
             /* A call of arbitrary code will lead to an exception with high likelihood.
-               However, we can hit harmless code, too, and safely return here. The loop is
-               not meant a repetition of the test case but aims at letting it virtually
-               always produce a failure. */
-            unsigned int u;
-            for(u=0; u<500; ++u)
+               However, we can hit harmless code, too, and safely return here. We repeat
+               the operation until we get an exception or - very, very unlikely to ever
+               happen - either a deadline violation or a valid return from the function. */
+            while(true)
             {
                 /* Random address is identical to test case prf_kof_randomWrite. */
                 uint32_t address = random()
@@ -833,7 +833,7 @@ static void injectError(void)
 #endif
                 ((void (*)(void))address)();
 
-            } /* End for(Several attempts to execute arbitrary code, until first exception) */
+            } /* End while(Execute arbitrary code until first exception) */
         }
         break;
 #endif
@@ -864,7 +864,7 @@ static void injectError(void)
                permitted limits.
                  If we try raising the priority (i.e. suspend) then violating the upper
                limit yields an exception, while violating the lower limit is silently
-               ignaored (and no priority change takes place).
+               ignored (and no priority change takes place).
                  If we try lowering the priority (i.e. resume) then violating the lower
                limit yields an exception. Violating the upper limit is silently
                ignored in PRODUCTION compilation and yields an exception in DEBUG

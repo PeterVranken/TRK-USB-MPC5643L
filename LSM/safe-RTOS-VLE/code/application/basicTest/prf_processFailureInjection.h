@@ -33,8 +33,9 @@
  */
 
 /** Some test cases hinder the code from debugging. The likelihood of hitting an se_illegal
-    instruction is high when executing code at arbitrary locations. This instruction make
-    the debugger unconditionally break and program flow is impossible.\n
+    instruction is high when executing code at arbitrary locations. This instruction makes
+    the debugger unconditionally break, when the debugger is connected, and program flow is
+    impossible.
       This switch enables code debugging. If the switch is set to 1 then all those test
     cases are switched off, which disable debugging. This switch overrides the otherwise
     made selection of test cases. */
@@ -287,16 +288,6 @@ typedef struct prf_cmdFailure_t
 
     /** General purpose pointer argument for test cases. */
     uint32_t address;
-
-    /** Expected number of process errors resulting from the failure. */
-    unsigned int expectedNoProcessFailures;
-
-    /** Depending on the number of possibly affected tasks there may be an unsharpness in
-        predicting the number of expected process errors. */
-    unsigned int expectedNoProcessFailuresTolerance;
-
-    /** Expected value for test case result. */
-    uint32_t expectedValue;
 
 } prf_cmdFailure_t;
 
