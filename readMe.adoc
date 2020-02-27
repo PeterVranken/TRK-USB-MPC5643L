@@ -98,6 +98,10 @@ is the not so lean technically ISO 26262 compliant variant of the previous
 with an additional process and privileges management concept that
 implements the _freedom-from-interference_ paradigm.
 
+TIP: On this branch, safe-RTOS-VLE is available with a new software
+scheduler. An unlimited number of events and tasks can be created but the
+CPU load is a bit higher.
+
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder["kernelBuilder"]
 is an assembler written software platform that provides a C API for
 interrupt processing, system calls and context switches: Design your own
