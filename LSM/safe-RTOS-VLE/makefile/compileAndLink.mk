@@ -341,7 +341,7 @@ $(targetDir)obj/%.o: %.c
 # will only pass the name of this file to the linker.
 $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath)
 	$(info Create linker input file $@)
-	$(file >$@,$^)
+	$(file >$@,$(sort $^))
 
 # Let the linker create the flashable binary file.
 #   CAUTION: An unsolved problem with GCC 4.9.4 is the switch -fshort-double, which is
