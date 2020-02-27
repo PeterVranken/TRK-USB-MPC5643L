@@ -118,18 +118,25 @@ document. The API is described in the online https://htmlpreview.github.io/?http
 
 === Differences to the ancestor RTOS
 
-The architecture of the RTOS is very simple and resemble its ancestor.
-This simplicity significantly supports the validation of the code in a
-safety-critical software development environment. The major difference
-between safe-RTOS and its ancestor is the substitution of the hardware
-based scheduler by a pure software solution. This has its pros and cons:
+The architecture of the RTOS is very simple and resembles its ancestors,
+which were the simple RTOS without safety concept and safe-RTOS-VLE from
+the master branch. This simplicity significantly supports the validation
+of the code in a safety-critical software development environment.
+
+The major difference between safe-RTOS on this branch and on the master
+branch is the substitution of the hardware based scheduler by a pure
+software solution. This has its pros and cons:
 
 * The performance of the software solution is worse. The sample
   application "default" shows an increased CPU load by about 1.5%
 * There's no longer a limitation for the maximum number of events (and,
   effectively, the number of tasks). This was the main motivation for the
-  change; a port to the MPC5775B/E dual-core suffered from the eight
-  events, which were to be distributed on both cores
+  change; a port for the MPC5775B/E dual-core suffered from the eight
+  events, which were even to be distributed onto both cores
+* All tasks have a prioprity, which is by principle lower than any
+  interrupt priority
+* User mode tasks can't have a critical section with ISRs any more. (OS
+  tasks can still have)
 * In a safety aware development process, the effort for testing and code
   reviews will be significantly higher for the software solution
 * There are behavioral differences between hard- and software solution,
@@ -145,20 +152,13 @@ For an explanation of the scheduling scheme, you may still refer to the
 documentation of the ancestor RTOS, please look
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTOS-VLE#The-RTOS[here].
 
-The differences between safe-RTOS with software scheduler and the simple
-RTOS are:
+The differences between safe-RTOS and the simple RTOS are:
 
 * The safety concept
-* Any number of events can be created and all software interrupts remain
-  available for other purposes
 * Any number of tasks can be associated with an event. The simple RTOS had
   used a one-by-one relation between events and tasks. (Having more than
   one task per event makes sense only in conjunction with the new process
   concept)
-* All tasks have a prioprity, which is by principle lower than any
-  interrupt priority
-* User mode tasks can't have a critical section with ISRs. (OS tasks still
-  can have)
 * The architecture may be similar but the implementation isn't. The safety
   demands require a significant portion of assembler code for
   implementation
