@@ -4,10 +4,10 @@
  * available to the user task code.\n
  *   The implementation basically uses the PCP from the INTC, i.e. implemented in hardware.
  * It adds protection code, such that bad use of the system calls by the user task can't be
- * harmful. In particular, it must be avoided the the interrupt level can be lowered by a
+ * harmful. In particular, it must be avoided that the interrupt level can be lowered by a
  * task.
  *
- * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2019-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -24,8 +24,8 @@
  */
 /* Module interface
  *   rtos_scBscHdlr_suspendAllInterruptsByPriority
- *   rtos_resumeAllInterruptsByPriority
- *   rtos_scBscHdlr_suspendAllInterruptsByPriority
+ *   rtos_suspendAllInterruptsByPriority
+ *   rtos_scBscHdlr_resumeAllInterruptsByPriority
  *   rtos_resumeAllInterruptsByPriority
  * Local functions
  */

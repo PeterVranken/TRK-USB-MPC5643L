@@ -163,8 +163,8 @@
  * Defines
  */
 
-/** Abbreviation of initialization code for a task descriptor. Default is an inactive
-    task. */
+/** Abbreviation of initialization code for an event descriptor. Default is an unused
+    event. */
 #define DEFAULT_EVENT(idEv)                         \
             [idEv] = { .tiDue = 0                   \
                        , .tiCycleInMs = 0           \
@@ -495,23 +495,28 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
  * Each function implements one event. It activates all associated tasks and acknowledges
  * the software interrupt flag.
  */
-#define swInt(idEv)                                                                 \
-    static void swInt##idEv(void)                                                   \
-    {                                                                               \
-        const rtos_taskDesc_t *pTaskConfig = &_eventAry[idEv].taskAry[0];           \
-        unsigned int u = _eventAry[idEv].noTasks;                                   \
-        while(u-- > 0)                                                              \
-        {                                                                           \
-            if(pTaskConfig->PID > 0)                                                \
-                rtos_osRunTask(pTaskConfig, /* taskParam */ idEv);                  \
-            else                                                                    \
-                ((void (*)(void))pTaskConfig->addrTaskFct)();                       \
-                                                                                    \
-            ++ pTaskConfig;                                                         \
-        } /* End while(Run all tasks associated with the event) */                  \
-                                                                                    \
-        /* Acknowledge the interrupt bit of the software interrupt. */              \
-        *((vuint8_t*)&INTC.SSCIR0_3.R + (idEv)) = 0x01;                             \
+#define swInt(idEv)                                                                         \
+    static void swInt##idEv(void)                                                           \
+    {                                                                                       \
+        const rtos_taskDesc_t *pTaskConfig = &_eventAry[idEv].taskAry[0];                   \
+        unsigned int u = _eventAry[idEv].noTasks;                                           \
+        while(u-- > 0)                                                                      \
+        {                                                                                   \
+            if(pTaskConfig->PID > 0)                                                        \
+            {                                                                               \
+                /* Note, the task parameter is actually not specified or documented */      \
+                /* for an event task. Providing the event ID is an arbitrary decision. */   \
+                /* Providing a well-specified value is still an option for the future. */   \
+                rtos_osRunTask(pTaskConfig, /* taskParam */ idEv);                          \
+            }                                                                               \
+            else                                                                            \
+                ((void (*)(void))pTaskConfig->addrTaskFct)();                               \
+                                                                                            \
+            ++ pTaskConfig;                                                                 \
+        } /* End while(Run all tasks associated with the event) */                          \
+                                                                                            \
+        /* Acknowledge the interrupt bit of the software interrupt. */                      \
+        *((vuint8_t*)&INTC.SSCIR0_3.R + (idEv)) = 0x01;                                     \
     }
 
 swInt(0)
