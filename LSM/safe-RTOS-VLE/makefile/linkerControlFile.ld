@@ -370,7 +370,7 @@ SECTIONS
            If we want to apply terms that filter for specific file names then these have to
            precede *(.sdata.*) and the SDA section of the file would actually be outside
            the SDA area. */
-        _SDA_BASE_ = . ;
+        _SDA_BASE_ = . + 0x8000;
         __SDATA_START__ = . ;
 
         ld_sbssStart = ABSOLUTE(.);
@@ -492,7 +492,7 @@ SECTIONS
            If we want to apply terms that filter for specific file names then these have to
            precede *(.sdata2.*) and the SDA2 section of the file would actually be outside
            the SDA2 area. */
-        _SDA2_BASE_ = . ;
+        _SDA2_BASE_ = . + 0x8000;
         __SDATA2_START__ = . ;
 
         ld_sbss2Start = ABSOLUTE(.);
