@@ -615,8 +615,10 @@ static void taskOs1ms(void)
  *   @param buttonState
  * The new, changed button state. See lbd_onButtonChangeCallback_t for details.
  */
-static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_UNUSED, uint8_t buttonState)
+static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_DBG_ONLY, uint8_t buttonState)
 {
+    assert(PID == pidOnButtonChangeCallback);
+    
     /* Toggle the LED colors on button SW3 down. */
     if((buttonState & lbd_btStMask_btnSw3_down) != 0)
     {
@@ -664,8 +666,10 @@ static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_UNUSED, uint8_t button
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
+static int32_t task1ms(uint32_t PID ATTRIB_DBG_ONLY)
 {
+    assert(PID == pidTask1ms);
+    
     checkAndIncrementTaskCnts(idTask1ms);
     testPCP(idTask1ms);
 
@@ -702,8 +706,10 @@ static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t task3ms(uint32_t PID ATTRIB_UNUSED)
+static int32_t task3ms(uint32_t PID ATTRIB_DBG_ONLY)
 {
+    assert(PID == pidTask3ms);
+
     checkAndIncrementTaskCnts(idTask3ms);
     ++ mai_cntTask3ms;
 
@@ -726,8 +732,10 @@ static int32_t task3ms(uint32_t PID ATTRIB_UNUSED)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t task1s(uint32_t PID ATTRIB_UNUSED)
+static int32_t task1s(uint32_t PID ATTRIB_DBG_ONLY)
 {
+    assert(PID == pidTask1s);
+
     checkAndIncrementTaskCnts(idTask1s);
 
     ++ mai_cntTask1s;
@@ -808,8 +816,10 @@ static int32_t task1s(uint32_t PID ATTRIB_UNUSED)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t taskNonCyclic(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskNonCyclic(uint32_t PID ATTRIB_DBG_ONLY)
 {
+    assert(PID == pidTaskNonCyclic);
+    
     checkAndIncrementTaskCnts(idTaskNonCyclic);
     ++ mai_cntTaskNonCyclic;
 
@@ -827,8 +837,10 @@ static int32_t taskNonCyclic(uint32_t PID ATTRIB_UNUSED)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
+static int32_t task17ms(uint32_t PID ATTRIB_DBG_ONLY)
 {
+    assert(PID == pidTask17ms);
+
     checkAndIncrementTaskCnts(idTask17ms);
     ++ mai_cntTask17ms;
 
@@ -866,8 +878,10 @@ static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
  *   @param PID
  * A user task function gets the process ID as first argument.
  */
-static int32_t taskOnButtonDown(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskOnButtonDown(uint32_t PID ATTRIB_DBG_ONLY)
 {
+    assert(PID == pidTaskOnButtonDown);
+    
     checkAndIncrementTaskCnts(idTaskOnButtonDown);
     ++ mai_cntTaskOnButtonDown;
     iprintf("You pressed the button the %lu. time\r\n", mai_cntTaskOnButtonDown);
@@ -910,8 +924,10 @@ static int32_t taskOnButtonDown(uint32_t PID ATTRIB_UNUSED)
  * observation window, which compensates for the effect of the discontinuous observation
  * window.
  */
-static int32_t taskCpuLoad(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskCpuLoad(uint32_t PID ATTRIB_DBG_ONLY)
 {
+    assert(PID == pidTaskCpuLoad);
+    
     checkAndIncrementTaskCnts(idTaskCpuLoad);
     testPCP(idTaskCpuLoad);
 
