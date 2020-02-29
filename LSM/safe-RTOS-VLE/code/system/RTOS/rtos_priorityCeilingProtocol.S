@@ -212,6 +212,7 @@ rtos_scFlHdlr_resumeAllTasksByPriority:
     se_cmpl     r4, r3
     se_bge      rai_return              /* r4>=r3: No change of current prio */
     e_stw       r4, rtos_currentPrio@sda21(13) /* Store checked, demanded value in prio var */
+    wrteei      0               /* Call of rtos_processTriggeredEvents requires MSR[EE] = 0. */
     e_b         rtos_processTriggeredEvents /* Check for possible task switches and return. */
 
 rai_return:

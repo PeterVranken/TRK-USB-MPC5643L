@@ -25,6 +25,7 @@
  *   rtos_terminateTask
  *   rtos_osSuspendAllInterrupts
  *   rtos_osResumeAllInterrupts
+ *   rtos_osGetAllInterruptsSuspended
  *   rtos_osEnterCriticalSection
  *   rtos_osLeaveCriticalSection
  *   rtos_triggerEvent
@@ -659,6 +660,31 @@ static ALWAYS_INLINE void rtos_osResumeAllInterrupts(void)
                  : /* Clobbers */ "memory"
                  );
 } /* End of rtos_osResumeAllInterrupts */
+
+
+
+
+/**
+ * Get the current state of the MSR[EE] status bit.
+ *   @return
+ * Get \a true if the processing of External Interrupts is currently enabled and \a false
+ * otherwise.
+ *   @remark
+ * This function must be used from OS tasks and ISRs only. Calling it from a user task will
+ * cause a privileged instruction exception and an error is counted for the process.
+ */
+static ALWAYS_INLINE bool rtos_osGetAllInterruptsSuspended(void)
+{
+    uint32_t msr;
+    asm volatile ( /* AssemblerTemplate */
+                   "mfmsr %0\n\t"
+                 : /* OutputOperands */ "=r" (msr)
+                 : /* InputOperands */
+                 : /* Clobbers */ "memory"
+                 );
+    return (msr & 0x00008000) == 0;
+
+} /* End of rtos_osGetAllInterruptsSuspended */
 
 
 

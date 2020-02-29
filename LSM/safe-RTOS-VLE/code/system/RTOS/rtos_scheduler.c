@@ -577,6 +577,7 @@ static inline void checkEventDue(void)
         {
             if((signed int)(pEvent->tiDue - rtos_tiOs) <= 0)
             {
+/// @todo Code duplication with osTriggerEvent
                 /* Task is due. Check event state. If it is not idle then we have a task
                    overrun otherwise we trigger it. The check requires a read-modify-write
                    and the event can be set coincidentally from an ISR of higher priority -
@@ -605,6 +606,7 @@ static inline void checkEventDue(void)
                 /* Adjust the due time.
                      Note, we could queue task activations for cyclic tasks by not adjusting
                    the due time. Some limitation code would be required to make this safe. */
+/// @todo TBC: Can likely be done outside CS
                 pEvent->tiDue += pEvent->tiCycleInMs;
 
                 rtos_osResumeAllInterrupts();
@@ -1455,6 +1457,12 @@ rtos_errorCode_t rtos_osInitKernel(void)
         rtos_tiOsStep = RTOS_CLOCK_TICK_IN_MS;
 
         rtos_osResumeAllInterrupts();
+        
+        /** @todo Minor problem: We leave tiOs at -1 to trigger all actions specified for
+            t=0 in the very first clock tick. This means unfortunately that the idle tasks
+            the time designation UINT_MAX for a short while. Actually a fault, even if
+            likely harmless. A simple way out would be a busy wait here till we see
+            tiOs >= 0. */
     }
 
     /* @todo Shall we offer idle tasks per process? If so, we cannot leave the routine but
@@ -1608,7 +1616,8 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
        significant potential waste of stack. (All of this potential waste would need to go
        into the worst case stack usage estimation.) */
 
-    /* Here, we are inside a critical section. */
+    /* Here, we are inside a critical section. External Interrupt handling is disabled. */
+    assert(rtos_osGetAllInterruptsSuspended());
 
     /* Safe the current priority: It'll be replaced by that of the events, we find to be
        served, but finally we will have to restore the value here. */
@@ -1656,6 +1665,7 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
             /* The event is entirely processes, we can release it. This must not be done
                before we are again in the next critical section. */
             rtos_osSuspendAllInterrupts();
+            assert(pEvent->state == evState_inProgress);
             pEvent->state = evState_idle;
             assert(rtos_noEventsPending > 0);
             -- rtos_noEventsPending;
