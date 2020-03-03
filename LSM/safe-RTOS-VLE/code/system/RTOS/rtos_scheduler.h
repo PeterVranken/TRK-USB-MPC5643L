@@ -50,6 +50,11 @@
 
 
 /*
+ * Global inline functions
+ */
+
+
+/*
  * Global prototypes
  */
 

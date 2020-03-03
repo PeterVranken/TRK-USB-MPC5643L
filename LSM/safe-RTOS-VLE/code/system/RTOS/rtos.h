@@ -416,7 +416,7 @@ uint32_t rtos_suspendAllTasksByPriority(uint32_t suspendUpToThisPriority);
  * later using this function. The effect of rtos_suspendAllTasksByPriority() will end
  * with the termination of the task. If a critical section is required at the end of a task
  * function it may even be advantageous to not call rtos_resumeAllTasksByPriority() in
- * order to save the overhead.
+ * order to save the overhead of the involved system call.
  *   @remark
  * Due to the task switch is can initiate, this function is implemented as a system call of
  * full conformance class and this means significant overhead. It should be applied with

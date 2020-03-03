@@ -8,9 +8,7 @@
  *   Only if all the LEDs are blinking everything is alright.\n
  *   Progress information is permanently written into the serial output channel. A terminal
  * on the development host needs to use these settings: 115000 Bd, 8 Bit data word, no
- * parity, 1 stop bit.\n
- *   Serial input is only demonstrated by echoing all input received from the terminal on
- * the host.
+ * parity, 1 stop bit.
  *
  * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -73,20 +71,21 @@
  * Local type definitions
  */
 
-/** The enumeration of all events, tasks and priority, to have them as symbols in the
+/** The enumeration of all events, tasks and priorities, to have them as symbols in the
     source code. Most relevant are the event IDs. Actually, these IDs are provided by the
     RTOS at runtime, when creating the event. However, it is guaranteed that the IDs, which
-    are dealt out by rtos_osCreateEvent() form the series 0, 1, 2, ..., 7. So we don't need
+    are dealt out by rtos_osCreateEvent() form the series 0, 1, 2, .... So we don't need
     to have a dynamic storage of the IDs; we define them as constants and double-check by
     assertion that we got the correct, expected IDs from rtos_osCreateEvent(). Note, this
     requires that the order of creating the events follows the order here in the
-    enumeration. */
+    enumeration.\n
+      Here we have the IDs of the created events. They occupy the index range starting from
+    zero. */
 enum
 {
-    /** The ID of the created events. They occupy the index range starting from zero. */
-    idEvTaskA = 0,  /// Event for first of the three mutually triggering round tobin tasks
-    idEvTaskB,      /// Event for second of the three mutually triggering round tobin tasks
-    idEvTaskC,      /// Event for third of the three mutually triggering round tobin tasks
+    idEvTaskA = 0,  /// Event for first of the three mutually triggering round robin tasks
+    idEvTaskB,      /// Event for second of the three mutually triggering round robin tasks
+    idEvTaskC,      /// Event for third of the three mutually triggering round robin tasks
     idEvTaskH,      /// Event for task of higer priority, which can preempt A, B, C
     idEvTaskT,      /// Event for cyclic task of same priority as H
     idEvTaskS,      /// Event for cyclic supervisor task in other process

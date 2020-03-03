@@ -503,6 +503,7 @@ bool rtos_isProcessSuspended(uint32_t PID)
 } /* End of rtos_isProcessSuspended */
 
 
+
 /**
  * Get the number of task failures (and task abortions at the same time) counted for the
  * given process since start of the kernel.
