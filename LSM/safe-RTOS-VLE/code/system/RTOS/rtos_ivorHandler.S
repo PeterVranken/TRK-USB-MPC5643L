@@ -1042,23 +1042,27 @@ rut_endWithoutErr:
     se_lwz      r3, RUT_O_USP(sp)
     se_stw      r3, O_PDESC_USP(r6) /* U sp as we had started the now ending task with */
 
-    /* The end of the user task is not necessarily the end of the OS task; several user
-       tasks can be associated with a single event, which means that they are consecutively
-       run in one and the same OS context. We must not rely on the current priority value
-       as left by the ending task. We need to restore already before a potential entry in a
-       subsequent user task. Note, these operations are nearly always useless and entirely
-       useless in case of fault-free user code. */
-/// @todo Is this necessarily part of the critical section? It shouldn't: The normal reset
-// of the CS (by user code) is also not done synchronously with the end of the task
-    se_lwz      r0, RUT_O_CPR(sp)       /* r0: Prio of user task start */
-    e_stw       r0, rtos_currentPrio@sda21(13) /* Restore priority in global variable */
-/// @todo To still have correct scheduling in case of bad user code, we need to call the
-// scheduler if we lower the priority (not raising it can be an assertion). First, think
-// about a test case to see and prove the difference. The previous todo will become obsolete,
-// because the scheduler needs to be run from inside a critical section
-
     /* Process context is completely reset to kernel mode. We can again permit preemptions. */
     wrteei      1
+    
+    /* The end of the user task is not necessarily the end of processing the causing event;
+       several tasks can be associated with a single event, which means that they are
+       consecutively run in one and the same OS context. We must not rely on the current
+       priority value as left by the ending task. We need to restore already before a
+       potential entry in a subsequent user task. Note, these operations are nearly always
+       useless. */
+    se_lwz      r0, RUT_O_CPR(sp)       /* r0: Prio of user task start */
+    e_lwz       r3, rtos_currentPrio@sda21(13) /* r3: Current prio value, to be checked */
+    se_cmpl     r0, r3
+#ifdef DEBUG
+    se_bgt      .                       /* assert(prio@TaskStart <= rtos_currentPrio); */
+#endif
+    se_beq      rut_noRestoreCPR        /* r0==r3: No restore of current prio required */
+    e_stw       r0, rtos_currentPrio@sda21(13) /* Restore priority in global variable */
+    wrteei      0               /* Call of rtos_processTriggeredEvents requires MSR[EE] = 0 */
+    e_bl        rtos_processTriggeredEvents /* Check for possible task switches */
+    wrteei      1
+rut_noRestoreCPR:
 
     /* Restore the non volatile registers. This would not be required for a gracefully
        terminating, error free user task, but is essential for failing or aborted tasks. We
@@ -1223,7 +1227,7 @@ rtos_ivor8Handler:
     se_beq      ivr8_isSVEnabledSysCall         /* from SV code. We check them explicitly. */
     mfspr       r0, SPR_SRR1    /* Load MSR of preempted process */
     se_btsti    r0, 17          /* Test bit "problem state" */
-    se_beq      .               /* assert(Problem state == user) */
+    se_beq      .               /* assert(Problem state == user); (see above) */
 ivr8_isSVEnabledSysCall:
 #endif
 

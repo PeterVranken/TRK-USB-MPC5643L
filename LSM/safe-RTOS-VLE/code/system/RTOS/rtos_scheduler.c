@@ -668,6 +668,7 @@ static void onOsTimerTick(void)
  *   @param pEvent
  * The event to trigger by reference.
  */
+/// @todo Inline?
 static bool osTriggerEvent(eventDesc_t * const pEvent)
 {
     bool success;
@@ -704,6 +705,7 @@ static bool osTriggerEvent(eventDesc_t * const pEvent)
             {
                 /* We will get here only if the function is called from a task (OS or user
                    through system call) */
+/// @todo TBC: The scheduler call doesn't necessarily need to be inside the same critical section. Which would facilitate resolving the code duplication with checkEventDue
                 rtos_processTriggeredEvents();
             }
         }
@@ -770,7 +772,8 @@ static void initRTOSClockTick(void)
                   , "RTOS clock tick configuration is out of range"
                   );
                   
-    /* Disable all PIT timers during configuration. */
+    /* Disable all PIT timers during configuration. See RM, 36.3.2.1 PIT Module Control
+       Register (PITMCR). */
     PIT.PITMCR.R = 0x2;
 
     /* Install the interrupt service routine for cyclic timer PIT 0. It drives the OS
@@ -1204,11 +1207,6 @@ rtos_errorCode_t rtos_osInitKernel(void)
     rtos_noEventsPending = 0;
     rtos_currentPrio = 0;
 
-/// @todo Additional error condition: All associated tasks should be different. A task must
-// not be associated with different events. TBC: It's not a technical issue but rather an
-// indication of a likely configuration problem. However, are there use cases for generaic
-// task body implementations, used in different contexts, prcesses?
-
     /* The user must have registered at minimum one task and must have associated it with a
        event. */
     if(rtos_tiOsStep != 0)
@@ -1457,12 +1455,6 @@ rtos_errorCode_t rtos_osInitKernel(void)
         rtos_tiOsStep = RTOS_CLOCK_TICK_IN_MS;
 
         rtos_osResumeAllInterrupts();
-        
-        /** @todo Minor problem: We leave tiOs at -1 to trigger all actions specified for
-            t=0 in the very first clock tick. This means unfortunately that the idle tasks
-            the time designation UINT_MAX for a short while. Actually a fault, even if
-            likely harmless. A simple way out would be a busy wait here till we see
-            tiOs >= 0. */
     }
 
     /* @todo Shall we offer idle tasks per process? If so, we cannot leave the routine but
@@ -1512,6 +1504,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
  * This function must be called from the OS context only. It may be called from an ISR to
  * implement delegation to a user task.
  */
+/// @todo triggerEvent could now get an argument. A 32 Bit value is passed to the
+// associated tasks as task function argument. ISRs could send simple data to a task
 bool rtos_osTriggerEvent(unsigned int idEvent)
 {
     return osTriggerEvent(getEventByID(idEvent));
@@ -1665,8 +1659,8 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
             /* The event is entirely processes, we can release it. This must not be done
                before we are again in the next critical section. */
             rtos_osSuspendAllInterrupts();
-            assert(pEvent->state == evState_inProgress);
             pEvent->state = evState_idle;
+/// @todo Maybe it's more meaningful or to the point to decrease noPending when acknowledging the event?
             assert(rtos_noEventsPending > 0);
             -- rtos_noEventsPending;
 
@@ -1914,6 +1908,8 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
  * using rtos_osResumeAllTasksByPriority() and still inside the same task. It is not
  * possible to consider this function a mutex, which can be acquired in one task activation
  * and which can be released in an arbitrary later task activation or from another task.\n
+ *   Moreover, different to the user mode variant of the PCP function pair, there is no
+ * restoration of the current priority level at task termination time.\n
  *   An assertion in the scheduler will likely fire if the two PCP APIs are not properly
  * used in pairs.
  *   @remark
@@ -1930,13 +1926,11 @@ uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority)
        code belongs to the sphere of trusted code and generally has full control. OS code
        can e.g. lock all interrupts, which is even more blocking than this function. */
     if(suspendUpToThisTaskPriority > RTOS_MAX_LOCKABLE_TASK_PRIORITY)
-        return;
+        return rtos_currentPrio;
 #endif
-    rtos_osSuspendAllInterrupts();
     const uint32_t prioBeforeChange = rtos_currentPrio;
     if(suspendUpToThisTaskPriority > prioBeforeChange)
         rtos_currentPrio = suspendUpToThisTaskPriority;
-    rtos_osResumeAllInterrupts();
 
     return prioBeforeChange;
     
@@ -1953,11 +1947,19 @@ uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority)
  * All tasks/interrupts above this priority level are resumed again. All tasks/interrupts
  * up to and including this priority remain locked.\n
  *   You will normally pass in the value got from the related call of
- * rtos_osSuspendAllInterruptsByPriority().\n
- *   Caution, this function lowers the current task priority level to the stated value
+ * rtos_osSuspendAllInterruptsByPriority().
+ *   @remark
+ * Caution, this function lowers the current task priority level to the stated value
  * regardless of the initial value for the task. Accidentally lowering the task priority
  * level below the configured task priority (i. the priority inherited from the triggering
  * event) will have unpredictable consequences.
+ *   @remark
+ * Different to the user mode variant of the function, rtos_resumeAllTasksByPriority(),
+ * there is no restoration of the current priority level at task termination time. For OS
+ * tasks, there's no option to omit the resume operation if a critical section should last
+ * till the end of the task - and there's no need to attempt this neither: The OS variant
+ * of the function doesn't involve the overhead of a system call and no execution time
+ * would be saved as for the user variant.
  *   @remark
  * This function must be called from OS tasks only. Any attempt to use it from either an
  * ISR or in user mode code will lead to either a failure or privileged exception,
@@ -1967,14 +1969,14 @@ uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority)
  */
 void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority)
 {
-    rtos_osSuspendAllInterrupts();
     if(resumeDownToThisTaskPriority < rtos_currentPrio)
     {
         rtos_currentPrio = resumeDownToThisTaskPriority;
-        rtos_processTriggeredEvents();
-    }
-    rtos_osResumeAllInterrupts();
 
+        rtos_osSuspendAllInterrupts();
+        rtos_processTriggeredEvents();
+        rtos_osResumeAllInterrupts();
+    }
 } /* rtos_osResumeAllTasksByPriority */
 
 
