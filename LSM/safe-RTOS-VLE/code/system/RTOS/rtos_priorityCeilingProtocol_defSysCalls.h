@@ -66,9 +66,9 @@ extern uint32_t rtos_scBscHdlr_suspendAllTasksByPriority(uint32_t suspendUpToThi
    style prototype, this is not a C callable function. The calling convention is different
    to C. This is the reason, why we declare it here instead of publishing it globally in
    rtos_priorityCeilingProtocol.h. */
-extern uint32_t rtos_scFlHdlr_resumeAllTasksByPriority(uint32_t resumeDownToThisPrio);
+extern uint32_t rtos_scBscHdlr_resumeAllTasksByPriority(uint32_t resumeDownToThisPrio);
 # define RTOS_SYSCALL_TABLE_ENTRY_0002  \
-                RTOS_SC_TABLE_ENTRY(rtos_scFlHdlr_resumeAllTasksByPriority, FULL)
+                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_resumeAllTasksByPriority, BASIC)
 #else
 # error System call 0002 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this

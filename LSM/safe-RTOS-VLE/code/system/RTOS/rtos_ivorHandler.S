@@ -562,6 +562,7 @@ rtos_ivor4Handler:
     #define O_SRRi          (8+8)   /* SRR0, SRR1: 2*4=8 Byte */
     #define O_CR            (8+16)  /* EABI volatile, CR, LR, CTR, XER: 4*4=16 Byte */
     #define O_R00           (8+32)  /* EABI volatile, r0, r3-r12: 11*4=44 Byte */
+/// @todo O_NOEV is no longer in use. Remove and retest
     #define O_NOEV          (8+76)  /* Saved value of rtos_noEventsPending */
     #define SIZE_OF_PAYLOAD 80      /* Size of user data in stack frame */
 
@@ -635,16 +636,6 @@ ivr4_endSwitchSP:
     se_lwz      r3, 0x0(r3)         /* Read address of interrupt service routine from
                                        ISR Vector Table using pointer  */
 
-    /* Load the current count of pending events to see the difference at return from the
-       ISR of lowest nesting level: When we eventually return to INTC interrupt level
-       zero, then we will start the schedule if any of the (nested) ISRs should have
-       triggered at least one event.
-         Note, we need to capture the contributions from any potential nested ISR,
-       therefore we need to read the reference value here before we leave the critical
-       section and allow preemptions by interrupts of higher priority. */
-    e_lwz       r4, rtos_noEventsPending@sda21(r13) /* r4: Count of pending events */
-    e_stw       r4, O_NOEV(sp)      /* Store for evaluation at return from ISR */
-    
     /* For preemptable interrupt handlers set the EE bit in the MSR. The property
        preemptability of a handler is encoded as MSBit of the function pointer. */
     se_btsti    r3, 0
@@ -664,29 +655,27 @@ rtos_isr_endIfPreemptable:
 
     /* The decision about task switches is taken in the C code implementation of the
        scheduler, rtos_processTriggeredEvents(). However, before we do the expensive
-       function call we evaluate a preliminary, simplified indicator. We compare the total
-       number of pending events before and after the ISR. */
-    e_lwz       r3, rtos_noEventsPending@sda21(r13)/* r3: Count of pending events after ISRs */
-    e_lwz       r4, O_NOEV(sp)      /* Load count of pending events before ISR */
-    se_cmpl     r3, r4              /* CR0: count after > count before, gt: has grown */
-#ifdef DEBUG
-    se_blt      .                   /* assert(after >= before); Check of indicator itself. */
-#endif
-    se_ble      iv4_noCallOfScheduler
+       function call we evaluate an indicator.
+         The pointer either points to an event to schedule or it is set to 0xffff_ffff. */
+    e_lwz       r3, rtos_pNextEventToSchedule@sda21(r13)/* r3: Event requires scheduling? */
+    e_cmp16i    r3, -1
+    se_beq      iv4_noCallOfScheduler
     
     /* We check for possible task switch because of an event being set in the ISR only if
        we return from the last ISR - but not (yet) if this is the return from a potential
-       preempting, nested ISR. Note, this is why the code evaluating the change of counts
-       of pending events needs to be inside a critical section. */
-    e_lis       r3, INTC_CPR_PRC0@ha    /* Load upper half of INTC_CPR address */
-    e_lwz       r3, INTC_CPR_PRC0@l(r3) /* r3: Current IRQ priority in INTC */
-    se_cmpli    r3, 1                   /* No activity if we are still in a nested ISR. */
+       preempting, nested ISR. */
+    e_lis       r4, INTC_CPR_PRC0@ha    /* Load upper half of INTC_CPR address */
+    e_lwz       r4, INTC_CPR_PRC0@l(r4) /* r4: Current IRQ priority in INTC */
+    se_cmpli    r4, 1                   /* No activity if we are still in a nested ISR. */
+    se_bge      iv4_noCallOfScheduler
     
-    /* Run the scheduler if we have the indication of newly set events. This may involve a
-       recursion inside of which new tasks are run.
-         Note, to avoid stack overflow we need to enter the function within the critical
-       section, which we had started before signalling end of IRQ to the INTC. */
-    e_bltl      rtos_processTriggeredEvents
+    /* Run the scheduler if we have the indication of newly triggered events. This may
+       involve a recursion inside of which new tasks are run.
+         Note, to avoid stack overflow we need to enter the function still within the
+       critical section, which we had started before signalling end of IRQ to the INTC. */
+    se_subi     r4, 1               /* r4: UINT_MAX, i.e. indication of "pointer unset" */
+    e_stw       r4, rtos_pNextEventToSchedule@sda21(r13) /* Clear pointer to triggered Event */
+    e_bl        rtos_processTriggeredEvents     /* r3: Event to be scheduler first */
     
 iv4_noCallOfScheduler:
     /* Restore the process ID. A sync operation is not required since we are not switching
@@ -1037,8 +1026,8 @@ rut_endWithoutErr:
     mtspr       SPR_G0_SVSP, r3
 
     /* Restore the U sp in the process descriptor. It is the value to use for newly started
-       tasks in this process. The location to store can be found easly as we still have the
-       pointer to the process descriptor in r6. */
+       tasks in this process. The location to store can be found easily as we still have
+       the pointer to the process descriptor in r6. */
     se_lwz      r3, RUT_O_USP(sp)
     se_stw      r3, O_PDESC_USP(r6) /* U sp as we had started the now ending task with */
 
@@ -1059,6 +1048,8 @@ rut_endWithoutErr:
 #endif
     se_beq      rut_noRestoreCPR        /* r0==r3: No restore of current prio required */
     e_stw       r0, rtos_currentPrio@sda21(13) /* Restore priority in global variable */
+    .extern     rtos_getEventByPriority
+    e_bl        rtos_getEventByPriority /* r3: prio before restore -> pEvent with that prio */
     wrteei      0               /* Call of rtos_processTriggeredEvents requires MSR[EE] = 0 */
     e_bl        rtos_processTriggeredEvents /* Check for possible task switches */
     wrteei      1
@@ -1333,6 +1324,22 @@ ivr8_startFullHandler:
     se_lwz      r3, O_SCDESC_sr(r3) /* r3: Address of handler implementation, replaces 1st */
     se_mtlr     r3                  /* function argument, which is anyway obsolete inside
                                        the handler */
+    
+    /* ivr8_switchBasicToFullHandler: Entry point for mixed mode system call handlers. A
+       handler can be declared a basic handler and decide later to become fully conformant
+       depending on what it needs to do.
+         Use case: A handler is responsible for occasional actions. The decision, whether
+       to do it now is simple and can be done in a basic handler. The action is complex and
+       implemented in C. The overhead for a fully conformant handler is spent only when the
+       action is occasionally taken.
+         lr: Address of normal C function, which is executed as full conformant part of the
+       system call. The system call ends with return from this function and the return
+       value from the function is the return value of the system call.
+         r3: Doesn't care, will be overwritten.
+         r4 .. r10: The C function receives the PID as first argument. The further up to 7
+       32 Bit arguments are taken from r4 till r10. */
+    .global     rtos_ivr8_switchBasicToFullHandler
+rtos_ivr8_switchBasicToFullHandler:
 
     /* Load the supervisor stack pointer and save the U sp. */
     se_mr       r0, sp

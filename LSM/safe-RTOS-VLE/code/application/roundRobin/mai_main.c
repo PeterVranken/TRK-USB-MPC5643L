@@ -104,8 +104,8 @@ enum
     prioEvA = 3,
     prioEvB = prioEvA,
     prioEvC = prioEvA,
-    prioEvH = 99,
-    prioEvT = 99,
+    prioEvH = 39,
+    prioEvT = 39,
     prioEvS = 33,
 };
 
@@ -182,6 +182,19 @@ volatile unsigned int SBSS_P2(mai_cntTaskS) = 0;
  */
 static int32_t taskInitProcess(uint32_t PID)
 {
+    _Static_assert(prioTaskIdle == 0
+                   &&  prioEvA > prioTaskIdle
+                   &&  prioEvA <= RTOS_MAX_LOCKABLE_TASK_PRIORITY
+                   &&  prioEvB == prioEvA
+                   &&  prioEvC == prioEvA
+                   &&  prioEvH > prioEvA
+                   &&  prioEvH <= RTOS_MAX_LOCKABLE_TASK_PRIORITY
+                   &&  prioEvT == prioEvH
+                   &&  prioEvS > prioEvA
+                   &&  prioEvS < prioEvH
+                  , "Bad task priority configuration"
+                  );
+
     static unsigned int cnt_ SECTION(.data.Shared.cnt_) = 0;
     ++ cnt_;
 

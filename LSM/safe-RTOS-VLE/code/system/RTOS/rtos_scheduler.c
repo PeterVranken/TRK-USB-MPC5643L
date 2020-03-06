@@ -127,6 +127,7 @@
  *   getEventByID
  *   getEventByIdx
  *   registerTask
+ *   osTriggerEvent
  *   checkEventDue
  *   onOsTimerTick
  *   launchAllTasksOfEvent
@@ -164,7 +165,7 @@
 /* The assembler code doesn't have access to all defines found in the sphere of C code.
    This makes it essential to have a cross check here, were we can access the definitions
    from both spheres. */
-#if RTOS_NO_ERR_PRC != RTOS_NO_CAUSES_TASK_ABORTION                                 \
+#if RTOS_NO_ERR_PRC != RTOS_NO_CAUSES_TASK_ABORTION                                     \
     ||  RTOS_ERR_PRC_PROCESS_ABORT != RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT           \
     ||  RTOS_ERR_PRC_MACHINE_CHECK != RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK           \
     ||  RTOS_ERR_PRC_DEADLINE != RTOS_CAUSE_TASK_ABBORTION_DEADLINE                     \
@@ -189,6 +190,10 @@
     ||  RTOS_IDX_SC_TRIGGER_EVENT != RTOS_SYSCALL_TRIGGER_EVENT                         \
     ||  RTOS_IDX_SC_SUSPEND_PROCESS != RTOS_SYSCALL_SUSPEND_PROCESS
 # error Inconsistent definitions made in C modules and RTOS API header file rtos.h
+#endif
+
+#if RTOS_MAX_LOCKABLE_TASK_PRIORITY >= RTOS_MAX_TASK_PRIORITY
+# error Suspicious task priority configuration
 #endif
 
 /** A pseudo event ID. Used to register a process initialization task using registerTask(). */
@@ -218,14 +223,13 @@ typedef struct eventDesc_t
     unsigned int tiCycleInMs;
 
     /** The priority of the event (and thus of all associated user tasks, which inherit the
-        prioritry) in the range 1..UINT_MAX. Whether different events can share the same
-        priority or need to have all different priorities depends on configuration macro
-        #RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY. If they may, then the execution of their
-        associated tasks will be sequenced when they become due at same time or with
-        overlap.\n
+        prioritry) in the range 1..UINT_MAX. Different events can share the same priority.
+        If they do then the execution of their associated tasks will be sequenced when they
+        become due at same time or with overlap.\n
           Note, if the event has a priority above #RTOS_MAX_LOCKABLE_TASK_PRIORITY then
         only those tasks can be associated, which belong to the process with highest PID in
         use. This is a safety constraint. */
+/// @todo Could become 16 Bit. Consider the interface with the PCP assembly code
     unsigned int priority;
 
     /** An event can be triggered by user code, using rtos_triggerEvent(). However, tasks
@@ -238,6 +242,7 @@ typedef struct eventDesc_t
           The range of \a minPIDToTriggerThisEvent is 0 ... (#RTOS_NO_PROCESSES+1). 0 and 1
         both mean, all processes may trigger the event, #RTOS_NO_PROCESSES+1 means only OS
         code can trigger the event. */
+/// @todo Could become 8 Bit
     unsigned int minPIDForTrigger;
 
     /** We can't queue events. If at least one task is still busy, which had been activated by
@@ -255,13 +260,13 @@ typedef struct eventDesc_t
 
     /** The set of associated tasks, which are activated by the event, is implemented by an
         array and the number of entries. Here we have the number of entries. */
+/// @todo Could become 8 Bit
     unsigned int noTasks;
 
-#if RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY == 1
     /** Support the scheduler: If this event has been processed then check event * \a
         this->pNextScheduledEvent as next one. */
     struct eventDesc_t *pNextScheduledEvent;
-#endif
+
 } eventDesc_t;
 
 
@@ -270,12 +275,12 @@ typedef struct eventDesc_t
  * Local prototypes
  */
 
-/** Hook function for ISRs: The tasks of triggered events are possibly executed (depending
-    on priority rules).\n
-      Note, this variable is not publically declared although it is global. It is called
+/** Hook function for ISRs and system calls: Some tasks of triggered events are possibly to
+    be executed (depending on priority rules).\n
+      Note, this function is not publically declared although it is global. It is called
     externally only from the assembly code, which can't read public declarations in header
     files. */
-void rtos_processTriggeredEvents(void);
+void rtos_processTriggeredEvents(eventDesc_t *pEvent);
 
 
 /*
@@ -306,29 +311,52 @@ static rtos_taskDesc_t DATA_OS(rtos_initTaskCfgAry)[1+RTOS_NO_PROCESSES] =
 /** The number of registered tasks. The range is 0..#RTOS_MAX_NO_TASKS. */
 static unsigned int SDATA_OS(rtos_noTasks) = 0;
 
-/** The list of task activating events. */
-static eventDesc_t BSS_OS(rtos_eventAry)[RTOS_MAX_NO_EVENTS];
+/** The list of task activating events. Plus a zero element as end of list guard.\n
+      Note, this variable is an interface with the assembly code. It may need to pick an
+    element from the list if lowering the current priority in the implementation of the PCP
+    requires the recursive call of the scheduler. */
+eventDesc_t BSS_OS(rtos_eventAry)[RTOS_MAX_NO_EVENTS+1];
 
 /** For performance reasons, all events are internally ordered by priority. At user API,
     they are identified by an ID, which can have an ordering. We need a mapping for the
     implementation of APIs that refer to an event. */
 static eventDesc_t * BSS_OS(rtos_mapEventIDToPtr)[RTOS_MAX_NO_EVENTS];
 
+/** The PCP, which changes the current priority needs the mapping from priority to the
+    first event in the list that has this priority. The map is implemented as direct lookup
+    table.\n
+      Note the map object is shared with the assembly code. */
+eventDesc_t * BSS_OS(rtos_mapPrioToEvent)[RTOS_MAX_TASK_PRIORITY+1];
+
 /** The number of created events. The range is 0..#RTOS_MAX_NO_EVENTS. */
 static unsigned int SDATA_OS(rtos_noEvents) = 0;
 
-/** The number of events, which have been triggered using rtos_osTriggerEvent() or
-    rtos_triggerEvent() and which have not yet been entirely processed (i.e. at least one
-    of its associated tasks has not yet completed).\n
+/** This flag is set when rtos_osTriggerEvent() or rtos_triggerEvent() has set an event,
+    which has a priority above the current so that a recursive, preempting scheduler call
+    is required to process it immediately.\n
       Note, this variable is an interface with the assembly code. The variable is inspected
     after return from an ISR to see whether the ISR has triggered an event so that some
     tasks may need to be launched. */
-uint32_t SDATA_OS(rtos_noEventsPending) = 0;
+bool SDATA_OS(rtos_isEventPending) = false;
+
+/** A pointer to event, which has to be served next by the scheduler. Points to an element of
+    array rtos_eventAry if an event requires the call of the scheduler (i.e.
+    rtos_isEventPending is true) or behind the end of the array otherwise.\n
+      This variable is an interface with the assembly code. It may call the scheduler with
+    this variable as argument after an ISR (postponed task activation). */
+eventDesc_t * SDATA_OS(rtos_pNextEventToSchedule) = (eventDesc_t*)(uintptr_t)-1;
+
+#ifdef DEBUG
+/** Pointer to guard element at the end of the list of events.\n
+      Since the guard itself is used as list termination this explicit pointer is just used
+    for self-tests in DEBUG compilation. */
+static const eventDesc_t *BSS_OS(rtos_pEndEvent) = NULL;
+#endif
 
 /** The priority of the currently executed task.\n
       This variable is an interface with the assembly code. The implementation of the PCP
-    requires the value to terminate a critical section if a user task should end without
-    doing so. */
+    requires access to the variable to terminate a critical section if a user task should
+    end without doing so. */
 uint32_t SDATA_OS(rtos_currentPrio) = 0;
 
 /** Time increment of one tick of the RTOS system clock. It is set at kernel initialization
@@ -401,6 +429,7 @@ static ALWAYS_INLINE eventDesc_t *getEventByIdx(unsigned int idxEvent)
     return &rtos_eventAry[idxEvent];
 
 } /* End of getEventByIdx */
+
 
 
 
@@ -561,6 +590,124 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
 
 
 /**
+ * Trigger an event to activate all associated tasks.\n
+ *   This function implements the operation. It is called from two API functions, one for
+ * OS code and one for user code. See rtos_osTriggerEvent() and rtos_triggerEvent() for
+ * more details.
+ *   @return
+ * Get \a true if event could be triggered, \a false otherwise.
+ *   @param pEvent
+ * The event to trigger by reference.
+ *   @param isInterrupt
+ * This function submits an immediate call of the scheduler if an event of accordingly high
+ * priority is triggered. However, this call is postponed if we are currently still inside
+ * an interrupt. This flag tells about.\n
+ *   Note, this is an inline function. The complete is-interrupt decision code will be
+ * discarded if a Boolean literal can be passed in - as it is for the call from the timer
+ * ISR and the user task API. Only the OS API, which is shared between ISRs and OS tasks
+ * will really contain the run-time decision code.
+ */
+static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInterrupt)
+{
+/// @todo Put this into an expression owned by the according assembly code
+    /* Unsafe types: Assembly code uses byte operations for Boolean flag. */
+    _Static_assert( sizeof(rtos_isEventPending) == 1
+                  , "Inconsistency in interface with assembly code"
+                  );
+
+    bool success;
+
+    rtos_osSuspendAllInterrupts();
+    if(pEvent->state == evState_idle)
+    {
+        /* Operation successful. Event can be triggered. */
+        pEvent->state = evState_triggered;
+        success = true;
+
+        /* Setting an event means a possible context switch to another task. It depends on
+           priority and interrupt state. If so, we need to run the scheduler.
+             It is not necessary to run the scheduler if the triggered event has a priority
+           equal 
+           to or lower than the priority of the currently processed event. In this case the
+           scheduler would anyway not change the current task right now.
+             The scheduler must not be called if this function is called from inside an
+           ISR. ISRs will call the function a bit later, when the interrupt context is
+           cleared and only if they serve the root level interrupt (i.e. not from a nested
+           interrupt). In this case calling rtos_processTriggeredEvents() is postponed and
+           done from the assembly code (IVOR #4 handler) but not yet here. The global flag
+           rtos_pNextEventToSchedule is set to command this. */
+        if(pEvent->priority > rtos_currentPrio)
+        {
+            if(isInterrupt)
+            {
+                /* Postpone the scheduler invocation till the end of the interrupt
+                   handler. This is indicated by a global pointer, which has an initial
+                   value that means "no pending event".
+                     The next scheduler invocation will start with serving this event. We
+                   must not move it towards less prior events - ISRs could trigger several
+                   events and the scheduler needs to start with the one of highest
+                   priority. The array of events is sorted in order of decreasing priority,
+                   therefore a simple comparison is sufficient. */
+                if(pEvent < rtos_pNextEventToSchedule)
+                    rtos_pNextEventToSchedule = pEvent;
+            }
+            else
+            {
+                /* We will get here only if the function is called from a task (OS or user
+                   through system call) */
+                
+                /* The recursive call of the scheduler is immediately done. We return here
+                   only after a couple of other task executions.
+                     Note, the critical section, we are currently in, will be left by the
+                   recursively invoked scheduler as soon as it finds a task to be launched.
+                   However, it'll return in a new critical section - which is the one we
+                   leave at the end of this function. */
+                rtos_processTriggeredEvents(pEvent);
+            }
+        }
+        else
+        {
+            /* Two possibilities to get here:
+                 - The event's priority is in the scope of the currently operating scheduler.
+               No need to immediately start a recursive scheduler or to postpone this start.
+                 - The event has a priority, which is lower than the current one but still
+               higher than the base priority of the currently processed event. This situation
+               occurs if the current priority had been raised by means of the PCP API.
+               Scheduling of the triggered event is postponed till the PCP API lowers the
+               priority again. There's no simple way to store the information whether/which
+               event to serve when PCP will later lower the priority:
+                 "Whether" depends on the not yet known information how far PCP will be asked
+               to lower the priority.
+                 "Which" would require a recursive data storage. A normal, preempting
+               scheduler could launch tasks, which in turn raise their priority by PCP.
+                 Therefore, we need to dynamically find out later as part of the PCP
+               priority lowering operation. Nothing to store here. */
+        }
+    }
+    else
+    {
+        /* Processing of event has not completed yet, associated tasks have not
+           all terminated yet. */
+
+        /* Counting the loss events requires a critical section. The loss counter can be
+           written concurrently from another task invoking rtos_osTriggerEvent() or by the
+           timer controlled scheduler. */
+        const unsigned int noActivationLoss = pEvent->noActivationLoss + 1;
+        if(noActivationLoss > 0)
+            pEvent->noActivationLoss = noActivationLoss;
+
+        success = false;
+    }
+    rtos_osResumeAllInterrupts();
+
+    return success;
+
+} /* End of osTriggerEvent */
+
+
+
+
+/**
  * Process the conditions that trigger events. The events are checked for becoming
  * meanwhile due and the associated tasks are made ready in case by setting the according
  * state in the event object. However, no tasks are already started in this function.
@@ -577,39 +724,13 @@ static inline void checkEventDue(void)
         {
             if((signed int)(pEvent->tiDue - rtos_tiOs) <= 0)
             {
-/// @todo Code duplication with osTriggerEvent
-                /* Task is due. Check event state. If it is not idle then we have a task
-                   overrun otherwise we trigger it. The check requires a read-modify-write
-                   and the event can be set coincidentally from an ISR of higher priority -
-                   we need a critical section. */
-                rtos_osSuspendAllInterrupts();
-                if(pEvent->state == evState_idle)
-                {
-                    /* Operation successful. Event can be triggered. */
-                    pEvent->state = evState_triggered;
-                    ++ rtos_noEventsPending;
-                    assert(rtos_noEventsPending <= rtos_noEvents);
-                }
-                else
-                {
-                    /* Processing of event has not completed yet, associated tasks have not
-                       all terminated yet. */
-
-                    /* Counting the loss events requires a critical section. The loss
-                       counter can be written concurrently from a task invoking
-                       rtos_triggerEvent(). */
-                    const unsigned int noActivationLoss = pEvent->noActivationLoss + 1;
-                    if(noActivationLoss > 0)
-                        pEvent->noActivationLoss = noActivationLoss;
-                }
+                /* Trigger the event or count an activation loss error. */
+                osTriggerEvent(pEvent, /* isInterrupt */ true);
 
                 /* Adjust the due time.
                      Note, we could queue task activations for cyclic tasks by not adjusting
                    the due time. Some limitation code would be required to make this safe. */
-/// @todo TBC: Can likely be done outside CS
                 pEvent->tiDue += pEvent->tiCycleInMs;
-
-                rtos_osResumeAllInterrupts();
 
             } /* End if(Event is due?) */
         }
@@ -659,81 +780,6 @@ static void onOsTimerTick(void)
 
 
 /**
- * Trigger an event to activate all associated tasks.\n
- *   This function implements the operation. It is called from two API functions, one for
- * OS code and one for user code. See rtos_osTriggerEvent() and rtos_triggerEvent() for
- * more details.
- *   @return
- * Get \a true if event could be triggered, \a false otherwise.
- *   @param pEvent
- * The event to trigger by reference.
- */
-/// @todo Inline?
-static bool osTriggerEvent(eventDesc_t * const pEvent)
-{
-    bool success;
-
-    rtos_osSuspendAllInterrupts();
-    if(pEvent->state == evState_idle)
-    {
-        /* Operation successful. Event can be triggered. */
-        pEvent->state = evState_triggered;
-        ++ rtos_noEventsPending;
-        assert(rtos_noEventsPending <= rtos_noEvents);
-        success = true;
-
-        /* Setting an event means a possible context switch to another task. We need to run
-           the scheduler to double-check this.
-             A small optimization is not calling the scheduler if the processed event has a
-           priority equal to or lower then the priority of the currently processed event. In
-           this case the scheduler would anyway not change the current task right now.
-             A condition is needed to avoid calling the scheduler if this function is
-           called from inside an ISR. ISRs will call the function a bit later, when the
-           interrupt context is cleared and only if they serve the root level interrupt
-           (i.e. not from nested interrupt). In this case calling
-           rtos_processTriggeredEvents() is done from the assembly code (IVOR #4 handler)
-           but not yet here.
-             Note, the call of rtos_processTriggeredEvents() will mean a recursive call of
-           the scheduler and we return here only after a couple of other task executions.
-             Note, the critical section, we are currently in, will be left by the scheduler
-           as soon as it finds a task to be launched. However, it'll return in a new
-           critical section - which is the one we leave at the end of this function. */
-        if(pEvent->priority > rtos_currentPrio)
-        {
-            const uint32_t interruptLevel = INTC.CPR_PRC0.R;
-            if(interruptLevel == 0)
-            {
-                /* We will get here only if the function is called from a task (OS or user
-                   through system call) */
-/// @todo TBC: The scheduler call doesn't necessarily need to be inside the same critical section. Which would facilitate resolving the code duplication with checkEventDue
-                rtos_processTriggeredEvents();
-            }
-        }
-    }
-    else
-    {
-        /* Processing of event has not completed yet, associated tasks have not
-           all terminated yet. */
-
-        /* Counting the loss events requires a critical section. The loss counter can be
-           written concurrently from another task invoking rtos_osTriggerEvent() or by the
-           timer controlled scheduler. */
-        const unsigned int noActivationLoss =
-                                    pEvent->noActivationLoss + 1;
-        if(noActivationLoss > 0)
-            pEvent->noActivationLoss = noActivationLoss;
-
-        success = false;
-    }
-    rtos_osResumeAllInterrupts();
-
-    return success;
-
-} /* End of osTriggerEvent */
-
-
-
-/**
  * Processing a triggered event means to execute all associated tasks. If the scheduler
  * finds an event to be processed as next one, then it'll call this function to run the
  * tasks.
@@ -771,7 +817,7 @@ static void initRTOSClockTick(void)
     _Static_assert( RTOS_CLOCK_TICK_IN_MS >= 1  &&  RTOS_CLOCK_TICK_IN_MS <= 35791
                   , "RTOS clock tick configuration is out of range"
                   );
-                  
+
     /* Disable all PIT timers during configuration. See RM, 36.3.2.1 PIT Module Control
        Register (PITMCR). */
     PIT.PITMCR.R = 0x2;
@@ -799,7 +845,7 @@ static void initRTOSClockTick(void)
          Note, that this doesn't release the scheduler yet; the step size is still zero
        and the system time doesn't advance despite of the starting timer interrupt. */
     PIT.PITMCR.R = 0x1;
-    
+
 } /* End of initRTOSClockTick */
 
 
@@ -839,11 +885,10 @@ static void initRTOSClockTick(void)
  *   Note, this setting is useless if a cycle time zero in \a tiCycleInMs specifies a non
  * regular event. \a tiFirstActivationInMs needs to be zero in this case, too.
  *   @param priority
- * The priority of the event in the range 1..UINT_MAX. Whether different events can share
- * the same priority or need to have all different priorities depends on configuration
- * macro #RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY. The priority of an event is the priority of
- * all associated tasks at the same time. The execution of tasks, which share the priority
- * will be serialized when they are activated at same time or with overlap.\n
+ * The priority of the event in the range 1..UINT_MAX. Different events can share the same
+ * priority. The priority of an event is the priority of all associated tasks at the same
+ * time. The execution of tasks, which share the priority will be serialized when they are
+ * activated at same time or with overlap.\n
  *   Note the safety constraint that task priorities above #RTOS_MAX_LOCKABLE_TASK_PRIORITY
  * are available only to events, which solely have tasks associated that belong to the
  * process with highest process ID in use.\n
@@ -881,7 +926,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     if(rtos_noEvents >= RTOS_MAX_NO_EVENTS)
         return rtos_err_tooManyEventsCreated;
 
-    if(priority == 0)
+    if(priority == 0  ||  priority > RTOS_MAX_TASK_PRIORITY)
         return rtos_err_invalidEventPrio;
 
     /* Check settings for non regularly activated tasks. */
@@ -911,15 +956,11 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
         if(getEventByIdx(idxNewEv)->priority < priority)
             break;
     }
-#if RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY != 1
-    if(idxNewEv > 0  &&  getEventByIdx(idxNewEv-1) == priority)
-        return rtos_err_eventsShareSamePriority;
-#endif
 
     for(v=rtos_noEvents; v>idxNewEv; --v)
         *getEventByIdx(v) = *getEventByIdx(v-1);
 
-    eventDesc_t * const pNewEvent = getEventByIdx(idxNewEv);
+    eventDesc_t *pNewEvent = getEventByIdx(idxNewEv);
     pNewEvent->tiCycleInMs = tiCycleInMs;
     pNewEvent->tiDue = tiFirstActivationInMs;
     pNewEvent->priority = priority;
@@ -927,6 +968,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     pNewEvent->noActivationLoss = 0;
     pNewEvent->taskAry = NULL;
     pNewEvent->noTasks = 0;
+    pNewEvent->pNextScheduledEvent = NULL;
 
     const unsigned int idNewEv = rtos_noEvents++;
 
@@ -937,18 +979,24 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
         if(rtos_mapEventIDToPtr[v] >= getEventByIdx(idxNewEv))
             ++ rtos_mapEventIDToPtr[v];
 
-    #define WARNING
-    #define WARNING Temporary test code, to be removed after use
-    for(v=1; v<rtos_noEvents; ++v)
-    {
-#if RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY == 1
-        if(getEventByIdx(v)->priority > getEventByIdx(v-1)->priority)
-#else
-        if(getEventByIdx(v)->priority >= getEventByIdx(v-1)->priority)
-#endif
-            return rtos_err_invalidEventPrio; /* Actually an internal implementation error */
-    }
+    /* Install the guard element at the end of the list. Essential is a priority value of
+       zero, i.e. below any true, scheduled task. */
+    *getEventByIdx(rtos_noEvents) = 
+                (eventDesc_t){ .tiCycleInMs = 0
+                             , .tiDue = 0
+                             , .priority = 0
+                             , .minPIDForTrigger = RTOS_EVENT_NOT_USER_TRIGGERABLE
+                             , .noActivationLoss = 0
+                             , .taskAry = NULL
+                             , .noTasks = 0
+                             , .pNextScheduledEvent = NULL
+                             };
 
+#ifdef DEBUG
+    for(v=1; v<=rtos_noEvents; ++v)
+        if(getEventByIdx(v)->priority > getEventByIdx(v-1)->priority)
+            return rtos_err_invalidEventPrio; /* Actually an internal implementation error */
+#endif
     /* Assign the next available array index as publically known event ID. */
     *pEventId = idNewEv;
 
@@ -1202,10 +1250,41 @@ void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int t
  */
 rtos_errorCode_t rtos_osInitKernel(void)
 {
+    /* If this assertion fires then you
+       - should double-check if you can redefine your task priorities such that they use
+         consecutive numbers, 1, 2, 3 ...
+       - can decide to change the condition of the assertion if you really need so many
+         different task priorities
+       - should decide if you change the implementation of the mapping from task priority
+         to event having that priority. So far we chose the most time efficient technique,
+         a direct lookup table, but any other technique would be fine, too. */
+    _Static_assert( RTOS_MAX_TASK_PRIORITY <= 64
+                  , "The used range of task priorities has been chosen such large that the"
+                    " implementation becomes quite inefficient in terms of memory usage"
+                  );
+                  
+    /* To shape a minimum of type safety with the assembly code, we check some interface
+       constraints imposed by the assembly implementtaion. */
+    assert(RTOS_PCP_INTERFACE_CONSTRAINTS_C_AS);
+    _Static_assert( RTOS_PCP_INTERFACE_STATIC_CONSTRAINTS_C_AS
+                  , "Interface check C to assembly failed for module"
+                    " rtos_priorityCeilingProtocol.S"
+                  );
+
     rtos_errorCode_t errCode = rtos_err_noError;
 
-    rtos_noEventsPending = 0;
+    /* The pointer rtos_pNextEventToSchedule is either unset or it points to the event of
+       highest priority which has been triggered but which cannot be scheduled yet because
+       we are still in an ISR. The value "unset" need to maintain the ordering of pointers,
+       the higher the value the lesser the priority of an event it points to. NULL would
+       not fulfill both condition and therefore require additional runtime code. We choose
+       UINT_MAX as indication of "unset". */
+    rtos_pNextEventToSchedule = (eventDesc_t*)(uintptr_t)-1;
+
     rtos_currentPrio = 0;
+#ifdef DEBUG
+    rtos_pEndEvent = getEventByIdx(rtos_noEvents);
+#endif
 
     /* The user must have registered at minimum one task and must have associated it with a
        event. */
@@ -1302,7 +1381,6 @@ rtos_errorCode_t rtos_osInitKernel(void)
         } /* for(All registered events) */
     }
 
-#if RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY == 1
     /* The scheduling of events of potentially same priority is supported by a link
        pointer, which points the scheduler to the next event to check after the event had
        been processed. This next event is either the first one in a group of events of same
@@ -1310,31 +1388,51 @@ rtos_errorCode_t rtos_osInitKernel(void)
     if(errCode == rtos_err_noError)
     {
         unsigned int idxEv, idxEvNextPrio;
-        unsigned int lastPrio;
-        for(idxEv=0; idxEv<rtos_noEvents; ++idxEv)
+        unsigned int lastPrio = sizeOfAry(rtos_mapPrioToEvent);
+        for(idxEv=0; idxEv<=rtos_noEvents; ++idxEv)
         {
             eventDesc_t * const pEvent = getEventByIdx(idxEv);
 
             /* Is this event the first one of the group of next lower priority? */
             if(idxEv == 0  ||  pEvent->priority < lastPrio)
             {
-                /* The first event in such a group is linked to the next one in order of
-                   the list. It doesn't matter if this object doesn't exist if the end of
-                   the list is reached. This pointer is anyway used as guard object. */
-                pEvent->pNextScheduledEvent = getEventByIdx(idxEv+1);
-
-                lastPrio = pEvent->priority;
+                const uint32_t priority = pEvent->priority;
                 idxEvNextPrio = idxEv;
+                
+                /* The first event in such a group is linked to the next one in order of
+                   the list. */
+                if(idxEv < rtos_noEvents)
+                {
+                    pEvent->pNextScheduledEvent = getEventByIdx(idxEv+1);
+                    assert(priority > 0);
+                }
+                else
+                {
+                    pEvent->pNextScheduledEvent = NULL;
+                    assert(priority == 0);
+                }
+                    
+                /* Add an entry to the map from priority to event. Assertions are fine to
+                   make the code safe - the according object properties have already been
+                   validated when creating the event objects. */
+                unsigned int idxMapEntry = lastPrio-1;
+                do
+                {
+                    assert(idxMapEntry < sizeOfAry(rtos_mapPrioToEvent));
+                    rtos_mapPrioToEvent[idxMapEntry] = pEvent;
+                }
+                while(idxMapEntry-- > priority);
+
+                lastPrio = priority;
             }
             else
             {
-                /* All further events is such a group are linked to the first event of the
+                /* All further events in such a group are linked to the first event of the
                    group. */
                 pEvent->pNextScheduledEvent = getEventByIdx(idxEvNextPrio);
             }
         } /* End for(All events) */
-    }
-#endif
+    } /* End if(No initialization error yet) */
 
     /* After checking the static configuration, we can enable the dynamic processes.
        Outline:
@@ -1508,7 +1606,10 @@ rtos_errorCode_t rtos_osInitKernel(void)
 // associated tasks as task function argument. ISRs could send simple data to a task
 bool rtos_osTriggerEvent(unsigned int idEvent)
 {
-    return osTriggerEvent(getEventByID(idEvent));
+    /* This function is shared between ISRs and OS tasks. We need to know because the
+       behavior depends. We query the INTC to find out. */
+    const uint32_t interruptLevel = INTC.CPR_PRC0.R;
+    return osTriggerEvent(getEventByID(idEvent), /* isInterrupt */ interruptLevel > 0);
 
 } /* End of rtos_osTriggerEvent */
 
@@ -1536,7 +1637,7 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
     {
         eventDesc_t * const pEvent = getEventByID(idEvent);
         if(pidOfCallingTask >= pEvent->minPIDForTrigger)
-            return (uint32_t)osTriggerEvent(pEvent);
+            return (uint32_t)osTriggerEvent(pEvent, /* isInterrupt */ false);
     }
 
     /* The user specified event ID is not in range or the calling process doesn't have the
@@ -1556,8 +1657,14 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
  *   The function is called from the common part of the assembly implementation of the ISRs
  * and from all system call handlers, which could potentially lead to the start of tasks.\n
  *   This function is entered with all interrupt processing disabled (MSR[ee]=0).
+ *   @param
+ * The caller (likely osTriggerEvent(), immediately or postponed) usually knows, which is
+ * the recently triggered event, which has to be handled by the scheduler. This event is
+ * provided by reference as a hint so that the scheduler doesn't need to look for the
+ * event.
  */
-SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents(void)
+SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
+                                                                    (eventDesc_t *pEvent)
 {
     /* This function and particularly this loop is the essence of the task scheduler. There
        are some tricky details to be understood.
@@ -1573,12 +1680,12 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
          First complexity is an interrupt, which sets another event while we are processing
        the tasks of the first one. If this has in turn a higher priority then it's no new
        consideration but just a matter of recursive invocation of this same function.
-       However, if it has a priority lower then that of the currently processed event and
+       However, if it has a priority lower than that of the currently processed event and
        tasks, then we (and not the preempting context, which triggers the event) are
        obliged to run the tasks of this event, too, but - because of the lower priority -
-       only later, after the current set of tasks. (Note, "later", there is no HW interrupt
-       any more to get the new event be processed - so we need a loop here to not forget
-       that event.) The tricky thing is how to span the critical sections:
+       only later, after the current set of tasks. (Note, "later", there is no
+       HW/SW-interrupt any more to get the new event be processed - so we need a loop here
+       to not forget that event.) The tricky thing is how to span the critical sections:
          If we find the first event (searching from highest towards lower priorities) then
        we apply the CS just to acknowledge the event. (I.e. no potential later, recursive
        invocation of this function will compete in handling it.) When done with all the
@@ -1603,34 +1710,45 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
        is just the same as outlined for the loop cycle-to-cycle situation. Actually, the
        final CS must not be ended before the stack frame has been killed, effectively at
        the very end of the ISR, with the rfi instruction.
-         The same consideration requires that we are already inside the first
-       acknowledge-CS when entering the function: Otherwise we could see a recursive
-       function call before the loop. Which would be possible only once per defined event,
-       thus not meaning unbounded stack usage, but still an avoidable and highly undesired,
-       significant potential waste of stack. (All of this potential waste would need to go
-       into the worst case stack usage estimation.) */
+         Another consideration makes it useful that we are already inside the first
+       acknowledge-CS when entering the function. This CS includes the decision (in
+       triggerEvenet), whether or not a recursive scheduler call is required. Being here,
+       and because of the CS, this information is still coherent with the events' state. We
+       can place some assertions, the behavior is more transparent and the implementation
+       more reliable. Without an CS we could see this: Event A is set and makes this
+       scheduler invoked. Event B can be triggered before tbhe scheduler finds the due
+       event. It is preempted by a recursive scheduler invocation. The preempting scheduler
+       would handle both events, B first then A. After the preemption the event A is no
+       longer due and the scheduler would have to return without doing anything. Which is
+       neither a problem nor an advantage (same overall effort and timing), but there are
+       less invariants for checking. Note, this is still an option if minimizing the CS
+       is rated higher than transparency of behavior. */
 
     /* Here, we are inside a critical section. External Interrupt handling is disabled. */
     assert(rtos_osGetAllInterruptsSuspended());
+
+    /* If we were called because of pending, postponed events, which are indicated by
+       rtos_pNextEventToSchedule then the caller must have acknowledged the request by
+       setting the pointer back to "unset". */
+    assert((uintptr_t)rtos_pNextEventToSchedule == (uintptr_t)-1);
 
     /* Safe the current priority: It'll be replaced by that of the events, we find to be
        served, but finally we will have to restore the value here. */
     const unsigned int prioAtEntry = rtos_currentPrio;
 
-    eventDesc_t *pEvent = getEventByIdx(0);
-    const eventDesc_t * const pEndEvent = getEventByIdx(rtos_noEvents);
-
     /* We iterate the events in order of decreasing priority. */
-    while(pEvent < pEndEvent)
+    assert(pEvent < rtos_pEndEvent &&  pEvent->priority >= prioAtEntry);
+    while(true)
     {
         if(pEvent->priority <= prioAtEntry)
         {
-            /* Launching tasks must not be considered for events below the priority at
-               start of this scheduler recursion. This priority level will mostly be
+            /* Launching tasks must not be considered for events at or below the priority
+               at start of this scheduler recursion. This priority level will mostly be
                because another, earlier call of this function, preempted and currently
                suspended somewhere deeper on the OS stack, which already handles the event
                but it can also happen if the PCP has been used to temporarily raise the
-               current priority. This would hinder us to serve triggered event already now.
+               current priority. This would hinder us to serve a triggered event already
+               now.
                  We leave the function still (or again) being in a critical section. */
             break;
         }
@@ -1656,50 +1774,45 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
                but didn't restore it again. */
             assert(rtos_currentPrio == pEvent->priority);
 
-            /* The event is entirely processes, we can release it. This must not be done
+            /* The event is entirely processed, we can release it. This must not be done
                before we are again in the next critical section. */
             rtos_osSuspendAllInterrupts();
             pEvent->state = evState_idle;
-/// @todo Maybe it's more meaningful or to the point to decrease noPending when acknowledging the event?
-            assert(rtos_noEventsPending > 0);
-            -- rtos_noEventsPending;
 
-            /* The next event to check is not necessarily the next in order. If we allow
-               events to have the same priority then we need to ensure that we have checked
-               all other events of same priority before we advance to one of lower
-               priority. (If we don't allow same priorities then this condition is
-               implicitly fulfilled and we can always advance with the next event in order,
-               which is surely of lower priority.)
+            /* The next event to check is not necessarily the next in order. Since we allow
+               events to have the same priority we need to ensure that we have checked all
+               other events of same priority before we advance to one of lower priority.
+               (If we wouldn't allow same priorities then this condition was implicitly
+               fulfilled and we could always advance with the next event in order, which is
+               surely of lower priority.)
                  Note, this consideration leads to the repeated check of the same events.
                Example: A and B were events of same priority and appear in the list in this
-               order. Event A can be triggered while event B is proceessed. We must check A
-               before we check the successor of B, e.g. C, which has lower priority. While
-               running the tasks of A, event B can have been triggered again, and so on. In
-               an extreme situation, we would infinitly loop and alternatingly process A
-               and B, but C would never been visited and suffer from starvation. (Easy to
-               get: A task of A triggers event B and a task of B triggers event A.) */
-#if RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY == 1
-            /* Same priorities are allowed for several events. After we have served an
-               event of priority n, we check the first event of this priority n as next
-               one. All event specifications, inlcuding priorities, are staically and we
-               have prepared a link from each event to the first in list order, which has
-               the same priority but which is not the event itself. Examples:
+               order. Event A can be triggered while event B is being proceessed. We must
+               check A before we check the successor of B, e.g. C, which has lower
+               priority. While running the tasks of A, event B can have been triggered
+               again, and so on. In an extreme situation, we would infinitly loop and
+               alternatingly process A and B, but C would never been visited and suffer
+               from starvation. (Easy to get: A task of A triggers event B and a task of B
+               triggers event A.)
+                 After we have served an event of priority n, we check the first event of
+               this priority n as next one. All event specifications, inlcuding priorities,
+               are staical and we have prepared a link from each event to the first in list
+               order, which has the same priority but which is not the event itself.
+               Examples:
                - A, B, C have prio n, D is the successor of C with prio n-1:
                  - A is linked to B
                  - B and C are linked to A
+                 - D is linked to its successor
                - A has prio n, B has prio n-1, C has prio n-2:
                  - A is linked to B
                  - B is linked to C
+                 - C is linked to its successor
                  Note, this scheme doesn't lead to a fair round robin for groups of events
                with same priority but this is not a contradiction with the meaning of
                priorities or priority based scheduling. */
 
             /* Proceed with preceding events of same priority (if any). */
             pEvent = pEvent->pNextScheduledEvent;
-#else
-            /* Proceed with next event. */
-            ++ pEvent;
-#endif
         }
         else
         {
@@ -1709,12 +1822,13 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
                current one. */
             assert(pEvent->state == evState_idle);
 
-            /* Proceed with next event. */
+            /* Proceed with next event. No need to start over at first event of same
+               priority as we had not left the critical section so that no such event can
+               have been triggered meanwhile. */
             ++ pEvent;
 
         } /* End if(Which event state?) */
-
-    } /* End While(All events we possibly need to handle) */
+    } /* End while(All events of prio, which is to be handled by this scheduler invocation) */
 
     /* Here we are surely still or again inside a critical section. */
     rtos_currentPrio = prioAtEntry; /* The initial priority is restored again. */
@@ -1933,7 +2047,7 @@ uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority)
         rtos_currentPrio = suspendUpToThisTaskPriority;
 
     return prioBeforeChange;
-    
+
 } /* rtos_osSuspendAllTasksByPriority */
 
 
@@ -1951,7 +2065,7 @@ uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority)
  *   @remark
  * Caution, this function lowers the current task priority level to the stated value
  * regardless of the initial value for the task. Accidentally lowering the task priority
- * level below the configured task priority (i. the priority inherited from the triggering
+ * level below the configured task priority (i.e. the priority inherited from the triggering
  * event) will have unpredictable consequences.
  *   @remark
  * Different to the user mode variant of the function, rtos_resumeAllTasksByPriority(),
@@ -1971,10 +2085,31 @@ void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority)
 {
     if(resumeDownToThisTaskPriority < rtos_currentPrio)
     {
+        /* Identify the events, which could possibly require the recursive call of the
+           scheduler.
+             Note, there is a significant difference in the implementation here for the OS
+           tasks and the system call that implements the same concept for the user tasks.
+           The OS code just identifies the events that may have been triggered meanwhile
+           and calls the scheduler to let it decide whether there's really something to do.
+           Often, this won't be the case. (Which is possible for the other reason, too,
+           that the check code is not inside the critical section).
+             The system call implementation really figures out whether there is at least
+           one event that requires scheduling. It looks at the state of all possible
+           candidates. Effectively, it re-implements part of the scheduler itself. The
+           reason is the significant overhead, which results from calling a C function from
+           a system call. In the majority of cases, the system call will find that calling
+           the scheduler is not needed so that this effectively is a significant
+           optimization. The OS code here would not benefit from the same strategy. */
+        eventDesc_t * const pEvToSchedulePossibly = rtos_getEventByPriority(rtos_currentPrio);
         rtos_currentPrio = resumeDownToThisTaskPriority;
 
         rtos_osSuspendAllInterrupts();
-        rtos_processTriggeredEvents();
+        /* Note, because check and change of the current prio are not inside the critical
+           section it can easily be that the call of the scheduler is already obsolete.
+           This doesn't matter, not even with respect to overhead and the number of
+           function invocations. Not taking check and change into the CS just means to have
+           a smaller CS. */
+        rtos_processTriggeredEvents(pEvToSchedulePossibly);
         rtos_osResumeAllInterrupts();
     }
 } /* rtos_osResumeAllTasksByPriority */

@@ -35,6 +35,7 @@
  *   taskA
  *   taskB
  *   taskH
+ *   taskO
  *   taskT
  *   taskS
  *   installInterruptServiceRoutines
@@ -259,6 +260,14 @@ volatile counter64_t SBSS_P2(mai_cntTaskS) = 0;
  */
 static int32_t taskInitProcess(uint32_t PID)
 {
+    _Static_assert(prioEvA <= RTOS_MAX_LOCKABLE_TASK_PRIORITY
+                   &&  prioEvB <= RTOS_MAX_LOCKABLE_TASK_PRIORITY
+                   &&  prioEvH <= RTOS_MAX_LOCKABLE_TASK_PRIORITY
+                   &&  prioEvT <= RTOS_MAX_LOCKABLE_TASK_PRIORITY
+                   &&  prioEvS >= RTOS_MAX_LOCKABLE_TASK_PRIORITY
+                   &&  prioEvS <= RTOS_MAX_TASK_PRIORITY
+                  , "Bad task priority configuration"
+                  );
     static unsigned int cnt_ SECTION(.data.Shared.cnt_) = 0;
     ++ cnt_;
 
@@ -949,6 +958,8 @@ int main(int noArgs ATTRIB_DBG_ONLY, const char *argAry[] ATTRIB_DBG_ONLY)
     bool success ATTRIB_UNUSED = true;
     while(true)    
     {
+/// @todo Add: osGetResource with level higher than idle but lower than A. Should work with and without osReleaseResource
+
         /* Trigger the first of the chained test tasks.
              Since we are here in idle, the trigger needs to be always possible. */
         bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_osTriggerEvent(idEvTaskA);

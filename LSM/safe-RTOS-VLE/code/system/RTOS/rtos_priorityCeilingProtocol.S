@@ -25,7 +25,8 @@
 /* Module interface
  *   rtos_scBscHdlr_suspendAllTasksByPriority
  *   rtos_suspendAllTasksByPriority
- *   rtos_scFlHdlr_resumeAllTasksByPriority
+ *   rtos_getEventByPriority
+ *   rtos_scBscHdlr_resumeAllTasksByPriority
  *   rtos_resumeAllTasksByPriority
  * Local functions
  */
@@ -46,6 +47,14 @@
 /*
  * Defines
  */
+
+/** To generate some profiling code? Does the switching from basic to full conformance
+    class for the PCP system call to lower the current priority pay off? We expect to see
+    much more ends of critical sections without the expensive call of the scgeduler than
+    with this call. This can be proven by counting the calls. */
+#ifdef DEBUG
+# define DBG_COUNT_SCHEDULER_CALLS
+#endif
 
 
 /*
@@ -73,7 +82,7 @@
  *   @return
  * On return, r3 contains the priority level at entry into this function (and into the
  * critical section). This priority level needs to be restored on exit from the critical
- * section, when rtos_scFlHdlr_resumeAllTasksByPriority is called.
+ * section, when rtos_scBscHdlr_resumeAllTasksByPriority is called.
  *   @param addressOfHandler
  * On entry, r3 holds the address of this system call handler. Not used.
  *   @param suspendUpToThisPriority
@@ -98,7 +107,7 @@ rtos_scBscHdlr_suspendAllTasksByPriority:
          The second condition is always fulfilled, since we only change upwards. A check in
        DEBUG compilation is relative expensive and typical client code faults, which lead
        to this situation, are anyway caught by the DEBUG code in
-       rtos_scFlHdlr_resumeAllTasksByPriority. So we don't do. */
+       rtos_scBscHdlr_resumeAllTasksByPriority. So we don't do. */
 #if RTOS_MAX_LOCKABLE_TASK_PRIORITY <= 32
     se_cmpli    r4, RTOS_MAX_LOCKABLE_TASK_PRIORITY /* Upper boundary */
 #else
@@ -141,14 +150,71 @@ rtos_suspendAllTasksByPriority:
     se_mr       r4, r3
     se_li       r3, RTOS_SYSCALL_SUSPEND_ALL_TASKS_BY_PRIORITY
     se_sc
-    se_blr
+    se_blr      /* This system call doesn't touch the LR */
     
 /* End of rtos_suspendAllTasksByPriority */
 
 
 
 /**
- *   @func rtos_scFlHdlr_resumeAllTasksByPriority
+ * eventDesc_t *rtos_getEventByPriority(uint32_t priority);
+ *
+ * Helper: Get the first event in the global event list, which has the given or a smaller
+ * priority. All its successors in the list will have either the same or a lower priority
+ * as the returned event. All its predecessors will have a higher priority.
+ *   @return
+ * r3: Get the address of the wanted event.\n
+ *   Note, \a priority may be a non existing value and the returned event's priority is
+ * lower than \a priority.\n
+ *   Note, if all actual events have a priority higher than \a priority then the returned
+ * event will be the guard element at the end of the list, which has the impossible low
+ * task priority value 0.
+ *   @param priority
+ * r3: The wanted priority. It needs to be a possbible value in the range
+ * 1..#RTOS_MAX_TASK_PRIORITY. It is not necessary that there is at least one event having
+ * this priority.
+ *   @remark
+ * This function is implemented for the use in a system call of basic conformance class.
+ * There are stronger implementation constraints than the normal EABI constraints:
+ * - Stack pointer must not be used for load/store
+ * - GPR 6+7 must not be altered
+ *   @remark
+ * The function can be called from assembly and C code and from any context, OS and user
+ * tasks and ISRs.
+ */
+    .section    .text.ivor
+    .globl      rtos_getEventByPriority
+    .balign     2
+    
+rtos_getEventByPriority:
+
+#ifdef DEBUG
+    se_cmpli    r3, 1   /* assert(priority >= 1  &&  priority <= RTOS_MAX_TASK_PRIORITY); */
+    se_blt      .
+# if RTOS_MAX_TASK_PRIORITY <= 32
+    se_cmpli    r3, RTOS_MAX_TASK_PRIORITY
+# else
+    e_cmpl16    r3, RTOS_MAX_TASK_PRIORITY
+#endif
+    se_bgt      .
+#endif
+    e_lwz       r5, _mapPrioToEvent@sda21(r13) /* r5: &rtos_mapPrioToEvent[0] */
+    se_slwi     r3, 2   /* r3: priority*4; each array element is a pointer */
+    se_add      r5, r3
+    e_lwz       r3, 0(r5)   /* r3: rtos_mapPrioToEvent[priority] */
+    se_blr
+
+    .section    .sdata.OS._mapPrioToEvent
+    .extern     rtos_mapPrioToEvent
+_mapPrioToEvent:
+    .dc.l       rtos_mapPrioToEvent
+
+/* End of rtos_getEventByPriority */
+
+
+
+/**
+ *   @func rtos_scBscHdlr_resumeAllTasksByPriority
  * Change the current priority of the calling user task context, only downwards and only down
  * to P0, where P0 is the initial priority of the system calling user task, which had been
  * statically agreed on by task configuration.\n
@@ -161,9 +227,6 @@ rtos_suspendAllTasksByPriority:
  * typical client code errors, when a task of too high priority tries getting a resource,
  * while resource sharing with such a task is forbidden (in order to not inhibit a safety
  * supervisory task from being accurately scheduled).
- *   @return
- * On return, r3 contains the priority level at entry into this function. This priority
- * level will mostly be of no particular interest.
  *   @param addressOfHandler
  * On entry, r3 holds the address of this system call handler. Not used.
  *   @param resumeDownToThisPriority
@@ -171,21 +234,20 @@ rtos_suspendAllTasksByPriority:
  * schedulded again. Tasks lower than this priority will still be locked.
  *   @remark
  * This is the implementation of a system call handler. The code must not be invoked
- * directly. The system call handler is compliant with the full conformance class.
- *   @remark
- * The ancestor revision of the RTOS with the hardware scheduler could implement this
- * function as a high performing basic handler, which requires assembly programming.
- * However, the meanwhile used software scheduler requires a handler of full conformance
- * class, which could be implemented in C. There's no strong justification any more to have
- * this function in assembly code.
+ * directly. The system call handler is basically compliant with the basic conformance
+ * class. However, if it decides that a recursive run of the scheduler is required then it
+ * switches to full conformance in order to do do.
  */
     .section    .text.ivor
     .extern     rtos_osSystemCallBadArgument
-    .globl      rtos_scFlHdlr_resumeAllTasksByPriority
+    .globl      rtos_scBscHdlr_resumeAllTasksByPriority
     .balign     2
 
-rtos_scFlHdlr_resumeAllTasksByPriority:
+rtos_scBscHdlr_resumeAllTasksByPriority:
 
+    mfspr       r13, SPR_G1_SDA     /* Basic handlers need to repair possibly destroyed SDA
+                                       pointers prior to first use. */
+                                       
     /* The yielded priority must be within the permitted range: Not at level of safety
        tasks or above and not below the level we had at entry into the task.
          The first condition is always fulfilled, since we only change downwards but we can
@@ -201,33 +263,118 @@ rtos_scFlHdlr_resumeAllTasksByPriority:
 # endif
     e_bgt       rtos_osSystemCallBadArgument /* r4>MAX: Abort task, demanded prio too high */
 #endif
-    se_lwz      r3, (IV8_SIZE_OF_SF+RUT_O_CPR)(sp)  /* r3: Prio of task start */
+    mfspr       r3, SPR_G0_SVSP /* r3: SV sp when we entered the now system calling user task*/
+    se_lwz      r3, RUT_O_CPR(r3)   /* r3: Prio of task start */
     se_cmpl     r4, r3
     e_blt       rtos_osSystemCallBadArgument    /* r4<r3: Abort task: Demanded prio too low */
 
     /* The function allows to change the task priority only downwards. It is not an error
        if the aimed priority is above from or same as current one: This happens if several
        critical sections or get/release resource pairs are nested. */
-    e_lwz       r3, rtos_currentPrio@sda21(13) /* r3: Current prio value, before change */
+    e_lwz       r3, rtos_currentPrio@sda21(r13) /* r3: Current prio value, before change */
     se_cmpl     r4, r3
-    se_bge      rai_return              /* r4>=r3: No change of current prio */
-    e_stw       r4, rtos_currentPrio@sda21(13) /* Store checked, demanded value in prio var */
-    wrteei      0               /* Call of rtos_processTriggeredEvents requires MSR[EE] = 0 */
-    e_b         rtos_processTriggeredEvents /* Check for possible task switches and return */
-
-rai_return:
-    se_blr
+    se_bge      rat_return              /* r4>=r3: No change of current prio */
+    e_stw       r4, rtos_currentPrio@sda21(r13) /* Store checked, demanded value in prio var */
+    se_mr       r7, r4      /* r6+r7 are persistent with respect to next function call */
+    se_bl       rtos_getEventByPriority /* r3: prio@entry -> pEvent with that prio */
     
-/* End of rtos_scFlHdlr_resumeAllTasksByPriority */
+    /* We will no visit the returned event, and all of its successors, to see whether at
+       least one has been triggered. If so, we need to recursively call the scheduler to
+       process this event (and maybe others, which can be left to the scheduler). The
+       iteration ends when we see an event of priority lower than or equal to the new,
+       restored current priority; the current scheduler instance (which brought us here)
+       will take care. */
+    se_mr       r4, r3      /* r4: pEv under progress */
+    
+#ifdef DEBUG
+    /* The iteration ends at latest at the gurad element at the end of the list, which has
+       priority zero. Moreover, before that we need to stop at an event of currently
+       scheduled priority. We can add an assertion. */
+    se_mr       r3, r7      /* r3: restored value of current prio */
+    se_bl       rtos_getEventByPriority /* r3: restored prio -> pEvent with that prio */
+    se_mr       r5, r3      /* r5: Guard pointer for assertion */
+#endif
+
+rat_loopNextEvent:
+#ifdef DEBUG
+    se_cmpl     r4, r5
+    se_bgt      .           /* assert(pEvUnderProgess <= pEvRestoredPrio); */
+#endif
+    se_lwz      r3, PCP_O_EVDESC_prio(r4)   /* r3: The event's priority */
+    se_cmpl     r3, r7      /* gt: Event is still to be considered */
+    se_ble      rat_return  /* First event in scope of current scheduler reached */
+#ifdef DEBUG
+    se_cmpl     r4, r5
+    se_bge      .           /* assert(pEvUnderProgess < pEvRestoredPrio); */
+#endif
+    se_lbz      r3, PCP_O_EVDESC_state(r4)  /* r3: The event's state */
+    se_cmpli    r3, PCP_E_EVST_triggered
+#ifdef DEBUG
+    se_bgt      .           /* assert(pEv->state != evState_inProgress); */
+#endif
+    se_beq      rat_callSchedulerRecursively    /* Seeing one demanding event is sufficient
+                                                   to decide. */
+#if PCP_SIZE_OF_EV_DESC <= 32
+    se_addi     r4, PCP_SIZE_OF_EV_DESC     /* r4: Points to next event in list */
+#else
+    e_add16i    r4, r4, PCP_SIZE_OF_EV_DESC /* r4: Points to next event in list */
+#endif
+    se_b        rat_loopNextEvent           /* Check next event's state */
+
+rat_callSchedulerRecursively:
+
+    /* Now we know, that we need to trigger the scheduler. This requires a full conformance
+       handler but we are here in a basic handler. We switch from basic to full,
+       effectively a full context switch.
+          r4 points to the first event to be considered by the new scheduler instance. */
+    .extern     rtos_ivr8_switchBasicToFullHandler
+    e_bl        rtos_ivr8_switchBasicToFullHandler  /* Context switch to full conformance
+                                                       and return here. r4..r10 are retained */
+    /* Here we are in a full conformance handler. r3 contains the PID of calling process. */
+    
+    .extern     rtos_processTriggeredEvents
+    se_mr       r3, r4      /* r3: PID -> pEvent with prio@entry */
+    wrteei      0           /* Call of rtos_processTriggeredEvents requires MSR[EE] = 0 */
+#ifdef DBG_COUNT_SCHEDULER_CALLS
+    /* Count executions of system call handler as basic handler. */
+    e_lwz       r4, _cntResumeWithScheduler@sda21(r13)
+    se_addi     r4, 1
+    e_stw       r4, _cntResumeWithScheduler@sda21(r13)
+#endif
+    e_b         rtos_processTriggeredEvents /* Check for possible task switches and return
+                                               from system call */
+rat_return:
+#ifdef DBG_COUNT_SCHEDULER_CALLS
+    /* Count executions of system call handler as basic handler. */
+    e_lwz       r3, _cntResumeNoScheduler@sda21(r13)
+    se_addi     r3, 1
+    e_stw       r3, _cntResumeNoScheduler@sda21(r13)
+#endif
+    se_rfi
+    
+
+#ifdef DBG_COUNT_SCHEDULER_CALLS
+    .section    .sdata.OS._cntResumeNoScheduler
+    .global     _cntResumeNoScheduler
+    .balign     4
+_cntResumeNoScheduler:
+    .dc.l       0
+    
+    .section    .sdata.OS._cntResumeWithScheduler
+    .global     _cntResumeWithScheduler
+    .balign     4
+_cntResumeWithScheduler:
+    .dc.l       0
+#endif
+
+/* End of rtos_scBscHdlr_resumeAllTasksByPriority */
 
 
 
 /**
  *   @func rtos_resumeAllTasksByPriority
- * System call code for rtos_scFlHdlr_resumeAllTasksByPriority(). Function details
+ * System call code for rtos_scBscHdlr_resumeAllTasksByPriority(). Function details
  * can be found there.
- *   @return
- * On return, r3 contains the priority level at entry into this function.
  *   @param resumeDownToThisPriority
  * On entry, r3 holds the aimed priority level.
  *   @remark
@@ -264,8 +411,12 @@ rtos_resumeAllTasksByPriority:
     se_addi     sp, SIZE_OF_SF
     se_blr
 
+
     #undef SIZE_OF_PAYLOAD
     #undef SIZE_OF_SF
     #undef O_LR
 
 /* End of rtos_resumeAllTasksByPriority */
+
+  
+

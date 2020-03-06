@@ -185,9 +185,6 @@ typedef enum rtos_errorCode_t
     , rtos_err_highPrioTaskInLowPrivPrc /// Task of highest prio belongs to process of low privileges
     , rtos_err_runTaskBadPermission /// "Unsafe" permissions granted to rtos_runTask()
     , rtos_err_suspendPrcBadPermission/// "Unsafe" permissions granted to rtos_suspendProcess()
-#if RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY != 1
-    , rtos_err_eventsShareSamePriority /// Event priorities are not unique
-#endif
     , rtor_err_noErrorCodes
 
 } rtos_errorCode_t;

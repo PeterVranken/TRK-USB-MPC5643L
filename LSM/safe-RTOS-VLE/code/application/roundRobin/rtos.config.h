@@ -31,7 +31,7 @@
 
 /** @remark Note, this file is shared with the assembly code. You must not use any
     constructs in the definition of the macros, which were not compatible with the GNU
-    assembly language, e.g. number literals like 10u intead of 10. */
+    assembly language, e.g. number literals like 10u instead of 10. */
 
 /** The period time of the RTOS system timer. Unit is 1ms. Configurable range is 1..35791.
     If either this range or the timing accuracy of 1ms is not sufficient then you need to
@@ -46,6 +46,13 @@
     the safety concept. */
 #define RTOS_KERNEL_IRQ_PRIORITY                1
 
+/** This is the highest task priority in use. Basically, a priority is just a number and it
+    doesn't matter which one. However, for some operations, the kernel needs lookup operations
+    from priority to other objects. These can be implemented most simple and efficient by
+    direct lookup tables if the maximum priority in use is not too large. Therefore, one
+    should use the priority values 1, 2, 3, ..., max and specify the maximum here. */
+#define RTOS_MAX_TASK_PRIORITY                  50
+
 /** This the highest priority that user tasks can have, which user code can shape a
     critical section with. If a task has a higher priority then user code can't hinder it
     from being scheduled at any time and race conditions with these tasks can't be
@@ -53,7 +60,7 @@
     tasks.\n
       Note, in order to not break the safety concept, there should be at least one safety
     supervisory task having a priority above #RTOS_MAX_LOCKABLE_TASK_PRIORITY. */
-#define RTOS_MAX_LOCKABLE_TASK_PRIORITY         100
+#define RTOS_MAX_LOCKABLE_TASK_PRIORITY         40
 
 /** Any user task is activated by an event. Several tasks can be associated with one and
     the same event but each event needs to have at least one associated task. Therefore, it
@@ -62,12 +69,6 @@
     constraints in changing it besides the amount of reserved RAM space for the resulting
     table size. */
 #define RTOS_MAX_NO_EVENTS                      6
-
-/** There are two flavours of the scheduling. Events may or may not share the same
-    priority. If they don't then the implementation can save a bit of overhead.
-      Set this macro to 1 if you have at least two events of same priority. If you should
-    set it to 0 as a kind of tiny optimization. */
-#define RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY     1
 
 /** The maximum, total number of user tasks, which can be activated by the events. The
     chosen number is a compile time configuration setting and there are no constraints in
