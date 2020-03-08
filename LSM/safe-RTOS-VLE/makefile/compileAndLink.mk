@@ -242,7 +242,7 @@ endif
     # O1: 52%
     # Os: 50%, requires linkage of crtsavres.S
     # Ofast: 41%, likely same as -O3
-productionCodeOptimization := -Os
+productionCodeOptimization := -Ofast
 # Choose C library.
 #   The switch -specs=nosys.specs links the generically implemented C library against a
 # stub library that satisfies the low level I/O routines without providing true

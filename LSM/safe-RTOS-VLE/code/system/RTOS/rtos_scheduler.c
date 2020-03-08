@@ -295,9 +295,9 @@ void rtos_processTriggeredEvents(eventDesc_t *pEvent);
 /** The list of all tasks. */
 static rtos_taskDesc_t DATA_OS(rtos_taskCfgAry)[RTOS_MAX_NO_TASKS] =
     { [0 ... (RTOS_MAX_NO_TASKS-1)] = { .addrTaskFct = 0
-                                             , .PID = 0
-                                             , .tiTaskMax = 0
-                                           }
+                                        , .PID = 0
+                                        , .tiTaskMax = 0
+                                      }
     };
 
 /** The list of all process initialization tasks. */
@@ -331,14 +331,6 @@ eventDesc_t * BSS_OS(rtos_mapPrioToEvent)[RTOS_MAX_TASK_PRIORITY+1];
 /** The number of created events. The range is 0..#RTOS_MAX_NO_EVENTS. */
 static unsigned int SDATA_OS(rtos_noEvents) = 0;
 
-/** This flag is set when rtos_osTriggerEvent() or rtos_triggerEvent() has set an event,
-    which has a priority above the current so that a recursive, preempting scheduler call
-    is required to process it immediately.\n
-      Note, this variable is an interface with the assembly code. The variable is inspected
-    after return from an ISR to see whether the ISR has triggered an event so that some
-    tasks may need to be launched. */
-bool SDATA_OS(rtos_isEventPending) = false;
-
 /** A pointer to event, which has to be served next by the scheduler. Points to an element of
     array rtos_eventAry if an event requires the call of the scheduler (i.e.
     rtos_isEventPending is true) or behind the end of the array otherwise.\n
@@ -356,8 +348,11 @@ static const eventDesc_t *BSS_OS(rtos_pEndEvent) = NULL;
 /** The priority of the currently executed task.\n
       This variable is an interface with the assembly code. The implementation of the PCP
     requires access to the variable to terminate a critical section if a user task should
-    end without doing so. */
-uint32_t SDATA_OS(rtos_currentPrio) = 0;
+    end without doing so.\n
+      Note the use of qualifier volatile: This data object is shared between different
+    nesting levels of the scheduler but it is not - and this makes the difference to nearly
+    all other shared objects - accessed solely from inside of critical sections. */
+volatile uint32_t SDATA_OS(rtos_currentPrio) = 0;
 
 /** Time increment of one tick of the RTOS system clock. It is set at kernel initialization
     time to the configured period time of the system clock in Milliseconds
@@ -609,12 +604,6 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
  */
 static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInterrupt)
 {
-/// @todo Put this into an expression owned by the according assembly code
-    /* Unsafe types: Assembly code uses byte operations for Boolean flag. */
-    _Static_assert( sizeof(rtos_isEventPending) == 1
-                  , "Inconsistency in interface with assembly code"
-                  );
-
     bool success;
 
     rtos_osSuspendAllInterrupts();
@@ -715,6 +704,7 @@ static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInte
 static inline void checkEventDue(void)
 {
     eventDesc_t *pEvent = getEventByIdx(0);
+/// @todo Needs change to use of guard!
     const eventDesc_t * const pEndEvent = getEventByIdx(rtos_noEvents);
 
     /* We iterate the events in order for decreasing priority. */
@@ -1177,7 +1167,8 @@ rtos_errorCode_t rtos_osRegisterOSTask( unsigned int idEvent
  * double-checked by assertion.
  *   @param targetPID
  * The tasks started with service rtos_runTask() may be run in process with PID \a
- * targetPID. The range is 1 .. maxPIDInUse-1, which is double-checked later.\n
+ * targetPID. The range is 1 .. maxPIDInUse-1, which is double-checked later at kernel
+ * initialization time.\n
  *   \a pidOfCallingTask and \a targetPID must not be identical, which is double-checked by
  * assertion.
  *   @remark
@@ -1664,7 +1655,7 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
  * event.
  */
 SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
-                                                                    (eventDesc_t *pEvent)
+                                                               (eventDesc_t *pEvent)
 {
     /* This function and particularly this loop is the essence of the task scheduler. There
        are some tricky details to be understood.
@@ -1881,7 +1872,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
         rtos_osSystemCallBadArgument();
     }
 
-    /* This code depends on specific number of processes, we need a check. The
+    /* This code depends on a specific number of processes, we need a check. The
        implementation requires consistent maintenance with other function
        rtos_osGrantPermissionRunTask() */
 #if RTOS_NO_PROCESSES != 4
@@ -1898,7 +1889,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
     {
         /* We forbid recursive use of this system call not because it would be technically
            not possible but to avoid an overflow of the supervisor stack. Each creation of
-           a user task puts a stack frame on the SV stack. We cannnot detect a recursion
+           a user task puts a stack frame on the SV stack. We cannot detect a recursion
            but we can hinder the SV stack overflow by making the current context's priority
            a gate for further use of this function: The next invokation needs to appear at
            higher level. This will limit the number of stack frames similar as this is
@@ -1909,6 +1900,9 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
            levels is strictly limited and so is then the number of possible recursions. The
            SV stack is protected. */
         static uint32_t SDATA_OS(minPriorityLevel_) = 0;
+/// @todo Requires migration to task priority. Not critical, the current implementation
+// will simply reject all recursive calls because INTC.CPR_PRC0.R is always zero, when we
+// get here. Only the first trying task will get access to the service
 
         uint32_t currentLevel = INTC.CPR_PRC0.R
                , minPriorityLevelOnEntry;

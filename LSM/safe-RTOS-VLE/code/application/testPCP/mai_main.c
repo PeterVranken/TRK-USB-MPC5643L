@@ -176,7 +176,7 @@ enum prioIRQ_t
     relationship is defined here.\n
       Note, a process needs to be configured in the linker script (actually: assignment of
     stack space) before it can be used. */
-enum
+enum pidOfTask_t
 {
     pidOs = 0,              /* Kernel always and implicitly has PID 0 */
     pidTaskA = 1,
