@@ -95,6 +95,15 @@
                     " assembler and C code"                                                 \
                   );
 
+/* The user API header file rtos.h doesn't recursively include all headers of all
+   implementing files. Therefore it needs to make some assumptions about basically variable
+   but normally never changed constants. These assumptions need of course to be double
+   checked. We do this here at compile time of the RTOS. */
+#if RTOS_IDX_SC_SUSPEND_PROCESS != RTOS_SYSCALL_SUSPEND_PROCESS
+# error Inconsistent definitions made in C modules and RTOS API header file rtos.h
+#endif
+
+
 /*
  * Local type definitions
  */

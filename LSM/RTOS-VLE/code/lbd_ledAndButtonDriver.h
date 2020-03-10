@@ -92,7 +92,7 @@ typedef enum lbd_button_t
  * Initialization of LED driver. The GPIO ports are defined to become outputs and the
  * output values are set such that the LEDs are shut off.
  */
-static inline void lbd_initLEDAndButtonDriver()
+static inline void lbd_initLEDAndButtonDriver(void)
 {
     /* LEDs are initially off. */
     SIU.GPDO[lbd_led_D4_grn].B.PDO = 1;

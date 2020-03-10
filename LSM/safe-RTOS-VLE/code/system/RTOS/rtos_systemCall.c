@@ -45,6 +45,7 @@
 #include "rtos_ivorHandler_defSysCalls.h"
 #include "rtos_priorityCeilingProtocol_defSysCalls.h"
 #include "rtos_process_defSysCalls.h"
+#include "rtos_runTask_defSysCalls.h"
 #include "rtos_scheduler_defSysCalls.h"
 #include "lbd_ledAndButtonDriver_defSysCalls.h"
 #include "sio_serialIO_defSysCalls.h"

@@ -10,7 +10,7 @@
  * rtos_osCreateEvent() to define the conditions or points in time, when the tasks have to
  * become due.\n
  *   Prior to the start of the scheduler (and thus prior to the beginning of the
- * pseudo-parallel, concurrent execution of the tasks) all later used task are registered
+ * pseudo-parallel, concurrent execution of the tasks) all later used tasks are registered
  * at the scheduler; an application will repeatedly use the APIs rtos_osRegisterUserTask()
  * and rtos_osRegisterOSTask().\n
  *   After all needed tasks are registered the application will start the RTOS' kernel
@@ -60,26 +60,37 @@
  * RTOS doesn't know task to task events -- such events are usually the way intentional
  * suspension and later resume of tasks is implemented.\n
  *   The activation of a task can be done by software, using API function
- * rtos_triggerEvent() or it can be done by the scheduler on a regular time base. In the
- * former case the task is called an event task, the latter is a cyclic task with fixed
- * period time.\n
+ * rtos_osTriggerEvent() or rtos_triggerEvent() or it can be done by the scheduler on a
+ * regular time base. In the former case the task is called an event task, the latter is a
+ * cyclic task with fixed period time.\n
  *   The RTOS implementation is tightly connected to the implementation of interrupt
  * services. Interrupt services, e.g. to implement I/O operations for the tasks, are
- * registered with rtos_osRegisterInterruptHandler().\n
- *   Any I/O interrupts can be combined with the tasks. Different to most RTOSs we don't
- * impose a priority ordering between tasks and interrupts. A conventional design would put
- * interrupt service routines (ISR) at higher priorities than the highest task priority but
- * this is not a must. However, certain constraints still result from safety considerations
- * - not from technical aspects.\n
- *   Effectively, there's no difference between tasks and ISRs. All what has been said for
- * tasks with respect to priority, states and preemption holds for ISRs and the combination
- * of tasks and ISRs, too.\n
+ * registered with rtos_osRegisterInterruptHandler(). There are a few services, which are
+ * available to ISRs:
+ *   - An ISR may use rtos_osEnterCriticalSection()/rtos_osLeaveCriticalSection(),
+ * rtos_osSuspendAllInterrupts()/rtos_osResumeAllInterrupts() or
+ * rtos_osSuspendAllInterruptsByPriority()/rtos_osResumeAllInterruptsByPriority() to shape
+ * critical sections with other ISRs or with OS tasks, which are based on interrupt locks
+ * and which are highly efficient. (Note, safety concerns forbid having an API to shape a
+ * critical section between ISRs and user tasks)
+ *   - An ISR may use rtos_osTriggerEvent() to trigger an event. The associated tasks will
+ * be scheduled after returning from the interrupt (and from any other interrupt it has
+ * possibly preempted)
+ *   - An ISR may use rtos_osRunTask to implement a callback into another process. The
+ * callback is run under the constraints of the target process and can therefore be
+ * implemented as part of the application(s) in that process and still without breaking the
+ * safety concept
  *
  * Safety:\n
  *   The RTOS is based on the "unsafe" counterpart published at
- * https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS-VLE. All
- * explanations given there still hold. In this project, we add a safety concept. This
- * needs to start with a specification of what we expect from a "safe" RTOS:\n
+ * https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS-VLE. Most
+ * explanations given there still hold. There are two major differences:\n
+ *   In this project, we have replaced the hardware scheduler with a scheduler implemented
+ * in software. The behavior is nearly identical and the performance penalty is little in
+ * comparison to the advantage of now having an unlimited number of events, priorities and
+ * tasks.\n
+ *   The second modification is the added safety concept. Such a concept starts with a
+ * specification of what we expect from a "safe" RTOS:\n
  *   "If the implementation of a task, which is meant the supervisory or safety task, is
  * itself free of faults then the RTOS shall guarantee that this task is correctly and
  * timely executed regardless of whatever imaginable failures are made by any other
@@ -113,15 +124,15 @@
  *   rtos_osRegisterInitTask
  *   rtos_osRegisterUserTask
  *   rtos_osRegisterOSTask
- *   rtos_osGrantPermissionRunTask
  *   rtos_osInitKernel
  *   rtos_osTriggerEvent
  *   rtos_scFlHdlr_triggerEvent
  *   rtos_processTriggeredEvents
- *   rtos_scFlHdlr_runTask
  *   rtos_osSuspendAllTasksByPriority
  *   rtos_osResumeAllTasksByPriority
  *   rtos_getNoActivationLoss
+ *   rtos_getTaskBasePriority
+ *   rtos_getCurrentTaskPriority
  * Module inline interface
  * Local functions
  *   getEventByID
@@ -155,6 +166,7 @@
 #include "rtos_systemMemoryProtectionUnit.h"
 #include "rtos_scheduler_defSysCalls.h"
 #include "rtos_scheduler.h"
+#include "rtos_runTask.h"
 #include "rtos.h"
 
 
@@ -186,9 +198,7 @@
    implementing files. Therefore it needs to make some assumptions about basically variable
    but normally never changed constants. These assumptions need of course to be double
    checked. We do this here at compile time of the RTOS. */
-#if RTOS_IDX_SC_RUN_TASK != RTOS_SYSCALL_RUN_TASK                                       \
-    ||  RTOS_IDX_SC_TRIGGER_EVENT != RTOS_SYSCALL_TRIGGER_EVENT                         \
-    ||  RTOS_IDX_SC_SUSPEND_PROCESS != RTOS_SYSCALL_SUSPEND_PROCESS
+#if RTOS_IDX_SC_TRIGGER_EVENT != RTOS_SYSCALL_TRIGGER_EVENT
 # error Inconsistent definitions made in C modules and RTOS API header file rtos.h
 #endif
 
@@ -338,12 +348,15 @@ static unsigned int SDATA_OS(rtos_noEvents) = 0;
     this variable as argument after an ISR (postponed task activation). */
 eventDesc_t * SDATA_OS(rtos_pNextEventToSchedule) = (eventDesc_t*)(uintptr_t)-1;
 
-#ifdef DEBUG
 /** Pointer to guard element at the end of the list of events.\n
       Since the guard itself is used as list termination this explicit pointer is just used
     for self-tests in DEBUG compilation. */
 static const eventDesc_t *BSS_OS(rtos_pEndEvent) = NULL;
-#endif
+
+/** Pointer to currently active event. This event is the one, whose associated tasks are
+    currently executed. Using this pointer, some informative services can be implemented
+    for the tasks. */
+static const eventDesc_t *BSS_OS(rtos_pCurrentEvent) = NULL;
 
 /** The priority of the currently executed task.\n
       This variable is an interface with the assembly code. The implementation of the PCP
@@ -367,22 +380,6 @@ static unsigned long SDATA_OS(rtos_tiOsStep) = 0;
 
 /** RTOS sytem time in Milliseconds since start of kernel. */
 static unsigned long SDATA_OS(rtos_tiOs) = (unsigned long)-1;
-
-/** The option for inter-process communication to let a task of process A run a task in
-    process B (system call rtos_runTask()) is potentially harmful, as the started task can
-    destroy on behalf of process A all data structures of the other process B. It's of
-    course not generally permittable. An all-embracing privilege rule cannot be defined
-    because of the different use cases of the mechanism. Therefore, we have an explicit
-    table of granted permissions, which can be configured at startup time as an element of
-    the operating system initialization code.\n
-      The bits of the word correspond to the 16 possible combinations of four possible
-    caller processes in four possible target processes.
-      By default, no permission is granted. */
-#if RTOS_NO_PROCESSES == 4
-static uint16_t SDATA_OS(rtos_runTask_permissions) = 0;
-#else
-# error Implementation depends on four being the number of processes
-#endif
 
 
 /*
@@ -704,11 +701,9 @@ static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInte
 static inline void checkEventDue(void)
 {
     eventDesc_t *pEvent = getEventByIdx(0);
-/// @todo Needs change to use of guard!
-    const eventDesc_t * const pEndEvent = getEventByIdx(rtos_noEvents);
 
     /* We iterate the events in order for decreasing priority. */
-    while(pEvent < pEndEvent)
+    while(pEvent < rtos_pEndEvent)
     {
         if(pEvent->tiCycleInMs > 0)
         {
@@ -971,6 +966,18 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
 
     /* Install the guard element at the end of the list. Essential is a priority value of
        zero, i.e. below any true, scheduled task. */
+    /// @todo Effectively, this object can be considered the descriptor of the idle task.
+    // At other location we wonder, whether we should offer idle tasks which are owned by
+    // the different processes. It would be straight forward to use this object, and
+    // particularly its field taskAry to implement this. Instead of returning from the
+    // initKernel we would start a first scheduler instance. An ugly detail: Without
+    // modification, the normal scheduling would clear the state "triggered" after
+    // execution of all associated tasks. Is it worth to let the normal scheduling suffer
+    // from an additional run-time condition just to make the idle concept work in the
+    // sketched way? Or we don't expect the root scheduler invokation to infinitely spin
+    // because of an ever triggered event but have an infinite loop instead, which invokes
+    // the unmodified scheduler always once, then triggers the idle event again and then
+    // starts the root scheduler again.
     *getEventByIdx(rtos_noEvents) = 
                 (eventDesc_t){ .tiCycleInMs = 0
                              , .tiDue = 0
@@ -1150,72 +1157,6 @@ rtos_errorCode_t rtos_osRegisterOSTask( unsigned int idEvent
 
 
 /**
- * Operating system initialization function: Grant permissions for using the service
- * rtos_runTask to particular processes. By default, the use of that service is not
- * allowed.\n
- *   By principle, offering service rtos_runTask makes all processes vulnerable, which are
- * allowed as target for the service. A failing, straying process can always hit some ROM
- * code executing the system call with arbitrary register contents, which can then lead to
- * errors in an otherwise correct process.\n
- *   This does not generally break the safety concept, the potentially harmed process can
- * for example be anyway supervised by another, unaccessible supervisory process.
- * Consequently, we can offer the service at least on demand. A call of this function
- * enables the service for a particular pair of calling process and targeted process.
- *   @param pidOfCallingTask
- * The tasks belonging to process with PID \a pidOfCallingTask are granted permission to
- * run a task in another process. The range is 1 .. #RTOS_NO_PROCESSES, which is
- * double-checked by assertion.
- *   @param targetPID
- * The tasks started with service rtos_runTask() may be run in process with PID \a
- * targetPID. The range is 1 .. maxPIDInUse-1, which is double-checked later at kernel
- * initialization time.\n
- *   \a pidOfCallingTask and \a targetPID must not be identical, which is double-checked by
- * assertion.
- *   @remark
- * It would break the safety concept if we permitted the process with highest privileges to
- * become the target of the service. This is double-checked not here (when it is not yet
- * defined, which particular process that will be) but as part of the RTOS startup
- * procedure; a bad configuration can therefore lead to a later reported run-time error.
- *   @remark
- * This function must be called from the OS context only. It is intended for use in the
- * operating system initialization phase. It is not reentrant. The function needs to be
- * called prior to rtos_osInitKernel().
- */
-void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID)
-{
-    /* targetPID <= 3: Necessary but not sufficient to double-check
-       "targetPID <= maxPIDInUse-1". */
-    assert(pidOfCallingTask >= 1  &&  pidOfCallingTask <= 4
-           &&  targetPID >= 1  &&  targetPID <= 3
-          );
-
-    /* It may be useful to grant process A the right to run a task in process A. This
-       effectively implements a try/catch mechanism. The run task function has the option
-       to abort its action at however deeply nested function invocation and using
-       rtos_terminateTask(). Control returns to the call of rtos_runTask and the caller
-       gets a negative response code as indication (otherwise a positive value computed by
-       the called function). The called function belongs to the same process and its
-       potential failures can of course harm the calling task, too. This does not break
-       our safety concept, but nonetheless, offering a kind of try/catch could easily be
-       misunderstood as a kind of full-flavored run-time protection, similar to what we
-       have between processes. This potential misunderstanding makes the use of such a
-       try/catch untransparent and therefore unsafe. Hence, we do not allow it here. */
-    assert(targetPID != pidOfCallingTask);
-
-    /* Caution, the code here depends on macro RTOS_NO_PROCESSES being four and needs to be
-       consistent with the implementation of rtos_scFlHdlr_runTask(). */
-#if RTOS_NO_PROCESSES != 4
-# error Implementation requires the number of processes to be four
-#endif
-    const unsigned int idxCalledPrc = targetPID - 1u;
-    const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
-    rtos_runTask_permissions |= mask;
-
-} /* End of rtos_osGrantPermissionRunTask */
-
-
-
-/**
  * Initialization and start of the RTOS kernel.\n
  *   The function initializes a hardware device to produce a regular clock tick and
  * connects the OS schedule function onOsTimerTick() with the interrupt raised by this
@@ -1272,10 +1213,9 @@ rtos_errorCode_t rtos_osInitKernel(void)
        UINT_MAX as indication of "unset". */
     rtos_pNextEventToSchedule = (eventDesc_t*)(uintptr_t)-1;
 
+    rtos_pEndEvent     =
+    rtos_pCurrentEvent = getEventByIdx(rtos_noEvents);
     rtos_currentPrio = 0;
-#ifdef DEBUG
-    rtos_pEndEvent = getEventByIdx(rtos_noEvents);
-#endif
 
     /* The user must have registered at minimum one task and must have associated it with a
        event. */
@@ -1330,14 +1270,10 @@ rtos_errorCode_t rtos_osInitKernel(void)
        run a task in the process with highest privileges. */
     if(errCode == rtos_err_noError)
     {
-        /* Caution: Maintenance of this code is required consistently with
-           rtos_osGrantPermissionRunTask() and rtos_scFlHdlr_runTask(). */
-        assert(maxPIDInUse <= 4);
-        const uint16_t mask = maxPIDInUse >= 1
-                              ? 0x1111 << (maxPIDInUse-1)   /* Normal situation */
-                              : 0xffff;                     /* No process in use */
-        if((rtos_runTask_permissions & mask) != 0)
-            errCode = rtos_err_runTaskBadPermission;
+        unsigned int callingPID;
+        for(callingPID=1; callingPID<=maxPIDInUse; ++callingPID)
+            if(rtos_checkPermissionRunTask(callingPID, /* targetPID */ maxPIDInUse))
+                errCode = rtos_err_runTaskBadPermission;
     }
 
     /* We could check if a process, an init task is registered for, has a least one runtime
@@ -1592,15 +1528,19 @@ rtos_errorCode_t rtos_osInitKernel(void)
  *   @remark
  * This function must be called from the OS context only. It may be called from an ISR to
  * implement delegation to a user task.
+ *   @todo The new software scheduler would easily allow service triggerEvent to have an
+ * argument. A 32 Bit value would be passed to the associated tasks as task function
+ * argument. ISRs could send simple data to a task. More stringent would be an individual
+ * argument for each of the associated tasks but the runtime overhead would barely pay off
+ * for the few use cases.
  */
-/// @todo triggerEvent could now get an argument. A 32 Bit value is passed to the
-// associated tasks as task function argument. ISRs could send simple data to a task
 bool rtos_osTriggerEvent(unsigned int idEvent)
 {
     /* This function is shared between ISRs and OS tasks. We need to know because the
        behavior depends. We query the INTC to find out. */
-    const uint32_t interruptLevel = INTC.CPR_PRC0.R;
-    return osTriggerEvent(getEventByID(idEvent), /* isInterrupt */ interruptLevel > 0);
+    return osTriggerEvent( getEventByID(idEvent)
+                         , /* isInterrupt */ rtos_osGetCurrentInterruptPriority() > 0
+                         );
 
 } /* End of rtos_osTriggerEvent */
 
@@ -1723,8 +1663,9 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
        setting the pointer back to "unset". */
     assert((uintptr_t)rtos_pNextEventToSchedule == (uintptr_t)-1);
 
-    /* Safe the current priority: It'll be replaced by that of the events, we find to be
-       served, but finally we will have to restore the value here. */
+    /* Safe the current state: It'll be updated with each of the events, we find to be
+       served, but finally we will have to restore these values here. */
+    const eventDesc_t * const pCurrentEvent = rtos_pCurrentEvent;
     const unsigned int prioAtEntry = rtos_currentPrio;
 
     /* We iterate the events in order of decreasing priority. */
@@ -1752,6 +1693,7 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
 
             /* The current priority is changed synchronously with the acknowledge of the
                event. We need to do this still inside the same critical section. */
+            rtos_pCurrentEvent = pEvent;
             rtos_currentPrio = pEvent->priority;
 
             /* Now handle the event, i.e. launch and execute all associated tasks. This is
@@ -1822,137 +1764,12 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
     } /* End while(All events of prio, which is to be handled by this scheduler invocation) */
 
     /* Here we are surely still or again inside a critical section. */
-    rtos_currentPrio = prioAtEntry; /* The initial priority is restored again. */
+
+    /* Restored the initial state. */
+    rtos_pCurrentEvent = pCurrentEvent;
+    rtos_currentPrio = prioAtEntry;
 
 } /* End of rtos_processTriggeredEvents */
-
-
-
-/**
- * System call handler implementation to create and run a task in another process. Find
- * more details in rtos_osRunTask().\n
- *   Start a user task. A user task is a C function, which is executed in user mode and in
- * a given process context. The call is synchronous; the calling user context is
- * immediately preempted and superseded by the started task. The calling user context is
- * resumed when the task function ends - be it gracefully or by exception/abortion.\n
- *   The started task inherits the priority of the calling user task. It can be preempted
- * only by contexts of higher priority.\n
- *   The function requires sufficient privileges. By default the use of this function is
- * forbidden. The operating system startup code can however use
- * rtos_osGrantPermissionRunTask() to enable particular pairs of calling and target
- * process for this service. The task can generally not be started in the OS context.\n
- *   The function cannot be used recursively. The created task cannot in turn make use of
- * rtos_runTask().
- *   @return
- * The executed task function can return a value, which is propagated to the calling user
- * context if it is positive. A returned negative task function result is interpreted as
- * failing task and rtos_runTask() returns #RTOS_ERR_PRC_USER_ABORT instead.
- * Furthermore, this event is counted as process error in the target process.
- *   @param pidOfCallingTask
- * The ID of the process the task belongs to, which invoked the system call.
- *   @param pUserTaskConfig
- * The read-only configuration data for the task. In particular the task function pointer
- * and the ID of the target process.
- *   @param taskParam
- * This argument is meaningless to the function. The value is just passed on to the started
- * task function. The size is large enough to convey a pointer.
- *   @remark
- * This function must never be called directly. The function is only made for placing it in
- * the global system call table.
- */
-uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
-                              , const rtos_taskDesc_t *pUserTaskConfig
-                              , uintptr_t taskParam
-                              )
-{
-    if(!rtos_checkUserCodeReadPtr(pUserTaskConfig, sizeof(rtos_taskDesc_t)))
-    {
-        /* User code passed in an invalid pointer. We must not even touch the contents.
-             Note, the next function won't return. */
-        rtos_osSystemCallBadArgument();
-    }
-
-    /* This code depends on a specific number of processes, we need a check. The
-       implementation requires consistent maintenance with other function
-       rtos_osGrantPermissionRunTask() */
-#if RTOS_NO_PROCESSES != 4
-# error Implementation requires the number of processes to be four
-#endif
-
-    /* Now we can check the index of the target process. */
-    const unsigned int idxCalledPrc = pUserTaskConfig->PID - 1u;
-    if(idxCalledPrc > 3)
-        rtos_osSystemCallBadArgument();
-
-    const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
-    if((rtos_runTask_permissions & mask) != 0)
-    {
-        /* We forbid recursive use of this system call not because it would be technically
-           not possible but to avoid an overflow of the supervisor stack. Each creation of
-           a user task puts a stack frame on the SV stack. We cannot detect a recursion
-           but we can hinder the SV stack overflow by making the current context's priority
-           a gate for further use of this function: The next invokation needs to appear at
-           higher level. This will limit the number of stack frames similar as this is
-           generally the case for interrupts.
-             Note, a user task can circumvent the no-recursion rule by abusing the priority
-           ceiling protocol to increment the level by one in each recursion. This is
-           technically alright and doesn't impose a risk. The number of available PCP
-           levels is strictly limited and so is then the number of possible recursions. The
-           SV stack is protected. */
-        static uint32_t SDATA_OS(minPriorityLevel_) = 0;
-/// @todo Requires migration to task priority. Not critical, the current implementation
-// will simply reject all recursive calls because INTC.CPR_PRC0.R is always zero, when we
-// get here. Only the first trying task will get access to the service
-
-        uint32_t currentLevel = INTC.CPR_PRC0.R
-               , minPriorityLevelOnEntry;
-
-        rtos_osSuspendAllInterrupts();
-        const bool isEnabled = currentLevel >= minPriorityLevel_;
-        if(isEnabled)
-        {
-            minPriorityLevelOnEntry = minPriorityLevel_;
-            minPriorityLevel_ = currentLevel+1;
-        }
-        rtos_osResumeAllInterrupts();
-
-        if(isEnabled)
-        {
-            /* All preconditions fulfilled, lock is set, run the task. */
-            const int32_t taskResult = rtos_osRunUserTask(pUserTaskConfig, taskParam);
-
-            /* Restore the pre-requisite for future use of this system call. */
-            rtos_osSuspendAllInterrupts();
-
-            /* The warning "'minPriorityLevelOnEntry' may be used uninitialized" is locally
-               switched off. Justification: Variable is only used if(isEnabled) and then it
-               is initialized, too. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-            minPriorityLevel_ = minPriorityLevelOnEntry;
-#pragma GCC diagnostic pop
-
-            rtos_osResumeAllInterrupts();
-
-            return (uint32_t)taskResult;
-        }
-        else
-        {
-            /* Bad use of function, penalty is task abortion.
-                 Note, this function does not return. */
-            rtos_osSystemCallBadArgument();
-        }
-    }
-    else
-    {
-        /* The user doesn't have the privileges to run the aimed task. This is a severe
-           user code error, which is handled with an exception, task abort and counted
-           error.
-             Note, this function does not return. */
-        rtos_osSystemCallBadArgument();
-    }
-} /* End of rtos_scFlHdlr_runTask */
-
 
 
 
@@ -2137,3 +1954,56 @@ unsigned int rtos_getNoActivationLoss(unsigned int idEvent)
         return UINT_MAX;
     }
 } /* End of rtos_getNoActivationLoss */
+
+
+
+/**
+ * A cyclic or event task can query its base priority.
+ *   @return
+ * Get the base priority of the task, which calls this function. It's the priority of the
+ * event it is associated with.
+ *   @remark
+ * The function is quite similar to rtos_getCurrentBasePriority() but this function
+ * considers temporary changes of the priority of a task because of the use of the PCP API.
+ * For one and the same task, it is rtos_getCurrentPriority() >
+ * rtos_getCurrentBasePriority().
+ *   @remark
+ * This function can be called from both, an OS or a user task.
+ *   @remark
+ * The function must not be called from an ISR or from a callback, which is started by an
+ * ISR and using the service rtos_osRunTask(). The result would be undefined as there is no
+ * event, which such a function would be associated with. However, with respect to safety
+ * or stability, there's no problem in doing this and therefore no privileges have been
+ * connected to this service.
+ */
+unsigned int rtos_getTaskBasePriority(void)
+{
+    return rtos_pCurrentEvent->priority;
+
+} /* End of rtos_getTaskBasePriority */
+
+
+
+/**
+ * A task can query the current task scheduling priority.
+ *   @return
+ * Get the current priority of the task, which calls this function.
+ *   @remark
+ * The function is quite similar to rtos_getTaskBasePriority() but this function
+ * considers temporary changes of the priority of a task because of the use of the PCP API.
+ * For one and the same task, it is rtos_getCurrentTaskPriority() >
+ * rtos_getTaskBasePriority().
+ *   @remark
+ * This function can be called from both, an OS or a user task.
+ *   @remark
+ * The function must not be called from an ISR or from a callback, which is started by an
+ * ISR and using the service rtos_osRunTask(). The result would be undefined as there is no
+ * event, which such a function would be associated with. However, with respect to safety
+ * or stability, there's no problem in doing this and therefore no privileges have been
+ * connected to this service.
+ */
+unsigned int rtos_getCurrentTaskPriority(void)
+{
+    return (unsigned int)rtos_currentPrio;
+
+} /* End of rtos_getCurrentTaskPriority */

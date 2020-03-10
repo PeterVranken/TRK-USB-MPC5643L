@@ -6,7 +6,7 @@
  * header file has to be included by source file rtos_systemCall.c, which collects all
  * system call declarations and assembles the const table of system call descriptors.
  *
- * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2019-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "rtos_process.h"
 #include "rtos_scheduler.h"
 
 
@@ -51,20 +50,6 @@
 #endif
 
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0004
-# if RTOS_SYSCALL_RUN_TASK != 4
-#  error Inconsistent definition of system call
-# endif
-# define RTOS_SYSCALL_TABLE_ENTRY_0004  RTOS_SC_TABLE_ENTRY(rtos_scFlHdlr_runTask, FULL)
-#else
-# error System call 0004 is ambiguously defined
-/* We purposely redefine the table entry and despite of the already reported error; this
-   makes the compiler emit a message with the location of the conflicting previous
-   definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0004    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
-#endif
-
-
 /*
  * Global type definitions
  */
@@ -81,11 +66,5 @@
 
 /** System call handler implementation to activate a task. */
 uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int idEvent);
-
-/** System call handler implementation to create and run a task in another process. */
-uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
-                              , const rtos_taskDesc_t *pUserTaskConfig
-                              , uintptr_t taskParam
-                              );
 
 #endif  /* RTOS_SCHEDULER_DEFSYSCALLS_INCLUDED */

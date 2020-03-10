@@ -4,7 +4,7 @@
  * @file rtos_scheduler.h
  * Definition of global interface of module rtos_scheduler.c
  *
- * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2019-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -27,6 +27,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "MPC5643L.h"
+#include "rtos.h"
+
 
 /*
  * Defines
@@ -34,9 +37,6 @@
 
 /** System call index of function rtos_triggerEvent(), offered by this module. */
 #define RTOS_SYSCALL_TRIGGER_EVENT                      3
-
-/** System call index of function rtos_runTask(), offered by this module. */
-#define RTOS_SYSCALL_RUN_TASK                           4
 
 
 /*
@@ -52,6 +52,24 @@
 /*
  * Global inline functions
  */
+
+/**
+ * Query the current interrupt priority level.
+ *   @return
+ * Get the interrupt level in the range 0..15. 1..15 are returned to ISRs running on that
+ * level and 0 ist returned if the function is called from an OS task.
+ *   @remark
+ * This function must be called from the OS context only. User tasks don't have the
+ * privileges to call this function.
+ */
+static inline unsigned int rtos_osGetCurrentInterruptPriority(void)
+{
+    /* We query the INTC to find out on which interrupt level we are busy. */
+    return (unsigned int)INTC.CPR_PRC0.R;
+
+} /* End of rtos_osGetCurrentInterruptPriority */
+
+
 
 
 /*
@@ -82,9 +100,6 @@ rtos_errorCode_t rtos_osRegisterUserTask( unsigned int idEvent
 /** Task registration for scheduled operating system tasks. */
 rtos_errorCode_t rtos_osRegisterOSTask(unsigned int idEvent, void (*osTaskFct)(void));
 
-/** Grant permission to particular processes for using the service rtos_runTask(). */
-void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int targetPID);
-
 /** Kernel initialization. */
 rtos_errorCode_t rtos_osInitKernel(void);
 
@@ -97,5 +112,10 @@ void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority);
 /** Get the current number of failed task activations since start of the RTOS scheduler. */
 unsigned int rtos_getNoActivationLoss(unsigned int idTask);
 
+/** A cyclic or event task can query its base priority. */
+unsigned int rtos_getTaskBasePriority(void);
+
+/** A task can query the current task scheduling priority. */
+unsigned int rtos_getCurrentTaskPriority(void);
 
 #endif  /* RTOS_SCHEDULER_INCLUDED */
