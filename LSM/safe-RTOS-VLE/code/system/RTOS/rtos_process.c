@@ -57,9 +57,6 @@
  * Defines
  */
 
-/** Companion of C's offsetof: The size of a field inside a struct. */
-#define sizeoffield(type, fieldName) (sizeof(((type*)0)->fieldName))
-
 /** The C code has an interface with the assembler code. It is used to exchange process and
     task related information. The interface is modeled twice, once as structs for C code
     and once as set of preprocessor macros, which hold size of data structures and offsets

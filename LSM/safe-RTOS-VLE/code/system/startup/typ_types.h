@@ -158,6 +158,21 @@
 /** The number of elements of a one dimensional array. */
 #define sizeOfAry(a)    (sizeof(a)/sizeof(a[0]))
 
+/** Companion of C's offsetof: The size of a field inside a struct. */
+#define sizeoffield(type, fieldName) (sizeof(((type*)0)->fieldName))
+
+/** Support of uintX_t types, X=8, 16, 32: Get the implementation maximum of such a
+    variable. */
+#define UINT_T_MAX(var) ((uint32_t)((1ull<<(sizeof(var)*8u))-1ull))
+
+/** Support of intX_t types, X=8, 16, 32: Get the implementation maximum of such a
+    variable. */
+#define INT_T_MAX(var)  ((int32_t)((1ul<<((sizeof(var)*8u)-1u))-1ul))
+
+/** Support of intX_t types, X=8, 16, 32: Get the implementation minimum of such a
+    variable. */
+#define INT_T_MIN(var)  ((int32_t)(1ul<<((sizeof(var)*8u)-1u)))
+
 
 /*
  * Global type definitions

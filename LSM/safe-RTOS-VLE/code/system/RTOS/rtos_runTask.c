@@ -266,7 +266,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
            not possible but to avoid an overflow of the supervisor stack. Each creation of
            a user task puts a stack frame on the SV stack. We cannot detect a recursion but
            we can hinder the SV stack overflow by making the current context's base
-           priority a gate for further use of this function: The next invokation needs to
+           priority a gate for further use of this function: The next invocation needs to
            appear at higher level. This will limit the number of stack frames similar as
            this is generally the case for interrupts.
              The number of available task base priority levels is strictly limited and so

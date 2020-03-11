@@ -82,7 +82,7 @@
     rtos_eventDesc_t. If it should not be accessible even by the process of highest
     privileges than #RTOS_EVENT_NOT_USER_TRIGGERABLE can be specified for \a
     minPIDToTriggerThisEvent. */
-#define RTOS_EVENT_NOT_USER_TRIGGERABLE  ((RTOS_NO_PROCESSES)+1u)
+#define RTOS_EVENT_NOT_USER_TRIGGERABLE ((uint8_t)((RTOS_NO_PROCESSES)+1u))
 
 /** The number of different kinds of process errors, which let to task abortion. */
 #define RTOS_NO_ERR_PRC                 13

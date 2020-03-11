@@ -221,8 +221,29 @@
     (Instead of offering the run-time configuration by APIs.) */
 typedef struct eventDesc_t
 {
-    /** The current state of the event. */
+    /** The current state of the event.\n
+          This field is shared with the assembly code. The PCP implementation reads it. */
     enum eventState_t { evState_idle, evState_triggered, evState_inProgress } state;
+
+    /** An event can be triggered by user code, using rtos_triggerEvent(). However, tasks
+        belonging to less privileged processes must not generally granted permission to
+        trigger events that may activate tasks of higher privileged processes. Since an
+        event is not process related, we make the minimum process ID an explicitly
+        configured, which is required to trigger this event.\n
+          Only tasks belonging to a process with PID >= \a minPIDToTriggerThisEvent are
+        permitted to trigger this event.\n
+          The range of \a minPIDToTriggerThisEvent is 0 ... (#RTOS_NO_PROCESSES+1). 0 and 1
+        both mean, all processes may trigger the event, #RTOS_NO_PROCESSES+1 means only OS
+        code can trigger the event. */
+    uint8_t minPIDForTrigger;
+
+    /** The set of associated tasks, which are activated by the event, is implemented by an
+        array and the number of entries. Here we have the number of entries. */
+    uint16_t noTasks;
+
+    /** The set of associated tasks, which are activated by the event, is implemented by an
+        array and the number of entries. Here we have the array. */
+    const rtos_taskDesc_t * taskAry;
 
     /** The next due time. At this time, the event will activate the associated task set.*/
     unsigned int tiDue;
@@ -239,39 +260,16 @@ typedef struct eventDesc_t
           Note, if the event has a priority above #RTOS_MAX_LOCKABLE_TASK_PRIORITY then
         only those tasks can be associated, which belong to the process with highest PID in
         use. This is a safety constraint. */
-/// @todo Could become 16 Bit. Consider the interface with the PCP assembly code
     unsigned int priority;
 
-    /** An event can be triggered by user code, using rtos_triggerEvent(). However, tasks
-        belonging to less privileged processes must not generally granted permission to
-        trigger events that may activate tasks of higher privileged processes. Since an
-        event is not process related, we make the minimum process ID an explicitly configured,
-        which is required to trigger this event.\n
-          Only tasks belonging to a process with PID >= \a minPIDToTriggerThisEvent are
-        permitted to trigger this event.\n
-          The range of \a minPIDToTriggerThisEvent is 0 ... (#RTOS_NO_PROCESSES+1). 0 and 1
-        both mean, all processes may trigger the event, #RTOS_NO_PROCESSES+1 means only OS
-        code can trigger the event. */
-/// @todo Could become 8 Bit
-    unsigned int minPIDForTrigger;
-
-    /** We can't queue events. If at least one task is still busy, which had been activated by
-        the event at its previous due time then an event (and the activation of the
-        associated tasks) is lost. This situation is considered an overrun and it is counted
-        for diagnostic purpose. The counter is saturated and will halt at the
+    /** We can't queue events. If at least one task is still busy, which had been activated
+        by the event at its previous due time then an event (and the activation of the
+        associated tasks) is lost. This situation is considered an overrun and it is
+        counted for diagnostic purpose. The counter is saturated and will halt at the
         implementation maximum.
           @remark This field is shared with the external client code of the module. There,
         it is read only. Only the scheduler code must update the field. */
     unsigned int noActivationLoss;
-
-    /** The set of associated tasks, which are activated by the event, is implemented by an
-        array and the number of entries. Here we have the array. */
-    const rtos_taskDesc_t * taskAry;
-
-    /** The set of associated tasks, which are activated by the event, is implemented by an
-        array and the number of entries. Here we have the number of entries. */
-/// @todo Could become 8 Bit
-    unsigned int noTasks;
 
     /** Support the scheduler: If this event has been processed then check event * \a
         this->pNextScheduledEvent as next one. */
@@ -498,6 +496,14 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
     if(rtos_noTasks >= RTOS_MAX_NO_TASKS  &&  idEvent != EVENT_ID_INIT_TASK)
         return rtos_err_tooManyTasksRegistered;
 
+    /* The event's field noTasks is of smaller size. */
+    if(idEvent != EVENT_ID_INIT_TASK
+       &&  getEventByIdx(idEvent)->noTasks >= UINT_T_MAX(((eventDesc_t*)NULL)->noTasks)
+      )
+    {
+        return rtos_err_tooManyTasksRegistered;
+    }
+
     /* Task function not set. */
     if(addrTaskFct == 0)
         return rtos_err_badTaskFunction;
@@ -565,6 +571,7 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
 
             /* Associate the task with the specified event. */
             ++ pEvent->noTasks;
+            assert(pEvent->noTasks > 0);
         }
 
         /* Fill the new task descriptor. */
@@ -572,6 +579,7 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
         pNewTaskDesc->tiTaskMax = tiTaskMaxInUs * 120;
         pNewTaskDesc->PID = PID;
         ++ rtos_noTasks;
+        assert(rtos_noTasks > 0);
     }
 
     return rtos_err_noError;
@@ -703,7 +711,8 @@ static inline void checkEventDue(void)
     eventDesc_t *pEvent = getEventByIdx(0);
 
     /* We iterate the events in order for decreasing priority. */
-    while(pEvent < rtos_pEndEvent)
+    const eventDesc_t * const pEndEvent = rtos_pEndEvent;
+    while(pEvent < pEndEvent)
     {
         if(pEvent->tiCycleInMs > 0)
         {
@@ -774,7 +783,7 @@ static void onOsTimerTick(void)
 static inline void launchAllTasksOfEvent(const eventDesc_t * const pEvent)
 {
     const rtos_taskDesc_t *pTaskConfig = &pEvent->taskAry[0];
-    unsigned int u = pEvent->noTasks;
+    unsigned int u = (unsigned int)pEvent->noTasks;
     while(u-- > 0)
     {
         if(pTaskConfig->PID > 0)
@@ -930,6 +939,9 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
         return rtos_err_badEventTiming;
 
     /* Is the PID constraint plausible? */
+    _Static_assert( RTOS_NO_PROCESSES >= 0  &&  RTOS_NO_PROCESSES <= 254
+                  , "Possible overflow of uint8_t pNewEvent->minPIDForTrigger"
+                  );
     if(minPIDToTriggerThisEvent > RTOS_NO_PROCESSES+1)
         return rtos_err_eventNotTriggerable;
 
@@ -956,6 +968,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     pNewEvent->pNextScheduledEvent = NULL;
 
     const unsigned int idNewEv = rtos_noEvents++;
+    assert(rtos_noEvents > 0);
 
     /* Update the mapping of (already issued, publically known) event IDs onto the (now
        modified) internal arry index. */
@@ -968,16 +981,13 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
        zero, i.e. below any true, scheduled task. */
     /// @todo Effectively, this object can be considered the descriptor of the idle task.
     // At other location we wonder, whether we should offer idle tasks which are owned by
-    // the different processes. It would be straight forward to use this object, and
+    // the different processes. It would be straightforward to use this object, and
     // particularly its field taskAry to implement this. Instead of returning from the
     // initKernel we would start a first scheduler instance. An ugly detail: Without
     // modification, the normal scheduling would clear the state "triggered" after
     // execution of all associated tasks. Is it worth to let the normal scheduling suffer
     // from an additional run-time condition just to make the idle concept work in the
-    // sketched way? Or we don't expect the root scheduler invokation to infinitely spin
-    // because of an ever triggered event but have an infinite loop instead, which invokes
-    // the unmodified scheduler always once, then triggers the idle event again and then
-    // starts the root scheduler again.
+    // sketched way?
     *getEventByIdx(rtos_noEvents) = 
                 (eventDesc_t){ .tiCycleInMs = 0
                              , .tiDue = 0
@@ -1286,7 +1296,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
         for(idxEv=0; idxEv<rtos_noEvents; ++idxEv)
         {
             const eventDesc_t * const pEvent = getEventByIdx(idxEv);
-            const unsigned int noAssociatedTasks = pEvent->noTasks;
+            const unsigned int noAssociatedTasks = (unsigned int)pEvent->noTasks;
 
             /* Check task configuration: Events without an associated task are useless and
                point to a configuration error. */
@@ -1537,7 +1547,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
 bool rtos_osTriggerEvent(unsigned int idEvent)
 {
     /* This function is shared between ISRs and OS tasks. We need to know because the
-       behavior depends. We query the INTC to find out. */
+       behavior depends (2nd function argument). */
     return osTriggerEvent( getEventByID(idEvent)
                          , /* isInterrupt */ rtos_osGetCurrentInterruptPriority() > 0
                          );
@@ -1567,7 +1577,7 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
     if(idEvent < rtos_noEvents)
     {
         eventDesc_t * const pEvent = getEventByID(idEvent);
-        if(pidOfCallingTask >= pEvent->minPIDForTrigger)
+        if(pidOfCallingTask >= (unsigned int)pEvent->minPIDForTrigger)
             return (uint32_t)osTriggerEvent(pEvent, /* isInterrupt */ false);
     }
 

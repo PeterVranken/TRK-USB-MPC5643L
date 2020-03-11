@@ -48,9 +48,9 @@
 
 
 /* Define the field offsets and enumeration values in struct eventDesc_t. */
-#define PCP_SIZE_OF_EV_DESC         36
-#define PCP_O_EVDESC_prio           12
+#define PCP_SIZE_OF_EV_DESC         28
 #define PCP_O_EVDESC_state          0
+#define PCP_O_EVDESC_prio           16
 #define PCP_E_EVST_idle             0
 #define PCP_E_EVST_triggered        1
 
@@ -66,6 +66,8 @@
             && PCP_O_EVDESC_prio == offsetof(eventDesc_t, priority) \
             && sizeoffield(eventDesc_t, state) == 1                 \
             && sizeoffield(eventDesc_t, priority) == 4              \
+            && PCP_E_EVST_idle == evState_idle                      \
+            && PCP_E_EVST_triggered == evState_triggered            \
         )
 
 /** This is an expression, which needs to be used in a C unit as condition for a runtime
@@ -76,10 +78,6 @@
         )
 
 #ifdef __STDC_VERSION__
-
-/// @todo Move this to global location, multiply used
-/** Companion of C's offsetof: The size of a field inside a struct. */
-#define sizeoffield(type, fieldName) (sizeof(((type*)0)->fieldName))
 
 
 /*
