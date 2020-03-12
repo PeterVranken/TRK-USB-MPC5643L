@@ -54,11 +54,14 @@
 #define PCP_E_EVST_idle             0
 #define PCP_E_EVST_triggered        1
 
+#ifdef __STDC_VERSION__
 
 /** This is an expression, which needs to be used in a C unit as condition for a static
     assertion. It double-checks the interface between C and assembly code and shapes a kind
-    of minimalistic type-safety. See #RTOS_PCP_INTERFACE_CONSTRAINTS_C_AS, too. */
-#define RTOS_PCP_INTERFACE_STATIC_CONSTRAINTS_C_AS (                \
+    of minimalistic type-safety. See #RTOS_CONSTRAINTS_INTERFACE_C_AS_PCP,
+    #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL  and
+    #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PROCESS, too. */
+#define RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PCP (                \
             sizeof(rtos_mapPrioToEvent[0]) == 4                     \
             && sizeof(rtos_currentPrio) == 4                        \
             && PCP_SIZE_OF_EV_DESC == sizeof(eventDesc_t)           \
@@ -72,12 +75,10 @@
 
 /** This is an expression, which needs to be used in a C unit as condition for a runtime
     assertion. It double-checks the interface between C and assembly code and shapes a kind
-    of minimalistic type-safety. See #RTOS_PCP_INTERFACE_STATIC_CONSTRAINTS_C_AS, too. */
-#define RTOS_PCP_INTERFACE_CONSTRAINTS_C_AS (                       \
+    of minimalistic type-safety. See #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PCP, too. */
+#define RTOS_CONSTRAINTS_INTERFACE_C_AS_PCP (                       \
             true                                                    \
         )
-
-#ifdef __STDC_VERSION__
 
 
 /*

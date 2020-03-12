@@ -38,26 +38,26 @@
  */
 
 /** The number of different causes of non graceful task terminations. */
-#define RTOS_NO_CAUSES_TASK_ABORTION 13
+#define RTOS_NO_CAUSES_TASK_ABORTION                13
 
 /* The enumeration of casues of task termination. */
-#define RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT      0 /* Process abort from user/scheduler */
-#define RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK      1 /* IVOR #1, Machine check, mostly memory
+#define RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT     0  /* Process abort from user/scheduler */
+#define RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK     1  /* IVOR #1, Machine check, mostly memory
                                                          protection */
-#define RTOS_CAUSE_TASK_ABBORTION_DEADLINE           2 /* Task exceeded deadline */
-#define RTOS_CAUSE_TASK_ABBORTION_DI_STORAGE         3 /* IVOR #2/#3, MMU storage error */
-#define RTOS_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG   4 /* Task referred to invalid system
+#define RTOS_CAUSE_TASK_ABBORTION_DEADLINE          2  /* Task exceeded deadline */
+#define RTOS_CAUSE_TASK_ABBORTION_DI_STORAGE        3  /* IVOR #2/#3, MMU storage error */
+#define RTOS_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG  4  /* Task referred to invalid system
                                                          call */
-#define RTOS_CAUSE_TASK_ABBORTION_ALIGNMENT          5 /* IVOR #5, Alignment */
-#define RTOS_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT  6 /* IVOR #6, mostly illegal
+#define RTOS_CAUSE_TASK_ABBORTION_ALIGNMENT         5  /* IVOR #5, Alignment */
+#define RTOS_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT 6  /* IVOR #6, mostly illegal
                                                           instruction */
-#define RTOS_CAUSE_TASK_ABBORTION_FPU_UNAVAIL        7 /* IVOR #7, Book E FPU instructions */
-#define RTOS_CAUSE_TASK_ABBORTION_TBL_DATA           8 /* IVOR #13, TBL data access mismatch */
-#define RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION    9 /* IVOR #14, TBL instr access
+#define RTOS_CAUSE_TASK_ABBORTION_FPU_UNAVAIL       7  /* IVOR #7, Book E FPU instructions */
+#define RTOS_CAUSE_TASK_ABBORTION_TBL_DATA          8  /* IVOR #13, TBL data access mismatch */
+#define RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION   9  /* IVOR #14, TBL instr access
                                                           mismatch */
-#define RTOS_CAUSE_TASK_ABBORTION_TRAP              10 /* IVOR #15, trap and debug events */
-#define RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION   11 /* IVOR #32, use of SPE instruction */
-#define RTOS_CAUSE_TASK_ABBORTION_USER_ABORT        12 /* User code returned error code */
+#define RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION   10 /* IVOR #32, use of SPE instruction */
+#define RTOS_CAUSE_TASK_ABBORTION_USER_ABORT        11 /* User code returned error code */
+#define RTOS_CAUSE_TASK_ABBORTION_RESERVED          12 /* Still unused error code */
 
 /* Helper macro: Compute the size of a stack frame if the size of the contained user data
    is known. The macro considers the additional space for stack pointer and link register
@@ -87,7 +87,7 @@
 #define SIZE_OF_SC_DESC         8
 #define O_SCDESC_sr             0
 #define O_SCDESC_confCls        4
-#define E_SCDESC_basicHdlr      RTOS_HDLR_CONF_CLASS_BASIC 
+#define E_SCDESC_basicHdlr      RTOS_HDLR_CONF_CLASS_BASIC
 #define E_SCDESC_simpleHdlr     RTOS_HDLR_CONF_CLASS_SIMPLE
 #define E_SCDESC_fullHdlr       RTOS_HDLR_CONF_CLASS_FULL
 
@@ -142,6 +142,64 @@
 
 
 #ifdef __STDC_VERSION__
+
+/** This is an expression, which needs to be used in C unit rtos_process.c as condition for
+    a static assertion. It double-checks the interface between C and assembly code and
+    shapes a kind of minimalistic type-safety. See
+    #RTOS_CONSTRAINTS_INTERFACE_C_AS_PROCESS, #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PCP
+    and #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL, too. */
+#define RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PROCESS (                                    \
+            sizeof(rtos_taskDesc_t) == SIZE_OF_TASK_CONF                                    \
+            &&  offsetof(rtos_taskDesc_t, addrTaskFct) == O_TCONF_pFct                      \
+            &&  offsetof(rtos_taskDesc_t, addrTaskFct) == 0                                 \
+            &&  sizeoffield(rtos_taskDesc_t, addrTaskFct) == 4                              \
+            &&  sizeoffield(rtos_taskDesc_t, addrTaskFct) == sizeof(uintptr_t)              \
+            &&  offsetof(rtos_taskDesc_t, tiTaskMax) == O_TCONF_tiMax                       \
+            &&  sizeoffield(rtos_taskDesc_t, tiTaskMax) == 4                                \
+            &&  offsetof(rtos_taskDesc_t, PID) == O_TCONF_pid                               \
+            &&  sizeoffield(rtos_taskDesc_t, PID) == 1                                      \
+            &&  sizeof(processDesc_t) == SIZE_OF_PROCESS_DESC                               \
+            &&  offsetof(processDesc_t, userSP) == O_PDESC_USP                              \
+            &&  O_PDESC_USP == 0                                                            \
+            &&  offsetof(processDesc_t, state) == O_PDESC_ST                                \
+            &&  sizeoffield(processDesc_t, state) == 1                                      \
+            &&  offsetof(processDesc_t, cntTotalTaskFailure) == O_PDESC_CNTTOT              \
+            &&  sizeoffield(processDesc_t, cntTotalTaskFailure) == 4                        \
+            &&  offsetof(processDesc_t, cntTaskFailureAry) == O_PDESC_CNTTARY               \
+            &&  sizeoffield(processDesc_t, cntTaskFailureAry)                               \
+                == RTOS_NO_CAUSES_TASK_ABORTION*4                                           \
+        )
+
+/** This is an expression, which needs to be used in C unit rtos_process.c as condition for
+    a runtime assertion. It double-checks the interface between C and assembly code and
+    shapes a kind of minimalistic type-safety. See
+    #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PROCESS, too. */
+#define RTOS_CONSTRAINTS_INTERFACE_C_AS_PROCESS (                                           \
+            true                                                                            \
+        )
+
+/** This is an expression, which needs to be used in C unit rtos_systemCall.c as
+    condition for a static assertion. It double-checks the interface between C and assembly
+    implementation of the system call service and shapes a kind of minimalistic
+    type-safety. See #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PROCESS and
+    #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PCP, too. */
+#define RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL (                                   \
+            sizeof(systemCallDesc_t) == SIZE_OF_SC_DESC                                     \
+            &&  offsetof(systemCallDesc_t, addressOfFct) == O_SCDESC_sr                     \
+            &&  sizeoffield(systemCallDesc_t, addressOfFct) == 4                            \
+            &&  offsetof(systemCallDesc_t, conformanceClass) == O_SCDESC_confCls            \
+            &&  sizeoffield(systemCallDesc_t, conformanceClass) == 4                        \
+        )
+
+/** This is an expression, which needs to be used in C unit rtos_systemCall.c as condition
+    for a runtime assertion. It double-checks the interface between C and assembly code and
+    shapes a kind of minimalistic type-safety. See
+    #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL, too. */
+#define RTOS_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL (                                          \
+            true                                                                            \
+        )
+
+
 /*
  * Global type definitions
  */

@@ -317,7 +317,7 @@ static void isrPit2(void)
     /* This ISR delegates some computation to a user task. It triggers the task. Note, that
        triggering will not necessarily succeed; see startup code, we have enebaled the
        interrupts earlier than the task scheduler. */         
-    const unsigned long tmpCntTaskUserPit2 = mai_cntTaskUserPit2;
+    const unsigned long tmpCntTaskUserPit2 ATTRIB_DBG_ONLY = mai_cntTaskUserPit2;
     rtos_osTriggerEvent(idEvPit2);
     /* There must be no immediate counter change of the task. It will be started after
        return from the ISR and depending on the task priorities. */

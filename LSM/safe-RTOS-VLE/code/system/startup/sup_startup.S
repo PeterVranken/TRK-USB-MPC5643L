@@ -136,14 +136,16 @@ sup_startUp:
     e_li        r0, 0x1000  /* Initialize MSR: CE=EE=0 but ME=1 */
     mtmsr       r0
 
+#if 0 // We don't enable debug interrupts at all
     /* Our RTOS requires catching the trap instruction with the IVOR #15 handler. This can
        be done safely only if the handler cannot be preempted by an External Interrupt. By
        default, this is possible. We configure the HID0 to clear MSR[EE] on entry into IVOR
        #15. */
     mfspr       r0, 1008    /* Read register Hardware implementation dependent (HID) 0 */
     se_bseti    r0, 19      /* Set bit DCLREE, Debug Interrupt Clears MSR[EE] */
-    se_bseti    r0, 20      /* Set bit DCLREE, Debug Interrupt Clears MSR[CE] */
+    se_bseti    r0, 20      /* Set bit DCLRCE, Debug Interrupt Clears MSR[CE] */
     mtspr       1008, r0    /* Write updated value back to HID0 */
+#endif
 
 #if ENABLE_BRANCH_PREDICTION == 1
     /* Enable the Branch Target Buffer (BTB) for branch prediction. Clear all buffer

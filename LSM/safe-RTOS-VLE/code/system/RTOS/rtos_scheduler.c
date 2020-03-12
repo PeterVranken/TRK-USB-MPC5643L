@@ -188,9 +188,9 @@
     ||  RTOS_ERR_PRC_FPU_UNAVAIL != RTOS_CAUSE_TASK_ABBORTION_FPU_UNAVAIL               \
     ||  RTOS_ERR_PRC_TBL_DATA != RTOS_CAUSE_TASK_ABBORTION_TBL_DATA                     \
     ||  RTOS_ERR_PRC_TBL_INSTRUCTION != RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION       \
-    ||  RTOS_ERR_PRC_TRAP != RTOS_CAUSE_TASK_ABBORTION_TRAP                             \
     ||  RTOS_ERR_PRC_SPE_INSTRUCTION != RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION       \
-    ||  RTOS_ERR_PRC_USER_ABORT != RTOS_CAUSE_TASK_ABBORTION_USER_ABORT
+    ||  RTOS_ERR_PRC_USER_ABORT != RTOS_CAUSE_TASK_ABBORTION_USER_ABORT                 \
+    ||  RTOS_ERR_PRC_RESERVED != RTOS_CAUSE_TASK_ABBORTION_RESERVED
 # error Inconsistencies found between definitions made in C and assembler code
 #endif
 
@@ -988,6 +988,9 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     // execution of all associated tasks. Is it worth to let the normal scheduling suffer
     // from an additional run-time condition just to make the idle concept work in the
     // sketched way?
+    _Static_assert( RTOS_EVENT_NOT_USER_TRIGGERABLE <= UINT_T_MAX(pNewEvent->minPIDForTrigger)
+                  , "Integer overflow"
+                  );
     *getEventByIdx(rtos_noEvents) = 
                 (eventDesc_t){ .tiCycleInMs = 0
                              , .tiDue = 0
@@ -1205,13 +1208,21 @@ rtos_errorCode_t rtos_osInitKernel(void)
                     " implementation becomes quite inefficient in terms of memory usage"
                   );
                   
-    /* To shape a minimum of type safety with the assembly code, we check some interface
-       constraints imposed by the assembly implementtaion. */
-    assert(RTOS_PCP_INTERFACE_CONSTRAINTS_C_AS);
-    _Static_assert( RTOS_PCP_INTERFACE_STATIC_CONSTRAINTS_C_AS
+    /* The C code has an interface with the assembler code. It is used to exchange process
+       and task related information. The interface is modeled twice, once as structs for C
+       code and once as set of preprocessor macros, which hold size of data structures and
+       offsets of fields. Here, we have macros, which support double-checking the
+       equivalence of both definitions. The compiler will abort the compilation if there is
+       a static inconsistency. A few more conditions require run-time checking. */
+    assert(RTOS_CONSTRAINTS_INTERFACE_C_AS_PCP);
+    _Static_assert( RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PCP
                   , "Interface check C to assembly failed for module"
                     " rtos_priorityCeilingProtocol.S"
                   );
+
+    /* Initialization of system all module: For now it's just used to place some unit
+       self-test code. */
+    rtos_initSystemCalls();
 
     rtos_errorCode_t errCode = rtos_err_noError;
 

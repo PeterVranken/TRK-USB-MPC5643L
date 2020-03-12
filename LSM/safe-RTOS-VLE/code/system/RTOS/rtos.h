@@ -82,7 +82,7 @@
     rtos_eventDesc_t. If it should not be accessible even by the process of highest
     privileges than #RTOS_EVENT_NOT_USER_TRIGGERABLE can be specified for \a
     minPIDToTriggerThisEvent. */
-#define RTOS_EVENT_NOT_USER_TRIGGERABLE ((uint8_t)((RTOS_NO_PROCESSES)+1u))
+#define RTOS_EVENT_NOT_USER_TRIGGERABLE ((RTOS_NO_PROCESSES)+1u)
 
 /** The number of different kinds of process errors, which let to task abortion. */
 #define RTOS_NO_ERR_PRC                 13
@@ -118,14 +118,14 @@
 /** Kind of process error: IVOR #14, TBL instr access mismatch */
 #define RTOS_ERR_PRC_TBL_INSTRUCTION    9
 
-/** Kind of process error: IVOR #15, trap and debug events */
-#define RTOS_ERR_PRC_TRAP               10
-
 /** Kind of process error: IVOR #32, use of SPE instruction */
-#define RTOS_ERR_PRC_SPE_INSTRUCTION    11
+#define RTOS_ERR_PRC_SPE_INSTRUCTION    10
 
 /** Kind of process error: User code returned error code */
-#define RTOS_ERR_PRC_USER_ABORT         12
+#define RTOS_ERR_PRC_USER_ABORT         11
+
+/** Kind of process error: Not yet in use, reserved for extensions. */
+#define RTOS_ERR_PRC_RESERVED           12
 
 
 /** Helper macro for I/O driver implementation. If the driver wants to declare a system

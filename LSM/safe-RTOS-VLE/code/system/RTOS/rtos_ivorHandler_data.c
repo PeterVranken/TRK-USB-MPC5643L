@@ -100,11 +100,6 @@ volatile uint16_t DATA_OS(rtos_cntIvor1PreemptsIvor13) = 0;
 volatile uint16_t DATA_OS(rtos_cntIvor1PreemptsIvor14) = 0;
 
 /** Reporting of double exceptions: A counter for MC exceptions, which preempted the
-    handler of an IVOR #15 CPU exception. The counter is saturated at its implementation
-    maximum. */
-volatile uint16_t DATA_OS(rtos_cntIvor1PreemptsIvor15) = 0;
-
-/** Reporting of double exceptions: A counter for MC exceptions, which preempted the
     handler of an IVOR #32 CPU exception. The counter is saturated at its implementation
     maximum. */
 volatile uint16_t DATA_OS(rtos_cntIvor1PreemptsIvor32) = 0;

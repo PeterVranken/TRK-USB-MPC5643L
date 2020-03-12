@@ -57,41 +57,6 @@
  * Defines
  */
 
-/** The C code has an interface with the assembler code. It is used to exchange process and
-    task related information. The interface is modeled twice, once as structs for C code
-    and once as set of preprocessor macros, which hold size of data structures and offsets
-    of fields. Here, we have a macro, which double-checks the equivalence of both
-    definitions. The compiler will abort the compilation if there is an inconsistency.\n
-      The macro needs to by compiled at least once, anywhere in the code. All checks are
-    done at compile-time and the compiler won't emit any machine code; therefore, it
-    doesn't matter where to place the macro. */
-#define CHECK_INTERFACE_S2C                                                                 \
-    _Static_assert( sizeof(rtos_taskDesc_t) == SIZE_OF_TASK_CONF                            \
-                    &&  offsetof(rtos_taskDesc_t, addrTaskFct) == O_TCONF_pFct              \
-                    &&  offsetof(rtos_taskDesc_t, addrTaskFct) == 0                         \
-                    &&  sizeoffield(rtos_taskDesc_t, addrTaskFct) == 4                      \
-                    &&  sizeoffield(rtos_taskDesc_t, addrTaskFct) == sizeof(uintptr_t)      \
-                    &&  offsetof(rtos_taskDesc_t, tiTaskMax) == O_TCONF_tiMax               \
-                    &&  sizeoffield(rtos_taskDesc_t, tiTaskMax) == 4                        \
-                    &&  offsetof(rtos_taskDesc_t, PID) == O_TCONF_pid                       \
-                    &&  sizeoffield(rtos_taskDesc_t, PID) == 1                              \
-                  , "struct rtos_taskDesc_t: Inconsistent interface between"                \
-                    " assembler and C code"                                                 \
-                  );                                                                        \
-    _Static_assert( sizeof(processDesc_t) == SIZE_OF_PROCESS_DESC                           \
-                    &&  offsetof(processDesc_t, userSP) == O_PDESC_USP                      \
-                    &&  O_PDESC_USP == 0                                                    \
-                    &&  offsetof(processDesc_t, state) == O_PDESC_ST                        \
-                    &&  sizeoffield(processDesc_t, state) == 1                              \
-                    &&  offsetof(processDesc_t, cntTotalTaskFailure) == O_PDESC_CNTTOT      \
-                    &&  sizeoffield(processDesc_t, cntTotalTaskFailure) == 4                \
-                    &&  offsetof(processDesc_t, cntTaskFailureAry) == O_PDESC_CNTTARY       \
-                    &&  sizeoffield(processDesc_t, cntTaskFailureAry)                       \
-                        == RTOS_NO_CAUSES_TASK_ABORTION*4                                   \
-                  , "struct processDesc_t: Inconsistent interface between"                  \
-                    " assembler and C code"                                                 \
-                  );
-
 /* The user API header file rtos.h doesn't recursively include all headers of all
    implementing files. Therefore it needs to make some assumptions about basically variable
    but normally never changed constants. These assumptions need of course to be double
@@ -223,21 +188,17 @@ static uint16_t SDATA_OS(_suspendProcess_permissions) = 0;
  */
 rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCESSES])
 {
-    /* We apply the macro that double-checks the consistency of the two independent
-       definitions of the same interface between assembler code and C code. The compiler
-       will abort the compilation of this module if there is a discrepancy. */
-    CHECK_INTERFACE_S2C
-
-    /* Here, where we have one time called code, we can double-check some static
-       constraints of the assembler implementation.
-         The configuration table rtos_systemCallDescAry is addressed with a short
-       instruction, which requires that it resides at a 15 Bit address. This is ensured by
-       the linker script, but better to check it. */
-#ifdef DEBUG
-    /// @todo Move this code to system call module to avoid the (even wrong) extern statement
-    extern const uint8_t rtos_systemCallDescAry[RTOS_NO_SYSTEM_CALLS];
-    assert((uintptr_t)rtos_systemCallDescAry < 0x8000);
-#endif
+    /* The C code has an interface with the assembler code. It is used to exchange process
+       and task related information. The interface is modeled twice, once as structs for C
+       code and once as set of preprocessor macros, which hold size of data structures and
+       offsets of fields. Here, we have macros, which support double-checking the
+       equivalence of both definitions. The compiler will abort the compilation if there is
+       a static inconsistency. A few more conditions require run-time checking. */
+    assert(RTOS_CONSTRAINTS_INTERFACE_C_AS_PROCESS);
+    _Static_assert( RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PROCESS
+                  , "Interface check C to assembly failed for module"
+                    " rtos_priorityCeilingProtocol.S"
+                  );
 
     rtos_errorCode_t errCode = rtos_err_noError;
 

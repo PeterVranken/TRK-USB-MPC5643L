@@ -389,7 +389,7 @@ ivr1_testIvor14:
     e_lis       r0, rtos_ivor14Handler@ha
     e_add16i    r0, r0, rtos_ivor14Handler@l  /* r0: Address Data TLB Error Interrupt handler */
     se_cmp      r0, r3          /* Both need to match to satisfy */
-    se_bne      ivr1_testIvor15
+    se_bne      ivr1_testIvor32
 
     /* IVOR #14 started handling the ECU exception when being preempted by the imprecise
        IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #14. */
@@ -399,27 +399,6 @@ ivr1_testIvor14:
     se_beq      ivr1_continuePreemptedIvor
     se_addi     r0, 1
     e_sth       r0, rtos_cntIvor1PreemptsIvor14@l(r3)
-    se_b        ivr1_continuePreemptedIvor
-
-ivr1_testIvor15:
-    /// @todo A double exception with IVOR #15 won't be recognized correctly. We have
-    // checked SRR1 for user code preemption first but IVOR #15 uses CSRR1. On the other
-    // hand have we never been able to provoke any IVOR #15 let alone a double one. Shall
-    // we really make the CSRR/SRR distinction here? Or drop the entire #15 handler? (See
-    // other todo at IVOR #15 handler, too)
-    e_lis       r0, rtos_ivor15Handler@ha
-    e_add16i    r0, r0, rtos_ivor15Handler@l  /* r0: Address Debug Interrupt handler */
-    se_cmp      r0, r3          /* Both need to match to satisfy */
-    se_bne      ivr1_testIvor32
-
-    /* IVOR #15 started handling the ECU exception when being preempted by the imprecise
-       IVOR #1. IVOR #1 doesn't handle the problem but returns to the preempted IVOR #15. */
-    e_lis       r3, rtos_cntIvor1PreemptsIvor15@ha
-    e_lhz       r0, rtos_cntIvor1PreemptsIvor15@l(r3)
-    e_cmpl16i   r0, 0xffff
-    se_beq      ivr1_continuePreemptedIvor
-    se_addi     r0, 1
-    e_sth       r0, rtos_cntIvor1PreemptsIvor15@l(r3)
     se_b        ivr1_continuePreemptedIvor
 
 ivr1_testIvor32:
@@ -562,9 +541,7 @@ rtos_ivor4Handler:
     #define O_SRRi          (8+8)   /* SRR0, SRR1: 2*4=8 Byte */
     #define O_CR            (8+16)  /* EABI volatile, CR, LR, CTR, XER: 4*4=16 Byte */
     #define O_R00           (8+32)  /* EABI volatile, r0, r3-r12: 11*4=44 Byte */
-/// @todo O_NOEV is no longer in use. Remove and retest
-    #define O_NOEV          (8+76)  /* Saved value of rtos_noEventsPending */
-    #define SIZE_OF_PAYLOAD 80      /* Size of user data in stack frame */
+    #define SIZE_OF_PAYLOAD 76      /* Size of user data in stack frame */
 
     /* Size of stack frame: Room for SP and LR and uprounding to multiple of 8. */
     #define S_I4_StFr   ((((SIZE_OF_PAYLOAD)+15)/8)*8)
@@ -724,7 +701,6 @@ iv4_retToPreemptedCtxt:
     #undef O_SRRi
     #undef O_CR
     #undef O_R00
-    #undef O_NOEV
     #undef SIZE_OF_PAYLOAD
     #undef S_I4_StFr
     #undef O_LR
@@ -1520,7 +1496,7 @@ rtos_ivor14Handler:
 
 
 
-/// @todo Likely misunderstood: The trap instruction goes into IVOR #6. Consider comment this function and undoing the changes on HID0 and IVOR table in sup_startup.S
+
 /**
  *   @func rtos_ivor15Handler
  * This is the interrupt handler for the MCU trap #15, Debug Interrupt. See Core
@@ -1537,19 +1513,11 @@ rtos_ivor14Handler:
     .global     rtos_ivor15Handler
     .p2align    4
 rtos_ivor15Handler:
-    /* We don't need a preamble with storage or register contexts of preempted context: We
-       are anyway going to abort the execution of that context.
-         We must not rely on any register content as got from the preempted context: It
-       can be corrupted as effect of the fault, which let to the exception. This holds in
-       particular for the EABI registers r2 and r13 and the stack pointer. */
-    mfcsrr1     r0          /* Load MSR of preempted process */
-    se_btsti    r0, 17      /* Test bit "problem state" */
-    se_beq      .           /* assert(Problem state == user) */
-
-    /* ESR not affected. MSR is in desired state: CE=EE=PR=0, ME not affected by exception */
-
-    se_li       r3, RTOS_CAUSE_TASK_ABBORTION_TRAP
-    e_b         rut_endUserTaskByException   /* Do same as system call "task abort" */
+    wrteei      0           /* By default debug interrupts don't disable External Interrupt
+                               handling. We consider it a fatal error if we ever get here
+                               and want to halt the SW execution in this case. Therefore we
+                               disable interrupt handling. See HID0, DCLREE and DCLRCE, too */
+    se_beq      .           /* assert(false); MSR[DE] = 0, we must not see this exception */
 
 /* End of rtos_ivor15Handler */
 

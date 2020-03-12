@@ -84,14 +84,16 @@
 
 
 /*
- * Global prototypes
+ * Global static inline functions
  */
 
 
 /*
- * Global static inline functions
+ * Global prototypes
  */
 
+/** Initialization function of the system call service implementation. */
+void rtos_initSystemCalls(void);
 
 #endif  /* C code parts of the file */
 #endif  /* RTOS_SYSTEMCALL_INCLUDED */

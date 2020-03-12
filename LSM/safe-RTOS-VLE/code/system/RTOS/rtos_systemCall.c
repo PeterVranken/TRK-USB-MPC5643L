@@ -18,6 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
+ *   rtos_initSystemCalls
  * Module inline interface
  * Local functions
  */
@@ -268,24 +269,6 @@
 /** Companion of C's offsetof: The size of a field inside a struct. */
 #define sizeoffield(type, fieldName) (sizeof(((type*)0)->fieldName))
 
-/** The C code has an interface with the assembler code that implements the system call
-    service. The interface is modeled twice, once as structs for C code and once as set of
-    preprocessor macros, which hold size of data structures and offsets of fields. Here, we
-    have a macro, which double-checks the equivalence of both definitions. The compiler
-    will abort the compilation if there is an inconsistency.\n
-      The macro needs to by compiled at least once, anywhere in the code. All checks are
-    done at compile-time and the compiler won't emit any machine code; therefore, it
-    doesn't matter where to place the macro. */
-#define CHECK_INTERFACE_S2C                                                                 \
-    _Static_assert( sizeof(systemCallDesc_t) == SIZE_OF_SC_DESC                             \
-                    &&  offsetof(systemCallDesc_t, addressOfFct) == O_SCDESC_sr             \
-                    &&  sizeoffield(systemCallDesc_t, addressOfFct) == 4                    \
-                    &&  offsetof(systemCallDesc_t, conformanceClass) == O_SCDESC_confCls    \
-                    &&  sizeoffield(systemCallDesc_t, conformanceClass) == 4                \
-                  , "struct systemCallDesc_t: Inconsistent interface between"               \
-                    " assembler and C code"                                                 \
-                  )
-
 
 /*
  * Local type definitions
@@ -401,18 +384,30 @@ const systemCallDesc_t rtos_systemCallDescAry[RTOS_NO_SYSTEM_CALLS]
  */
 
 /**
- * This is a dummy function, which can be removed as soon as a true function is implemented
- * in this module. We need to have at least one function in order to place the assertion
- * statement for double-checking the binary built-up of the interface for system calls
- * between assembly code and C code -  a check, which is neither done implicitly by C
- * compiler nor by assembler.\n
- *   The linker shall recognize that the function is nowhere called and discard it from the
- * flashed binary files.
- *   @remark
- * Do never call this function. It's just needed for the compilation process.
+ * For now, the initialization function of the system call service implementation is a
+ * dummy, which is solely used for some code self-test. We need to have at least one
+ * function in order to place the assertion statements for double-checking the binary
+ * built-up of the interface for system calls between assembly code and C code - a check,
+ * which is neither done implicitly by C compiler nor by assembler.
  */
-void rtos_checkInterfaceAssemblerToC(void)
+void rtos_initSystemCalls(void)
 {
-    CHECK_INTERFACE_S2C;
+    /* The C code has an interface with the assembler code. It is used to exchange process
+       and task related information. The interface is modeled twice, once as structs for C
+       code and once as set of preprocessor macros, which hold size of data structures and
+       offsets of fields. Here, we have macros, which support double-checking the
+       equivalence of both definitions. The compiler will abort the compilation if there is
+       a static inconsistency. A few more conditions require run-time checking. */
+    assert(RTOS_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL);
+    _Static_assert( RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL
+                  , "Interface check C to assembly failed for module rtos_rtos_ivorHandler.S"
+                  );
+    
+    /* Here, where we have one time called code, we can double-check some static
+       constraints of the assembler implementation.
+         The configuration table rtos_systemCallDescAry is addressed with a short
+       instruction, which requires that it resides at a 15 Bit address. This is ensured by
+       the linker script, but better to check it. */
+    assert((uintptr_t)rtos_systemCallDescAry < 0x8000);
 
-} /* End of rtos_checkInterfaceAssemblerToC */
+} /* End of rtos_initSystemCalls */
