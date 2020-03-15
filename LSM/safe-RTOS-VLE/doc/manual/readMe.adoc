@@ -1,7 +1,7 @@
 = safe-RTOS - Manual
 :Author:              Peter Vranken
 :Email:               mailto:Peter_Vranken@Yahoo.de[P. Vranken]
-:Revision:            1
+:Revision:            2
 :title-page:
 :toc:                 left
 :toclevels:           4
@@ -41,7 +41,7 @@ relevant safety standards, like ISO 26262.
 |I/O| Input/output
 |ISO| International Organization for Standardization
 |ISR| Interrupt service routine
-|MCU| Micro controller unit
+|MCU| Microcontroller unit
 |MMU| Memory management unit
 |MPU| Memory protection unit
 |OS| Operating system (kernel plus I/O drivers)
@@ -78,7 +78,7 @@ new safety aspects. The scheduler with its capabilities to trigger
 application code tasks on a time or event base has not been modified.
 Consequently, we still have the most simple kernel, which solely
 implements a strictly hierarchical preemption pattern, which is for
-example called "tasks of Basic Conformance Class" in the OSEK/VDX-OS
+example called tasks of "Basic Conformance Class" in the OSEK/VDX-OS
 standard and which -- as a matter of experience -- suffices to drive the
 majority of industrial applications.
 
@@ -95,9 +95,9 @@ channels or I/O data become protected resources, too.
 
 Memory protection is implemented with the memory protection unit (MPU) of
 the microcontroller. The MPU contains a number of memory area descriptors,
-which associate a range of memory addresses (by start address and end
-address) with access rights. (Actually, it are addresses, regardless
-whether memory, I/O registers or nothing is found at these addresses.) Any
+which associate a range of memory addresses (defined by start and end
+address) with access rights. Mre precise, it are addresses, regardless
+whether memory, I/O registers or nothing is found at these addresses. Any
 load and store of the CPU is either permitted by at least one of the
 descriptors and then executed or it is suppressed and leads to an
 exception. The access rights can be granted for read and/or write, they
@@ -114,8 +114,8 @@ implications:
 * No indeterministic timing due to hit-miss-interrupts and according
   corrective actions
 * Limitation of number of processes due to the given, fixed number of
-  memory area descriptors in the MPU (four application processes, one kernel
-  process)
+  memory area descriptors in the MPU (four application processes plus one
+  kernel process in the default configuration)
 * Simple, barely changeable memory layout for kernel and processes (see
   below for details)
 * Implementation of C code is tightly coupled with linker script. This is
@@ -150,22 +150,22 @@ Note, deadline monitoring always punishes the failing task, although it
 is not necessarily the causing task. A task may fail to meet its deadline
 because it has been overly blocked by other tasks of higher priority - if
 these do not exceed their deadline then only the poor task of lower
-priority is punished. This may not be fair but it is to the point as the
+priority is punished. This may be not fair but it is to the point as the
 system design fails to meet the timing requirements for the punished task.
 
 A second, simpler yet often advantageous mechanism is offered for time
 protection. The situation is recorded and reported as an "activation loss"
-error when an event triggers but not all tasks associated with the event
-have terminated yet after the preceding trigger of the event. For the most
-typical use case of timer events and regular tasks this would have the
-meaning of a task overrun.
+error when an event is triggered but not all tasks associated with the
+event have terminated yet after the preceding trigger of the event. For
+the most typical use case of timer events and regular tasks this would
+have the meaning of a task overrun.
 
-The kernel offers the priority ceiling protocol (PCP) to the tasks and
-interrupts for implementing mutual exclusion. A minor modification of this
-common technique is a measure to protect the scheduling of the CPU. The
-PCP is limited to tasks and interrupts of a certain, configurable maximum
-priority. PCP cannot hinder application tasks to execute, which have a
-higher priority and it is therefore possible to implement a trusted
+The kernel offers the priority ceiling protocol (PCP) to the tasks for
+implementing mutual exclusion. A minor modification of this common
+technique is a measure to protect the scheduling of the CPU against abuse
+or software faults. The PCP is limited to tasks of a certain, configurable
+maximum priority. PCP cannot hinder application tasks to execute, which
+have a higher priority and it is therefore possible to implement a trusted
 supervisory task, which can detect forbidden and potentially unsafe
 blocking states caused by failing or malicious functional tasks.
 
@@ -248,20 +248,19 @@ The operating system startup code can install needed interrupt service
 routines (ISR). This will mostly appear in the initialization of the added
 I/O drivers.
 
-For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
-lock API is offered that implements the priority ceiling protocol (PCP).
-It is secured so that supervisory tasks cannot be accidentally or
-purposely blocked.
+For mutual exclusion of tasks, if shared data is involved, a lock API is
+offered that implements the priority ceiling protocol (PCP). It is secured
+so that supervisory tasks cannot be accidentally or purposely blocked.
 
-There are mechanisms to suspend and resume all interrupts but they are not
-available to application code, only the operating system may use them
-(mainly for I/O driver implementation).
+There are three slightly differing mechanisms to suspend and resume
+interrupts but they are not available to application code, only the
+operating system may use them (mainly for I/O driver implementation).
 
 The use of the RTOS is further supported by some diagnostic functions.
 They offer stack usage information, information about caught exceptions
-and averaged CPU load information. The diagnostics comes along with an
-API to halt the execution of a process. Permission to use this API is
-granted only to what is considered the safety process or task.
+and averaged CPU load information. The diagnostics come along with an API
+to halt the execution of a (failing) process. Permission to use this API
+is granted only to what is considered the safety process or task.
 
 === Scheduler and preemption
 
@@ -271,7 +270,7 @@ task activation. BCC means that a task will have to complete before any
 other task of same or lower priority can execute. Preemption occurs only
 when a task is activated, which has a priority higher than the currently
 running task. The preempting task is started and needs to complete before
-the pre-empted task can continue execution. The preemption pattern of tasks
+the preempted task can continue execution. The preemption pattern of tasks
 is strictly hierarchical, similar to the execution of nested functions in
 a C program, see figure <<figSchemeOfPreemptions>>.footnote:[The picture
 has been downloaded at
@@ -282,12 +281,73 @@ on Nov 19, 2017.]
 .Hierarchical task scheduling
 image::manual_resources/taskSwitchesBCC.jpg[Hierarchical task scheduling, width="80%", pdfwidth="80%", align="center"]
 
-For this RTOS, and different to most others, the priority scheme is shared
-with interrupts. The interrupt handlers behave like tasks with the only
-exception that they are activated by hardware events out of scope of
-the RTOS kernel while true tasks are activated only under control of the
-RTOS kernel (mostly by time conditions, sometimes on explicit demand by a
-task or interrupt handler).
+Although BCC means a significant reduction of complexity and functionality
+in comparison to a full featured real time kernel, the embedded practice
+mostly doesn’t require more than this. The typical data flow paradigm of
+an industrial embbeded application is to have event triggered tasks, which
+serve the asynchronous I/O channels and strictly cyclic application tasks,
+which process the data and implement the control strategies. The
+communication between ISRs and tasks is done either by queues or by
+overwriting (last recent value supersedes earlier ones), that depents.
+It’s a simple model, which has the advantage of being well understood,
+transparent and by nature free of dead locks. The latency times are higher
+than for consequently designed event controlled systems but they are
+predictable and have easy to determine upper bounds. Last but not least,
+software design can determine the upper bounds by choosing appropriate
+cycle times. 
+
+=== The operating system clock
+
+The RTOS is clocked by a timer interrupt. By default, a 1 ms clock tick is
+configured. This clock tick is the resolution of controlling the period of
+cyclic tasks.
+
+The clock is generated by the MCU's device PID0. This timer is not
+available to the application. If the application requires to use the other
+PID timers then the initialization needs to be done with care: There are
+common settings, which affect all PID timers. You need to align your
+initialization code with the RTOS kernel initialization. 
+
+[[secPrioTaskAndISR]]
+=== Priority of tasks and interrupts
+
+The priority scheme of tasks is disjunct with that of interrupts. The
+priority range of interrupts is 1..15. The priority range of tasks is
+1..UINT_MAX. Regardless of the chosen numbers, any interrupt has a
+priority higher than any task. An application task cannot shape a critical
+section with interrupts but an OS task can do. (Which is one of the many
+reasons, why an OS, which is built on this RTOS, must not make OS tasks
+available to untrusted application code.)
+
+Preemption takes place only by higher priority; once a task is running
+it'll not be preempted by any other of same or lower priority. If two or
+more tasks of same priority become ready at the same time then they are
+executed sequentially, i.e. one after another. This introduces a kind of
+sub-ordinated priority, which determines the order of execution in this
+situation. This sub-ordinated priority is defined at RTOS configuration
+time; in the given situation, the tasks would be executed primarily in
+order of creation of the events, they are associated with, and secondarily
+in order of registration, if they are associated with one and the same
+event; see _rtos_osCreateEvent_(), _rtos_osRegisterOSTask_() and
+_rtos_osRegisterUserTask() for details.
+
+What does "become ready at the same time" mean? This can be as easy as two
+cyclic tasks that become due at the same nominal operating system clock
+tick. For event tasks, which are triggered from one or more ISRs it's less
+evident. One ISR can trigger several events or several nesting, preempting
+ISRs can each trigger one or more events. Due to the generally higher
+priority of interrupts in comparison to tasks, all of the tasks, which are
+associated with any of the triggered events, become effectively due at the
+(logically) same time and compete for the CPU immediately after return
+from the last of the nested interrupts. In this situation, the
+sub-ordinated priority counts for those of same priority.
+
+TIP: A most important aspect of tasks of same priority -- it doesn't
+matter whether they are associated with the same event or with different
+events of same priority -- is that there are by principle no race
+condition between them. They can easily share data objects without any
+concern about using keyword _volatile_ or the need to implement critical
+section code.
 
 === Exception handling
 
@@ -318,13 +378,15 @@ the decisions for halting bad processes, switching off, shutting down or
 what else seems appropriate.
 
 Our working assumption is that the OS code is proven to have no faults, so
-there's no need to handle an exception in this code. However, nobody is
-perfect and kernel or an I/O driver may contain undiscovered errors.
-There's no way to handle an exception caused by the OS code. In this case,
-the exception handler enters an infinite loop to effectively halt the
-software execution. It's considered a matter of appropriate configuration
-of watchdogs and appropriate hardware design to ensure that this will keep
-the system, which the software is made for, in a safe state.
+there's no need to handle an exception in this code. (The assumption of
+fault free code is often referred to as "trusted code".) However, nobody
+is perfect and even kernel or an I/O driver may contain undiscovered
+errors. There's no way to handle an exception caused by the OS code. In
+this case, the exception handler enters an infinite loop to effectively
+halt the software execution. It's considered a matter of appropriate
+configuration of watchdogs and of appropriate hardware design to ensure
+that this will keep the system, which the software is made for, in a safe
+state.
 
 === Deadline monitoring
 
@@ -337,35 +399,41 @@ TODOC: Principle and limitations
   failure detection and shutdown
  ** Trick: Have a regular 100us timer interrupt with empty ISR. Now we
     have a resume and check every 100us
-* Not working if there's no preempting ISR. Function can't be guaranteed
-  for prio equal or above kernel prio
-* Exception leaves tasks and data in inconsistent state. (Can abort task
-  in the middle of a critical section.) Generally no reasonable means to
-  limit execution time. Just an error recognition and worst case hindering
-  tool
+ ** Not critical: If there's no IRQ before it only matters to tasks of
+    lower priority, which must not be safety critical by design
+* An exception leaves task's data in inconsistent state. (Can abort task
+  in the middle of a critical section.) Generally no design tool for
+  limiting execution time. Just an error recognition and worst case
+  hindering tool
 * If short latency times in error recognition path is not critical then
   relying only on activation loss is likely the better option
 
 === Differences to the ancestor RTOS
 
-The architecture of the RTOS is very simple and almost identical to its
-ancestor. This simplicity significantly supports the validation of the
-code in a safety-critical software development environment. The
-explanation is that both RTOSs build directly on the hardware capabilities
-of the MCU. Please refer to the
+safe-RTOS is a succesor of the simple RTOS, presented earlier at same
+location. The architecture of safe-RTOS is still much like its ancestor.
+This simplicity significantly supports the validation of the code in a
+safety-critical software development environment. The documentation of the
+simple RTOS may still be a valuable source of information; please have a
+look at the
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS-VLE#The-RTOS[readme^]
-of the simple RTOS for a detailed explanation of the kernel concept.
+of the simple RTOS.
 
 The differences to the simple RTOS are:
 
 * The safety concept
+* Any number of events can be created
+* Any number of task priorities is available
 * Any number of tasks can be associated with an event. The simple RTOS had
-  used a one-by-one relation between events and tasks. (Having more than
-  one task per event makes sense only in conjunction with the new process
-  concept)
-* The architecture may be similar but the implementation isn't. The safety
-  demands required a significant portion of assembler code for the
-  implementation
+  used a one-by-one relation between events and tasks. (Which was not a
+  weakness; having more than one task per event makes sense only in
+  conjunction with the new process concept)
+* The architecture may be similar but the implementation isn't:
+ ** The safety demands require a significant portion of assembler code
+    for the implementation
+ ** The implementation of the ancestor RTOS is incredible lean because it
+    directly builds on the hardware capabilities of the MCU. safe-RTOS
+    uses a normal software implemention of the scheduler
 * The Book E instruction set is no longer supported
 
 === Distribution and integration
@@ -407,13 +475,13 @@ code.
 If the system can reach a state, which is potentially harmful to people or
 hardware, then it'll typically need some supervisory software, too, which
 has the only aim of avoiding such a state. Most typical, the supervisory
-software can be kept very lean. It may e.g. be sufficient to read a
-temperature sensor, check the temperature against a boundary and to
-control the coil of the main relay, which powers the system. If the
-temperature exceeds a limit or if the temperature reading is somehow
-implausible then the relay is switched off and the entire system
-unpowered. That's all. A few hundred lines of code can already suffice
-for such a task.
+software can be kept very lean. Depending on what kind of system we talk,
+it may e.g. be sufficient to read a temperature sensor, check the
+temperature against a boundary and to control the coil of the main relay,
+which powers the system. If the temperature exceeds a limit or if the
+temperature reading is somehow implausible then the relay is switched off
+and the entire system unpowered. That's all. A few hundred lines of code
+can already suffice for such a task.
 
 All the rest of the software is not safety relevant. A fault in this
 majority of code may lead to wrong system behavior, customer
@@ -428,13 +496,16 @@ potential failures of the rest of the code.
 Using a safety-aware RTOS can be one means to ensure the "working always
 well" of the supervisory code. The supervisory code is put into a process
 of higher privileges and the hundred thousands of lines of other code are
-placed into a separate process with lower privileges. (Only) RTOS and
+placed into a separate process with lower privileges. By principle, the
+code in one process can not harm or damage the resources of the other
+process (data and access to CPU or computation time). Nor can a process of
+low privileges get access to I/O deemed safety-critical. (Only) RTOS and
 supervisory code need to be carefully reviewed, tested, validated to
 guarantee the "working always well". Using a "normal" RTOS, where a fault
-in any part of the code can crash the entire software system, the effort
-for reviews, tests and validation needed to be extended to all of the many
-hundred thousand lines of code. The economic difference and the much
-higher risk of not discovering a fault are evident.
+in any part of the code can easily crash the entire software runtime
+system, the effort for reviews, tests and validation needed to be extended
+to all of the many hundred thousand lines of code. The economic difference
+and the much higher risk of not discovering a fault are evident.
 
 These basic considerations result in a single top-level safety requirement
 for our safe-RTOS:
@@ -514,7 +585,7 @@ to be executable in user mode.
 === Memory mapped I/O driver
 
 The simplest way to implement an I/O driver is the memory mapped driver.
-All conveyed information is placed in memory, which can be accesses from
+All conveyed information is placed in memory, which can be accessed from
 the application tasks and from the OS. 
 
 The API is a set of getters and/or setters, which simply read from or
@@ -537,19 +608,21 @@ example. This behavior has a significant impact on worst execution time
 
 A related issue can be the consistency of the data set. The ADC may
 provide several input channels, which are sampled coincidentally. The
-result-fetching ISR would typically have a priority above those from the
-application tasks. In this case the ISR can preempt the application task
-while it is busy with reading all the channel results. As an effect the
-application task will see some samples from before and some from after the
-preemption. The set of samples is inconsistent; the age of the samples
-differs by one cycle.
+result-fetching ISR has a priority above those from the application tasks.
+Therefore, the ISR can preempt the application task while it is busy with
+reading all the channel results. As an effect, the application task will
+see some samples from before and some from after the preemption. The set
+of samples is inconsistent; the age of the samples differs by one cycle.
 
-If consistency of a data set matters for an I/O driver then our RTOS
-offers its PCP API to implement a critical section, or, with other words,
-mutual exclusion of application tasks and I/O driver function. Note, this
-has an impact on the allowed priority range for the ISR: It must not
-exceed the maximum priority a task can achieve using the PCP. This
-priority is compile-time configurable by means of a C macro.
+If consistency of a data set matters for an interrupt driven I/O driver
+then it can either apply a double-buffering strategy or it delegate the
+API update to an OS task of sufficiently high priority. Delegation means
+the ISR just triggers the event the task is associated with. The task
+reads the I/O registers and writes the results into the API buffers. This
+design is often referred to as "deferred interrupt handling". The
+difference is that the API now can implement critical section code -- this
+is possible between different tasks, between OS tasks and ISRs but not
+between application tasks and ISRs.
 
 Memory mapped I/O drivers are the best choice whenever the sketched
 drawbacks don't matter -- and in particular for input channels: The
@@ -609,37 +682,35 @@ time would prolongate the execution time of the ISR - which is constrained
 in typical scenarios. A deadline for the (unknown, untrusted) user
 callback code will limit the possible damage by bad callback behavior.
 
-The callback is executed at same priority as the ISR. Deadline monitoring
-is not available to tasks with a priority greater or equal to the kernel
-priority (a configurable compile-time constant) and running untrusted
-callback code without an execution time constraint would break the safety
-concept of the aimed software; an infinite loop would already suffice to
-hinder the supervisory task from executing.
+The callback is executed at same priority as the ISR, i.e. a priority
+above all normal tasks and particularly above the safety task. This
+involves a safety risk: Deadline monitoring is not generally available to
+tasks with an interrupt priority greater or equal to the kernel priority
+(a configurable compile-time constant) and running untrusted callback code
+without an execution time constraint would break the safety concept of the
+aimed software; an infinite loop would already suffice to hinder the
+supervisory task from executing.
+  footnote:[It would be a considerable design decision to implement the
+safety task in turn as a callback from a (regular timer) ISR of even
+higher priority to overcome this problem.]
 
-Therefore it is inevitable that interrupts making use of callbacks into
-application code have a priority less than the highest permitted task
-priority! (This priority is one less than the configurable kernel
-priority.)
+The second way to implement a callback is using a dedicated event. The
+callback is implemented as a task, which is associated with the event. By
+triggering the event, the ISR activates the task. Independently, the
+scheduler of the RTOS decides when to make the task running. The task is
+user code owned, belongs to the same, supervised process and can implement
+the notification as suitable in this context.
 
-The second way to implement a callback is using a dedicated event. An ISR
-may trigger an event. The callback is implemented as a task, which is
-associated with the event. By triggering the event, the ISR activates the
-task. Independently, the scheduler of the RTOS decides when to make the
-task running.
-
-There are several significant differences between both solutions:
+There are significant differences between both solutions:
 
 * Using an event means less time uncertainty for the ISR implementation.
-  Normally, the event will have a lower priority than the ISR and triggering
-  the event will be done in no time. The ISR continues and can return soon
+  The event has a lower priority than the ISR, so the ISR is surely not
+  preempted and triggering the event will be done in no time. The ISR can
+  return soon
 * Using the event means to have better control on priorities. The callback
-  can (most typically: will) have another priority than the ISR. The other
-  side of the coin: This can break the intended tight coupling in time
-* The callback using _rtos_osRunTask_() can have an argument, which the event
-  task doesn't have. Direct data passing is possible only in the former case
-* The number of callbacks using _rtos_osRunTask_() is unlimited while there is
-  only a hardware limited number of events available. For the MPC5643L
-  this means only eight events in total
+  has a priority, which can be balanced with the other tasks. The other
+  side of the coin: This can break the intended tight coupling in time,
+  which is normally expected from interruppt based I/O drivers
 
 Please refer to the sample I/O driver
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE/code/system/drivers/ledAndButton[ledAndButton^]
@@ -654,7 +725,7 @@ is a function, which is executed in supervisor mode. In our RTOS, the
 supervisor mode is not constrained in accessing I/O registers and memory
 locations. Therefore, a system call can be applied to do any kind of I/O.
 
-Caution, the system call function is executed in supervisor mode and
+CAUTION: The system call function is executed in supervisor mode and
 doesn't have exception handling or failure reporting and handling. By
 principle, the implementation belongs into the sphere of proven, trusted
 code. A user or application supplied function must never be accepted or
@@ -690,7 +761,7 @@ The leanest and fastest system call is the basic handler:
 * The basic system call offers a maximum of flexibility and control; the
   handler is not restricted to be just an ordinary synchronous function
   call with return. For example, the "throw exception" system call, i.e.
-  _rtos_terminateTask_(), is implemented this way, which returns to the
+  _rtos_terminateTask_(), is implemented this way, it returns to the
   operating system but not from the system call
   
 The programmer of a basic system call has the full responsibility for
@@ -740,9 +811,12 @@ function:
   non-preemptable and must not resume interrupt processing. No functions
   must be called, neither in the handler function itself and nor in any of
   its sub-functions, which can potentially enable the External Interrupt
-  processing. This includes but is not restricted to
-  _rtos_osResumeAllInterrupts_(), _rtos_osResumeAllInterruptsByPriority_(),
-  _rtos_osLeaveCriticalSection_(), _rtos_osRunTask_()
+  processing. This includes but is not restricted to:
+** _rtos_osResumeAllInterrupts_()
+** _rtos_osLeaveCriticalSection_()
+** _rtos_osResumeAllTasksByPriority_()
+** _rtos_osRunTask_()
+** _rtos_osTriggerEvent_()
 
 The simple handler should be chosen for quickly executing services,
 because it implicitly forms a critical section. Note, this is not a
@@ -772,11 +846,15 @@ additional:
 The handler uses the kernel stack, which cannot be protected by the MPU
 like the user process stacks. For a safe software design, it's unavoidable
 that the static stack calculation for the handler implementation is
-considered for the kernel stack usage estimation.
+considered for the worst case kernel stack usage estimation.
+
+TODO: The user requires a proven and complete table of all services,
+telling in which mode/handler class/ISR/OS/application task it can be
+used.
 
 ==== Safety concept
 
-The implementation of the system call handler -- regardless which
+The implementation of a system call handler -- regardless which
 conformance class -- can easily break the safety concept of the software
 built on top of this RTOS. It is executed in supervisor mode and the error
 catching and reporting mechanisms for user processes and tasks are not
@@ -795,8 +873,8 @@ available. This has several implications:
     let it place the function result at the addressed memory location.
     This will potentially harm the memories of another process or even the
     kernel
- ** Indexes can be out of bounds and can then lead to the same problems as
-    discussed for pointers
+ ** Array indexes can be out of bounds and can then lead to the same
+    problems as discussed for pointers
 * Referenced I/O devices or channels could be connected to safety critical
   actuators, which must not be controllable by the calling user process
 * The stack consumption of the implementation needs to be considered for
@@ -808,7 +886,8 @@ available. This has several implications:
 
 The RTOS offers convenience functions to validate user provided pointers.
 Although using pointers as arguments of system calls is not recommended at
-all, it can be safely done.
+all, it can be safely done. Please, see _rtos_checkUserCodeReadPtr_() and
+_rtos_checkUserCodeWritePtr_().
 
 [CAUTION]
 =========
@@ -884,9 +963,9 @@ not be used by user added code.
 |Index |Function |Class |Description
 |0  |rtos_scBscHdlr_terminateUserTask |Basic | (Premature) task abortion
 by user code
-|1  |rtos_scBscHdlr_{zwsp}suspendAllInterruptsByPriority |Basic | PCP: get 
+|1  |rtos_scBscHdlr_{zwsp}suspendAllTasksByPriority |Basic | PCP: get 
 resource or enter critical section
-|2  |rtos_scBscHdlr_{zwsp}resumeAllInterruptsByPriority |Basic | PCP: release
+|2  |rtos_scBscHdlr_{zwsp}resumeAllTasksByPriority |Basic | PCP: release
 resource or leave critical section
 |3  |rtos_scFlHdlr_triggerEvent |Full | Event trigger by software
 |4  |rtos_scFlHdlr_runTask |Full | Run a user task or inter-process
@@ -949,9 +1028,9 @@ tasks. Application tasks are executed in user mode. If they try calling an
 OS function then they will be punished by an exception.
 
 For application functions it depends. Some may be safely called by both,
-application and OS code. (These are mostly very simple getter functions.)
-The documentation of a function `rtos_<fctName>` would indicate if it were
-callable also by OS code.
+application and OS code. (These are mostly very simple memory reading
+getter functions.) The documentation of a function `rtos_<fctName>` would
+indicate if it were callable also by OS code.
 
 The rest of the application functions is simply not available to OS code
 and an attempt to invoke them from an ISR or OS task will cause a crash.
@@ -959,8 +1038,8 @@ In case of these functions, there will -- with a few exceptions -- always
 be a pair of API functions, one for OS and one for user code with nearly
 same functionality. The function documentation will name the constraints.
 
-Remark: As a matter of experience, during software development time the
-call of an application function (mostly it is the system call
+TIP: As a matter of experience, during software development time the call
+of an application function (mostly it is the system call service
 `rtos_systemCall`) from an OS task is the most typical reason for the
 software execution being halted in the kernel.
 
@@ -1052,10 +1131,9 @@ The returned event IDs form a sequence of numbers 0, 1, 2, ... in the
 order of creation calls. The ID is required as input to some other API
 functions that relate to an event, `rtos_triggerEvent` in the first place.
 
-The priority is an integer number, which shares the value space with
-interrupt service routines. Depending on their priority relation, the
-tasks, which are associated with the event, can preempt an ISR or vice
-versa. See <<secApiRegisterIsr>> also.
+The priority is a non zero integer number. Regardless of the number, any
+event (and thus all of the associated tasks) will a priority below any
+interrupt. See <<secPrioTaskAndISR>> and <<secApiRegisterIsr>> also.
 
 Parameter `minPIDToTriggerThisEvent` restricts the use of the API
 `rtos_triggerEvent` to processes of sufficient privileges.
@@ -1115,10 +1193,12 @@ stability.
                             , unsigned int tiMaxInUs
                             );
 
-Note the return value of user and initialization task functions. These
-tasks are run under protection and an error is reported in their process
-if they fail. The return value permits to let the task voluntarily report
-a failure in their process the same way a kernel caught failure would.
+Note the return value of the registered user and initialization task
+functions. These tasks are run under protection and an error is reported
+in their process if they fail. The return value permits to let the task
+voluntarily report a failure in their process the same way a kernel caught
+failure would. Use case is hindering the system from startup if something
+goes wrong during initialization.
 
 [[secApiRegisterIsr]]
 ==== Registering an ISR
@@ -1138,18 +1218,11 @@ _vectorNum_ relates to the hard-wired interrupt sources of the MCU, see
 reference manual. Note that the RTOS itself makes use of interrupt source
 59, PIT0, which must thus never be used anywhere else.
 
-The priority is an integer number, which shares the value space with
-events. Depending on their priority relation an ISR can preempt the tasks,
-which are associated with the event and vice versa, if the ISR is specified
-preemptable. See <<secApiCreateEvent>> also.
+The priority is an integer number in the range 1..15. See
+<<secPrioTaskAndISR>> and <<secApiCreateEvent>> also.
 
-Actually, there's barely a difference in behavior between ISRs and OS
-tasks. Effectively, an OS task is an ISR, which has a timer event as
-interrupt source. (And transparent ordering with other tasks, associated
-with the same event.)
-
-The use case for this function is the initialization of I/O drivers. Such
-drivers will frequently make use of interrupts.
+The use case for this function is the initialization code of I/O drivers.
+Such drivers will frequently make use of interrupts.
 
 ==== Configure privileges for inter-process function calls
 
@@ -1202,7 +1275,9 @@ task.
 Most events are typically time triggered. The rest is triggered on demand.
 Here's the API to trigger such an event. Use cases are inter-process
 communication and deferred interrupt handling. This service is available
-to OS (including ISRs) and to user tasks.
+to preemptable ISRs, OS and to user tasks and system call handlers of full
+conformance class. Non-preemptable ISRs and system call handlers of lower
+conformance class must not use it.
 
     #include "rtos.h"
     bool rtos_osTriggerEvent(unsigned int idEvent);
@@ -1274,7 +1349,8 @@ problem to the kernel. It raises an exception in the calling process.
 
 ==== Inter-process function call
 
-An OS or a user task can run a task in another process, where "task"
+A preemptable ISR, an OS or user task or a system call handler of full
+conformance class can run a task in another process, where "task"
 effectively is an arbitrary function with only some constrained function
 arguments. The function can return a value from the destination process to
 the calling process.
@@ -1346,7 +1422,7 @@ to a few machine instructions.
     uint32_t rtos_osEnterCriticalSection(void);
     void rtos_osLeaveCriticalSection(uint32_t oldState);
 
-==== Priority ceiling protocol 
+==== Priority ceiling protocol for tasks
 
 A common method of inhibiting other tasks from coincidentally accessing
 the same shared resources (mostly data objects in RAM) is the priority
@@ -1364,23 +1440,24 @@ higher priority from execution. The modification guarantees to a safety
 supervisory task that it will always execute so that it can safely
 recognize potentially harmful software states under all circumstances.
 
-Due to the priority scheme being shared between ISRs and tasks these
-methods may be useful for mutual exclusion with ISRs, too.
-
     #include "rtos.h"
-    uint32_t rtos_osSuspendAllInterruptsByPriority
-                            (uint32_t suspendUpToThisPriority);
-    void rtos_osResumeAllInterruptsByPriority
-                            (uint32_t resumeDownToThisPriority);
-    uint32_t rtos_suspendAllInterruptsByPriority
-                            (uint32_t suspendUpToThisPriority);
-    void rtos_resumeAllInterruptsByPriority
-                            (uint32_t resumeDownToThisPriority);
+    uint32_t rtos_osSuspendAllTasksByPriority
+                            (uint32_t suspendUpToThisTaskPriority);
+    void rtos_osResumeAllTasksByPriority
+                            (uint32_t resumeDownToThisTaskPriority);
+    uint32_t rtos_suspendAllTasksByPriority
+                            (uint32_t suspendUpToThisTaskPriority);
+    void rtos_resumeAllTasksByPriority
+                            (uint32_t resumeDownToThisTaskPriority);
 
 Because of their system call interface, the cost of calling these
 functions from user tasks is significantly higher than of the OS
 functions. They should be used with care. Software design should
 preferably make use of lock-free communication concepts.
+
+It is generally not possible for a user task to implement mutual exclusion
+with an ISR. Software design needs to make use of lock-free communication
+concepts, where this matters.
 
 ==== Suspend a process
 
@@ -1419,6 +1496,8 @@ process are still unused.
 Note, the computation is expensive and should be done only in a task of
 low priority.
 
+The API can be called from OS and user tasks.
+
 
 ==== Task overrun
 
@@ -1452,6 +1531,8 @@ system make use of time budgets for user tasks than it may be a matter of
 getting occasional time-out exceptions because of temporary high system
 load.
 
+The API can be called from OS and user tasks.
+
 
 ==== Exception count by kind
 
@@ -1471,6 +1552,8 @@ coherently to a user task and so this invariant won't hold for queried counts.
 
 The differentiated kinds of exceptions are enumerated and documented in
 the header file `rtos.h`.
+
+The API can be called from OS and user tasks.
 
 
 ==== Process state
@@ -1495,6 +1578,9 @@ most of the idle time for load computation.
     unsigned int gsl_getSystemLoad(void);
 
 The load is returned in tens of percent.
+
+The function could be called from OS and user tasks, but the only
+meaningful use case is calling it from the OS idle task.
 
 
 [[secMemoryLayout]]
@@ -1721,6 +1807,9 @@ even if your code handles the race conditions; the variable will not be
 write-accessible by all calling processes. Maybe, the solution is the use
 of the shared memory area but this can easily break the safety concept.
 
+Note, automatic variables, which are placed on the stack, are not
+affected. Each process has its own stack in its own memory area.
+
 === Common access rules
 
 The memory area descriptors are attributed with access rights for the
@@ -1730,12 +1819,12 @@ following rules:
 * All processes have read-access to the used portion of the ROM (both,
   instruction read and data read). The unused portion of ROM is generally
   unaccessible
-* All processes have read-access to the used portions of the RAM (both,
-  instruction read and data read). The unused portion of RAM is generally
-  unaccessible
-* The kernel process (OS code, including I/O drivers) write-access to all
-  used RAM
-* Any user process has write-access to its own three RAM areas
+* All processes have data read-access to the used portions of the RAM. The
+  unused portion of RAM is generally unaccessible
+* The kernel process (OS code, including I/O drivers) has write-access and
+  instruction read-access to all used RAM
+* Any user process has write-access and instruction read-access to its own
+  three RAM areas
 * All processes have write-access to the shared RAM area
 * The kernel process has data read- and write access to the I/O address
   space
@@ -1771,7 +1860,7 @@ If there is some legacy application source code then there will likely be
 some legacy build scripts, too. The legacy build scripts can't easily be
 used with safe-RTOS; the tight interference between the RTOS' own linker
 script and the source code (MPU configuration and ownership of data
-objects) needed to be adopted by the legacy scripts. Which is not
+objects) needs to be adopted by the legacy scripts. Which is not
 impossible but it shall be difficult. The existing build scripts will have
 their own requirements concerning partitioning the memory map and
 conflicts with the RTOS' concept of having three solid RAM areas per
@@ -1825,20 +1914,12 @@ one of its sub-folders, is considered the sample application.
 
 The safe-RTOS repository contains a few such sample applications.
 
-[[secAppDefault]]
-=== Sample application "default"
+[[secAppInitial]]
+=== Sample application "initial"
 
-The first sample application is a migration of the according code from the
-elder TRK-USB-MPC5643L sample "RTOS-VLE". It has been put into file
-`code\application\default\mai_main.c`.
-
-The migration mainly considers the API changes of the RTOS and the
-functionality is still quite similar to TRK-USB-MPC5643L sample "RTOS-VLE"
-with its blinking LEDs. Several tasks are running concurrently and the
-LEDs are driven by different tasks. Some progress information is printed
-to the serial output but much of the operation can be observed only in the
-debugger. This sample application doesn't make much use of the safety
-concepts of the new RTOS.
+Sample application "initial" is a minimal configuration of the RTOS, meant
+to demonstrate the use of the APIs to configure an run the RTOS: Create an
+event, associate a task with the event and start the kernel.
 
 To see how the RTOS sample application works you need to open a terminal
 software on your host machine. You can find a terminal as part of the
@@ -1851,6 +1932,31 @@ out.) The Baud rate has been selected as 115200 Bd in file
 `code\application\default\mai_main.c`, 8 Bit, no parity, 1 start and stop
 Bit. The terminal should print the messages, which are regularly sent by
 the sample code running on the evaluation board.
+
+To compile the RTOS with this sample application, have 
+
+    APP=code/application/initial/
+
+in the command line of the make process.
+
+
+=== Sample application "default"
+
+The next sample application is a migration of the according code from the
+elder TRK-USB-MPC5643L sample "RTOS-VLE". It has been put into file
+`code\application\default\mai_main.c`.
+
+The migration mainly considers the API changes of the RTOS and the
+functionality is still quite similar to TRK-USB-MPC5643L sample "RTOS-VLE"
+with its blinking LEDs. Several tasks are running concurrently and the
+LEDs are driven by different tasks. Some progress information is printed
+to the serial output but much of the operation can be observed only in the
+debugger. This sample application doesn't make much use of the safety
+concepts of the new RTOS.
+
+Progress and status are reported through the serial interface. Setting up
+a terminal program on the development computer is identical to
+<<secAppInitial>>.
 
 Try pressing button SW3 on the evaluation board and see what happens.
 
@@ -1877,7 +1983,7 @@ kernel.
 
 Progress and status are reported through the serial interface. Setting up
 a terminal program on the development computer is identical to
-<<secAppDefault>>.
+<<secAppInitial>>.
 
 The process related API is used by the controlling tasks to halt software
 execution if any deviation from the expectations should be recognized -
@@ -1890,6 +1996,22 @@ To compile the RTOS with this sample application, have
 
 in the command line of the make process.
 
+=== Sample applications "testPCP" and "roundRobin"
+
+These sample applications serve as test of the scheduler of the RTOS.
+Progress and status are reported through the serial interface. Setting up
+a terminal program on the development computer is identical to
+<<secAppInitial>>.
+
+To compile the RTOS with this sample applications, have 
+
+    APP=code/application/testPCP/
+
+or, respectively,
+
+    APP=code/application/roundRobin/
+
+in the command line of the make process.
 
 :Local Variables:
 :coding:    utf-8
