@@ -89,10 +89,12 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
       <li><a href="#index_b"><span>b</span></a></li>
       <li><a href="#index_d"><span>d</span></a></li>
       <li><a href="#index_g"><span>g</span></a></li>
+      <li><a href="#index_i"><span>i</span></a></li>
       <li><a href="#index_n"><span>n</span></a></li>
       <li><a href="#index_r"><span>r</span></a></li>
       <li><a href="#index_s"><span>s</span></a></li>
-      <li class="current"><a href="#index_t"><span>t</span></a></li>
+      <li><a href="#index_t"><span>t</span></a></li>
+      <li class="current"><a href="#index_u"><span>u</span></a></li>
     </ul>
   </div>
 </div><!-- top -->
@@ -200,6 +202,16 @@ $(document).ready(function(){initNavTree('globals_defs.html','');});
 </ul>
 
 
+<h3><a class="anchor" id="index_i"></a>- i -</h3><ul>
+<li>INT_T_MAX
+: <a class="el" href="typ__types_8h.html#a6cfe01e7fe8992f216423fabb793599d">typ_types.h</a>
+</li>
+<li>INT_T_MIN
+: <a class="el" href="typ__types_8h.html#a1c182c09d0b3c8d940589c82c0e85030">typ_types.h</a>
+</li>
+</ul>
+
+
 <h3><a class="anchor" id="index_n"></a>- n -</h3><ul>
 <li>NO_INLINE
 : <a class="el" href="typ__types_8h.html#ab5ce7bd7fe4169a9f709815f03f9870b">typ_types.h</a>
@@ -209,7 +221,7 @@ $(document).ready(function(){initNavTree('globals_defs.html','');});
 
 <h3><a class="anchor" id="index_r"></a>- r -</h3><ul>
 <li>RTOS_CLOCK_TICK_IN_MS
-: <a class="el" href="rtos_8h.html#adac6ecd4fb33ad903127c325c5aff1e0">rtos.h</a>
+: <a class="el" href="rtos_8config_8h.html#adac6ecd4fb33ad903127c325c5aff1e0">rtos.config.h</a>
 </li>
 <li>RTOS_DISARM_MPU
 : <a class="el" href="rtos__system_memory_protection_unit_8c.html#af620f44dbc920ca8f7a2a92d67e70ff0">rtos_systemMemoryProtectionUnit.c</a>
@@ -235,6 +247,9 @@ $(document).ready(function(){initNavTree('globals_defs.html','');});
 <li>RTOS_ERR_PRC_PROGRAM_INTERRUPT
 : <a class="el" href="rtos_8h.html#a0172049df63fe882ed7bacdb1d395600">rtos.h</a>
 </li>
+<li>RTOS_ERR_PRC_RESERVED
+: <a class="el" href="rtos_8h.html#a82df28472250ffa82b5cf33dbb41c93f">rtos.h</a>
+</li>
 <li>RTOS_ERR_PRC_SPE_INSTRUCTION
 : <a class="el" href="rtos_8h.html#af17be265e573ec7a6908a84693422c0c">rtos.h</a>
 </li>
@@ -246,9 +261,6 @@ $(document).ready(function(){initNavTree('globals_defs.html','');});
 </li>
 <li>RTOS_ERR_PRC_TBL_INSTRUCTION
 : <a class="el" href="rtos_8h.html#ad85879d045e06a015caa8cd62a907500">rtos.h</a>
-</li>
-<li>RTOS_ERR_PRC_TRAP
-: <a class="el" href="rtos_8h.html#a11a38a6de128a822a1e110019dbed22d">rtos.h</a>
 </li>
 <li>RTOS_ERR_PRC_USER_ABORT
 : <a class="el" href="rtos_8h.html#a32453f0c8f6c8845c879a54e4288c2b4">rtos.h</a>
@@ -268,20 +280,20 @@ $(document).ready(function(){initNavTree('globals_defs.html','');});
 <li>RTOS_INVALID_EVENT_ID
 : <a class="el" href="rtos_8h.html#ac4ea516ad4edd46b1088804cf463bc84">rtos.h</a>
 </li>
-<li>RTOS_KERNEL_PRIORITY
-: <a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">rtos.h</a>
+<li>RTOS_KERNEL_IRQ_PRIORITY
+: <a class="el" href="rtos_8config_8h.html#a9f3892b7ba70de7367144de511111c59">rtos.config.h</a>
 </li>
-<li>RTOS_MAX_LOCKABLE_PRIORITY
-: <a class="el" href="rtos_8h.html#a9520f3e002688cbf786b1d0134350dbe">rtos.h</a>
+<li>RTOS_MAX_LOCKABLE_TASK_PRIORITY
+: <a class="el" href="rtos_8config_8h.html#a7c7e477ca4efe3a5b5502f91e0568d99">rtos.config.h</a>
 </li>
 <li>RTOS_MAX_NO_EVENTS
-: <a class="el" href="rtos_8h.html#a6f73e4184494130fdd081ee3b603a732">rtos.h</a>
+: <a class="el" href="rtos_8config_8h.html#a6f73e4184494130fdd081ee3b603a732">rtos.config.h</a>
 </li>
-<li>RTOS_MAX_NO_USER_TASKS
-: <a class="el" href="rtos_8h.html#a70565e1202ec02ce7048d39775cccb2d">rtos.h</a>
+<li>RTOS_MAX_NO_TASKS
+: <a class="el" href="rtos_8config_8h.html#a132fbde1ccf910d5a3ba069232db0709">rtos.config.h</a>
 </li>
-<li>RTOS_NO_CAUSES_TASK_ABORTION
-: <a class="el" href="rtos__ivor_handler_8h.html#a1416cacfeac328c2734d1b4bf473b6c3">rtos_ivorHandler.h</a>
+<li>RTOS_MAX_TASK_PRIORITY
+: <a class="el" href="rtos_8config_8h.html#a43041ea621d7f741020ac4fca4c543c7">rtos.config.h</a>
 </li>
 <li>RTOS_NO_ERR_PRC
 : <a class="el" href="rtos_8h.html#a3e599fcdd6c1ffc7c78aa83bf3d890c6">rtos.h</a>
@@ -295,26 +307,23 @@ $(document).ready(function(){initNavTree('globals_defs.html','');});
 <li>RTOS_SC_TABLE_ENTRY
 : <a class="el" href="rtos_8h.html#a7eac206295711ad1e5346d367f9ce74c">rtos.h</a>
 </li>
-<li>RTOS_SYSCALL_ASSERT_FUNC
-: <a class="el" href="rtos__ivor_handler_8h.html#a0fa698f1f0300eced6207a63c8a07ae1">rtos_ivorHandler.h</a>
+<li>RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY
+: <a class="el" href="rtos_8config_8h.html#aa7e65dd33e6a3ac1d6d1eb3831c198c0">rtos.config.h</a>
 </li>
 <li>RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 : <a class="el" href="rtos__system_call_8c.html#a84aeb758bcdf0f1f3b53503464c3ae35">rtos_systemCall.c</a>
 </li>
-<li>RTOS_SYSCALL_RESUME_ALL_INTERRUPTS_BY_PRIORITY
-: <a class="el" href="rtos__priority_ceiling_protocol_8h.html#a4410822296276ecb2714f496325cff08">rtos_priorityCeilingProtocol.h</a>
+<li>RTOS_SYSCALL_RESUME_ALL_TASKS_BY_PRIORITY
+: <a class="el" href="rtos__priority_ceiling_protocol_8h.html#a2dabd2911ae013122d4558f976d3b689">rtos_priorityCeilingProtocol.h</a>
 </li>
 <li>RTOS_SYSCALL_RUN_TASK
-: <a class="el" href="rtos__scheduler_8h.html#a866e2069c380206deb52871acc8e6e2c">rtos_scheduler.h</a>
+: <a class="el" href="rtos__run_task_8h.html#a866e2069c380206deb52871acc8e6e2c">rtos_runTask.h</a>
 </li>
-<li>RTOS_SYSCALL_SUSPEND_ALL_INTERRUPTS_BY_PRIORITY
-: <a class="el" href="rtos__priority_ceiling_protocol_8h.html#a0b22d7d4a9e62d6b61f3d50a4501f01f">rtos_priorityCeilingProtocol.h</a>
+<li>RTOS_SYSCALL_SUSPEND_ALL_TASKS_BY_PRIORITY
+: <a class="el" href="rtos__priority_ceiling_protocol_8h.html#a97b93e79061c128f765724a1b09708c9">rtos_priorityCeilingProtocol.h</a>
 </li>
 <li>RTOS_SYSCALL_SUSPEND_PROCESS
 : <a class="el" href="rtos__process_8h.html#a643cf094ea71fd6e396ad6e7147bb23c">rtos_process.h</a>
-</li>
-<li>RTOS_SYSCALL_SUSPEND_TERMINATE_TASK
-: <a class="el" href="rtos__ivor_handler_8h.html#a15d8871ad805e54a86649b8b726df7fd">rtos_ivorHandler.h</a>
 </li>
 <li>RTOS_SYSCALL_TRIGGER_EVENT
 : <a class="el" href="rtos__scheduler_8h.html#a55b40fe48f3cd0222a446f0f6b559bbd">rtos_scheduler.h</a>
@@ -362,21 +371,19 @@ $(document).ready(function(){initNavTree('globals_defs.html','');});
 <li>sizeOfAry
 : <a class="el" href="typ__types_8h.html#a50c28e23c3930259953bf78ba200c87d">typ_types.h</a>
 </li>
-<li>SPR_G0_SVSP
-: <a class="el" href="rtos__ivor_handler_8h.html#ac8d55229388c64a2faf91949f8402d11">rtos_ivorHandler.h</a>
-</li>
-<li>SPR_G1_SDA
-: <a class="el" href="rtos__ivor_handler_8h.html#ad628fd1a196ebfe3c032e2803db5bd2d">rtos_ivorHandler.h</a>
-</li>
-<li>SPR_G2_SDA2
-: <a class="el" href="rtos__ivor_handler_8h.html#affedf16b0c715cc95a1360e85c38ce51">rtos_ivorHandler.h</a>
-</li>
 </ul>
 
 
 <h3><a class="anchor" id="index_t"></a>- t -</h3><ul>
 <li>TI_WINDOW_LEN_MS
 : <a class="el" href="gsl__system_load_8c.html#a1a0ebbe40291f935fed867fb36bde4c9">gsl_systemLoad.c</a>
+</li>
+</ul>
+
+
+<h3><a class="anchor" id="index_u"></a>- u -</h3><ul>
+<li>UINT_T_MAX
+: <a class="el" href="typ__types_8h.html#a2d069e3f476dfa726365914d7045dbf9">typ_types.h</a>
 </li>
 </ul>
 </div><!-- contents -->

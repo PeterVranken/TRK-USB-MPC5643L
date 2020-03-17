@@ -25,6 +25,9 @@ var typ__types_8h =
     [ "BSS_SHARED", "typ__types_8h.html#a650074eae2f9cf1e66a52e09b8279658", null ],
     [ "DATA_SHARED", "typ__types_8h.html#a6fd27dbb389be9bffaf2d40f3f8eac15", null ],
     [ "sizeOfAry", "typ__types_8h.html#a50c28e23c3930259953bf78ba200c87d", null ],
+    [ "UINT_T_MAX", "typ__types_8h.html#a2d069e3f476dfa726365914d7045dbf9", null ],
+    [ "INT_T_MAX", "typ__types_8h.html#a6cfe01e7fe8992f216423fabb793599d", null ],
+    [ "INT_T_MIN", "typ__types_8h.html#a1c182c09d0b3c8d940589c82c0e85030", null ],
     [ "float32_t", "typ__types_8h.html#a4611b605e45ab401f02cab15c5e38715", null ],
     [ "float64_t", "typ__types_8h.html#ac55f3ae81b5bc9053760baacf57e47f4", null ]
 ];

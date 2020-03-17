@@ -167,6 +167,12 @@ Macros</h2></td></tr>
 <tr class="separator:a6fd27dbb389be9bffaf2d40f3f8eac15"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50c28e23c3930259953bf78ba200c87d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="typ__types_8h.html#a50c28e23c3930259953bf78ba200c87d">sizeOfAry</a>(a)&#160;&#160;&#160;(sizeof(a)/sizeof(a[0]))</td></tr>
 <tr class="separator:a50c28e23c3930259953bf78ba200c87d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d069e3f476dfa726365914d7045dbf9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="typ__types_8h.html#a2d069e3f476dfa726365914d7045dbf9">UINT_T_MAX</a>(var)&#160;&#160;&#160;((uint32_t)((1ull&lt;&lt;(sizeof(var)*8u))-1ull))</td></tr>
+<tr class="separator:a2d069e3f476dfa726365914d7045dbf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6cfe01e7fe8992f216423fabb793599d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="typ__types_8h.html#a6cfe01e7fe8992f216423fabb793599d">INT_T_MAX</a>(var)&#160;&#160;&#160;((int32_t)((1ul&lt;&lt;((sizeof(var)*8u)-1u))-1ul))</td></tr>
+<tr class="separator:a6cfe01e7fe8992f216423fabb793599d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c182c09d0b3c8d940589c82c0e85030"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="typ__types_8h.html#a1c182c09d0b3c8d940589c82c0e85030">INT_T_MIN</a>(var)&#160;&#160;&#160;((int32_t)(1ul&lt;&lt;((sizeof(var)*8u)-1u)))</td></tr>
+<tr class="separator:a1c182c09d0b3c8d940589c82c0e85030"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -590,6 +596,57 @@ BSS_OS(x);" instead of the more explicit "int x SECTION(.bss.OS.x);" into your s
       </table>
 </div><div class="memdoc">
 <p>The number of elements of a one dimensional array. </p>
+
+</div>
+</div>
+<a class="anchor" id="a2d069e3f476dfa726365914d7045dbf9"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define UINT_T_MAX</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">var</td><td>)</td>
+          <td>&#160;&#160;&#160;((uint32_t)((1ull&lt;&lt;(sizeof(var)*8u))-1ull))</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Support of uintX_t types, X=8, 16, 32: Get the implementation maximum of such a variable. </p>
+
+</div>
+</div>
+<a class="anchor" id="a6cfe01e7fe8992f216423fabb793599d"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define INT_T_MAX</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">var</td><td>)</td>
+          <td>&#160;&#160;&#160;((int32_t)((1ul&lt;&lt;((sizeof(var)*8u)-1u))-1ul))</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Support of intX_t types, X=8, 16, 32: Get the implementation maximum of such a variable. </p>
+
+</div>
+</div>
+<a class="anchor" id="a1c182c09d0b3c8d940589c82c0e85030"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define INT_T_MIN</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">var</td><td>)</td>
+          <td>&#160;&#160;&#160;((int32_t)(1ul&lt;&lt;((sizeof(var)*8u)-1u)))</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Support of intX_t types, X=8, 16, 32: Get the implementation minimum of such a variable. </p>
 
 </div>
 </div>

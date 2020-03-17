@@ -763,9 +763,10 @@ WARN_LOGFILE           =
 # spaces.
 # Note: If this tag is empty the current directory is searched.
 
-INPUT =                                                      \
-    mainpage.txt                                             \
-    ../../code/system/RTOS                                   \
+INPUT =                                                     \
+    mainpage.txt                                            \
+    ../../code/system/RTOS                                  \
+    ../../code/system/RTOS/rtos.config.h.template           \
     ../../code/system/startup/typ_types.h
 
 # This tag can be used to specify the character encoding of the source files
@@ -803,7 +804,8 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                =
+EXCLUDE =                                                   \
+    ../../code/system/RTOS/rtos_ivorHandler.h
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

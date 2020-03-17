@@ -123,7 +123,7 @@ $(document).ready(function(){initNavTree('rtos__process_8c.html','');});
 <code>#include &quot;<a class="el" href="rtos__process__def_sys_calls_8h_source.html">rtos_process_defSysCalls.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos_8h_source.html">rtos.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos__system_call_8h_source.html">rtos_systemCall.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="rtos__ivor_handler_8h_source.html">rtos_ivorHandler.h</a>&quot;</code><br />
+<code>#include &quot;rtos_ivorHandler.h&quot;</code><br />
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
@@ -300,7 +300,7 @@ This function must be called from the OS context only. Any attempt to use it in 
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">PID</td><td>The ID of the queried process in the range 1 .. RTOS_NO_PROCESSES. An out of range PID will always yield UINT_MAX and an assertion fires in DEBUG compilation. An unused process has no errors. </td></tr>
-    <tr><td class="paramname">kindOfErr</td><td>The category of the error. See file <a class="el" href="rtos__ivor_handler_8h.html">rtos_ivorHandler.h</a>, <a class="el" href="rtos_8h.html#a5c3c87d0d5a675b6ebe299611b001193">RTOS_ERR_PRC_MACHINE_CHECK</a> and following, for the enumerated error causes. </td></tr>
+    <tr><td class="paramname">kindOfErr</td><td>The category of the error. See file rtos_ivorHandler.h, <a class="el" href="rtos_8h.html#a5c3c87d0d5a675b6ebe299611b001193">RTOS_ERR_PRC_MACHINE_CHECK</a> and following, for the enumerated error causes. </td></tr>
   </table>
   </dd>
 </dl>

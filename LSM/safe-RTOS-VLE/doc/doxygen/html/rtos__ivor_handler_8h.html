@@ -118,40 +118,43 @@ Macros</h2></td></tr>
 <tr class="memitem:a1416cacfeac328c2734d1b4bf473b6c3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__ivor_handler_8h.html#a1416cacfeac328c2734d1b4bf473b6c3">RTOS_NO_CAUSES_TASK_ABORTION</a>&#160;&#160;&#160;13</td></tr>
 <tr class="separator:a1416cacfeac328c2734d1b4bf473b6c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:affbd1ba8b8f79c91552c48d081f82081"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="affbd1ba8b8f79c91552c48d081f82081"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT</b>&#160;&#160;&#160;0 /* Process abort from user/scheduler */</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT</b>&#160;&#160;&#160;0  /** Process abort from user/scheduler */</td></tr>
 <tr class="separator:affbd1ba8b8f79c91552c48d081f82081"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a79afa240874c933a56d4bbdb22d66580"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK</b></td></tr>
 <tr class="separator:a79afa240874c933a56d4bbdb22d66580"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6f423835b9dd1f79daf112ee3251b148"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6f423835b9dd1f79daf112ee3251b148"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_DEADLINE</b>&#160;&#160;&#160;2 /* Task exceeded deadline */</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_DEADLINE</b>&#160;&#160;&#160;2  /* Task exceeded deadline */</td></tr>
 <tr class="separator:a6f423835b9dd1f79daf112ee3251b148"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af659a177207e5e1e20efcd2d68e588a3"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af659a177207e5e1e20efcd2d68e588a3"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_DI_STORAGE</b>&#160;&#160;&#160;3 /* IVOR #2/#3, MMU storage error */</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_DI_STORAGE</b>&#160;&#160;&#160;3  /* IVOR #2/#3, MMU storage error */</td></tr>
 <tr class="separator:af659a177207e5e1e20efcd2d68e588a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1500f35f9eecbc5ded34e591dcb5f113"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG</b></td></tr>
 <tr class="separator:a1500f35f9eecbc5ded34e591dcb5f113"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab4a40975f1c1aff89ef196024789f17d"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab4a40975f1c1aff89ef196024789f17d"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_ALIGNMENT</b>&#160;&#160;&#160;5 /* IVOR #5, Alignment */</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_ALIGNMENT</b>&#160;&#160;&#160;5  /* IVOR #5, Alignment */</td></tr>
 <tr class="separator:ab4a40975f1c1aff89ef196024789f17d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8237d0d5cb307f3eb58f9cfc2be36437"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT</b></td></tr>
 <tr class="separator:a8237d0d5cb307f3eb58f9cfc2be36437"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae36f5dc28b16817ed876d8de2d3f3525"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae36f5dc28b16817ed876d8de2d3f3525"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_FPU_UNAVAIL</b>&#160;&#160;&#160;7 /* IVOR #7, Book E FPU instructions */</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_FPU_UNAVAIL</b>&#160;&#160;&#160;7  /* IVOR #7, Book E FPU instructions */</td></tr>
 <tr class="separator:ae36f5dc28b16817ed876d8de2d3f3525"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8e47423641799662ab1456f8c5ce9d6"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab8e47423641799662ab1456f8c5ce9d6"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_TBL_DATA</b>&#160;&#160;&#160;8 /* IVOR #13, TBL data access mismatch */</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_TBL_DATA</b>&#160;&#160;&#160;8  /* IVOR #13, TBL data access mismatch */</td></tr>
 <tr class="separator:ab8e47423641799662ab1456f8c5ce9d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa07286b89e25bf29fbba38638cf53d5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION</b></td></tr>
 <tr class="separator:afa07286b89e25bf29fbba38638cf53d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a80ae7885adc813440b531765dadd315e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a80ae7885adc813440b531765dadd315e"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_TRAP</b>&#160;&#160;&#160;10 /* IVOR #15, trap and debug events */</td></tr>
-<tr class="separator:a80ae7885adc813440b531765dadd315e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a856de77ddac2b127362edd2730a867a0"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a856de77ddac2b127362edd2730a867a0"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION</b>&#160;&#160;&#160;11 /* IVOR #32, use of SPE instruction */</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION</b>&#160;&#160;&#160;10 /* IVOR #32, use of SPE instruction */</td></tr>
 <tr class="separator:a856de77ddac2b127362edd2730a867a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a14263fc78f2325233dbe07fa0f53d2f3"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a14263fc78f2325233dbe07fa0f53d2f3"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_USER_ABORT</b>&#160;&#160;&#160;12 /* User code returned error code */</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_USER_ABORT</b>&#160;&#160;&#160;11 /* User code returned error code */</td></tr>
 <tr class="separator:a14263fc78f2325233dbe07fa0f53d2f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9bdcef62c74cfbef7236aa62d4d5a407"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a9bdcef62c74cfbef7236aa62d4d5a407"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_CAUSE_TASK_ABBORTION_RESERVED</b>&#160;&#160;&#160;12 /* Still unused error code */</td></tr>
+<tr class="separator:a9bdcef62c74cfbef7236aa62d4d5a407"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afacf35e1468f8a7d64c070b00bcc1ff0"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afacf35e1468f8a7d64c070b00bcc1ff0"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_SIZE_OF_SF</b>(sizeOfPayload)&#160;&#160;&#160;((((sizeOfPayload)+15)/8)*8)</td></tr>
+<tr class="separator:afacf35e1468f8a7d64c070b00bcc1ff0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abb4f43771b95aadbe521f20a95900700"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abb4f43771b95aadbe521f20a95900700"></a>
 #define&#160;</td><td class="memItemRight" valign="bottom"><b>SIZE_OF_TASK_DESC</b>&#160;&#160;&#160;4</td></tr>
 <tr class="separator:abb4f43771b95aadbe521f20a95900700"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -224,6 +227,24 @@ Macros</h2></td></tr>
 <tr class="memitem:abb8341f61418378e0134f9692e3c9348"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abb8341f61418378e0134f9692e3c9348"></a>
 #define&#160;</td><td class="memItemRight" valign="bottom"><b>RUT_SIZE_OF_SF_PAYLOAD</b>&#160;&#160;&#160;92      /* Size of user data in stack frame */</td></tr>
 <tr class="separator:abb8341f61418378e0134f9692e3c9348"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afeab631a29932c32c8a2497f471e5d5e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afeab631a29932c32c8a2497f471e5d5e"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>IV8_O_USP</b>&#160;&#160;&#160;(8+0)</td></tr>
+<tr class="separator:afeab631a29932c32c8a2497f471e5d5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5e2677fdd5ec49c633696e5ff549657"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab5e2677fdd5ec49c633696e5ff549657"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>IV8_O_PID</b>&#160;&#160;&#160;(8+4)</td></tr>
+<tr class="separator:ab5e2677fdd5ec49c633696e5ff549657"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a676370e121a57f3bf68023f538d4cd58"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a676370e121a57f3bf68023f538d4cd58"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>IV8_O_SRRi</b>&#160;&#160;&#160;(8+8)   /* Two 32 Bit registers = 8 Byte */</td></tr>
+<tr class="separator:a676370e121a57f3bf68023f538d4cd58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a909d2d82031326918ba56afde9dc016c"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a909d2d82031326918ba56afde9dc016c"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>IV8_O_LR</b>&#160;&#160;&#160;(IV8_SIZE_OF_SF+4)</td></tr>
+<tr class="separator:a909d2d82031326918ba56afde9dc016c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab9bbe1ff0ec66425097edb91ba121a33"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab9bbe1ff0ec66425097edb91ba121a33"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>IV8_SIZE_OF_SF_PAYLOAD</b>&#160;&#160;&#160;16      /* Size of user data in stack frame */</td></tr>
+<tr class="separator:ab9bbe1ff0ec66425097edb91ba121a33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2cf2c9c9b824c2bacde42936fd6d63fa"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2cf2c9c9b824c2bacde42936fd6d63fa"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>IV8_SIZE_OF_SF</b>&#160;&#160;&#160;RTOS_SIZE_OF_SF(IV8_SIZE_OF_SF_PAYLOAD)</td></tr>
+<tr class="separator:a2cf2c9c9b824c2bacde42936fd6d63fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a15d8871ad805e54a86649b8b726df7fd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__ivor_handler_8h.html#a15d8871ad805e54a86649b8b726df7fd">RTOS_SYSCALL_SUSPEND_TERMINATE_TASK</a>&#160;&#160;&#160;0</td></tr>
 <tr class="separator:a15d8871ad805e54a86649b8b726df7fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0fa698f1f0300eced6207a63c8a07ae1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__ivor_handler_8h.html#a0fa698f1f0300eced6207a63c8a07ae1">RTOS_SYSCALL_ASSERT_FUNC</a>&#160;&#160;&#160;6</td></tr>
@@ -265,7 +286,7 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">1 <span class="comment">/* IVOR #1, Machine check, mostly memory</span></div>
+<b>Value:</b><div class="fragment"><div class="line">1  <span class="comment">/* IVOR #1, Machine check, mostly memory</span></div>
 <div class="line"><span class="comment">                                                         protection */</span></div>
 </div><!-- fragment -->
 </div>
@@ -279,7 +300,7 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">4 <span class="comment">/* Task referred to invalid system</span></div>
+<b>Value:</b><div class="fragment"><div class="line">4  <span class="comment">/* Task referred to invalid system</span></div>
 <div class="line"><span class="comment">                                                         call */</span></div>
 </div><!-- fragment -->
 </div>
@@ -293,7 +314,7 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">6 <span class="comment">/* IVOR #6, mostly illegal</span></div>
+<b>Value:</b><div class="fragment"><div class="line">6  <span class="comment">/* IVOR #6, mostly illegal</span></div>
 <div class="line"><span class="comment">                                                          instruction */</span></div>
 </div><!-- fragment -->
 </div>
@@ -307,7 +328,7 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">9 <span class="comment">/* IVOR #14, TBL instr access</span></div>
+<b>Value:</b><div class="fragment"><div class="line">9  <span class="comment">/* IVOR #14, TBL instr access</span></div>
 <div class="line"><span class="comment">                                                          mismatch */</span></div>
 </div><!-- fragment -->
 </div>

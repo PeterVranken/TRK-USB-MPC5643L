@@ -112,6 +112,8 @@ $(document).ready(function(){initNavTree('rtos__scheduler_8h.html','');});
 <div class="contents">
 <div class="textblock"><code>#include &lt;stdint.h&gt;</code><br />
 <code>#include &lt;stdbool.h&gt;</code><br />
+<code>#include &quot;MPC5643L.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="rtos_8h_source.html">rtos.h</a>&quot;</code><br />
 </div>
 <p><a href="rtos__scheduler_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -119,11 +121,11 @@ $(document).ready(function(){initNavTree('rtos__scheduler_8h.html','');});
 Macros</h2></td></tr>
 <tr class="memitem:a55b40fe48f3cd0222a446f0f6b559bbd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#a55b40fe48f3cd0222a446f0f6b559bbd">RTOS_SYSCALL_TRIGGER_EVENT</a>&#160;&#160;&#160;3</td></tr>
 <tr class="separator:a55b40fe48f3cd0222a446f0f6b559bbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a866e2069c380206deb52871acc8e6e2c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#a866e2069c380206deb52871acc8e6e2c">RTOS_SYSCALL_RUN_TASK</a>&#160;&#160;&#160;4</td></tr>
-<tr class="separator:a866e2069c380206deb52871acc8e6e2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a851764d259097a9035a040bb1269f5e5"><td class="memItemLeft" align="right" valign="top">static unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#a851764d259097a9035a040bb1269f5e5">rtos_osGetCurrentInterruptPriority</a> (void)</td></tr>
+<tr class="separator:a851764d259097a9035a040bb1269f5e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9e214eed5eb27fd51e72227fb62f9b8a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos_osCreateEvent</a> (unsigned int *pEventId, unsigned int tiCycleInMs, unsigned int tiFirstActivationInMs, unsigned int priority, unsigned int minPIDToTriggerThisEvent)</td></tr>
 <tr class="separator:a9e214eed5eb27fd51e72227fb62f9b8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:addefdb75681eaad3fd2699f2dabf85ba"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#addefdb75681eaad3fd2699f2dabf85ba">rtos_osRegisterInitTask</a> (int32_t(*initTaskFct)(uint32_t PID), unsigned int PID, unsigned int tiMaxInUs)</td></tr>
@@ -132,16 +134,22 @@ Functions</h2></td></tr>
 <tr class="separator:a8267fb6047b63c04640f2e78852c4574"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a68096423d941e1dc670a6ec2e37d5275"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#a68096423d941e1dc670a6ec2e37d5275">rtos_osRegisterOSTask</a> (unsigned int idEvent, void(*osTaskFct)(void))</td></tr>
 <tr class="separator:a68096423d941e1dc670a6ec2e37d5275"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeaae84408e099b28495d703994100c16"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#aeaae84408e099b28495d703994100c16">rtos_osGrantPermissionRunTask</a> (unsigned int pidOfCallingTask, unsigned int targetPID)</td></tr>
-<tr class="separator:aeaae84408e099b28495d703994100c16"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab24d0fa9208d5675e03cc931a08e52fd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel</a> (void)</td></tr>
 <tr class="separator:ab24d0fa9208d5675e03cc931a08e52fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a90505523c85decbc51c6835d425f861e"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#a90505523c85decbc51c6835d425f861e">rtos_osSuspendAllTasksByPriority</a> (uint32_t suspendUpToThisTaskPriority)</td></tr>
+<tr class="separator:a90505523c85decbc51c6835d425f861e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3edc62289271a4f7bcdbcc02b1680c8e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#a3edc62289271a4f7bcdbcc02b1680c8e">rtos_osResumeAllTasksByPriority</a> (uint32_t resumeDownToThisTaskPriority)</td></tr>
+<tr class="separator:a3edc62289271a4f7bcdbcc02b1680c8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af741852d8d40bcd61fc141fc96c0523b"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#af741852d8d40bcd61fc141fc96c0523b">rtos_getNoActivationLoss</a> (unsigned int idTask)</td></tr>
 <tr class="separator:af741852d8d40bcd61fc141fc96c0523b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae058e3b77c80c513d549021f45205a4d"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#ae058e3b77c80c513d549021f45205a4d">rtos_getTaskBasePriority</a> (void)</td></tr>
+<tr class="separator:ae058e3b77c80c513d549021f45205a4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afb72ceeb5e20ccd2fb5fb8a2e5fcd5b6"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__scheduler_8h.html#afb72ceeb5e20ccd2fb5fb8a2e5fcd5b6">rtos_getCurrentTaskPriority</a> (void)</td></tr>
+<tr class="separator:afb72ceeb5e20ccd2fb5fb8a2e5fcd5b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Definition of global interface of module <a class="el" href="rtos__scheduler_8c.html">rtos_scheduler.c</a></p>
-<p>Copyright (C) 2019 Peter Vranken (<a href="#" onclick="location.href='mai'+'lto:'+'Pet'+'er'+'_Vr'+'an'+'ken'+'@Y'+'aho'+'o.'+'de'; return false;">Peter<span style="display: none;">.nosp@m.</span>_Vra<span style="display: none;">.nosp@m.</span>nken@<span style="display: none;">.nosp@m.</span>Yaho<span style="display: none;">.nosp@m.</span>o.de</a>)</p>
+<p>Copyright (C) 2019-2020 Peter Vranken (<a href="#" onclick="location.href='mai'+'lto:'+'Pet'+'er'+'_Vr'+'an'+'ken'+'@Y'+'aho'+'o.'+'de'; return false;">Peter<span style="display: none;">.nosp@m.</span>_Vra<span style="display: none;">.nosp@m.</span>nken@<span style="display: none;">.nosp@m.</span>Yaho<span style="display: none;">.nosp@m.</span>o.de</a>)</p>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.</p>
 <p>You should have received a copy of the GNU Lesser General Public License along with this program. If not, see <a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>. </p>
@@ -159,20 +167,33 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a866e2069c380206deb52871acc8e6e2c"></a>
+<h2 class="groupheader">Function Documentation</h2>
+<a class="anchor" id="a851764d259097a9035a040bb1269f5e5"></a>
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">#define RTOS_SYSCALL_RUN_TASK&#160;&#160;&#160;4</td>
+          <td class="memname">static unsigned int rtos_osGetCurrentInterruptPriority </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
-<p>System call index of function <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask()</a>, offered by this module. </p>
+<p>Query the current interrupt priority level. </p><dl class="section return"><dt>Returns</dt><dd>Get the interrupt level in the range 0..15. 1..15 are returned to ISRs running on that level and 0 ist returned if the function is called from an OS task. </dd></dl>
+<dl class="section remark"><dt>Remarks</dt><dd>This function must be called from the OS context only. User tasks don't have the privileges to call this function. </dd></dl>
 
 </div>
 </div>
-<h2 class="groupheader">Function Documentation</h2>
 <a class="anchor" id="a9e214eed5eb27fd51e72227fb62f9b8a"></a>
 <div class="memitem">
 <div class="memproto">
@@ -215,9 +236,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Creation of an event. The event can be cyclically triggering or software triggerd.</p>
-<p>Creation of an event. The event can be cyclically triggering or software triggerd. An event is needed to activate a user task. Therefore, any reasonable application will ceate at least one event.<br />
+<p>Creation of an event. The event can be cyclically triggering or software triggered. An event is needed to activate a user task. Therefore, any reasonable application will create at least one event.<br />
  This function is repeatedly called by the application code for each required event. All calls of this function need to be done prior to the start of the kernel using <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>.<br />
- </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the event could be created. The maximum number of events is limited to <a class="el" href="rtos_8h.html#a6f73e4184494130fdd081ee3b603a732">RTOS_MAX_NO_EVENTS</a> by hardware constraints. If the event cannot be created due to this constraint or if the event descriptor contains invalid data then then the function returns a non zero value from enumeration <em>rtos_errorCode_t</em>.<br />
+ </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the event could be created. The maximum number of events is limited to <a class="el" href="rtos_8config_8h.html#a6f73e4184494130fdd081ee3b603a732">RTOS_MAX_NO_EVENTS</a> by hardware constraints. If the event cannot be created due to this constraint or if the event descriptor contains invalid data then then the function returns a non zero value from enumeration <em>rtos_errorCode_t</em>.<br />
  An assertion in the calling code is considered appropriate to handle the error because it'll always be a static configuration error. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -227,8 +248,8 @@ Functions</h2></td></tr>
  The permitted range is 0..2^30-1. 0 means no regular, timer controlled trigger and the event is only enabled for software trigger using <a class="el" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent()</a> (permitted for interrupts or other tasks). </td></tr>
     <tr><td class="paramname">tiFirstActivationInMs</td><td>The first trigger of the event in ms after start of kernel. The permitted range is 0..2^30-1.<br />
  Note, this setting is useless if a cycle time zero in <em>tiCycleInMs</em> specifies a non regular event. <em>tiFirstActivationInMs</em> needs to be zero in this case, too. </td></tr>
-    <tr><td class="paramname">priority</td><td>The priority of the event in the range 1..(<a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">RTOS_KERNEL_PRIORITY</a>-1). Different events can share the same priority or have different priorities. The priotrity of an event is the priority of all associated tasks at the same time. The execution of tasks, which share the priority will be serialized when they are activated at same time or with overlap.<br />
- Note the safety constraint that the highest permitted priorities, <a class="el" href="rtos_8h.html#a9520f3e002688cbf786b1d0134350dbe">RTOS_MAX_LOCKABLE_PRIORITY</a>+1 till <a class="el" href="rtos_8h.html#aaa872380c24395eaa01addbd96f49edf">RTOS_KERNEL_PRIORITY</a>-1, are available only to events, which solely have tasks associated that belong to the process with highest process ID in use.<br />
+    <tr><td class="paramname">priority</td><td>The priority of the event in the range 1..UINT_MAX. Different events can share the same priority. The priority of an event is the priority of all associated tasks at the same time. The execution of tasks, which share the priority will be serialized when they are activated at same time or with overlap.<br />
+ Note the safety constraint that task priorities above <a class="el" href="rtos_8config_8h.html#a7c7e477ca4efe3a5b5502f91e0568d99">RTOS_MAX_LOCKABLE_TASK_PRIORITY</a> are available only to events, which solely have tasks associated that belong to the process with highest process ID in use.<br />
  Note, the order in which events are created can affect the priority in a certain sense. If two events are created with same priority and when they at runtime become due at the same OS time tick then the earlier created event will trigger its associated user tasks before the later ceated event. </td></tr>
     <tr><td class="paramname">minPIDToTriggerThisEvent</td><td>An event can be triggered by user code, using <a class="el" href="rtos_8h.html#a7ea8f15fbf4159dec1d3b53babbc3864">rtos_triggerEvent()</a>. However, tasks belonging to less privileged processes must not generally have permission to trigger events that may activate tasks of higher privileged processes. Since an event is not process related, we make the minimum process ID, which is required to trigger this event, an explicitly configured property of the event.<br />
  Only tasks belonging to a process with PID &gt;= <em>minPIDToTriggerThisEvent</em> are permitted to trigger this event.<br />
@@ -239,6 +260,7 @@ Functions</h2></td></tr>
 <dl class="section remark"><dt>Remarks</dt><dd>Never call this function after the call of <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>! </dd>
 <dd>
 This function must be called by trusted code in supervisor mode only. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo:</a></b></dt><dd>Effectively, this object can be considered the descriptor of the idle task. </dd></dl>
 
 </div>
 </div>
@@ -333,7 +355,7 @@ This function must be called by trusted code in supervisor mode only. </dd></dl>
 </div><div class="memdoc">
 <p>Task registration for scheduled user mode tasks.</p>
 <p>Registration of an event triggered user mode task. Normal, event activated tasks can be registered for later execution. This function is repeatedly called by the application code as often as user mode tasks are required.<br />
- All calls of this function need to be done prior to the start of the kernel using <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>. </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the task could be registered. The maximum number of tasks is limited to <a class="el" href="rtos_8h.html#a70565e1202ec02ce7048d39775cccb2d">RTOS_MAX_NO_USER_TASKS</a> (regardless, how they are distributed among processes). If the limit is exceeded or if the task specification is invalid then the function returns a non zero value from enumeration <em>rtos_errorCode_t</em>.<br />
+ All calls of this function need to be done prior to the start of the kernel using <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>. </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the task could be registered. The maximum number of tasks is limited to <a class="el" href="rtos_8config_8h.html#a132fbde1ccf910d5a3ba069232db0709">RTOS_MAX_NO_TASKS</a> (regardless, how they are distributed among processes). If the limit is exceeded or if the task specification is invalid then the function returns a non zero value from enumeration <em>rtos_errorCode_t</em>.<br />
  An assertion in the calling code is considered appropriate to handle the error because it'll always be a static configuration error. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -382,7 +404,7 @@ This function must be called by trusted code in supervisor mode only. </dd></dl>
 </div><div class="memdoc">
 <p>Task registration for scheduled operating system tasks.</p>
 <p>Registration of an event triggered operating system task. Event activated tasks can be registered for later execution. This function is repeatedly called by the application code as often as operating system tasks are required.<br />
- All calls of this function need to be done prior to the start of the kernel using <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>. </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the task could be registered. The maximum number of tasks is limited to <a class="el" href="rtos_8h.html#a70565e1202ec02ce7048d39775cccb2d">RTOS_MAX_NO_USER_TASKS</a> (regardless, how they are distributed among processes). If the limit is exceeded or if the task specification is invalid then the function returns a non zero value from enumeration <em>rtos_errorCode_t</em>.<br />
+ All calls of this function need to be done prior to the start of the kernel using <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>. </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the task could be registered. The maximum number of tasks is limited to <a class="el" href="rtos_8config_8h.html#a132fbde1ccf910d5a3ba069232db0709">RTOS_MAX_NO_TASKS</a> (regardless, how they are distributed among processes). If the limit is exceeded or if the task specification is invalid then the function returns a non zero value from enumeration <em>rtos_errorCode_t</em>.<br />
  An assertion in the calling code is considered appropriate to handle the error because it'll always be a static configuration error. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -395,46 +417,6 @@ This function must be called by trusted code in supervisor mode only. </dd></dl>
 <dl class="section remark"><dt>Remarks</dt><dd>Never call this function after the call of <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>! </dd>
 <dd>
 This function must be called by trusted code in supervisor mode only. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="aeaae84408e099b28495d703994100c16"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void rtos_osGrantPermissionRunTask </td>
-          <td>(</td>
-          <td class="paramtype">unsigned int&#160;</td>
-          <td class="paramname"><em>pidOfCallingTask</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">unsigned int&#160;</td>
-          <td class="paramname"><em>targetPID</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Grant permission to particular processes for using the service <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask()</a>.</p>
-<p>Operating system initialization function: Grant permissions for using the service rtos_runTask to particular processes. By default, the use of that service is not allowed.<br />
- By principle, offering service rtos_runTask makes all processes vulnerable, which are allowed as target for the service. A failing, straying process can always hit some ROM code executing the system call with arbitrary register contents, which can then lead to errors in an otherwise correct process.<br />
- This does not generally break the safety concept, the potentially harmed process can for example be anyway supervised by another, unaccessible supervisory process. Consequently, we can offer the service at least on demand. A call of this function enables the service for a particular pair of calling process and targeted process. </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pidOfCallingTask</td><td>The tasks belonging to process with PID <em>pidOfCallingTask</em> are granted permission to run a task in another process. The range is 1 .. <a class="el" href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a>, which is double-checked by assertion. </td></tr>
-    <tr><td class="paramname">targetPID</td><td>The tasks started with service <a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask()</a> may be run in process with PID <em>targetPID</em>. The range is 1 .. maxPIDInUse-1, which is double-checked later.<br />
- <em>pidOfCallingTask</em> and <em>targetPID</em> must not be identical, which is double-checked by assertion. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section remark"><dt>Remarks</dt><dd>It would break the safety concept if we permitted the process with highest privileges to become the target of the service. This is double-checked not here (when it is not yet defined, which particular process that will be) but as part of the RTOS startup procedure; a bad configuration can therefore lead to a later reported run-time error. </dd>
-<dd>
-This function must be called from the OS context only. It is intended for use in the operating system initialization phase. It is not reentrant. The function needs to be called prior to <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>. </dd></dl>
 
 </div>
 </div>
@@ -453,13 +435,97 @@ This function must be called from the OS context only. It is intended for use in
 </div><div class="memdoc">
 <p>Kernel initialization.</p>
 <p>Initialization and start of the RTOS kernel.<br />
- The function initializes a hardware device to produce a regular clock tick and connects the OS schedule function onOsTimerTick() with the interrupt raised by this timer device. After return, the RTOS is running with a regular clock tick for scheduling the tasks. Period time is <a class="el" href="rtos_8h.html#adac6ecd4fb33ad903127c325c5aff1e0">RTOS_CLOCK_TICK_IN_MS</a> Milliseconds.<br />
+ The function initializes a hardware device to produce a regular clock tick and connects the OS schedule function onOsTimerTick() with the interrupt raised by this timer device. After return, the RTOS is running with a regular clock tick for scheduling the tasks. Period time is <a class="el" href="rtos_8config_8h.html#adac6ecd4fb33ad903127c325c5aff1e0">RTOS_CLOCK_TICK_IN_MS</a> Milliseconds.<br />
  The function can be called before or after the External Interrupts are enabled at the CPU (see <a class="el" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts()</a>). Normal behavior is however, no to resume the interrupt processing before and let this be done by <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>. </p><dl class="section return"><dt>Returns</dt><dd><em>rtos_err_noError</em> (zero) if the scheduler could be started. The function returns a non zero value from enumeration <em>rtos_errorCode_t</em> if a configuration error is detected. The software must not start up in this case. Since it is only about static configuration, the returned error may be appropriately handled by an assertion. </dd></dl>
 <dl class="section remark"><dt>Remarks</dt><dd>The RTOS kernel applies the Periodic Interrupt Timer 0 (PIT0) as clock source. This timer is reserved to the RTOS and must not be used at all by some other code. </dd>
 <dd>
 All application tasks need to be registered before invoking this function, see <a class="el" href="rtos__scheduler_8c.html#ad638a1d6495b0948343a90257e6410d4">rtos_osRegisterInitTask()</a>, <a class="el" href="rtos__scheduler_8c.html#ad2f82142ad49b24808f65723a0842be8">rtos_osRegisterUserTask()</a> and <a class="el" href="rtos__scheduler_8c.html#a68096423d941e1dc670a6ec2e37d5275">rtos_osRegisterOSTask()</a>. </dd>
 <dd>
 This function must be called from the OS context only. The call of this function will end the operating system initialization phase. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="a90505523c85decbc51c6835d425f861e"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t rtos_osSuspendAllTasksByPriority </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>suspendUpToThisTaskPriority</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Enter critcal section; partially suspend task scheduling.</p>
+<p>Priority ceiling protocol (PCP), partial scheduler lock: All tasks up to the specified task priority level won't be handled by the CPU any more. This function is intended for implementing mutual exclusion of sub-sets of tasks.<br />
+ Note, the use of the other function pairs<br />
+</p><ul>
+<li><a class="el" href="rtos_8h.html#a4a9eb6b285b58c2e2f8f6f02e995bf59">rtos_osEnterCriticalSection()</a> and<br />
+</li>
+<li><a class="el" href="rtos_8h.html#ae6935dc959dd97bcbe04070a477c2ac3">rtos_osLeaveCriticalSection()</a><br />
+or<br />
+</li>
+<li><a class="el" href="rtos_8h.html#ab154b2923ad0d102fa1515e89d42c898">rtos_osSuspendAllInterrupts()</a> and<br />
+</li>
+<li><a class="el" href="rtos_8h.html#ad580381efb7808b37da052d3a51a7901">rtos_osResumeAllInterrupts()</a><br />
+locks all interrupt processing and no other task (or interrupt handler) can become active while the task is inside the critical section code. With respect to behavior, using the PCP API is much better: Call this function with the highest priority of all tasks, which should be locked, i.e. which compete for the resource or critical section to protect. This may still lock other, non competing tasks, but at least all interrupts and all non competing tasks of higher priority will be served.<br />
+ The major drawback of using the PCP instead of the interrupt lock API is the significantly higher expense; particularly at the end of the critical section, when resuming the scheduling again: A recursive call of the scheduler is required to see if some tasks of higher priority had become ready during the lock time. Therefore, locking the interrupts is likely the better choice for very short critical sections.<br />
+ To release the protected resource or to leave the critical section, call the counterpart function <a class="el" href="rtos__scheduler_8c.html#a3edc62289271a4f7bcdbcc02b1680c8e">rtos_osResumeAllTasksByPriority()</a>, which restores the original task priority level. <dl class="section return"><dt>Returns</dt><dd>The task priority level at entry into this function (and into the critical section) is returned. This level needs to be restored on exit from the critical section using <a class="el" href="rtos__scheduler_8c.html#a3edc62289271a4f7bcdbcc02b1680c8e">rtos_osResumeAllTasksByPriority()</a>. </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">suspendUpToThisTaskPriority</td><td>All tasks up to and including this priority will be locked, i.e. they won't be executed even if they'd become ready. The CPU will not handle them until the priority level is lowered again. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section remark"><dt>Remarks</dt><dd>The critical section shaped with this API from an OS task guarantees mutual exclusion with critical section code shaped with the other API <a class="el" href="rtos_8h.html#aa4e09fafaef05f7c20adb63eaefe0b29">rtos_suspendAllTasksByPriority()</a> from a user code task. </dd>
+<dd>
+To support the use case of nested calls of OSEK/VDX like GetResource/ReleaseResource functions, this function compares the stated value to the current priority level. If <em>suspendUpToThisTaskPriority</em> is less than the current value then the current value is not altered. The function still returns the current value and the calling code doesn't need to take care: It can unconditionally end a critical section with <a class="el" href="rtos__scheduler_8c.html#a3edc62289271a4f7bcdbcc02b1680c8e">rtos_osResumeAllTasksByPriority()</a> stating the returned priority level value. (The resume function will have no effect in this case.) This makes the OSEK like functions usable without deep inside or full transparency of the priority levels behind the scene; just use the pairs of Get-/ResumeResource, be they nested or not. </dd>
+<dd>
+The use of this function to implement critical sections is usually quite static. For any protected entity (usually a data object or I/O device) the set of competing tasks normally is a compile time known. The priority level to set for entry into the critical section is the maximum of the priorities of all tasks in the set. The priority level to restore on exit from the critical section is the priority of the calling task. All of this static knowledge would typically be put into encapsulating macros that actually invoke this function. (OSEK/VDX like environments would use this function pair to implement the GetResource/ReleaseResource concept.) </dd>
+<dd>
+Any change of the current priority level made with this function needs to be undone using <a class="el" href="rtos__scheduler_8c.html#a3edc62289271a4f7bcdbcc02b1680c8e">rtos_osResumeAllTasksByPriority()</a> and still inside the same task. It is not possible to consider this function a mutex, which can be acquired in one task activation and which can be released in an arbitrary later task activation or from another task.<br />
+ Moreover, different to the user mode variant of the PCP function pair, there is no restoration of the current priority level at task termination time.<br />
+ An assertion in the scheduler will likely fire if the two PCP APIs are not properly used in pairs. </dd>
+<dd>
+This function must be called from OS tasks only. Any attempt to use it from either an ISR or in user mode code will lead to either a failure or privileged exception, respectively. </dd>
+<dd>
+This function requires that msr[EE]=1 on entry. </dd></dl>
+</li>
+</ul>
+
+</div>
+</div>
+<a class="anchor" id="a3edc62289271a4f7bcdbcc02b1680c8e"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void rtos_osResumeAllTasksByPriority </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>resumeDownToThisTaskPriority</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Leave critical section; resume scheduling of tasks.</p>
+<p>This function is called to end a critical section of code, which requires mutual exclusion of two or more tasks. It is the counterpart of function rtos_osSuspendAllInterruptsByPriority(), refer to that function for more details.<br />
+ </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">resumeDownToThisTaskPriority</td><td>All tasks/interrupts above this priority level are resumed again. All tasks/interrupts up to and including this priority remain locked.<br />
+ You will normally pass in the value got from the related call of rtos_osSuspendAllInterruptsByPriority(). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section remark"><dt>Remarks</dt><dd>Caution, this function lowers the current task priority level to the stated value regardless of the initial value for the task. Accidentally lowering the task priority level below the configured task priority (i.e. the priority inherited from the triggering event) will have unpredictable consequences. </dd>
+<dd>
+Different to the user mode variant of the function, <a class="el" href="rtos_8h.html#ab749e1296f04521109c29ce521ea770e">rtos_resumeAllTasksByPriority()</a>, there is no restoration of the current priority level at task termination time. For OS tasks, there's no option to omit the resume operation if a critical section should last till the end of the task - and there's no need to attempt this neither: The OS variant of the function doesn't involve the overhead of a system call and no execution time would be saved as for the user variant. </dd>
+<dd>
+This function must be called from OS tasks only. Any attempt to use it from either an ISR or in user mode code will lead to either a failure or privileged exception, respectively. </dd>
+<dd>
+This function requires that msr[EE]=1 on entry. </dd></dl>
 
 </div>
 </div>
@@ -486,6 +552,52 @@ This function must be called from the OS context only. The call of this function
   </dd>
 </dl>
 <dl class="section remark"><dt>Remarks</dt><dd>This function can be called from both, the OS context and a user task. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ae058e3b77c80c513d549021f45205a4d"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned int rtos_getTaskBasePriority </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>A cyclic or event task can query its base priority.</p>
+<p>A cyclic or event task can query its base priority. </p><dl class="section return"><dt>Returns</dt><dd>Get the base priority of the task, which calls this function. It's the priority of the event it is associated with. </dd></dl>
+<dl class="section remark"><dt>Remarks</dt><dd>The function is quite similar to rtos_getCurrentBasePriority() but this function considers temporary changes of the priority of a task because of the use of the PCP API. For one and the same task, it is rtos_getCurrentPriority() &gt; rtos_getCurrentBasePriority(). </dd>
+<dd>
+This function can be called from both, an OS or a user task. </dd>
+<dd>
+The function must not be called from an ISR or from a callback, which is started by an ISR and using the service <a class="el" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask()</a>. The result would be undefined as there is no event, which such a function would be associated with. However, with respect to safety or stability, there's no problem in doing this and therefore no privileges have been connected to this service. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="afb72ceeb5e20ccd2fb5fb8a2e5fcd5b6"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned int rtos_getCurrentTaskPriority </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>A task can query the current task scheduling priority.</p>
+<p>A task can query the current task scheduling priority. </p><dl class="section return"><dt>Returns</dt><dd>Get the current priority of the task, which calls this function. </dd></dl>
+<dl class="section remark"><dt>Remarks</dt><dd>The function is quite similar to <a class="el" href="rtos__scheduler_8c.html#ae058e3b77c80c513d549021f45205a4d">rtos_getTaskBasePriority()</a> but this function considers temporary changes of the priority of a task because of the use of the PCP API. For one and the same task, it is <a class="el" href="rtos__scheduler_8c.html#afb72ceeb5e20ccd2fb5fb8a2e5fcd5b6">rtos_getCurrentTaskPriority()</a> &gt; <a class="el" href="rtos__scheduler_8c.html#ae058e3b77c80c513d549021f45205a4d">rtos_getTaskBasePriority()</a>. </dd>
+<dd>
+This function can be called from both, an OS or a user task. </dd>
+<dd>
+The function must not be called from an ISR or from a callback, which is started by an ISR and using the service <a class="el" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask()</a>. The result would be undefined as there is no event, which such a function would be associated with. However, with respect to safety or stability, there's no problem in doing this and therefore no privileges have been connected to this service. </dd></dl>
 
 </div>
 </div>
