@@ -1,4 +1,4 @@
-= image:doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="3%", pdfwidth="5%"] "safe-RTOS" (VLE) - A simple RTOS with safety support for MPC5643L
+= image:doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="3%", pdfwidth="5%"] safe-RTOS (VLE) - A simple RTOS with safety support for MPC5643L
 :Author:            Peter Vranken 
 :Email:             mailto:Peter_Vranken@Yahoo.de
 :toc:               left
@@ -42,8 +42,7 @@ The RTOS itself is not a runnable piece of software. It requires some
 application code. The demo application file from the elder
 TRK-USB-MPC5643L sample RTOS-VLE has been modified as
 `code\application\default\mai_main.c` in order to make use of some of the
-new features of the RTOS. The functionality is similar to sample "startup"
-with its blinking LEDs. Several tasks are running concurrently and the
+new features of the RTOS. Several tasks are running concurrently and the
 LEDs are driven by different tasks. Some progress information is printed
 to the serial output but much of the operation can be observed only in the
 debugger.
@@ -61,8 +60,8 @@ the sample code running on the evaluation board.
 
 Try pressing button SW3 on the evaluation board and see what happens.
 
-A more meaningful application of the RTOS can be found in
-`code\application\basicTest`.
+Some more meaningful application of the RTOS can be found in folder
+`code\application\`.
 
 == The RTOS
 
@@ -92,17 +91,17 @@ tasks.
 
 The operating system startup code can install needed interrupt service
 routines (ISR). The API offered for this purpose is similar to the other
-samples.
+TRK-USB-MPC5643L samples in this repository.
 
-For mutual exclusion of tasks and/or ISRs, if shared data is involved, a
-lock API is offered that implements the priority ceiling protocol (PCP).
-It is secured so that supervisory tasks cannot be accidentally or
-purposely blocked.
+For mutual exclusion of tasks, if shared data is involved, a lock API is
+offered that implements the priority ceiling protocol (PCP). It is secured
+so that supervisory tasks cannot be accidentally or purposely blocked by
+application code.
 
-The mechanisms already known from the other samples to suspend and resume
-all interrupts are still supported but they are no longer offered to
-application code, only the operating system may use them (mainly for I/O
-driver implementation).
+The mechanisms already known from the other TRK-USB-MPC5643L samples to
+suspend and resume all interrupts are still supported but they are no
+longer offered to application code, only the operating system may use them
+(mainly for I/O driver implementation).
 
 The use of the RTOS is further supported by some diagnostic functions.
 They offer stack usage information, information about caught exceptions
@@ -119,37 +118,13 @@ document. The API is described in the online https://htmlpreview.github.io/?http
 === Differences to the ancestor RTOS
 
 The architecture of the RTOS is very simple and resembles its ancestors,
-which were the simple RTOS without safety concept and safe-RTOS-VLE from
-the master branch. This simplicity significantly supports the validation
-of the code in a safety-critical software development environment.
-
-The major difference between safe-RTOS on this branch and on the master
-branch is the substitution of the hardware based scheduler by a pure
-software solution. This has its pros and cons:
-
-* The performance of the software solution is worse. The sample
-  application "default" shows an increased CPU load by about 1.5%
-* There's no longer a limitation for the maximum number of events (and,
-  effectively, the number of tasks). This was the main motivation for the
-  change; a port for the MPC5775B/E dual-core suffered from the eight
-  events, which were even to be distributed onto both cores
-* All tasks have a prioprity, which is by principle lower than any
-  interrupt priority
-* User mode tasks can't have a critical section with ISRs any more. (OS
-  tasks can still have)
-* In a safety aware development process, the effort for testing and code
-  reviews will be significantly higher for the software solution
-* There are behavioral differences between hard- and software solution,
-  which are visible at the API. It's mainly about having separate priority
-  spaces for tasks and ISRs in the software solution, but this is a
-  particularity, which won't have an impact on the choice to make
-
-For small applications, where the hardware given maximum of eight events
-is no issue, the hardware solution may still be the better choice. For now,
-it is still available on the master branch of the repository.
+which were the simple RTOS without safety concept and safe-RTOS-VLE with
+hardware scheduler (still provided on the master branch). This simplicity
+significantly supports the validation of the code in a safety-critical
+software development environment.
 
 For an explanation of the scheduling scheme, you may still refer to the
-documentation of the ancestor RTOS, please look
+documentation of the simple RTOS, please look
 https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTOS-VLE#The-RTOS[here].
 
 The differences between safe-RTOS and the simple RTOS are:
@@ -159,10 +134,38 @@ The differences between safe-RTOS and the simple RTOS are:
   used a one-by-one relation between events and tasks. (Having more than
   one task per event makes sense only in conjunction with the new process
   concept)
-* The architecture may be similar but the implementation isn't. The safety
-  demands require a significant portion of assembler code for
-  implementation
+* The architecture of the RTOSs may be similar but the implementation
+  isn't. The safety demands require a significant portion of assembler
+  code for implementation
 * The Book E instruction set is no longer supported
+
+The major difference between the two branches of safe-RTOS is the
+substitution of the hardware based scheduler by a pure software solution.
+This has its pros and cons:
+
+* The performance of the software solution is worse. The sample
+  application "benchmark" shows an increased CPU load of about 0.3%. For
+  the other sample application "default", which has an extremely high
+  interrupt load, it's even 1.5%
+* There's no longer a limitation for the maximum number of events (and,
+  effectively, the number of tasks). This was the main motivation for the
+  change; a port for the MPC5775B/E dual-core suffered from the hardware
+  limitation of eight events, which were even to be distributed onto both
+  cores
+* All tasks have a prioprity, which is by principle lower than any
+  interrupt priority
+* User mode tasks can't have a critical section with ISRs any more. (OS
+  tasks can still have)
+* In a safety aware development process, the effort for testing and code
+  reviews will be higher for the software solution
+* There are behavioral differences between hard- and software solution,
+  which are visible at the API. It's mainly about having separate priority
+  spaces for tasks and ISRs in the software solution, but this is a
+  particularity, which won't have an impact on the choice to make
+
+For small applications, where the hardware given maximum of eight events
+is no issue, the hardware solution may still be the better choice. For now,
+it is still available on the master branch of the repository.
 
 == The safety concept
 
@@ -265,7 +268,7 @@ end up with an endless cycle of task activations and task abortions.
 The kernel will never do more than immediately aborting a failing task.
 It'll not take any decision like: "Enough is enough, we are going to stop
 that." Instead, it offers the mechanisms to implement such decisions in a
-particular, supervisory task.
+particular supervisory task.
 
 The implementation of recognizing privilege violations before they can
 harm is founded on the memory management unit (MMU) in the CPU, the memory
@@ -408,7 +411,7 @@ You can simply type `make` from any location to run MinGW32 GNU make.
 
 The PowerShell process reads the script `setEnv.ps1`, located in the
 project root, too, to configure the environment. This script requires
-configuration prior to its first use. Windows users open it in a text
+customization prior to its first use. Windows users open it in a text
 editor and follow the given instructions that are marked by TODO tags.
 Mainly, it's about specifying the installation directory of GCC.
 
@@ -426,7 +429,7 @@ easiest way to do so is starting Eclipse from a shell, that has executed
 the script `setEnv.ps1` prior to opening Eclipse.
 
 For Windows users the script `CW-IDE.ps1` has been prepared. This script
-requires configuration prior to its first use. Windows users open it in a
+requires customization prior to its first use. Windows users open it in a
 text editor and follow the given instructions that are marked by TODO
 tags. Mainly, it's about specifying the installation directory of
 CodeWarrior.
@@ -460,7 +463,7 @@ sample "safe-RTOS-VLE" but the kernel can't be linked into a runnable
 binary without an application. You need to specify the source code path of
 a safe-RTOS application on the command line of make. Set variable APP to
 do so. Possible applications can be found as the children of folder
-`<projectRoot>/LSM/safe-RTOS-VLE/code/applications`. Type
+`<projectRoot>/LSM/safe-RTOS-VLE/code/application`. Type
 ("code/application/default/" is just an example):
 
     mingw32-make -s build APP=code/application/default/
@@ -488,7 +491,7 @@ The makefile is designed to run on different host systems but has been
 tested with Windows 7 and Windows 10 only.
 
 Note, the Eclipse project configuration in the root folder of this sample
-supports the build of only a sub-set of the possible configurations.
+only supports the build of a sub-set of the possible configurations.
 Safe-RTOS can be compiled with a few sample applications only, each of
 them in DEBUG and PRODUCTION compilation. To build more samples with
 Eclipse you would have to duplicate the existing build configurations and
@@ -497,7 +500,8 @@ explanations and examples above.
 
 === Flashing and debugging
 
-The sample code can be flashed and debugged with the CodeWarrior IDE.
+The code of this TRK-USB-MPC5643L sample can be flashed and debugged with
+the CodeWarrior IDE.
 
 To flash the `*.elf` file of a safe-RTOS application like `default`, open the
 CodeWarrior IDE, go to the menu, click "Window/Show
@@ -529,9 +533,9 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation[TRK
 
 == Code architecture
 
-This sample builds on the other sample "RTOS-VLE" located in a sibling
-folder. "safe-RTOS-VLE" is compiled for the VLE instruction set. The build
-settings are identical to "startup-VLE". Please refer to
+This TRK-USB-MPC5643L sample builds on the other sample "RTOS-VLE" located
+in a sibling folder. "safe-RTOS-VLE" is compiled for the VLE instruction
+set. The build settings are identical to "startup-VLE". Please refer to
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-swScheduler/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc^]
 for details.
 
@@ -552,6 +556,13 @@ Only the code of the idle task is executed any longer.
 +
 Workaround: Don't open the view of the INTC0 in the debugger when
 debugging a safe-RTOS application. Then the INTC and the code work fine.
+
+. A similar effect has been observed with the instructions to alter the
+External Interrupt enable bit, MSR[EE]. Do not single-step in the debugger
+over wrtee(i) instructions. The instruction may fail to change the bit. If
+the code approaches such an instruction you should use the right-click
+operation "Run to line", targeting the instruction behind the wrtee(i).
+This works fine.
 
 . Debugger: It is not possible to hinder the P&E debugger from halting at
 an se_illegal instruction. (See https://community.nxp.com/thread/497533)
