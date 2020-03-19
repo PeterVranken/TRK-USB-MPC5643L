@@ -46,16 +46,16 @@ sample application "default", see folder `code\application\default`.
 Some more meaningful applications of the RTOS can be found in folder
 `code\application\`.
 
-To see how the samples works you need to open a terminal software on your
+To see how the samples work you need to open a terminal software on your
 host machine. You can find a terminal as part of the CodeWarrior Eclipse
 IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal".
 
 Open the serial port, which is offered by the TRK-USB-MPC5643L. (On
 Windows, open the Computer Management and go to the Device Manager to find
-out.) The Baud rate has been selected as 115200 Bd in file
-`code\application\default\mai_main.c`, 8 Bit, no parity, 1 start and stop
-Bit. The terminal should print the messages, which are regularly sent by
-the sample code running on the evaluation board.
+out.) The Baud rate has been selected as 115200 Bd in files
+`code\application\<applicationName>\mai_main.c`, 8 Bit, no parity, 1 start
+and stop Bit. The terminal should print the messages, which are regularly
+sent by the sample code running on the evaluation board.
 
 == The RTOS
 
@@ -103,9 +103,9 @@ and averaged CPU load information. The diagnostics comes along with a new
 API to halt the execution of a process. Permission to use this API is
 granted only to what is considered the safety process or task.
 
-Many more details can be found in the manual, which is
+Many more details can be found in the manual, which is available
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE/doc/manual/readMe.adoc[online^]
-available here in GitHub, or available as
+in GitHub or as
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE/doc/manual/manual.pdf[printable^]
 document. The API is described in the online https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[Doxygen^] help, too.
 
@@ -129,7 +129,7 @@ The differences between safe-RTOS and the simple RTOS are:
   one task per event makes sense only in conjunction with the new process
   concept)
 * The implementation of the safety mechanisms means a performance loss.
-  The sample application "benchmark", which aims at simulating a typical
+  The sample application "benchmark", which aims at simulating the typical
   timing of a true application shows an increased CPU load of 1.7%.
 * The architecture of the RTOSs may be similar but the implementation
   isn't. The safety demands require a significant portion of assembler
@@ -144,11 +144,10 @@ This has its pros and cons:
   application "benchmark" shows an increased CPU load of about 0.3%. For
   the other sample application "default", which has an extremely high
   interrupt load, it's even 1.5%
-* There's no longer a limitation for the maximum number of events (and,
-  effectively, the number of tasks). This was the main motivation for the
-  change; a port for the MPC5775B/E dual-core suffered from the hardware
-  limitation of eight events, which were even to be distributed onto both
-  cores
+* There's no longer a limitation for the maximum number of events. This
+  was the main motivation for the change; a port for the MPC5775B/E
+  dual-core suffered from the hardware limitation of eight events, which
+  were even to be distributed onto both cores
 * All tasks have a prioprity, which is by principle lower than any
   interrupt priority
 * User mode tasks can't have a critical section with ISRs any more. (OS
@@ -439,9 +438,9 @@ Once everything is prepared, the CodeWarrior Eclipse IDE will never be
 started other than by clicking the script `CW-IDE.ps1` or its equivalent
 on non-Windows hosts.
 
-See https://github.com/PeterVranken/TRK-USB-MPC5643L[project overview] and
+See https://github.com/PeterVranken/TRK-USB-MPC5643L[project overview^] and
 https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation[GitHub
-Wiki] for more details about downloading and installing the required
+Wiki^] for more details about downloading and installing the required
 tools.
 
 === Compiler and makefile
