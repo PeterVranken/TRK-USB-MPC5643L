@@ -40,14 +40,13 @@ harmful interferences between them. Features:
 
 The RTOS itself is not a runnable piece of software. It requires some
 application code. The demo application file from the elder
-TRK-USB-MPC5643L sample RTOS-VLE has been modified as
-`code\application\default\mai_main.c` in order to make use of some of the
-new features of the RTOS. Several tasks are running concurrently and the
-LEDs are driven by different tasks. Some progress information is printed
-to the serial output but much of the operation can be observed only in the
-debugger.
+TRK-USB-MPC5643L sample RTOS-VLE has been migrated and can now be found as
+sample application "default", see folder `code\application\default`.
 
-To see how the sample works you need to open a terminal software on your
+Some more meaningful applications of the RTOS can be found in folder
+`code\application\`.
+
+To see how the samples works you need to open a terminal software on your
 host machine. You can find a terminal as part of the CodeWarrior Eclipse
 IDE; go to the menu, "Window/Show View/Other/Terminal/Terminal".
 
@@ -57,11 +56,6 @@ out.) The Baud rate has been selected as 115200 Bd in file
 `code\application\default\mai_main.c`, 8 Bit, no parity, 1 start and stop
 Bit. The terminal should print the messages, which are regularly sent by
 the sample code running on the evaluation board.
-
-Try pressing button SW3 on the evaluation board and see what happens.
-
-Some more meaningful application of the RTOS can be found in folder
-`code\application\`.
 
 == The RTOS
 
