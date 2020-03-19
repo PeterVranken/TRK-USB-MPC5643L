@@ -127,7 +127,7 @@
  *   rtos_osInitKernel
  *   rtos_osTriggerEvent
  *   rtos_scFlHdlr_triggerEvent
- *   rtos_processTriggeredEvents
+ *   rtos_osProcessTriggeredEvents
  *   rtos_osSuspendAllTasksByPriority
  *   rtos_osResumeAllTasksByPriority
  *   rtos_getNoActivationLoss
@@ -287,8 +287,10 @@ typedef struct eventDesc_t
     be executed (depending on priority rules).\n
       Note, this function is not publically declared although it is global. It is called
     externally only from the assembly code, which can't read public declarations in header
-    files. */
-void rtos_processTriggeredEvents(eventDesc_t *pEvent);
+    files.
+      @param pEvent
+    The first event in global list, which is to be considered for scheduling. */
+void rtos_osProcessTriggeredEvents(eventDesc_t *pEvent);
 
 
 /*
@@ -514,6 +516,13 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
         return rtos_err_taskBudgetTooBig;
 
     /* We make the distinction between normal runtime tasks and initialization tasks. */
+    /// @todo Afterwards, it looks like a strange design decision to make this distinction.
+    // Why not having a block of consecutive tasks in the array of all tasks? The required
+    // sorting algorithms are anyway in place. We would reuse same code and could easily
+    // offer an unbounded number of initialization tasks per process. They were associated
+    // with a virtual event, meaning the system initialization.
+    /// @todo See other TODO, which proposes more or less the same for process related idle
+    // tasks
     if(idEvent == EVENT_ID_INIT_TASK)
     {
         /* An initialization task must not be configured repeatedly for one and the same
@@ -611,7 +620,18 @@ static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInte
 {
     bool success;
 
-    rtos_osSuspendAllInterrupts();
+    /* If the function is called from an ISR then we need to use enter/leaveCriticalSection
+       to create the critical section. This makes the function available to preemptable and
+       non-preemptable ISRs. When called from a task it would be sufficient to
+       unconditionally suspend and resume interrupt processing. (If a task has suspended
+       the interrupts and then calls this function, which temporarily enables all
+       interrupts then it'll surely be a design error in the logic of the calling task.)\n
+         Generally using enter/leaveCriticalSection is never wrong but means useless
+       overhead for calls from preemptable ISRs or tasks. The current construct of using
+       one and the same inline implementation at all the different calling situations
+       cannot avoid the useless overhead. We have a trade-off between avoidance of
+       undesired code duplication and of useless overhead in all calling situations. */
+    const uint32_t stateIrqAtEntry = rtos_osEnterCriticalSection();
     if(pEvent->state == evState_idle)
     {
         /* Operation successful. Event can be triggered. */
@@ -627,7 +647,7 @@ static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInte
              The scheduler must not be called if this function is called from inside an
            ISR. ISRs will call the function a bit later, when the interrupt context is
            cleared and only if they serve the root level interrupt (i.e. not from a nested
-           interrupt). In this case calling rtos_processTriggeredEvents() is postponed and
+           interrupt). In this case calling rtos_osProcessTriggeredEvents() is postponed and
            done from the assembly code (IVOR #4 handler) but not yet here. The global flag
            rtos_pNextEventToSchedule is set to command this. */
         if(pEvent->priority > rtos_currentPrio)
@@ -656,7 +676,7 @@ static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInte
                    recursively invoked scheduler as soon as it finds a task to be launched.
                    However, it'll return in a new critical section - which is the one we
                    leave at the end of this function. */
-                rtos_processTriggeredEvents(pEvent);
+                rtos_osProcessTriggeredEvents(pEvent);
             }
         }
         else
@@ -692,8 +712,8 @@ static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInte
 
         success = false;
     }
-    rtos_osResumeAllInterrupts();
-
+    rtos_osLeaveCriticalSection(stateIrqAtEntry);
+    
     return success;
 
 } /* End of osTriggerEvent */
@@ -1557,11 +1577,24 @@ rtos_errorCode_t rtos_osInitKernel(void)
  */
 bool rtos_osTriggerEvent(unsigned int idEvent)
 {
+    /* This function behaves differently depending on whether it is called from an ISR
+       (task activation is deferred) or from an OS task (task activation immediately
+       possible depending on priorities). If we don't want to offer different APIs for
+       tasks and ISRs then we need to have run-time code to decide. This is a little
+       performance degradation for sake of ease of use and transparency of the API. */
+    const bool isInterrupt = rtos_osIsInterrupt();
+    
+    /* Although it is not generally forbidden to call this function from a task while under
+       lock of External Interrupt processing it's at least very suspicious; the function
+       will unconditionally remove the lock, which is likely not what a calling context
+       expects if it set the lock. We catch this situation by assertion.
+         If this assertion fires then there's likely a misunderstanding of the semantics of
+       rtos_osTriggerEvent() in the calling code. */
+    assert(isInterrupt || !rtos_osGetAllInterruptsSuspended());
+    
     /* This function is shared between ISRs and OS tasks. We need to know because the
        behavior depends (2nd function argument). */
-    return osTriggerEvent( getEventByID(idEvent)
-                         , /* isInterrupt */ rtos_osGetCurrentInterruptPriority() > 0
-                         );
+    return osTriggerEvent(getEventByID(idEvent), isInterrupt);
 
 } /* End of rtos_osTriggerEvent */
 
@@ -1615,7 +1648,7 @@ uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int 
  * provided by reference as a hint so that the scheduler doesn't need to look for the
  * event.
  */
-SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
+SECTION(.text.ivor.rtos_osProcessTriggeredEvents) void rtos_osProcessTriggeredEvents
                                                                (eventDesc_t *pEvent)
 {
     /* This function and particularly this loop is the essence of the task scheduler. There
@@ -1790,7 +1823,7 @@ SECTION(.text.ivor.rtos_processTriggeredEvents) void rtos_processTriggeredEvents
     rtos_pCurrentEvent = pCurrentEvent;
     rtos_currentPrio = prioAtEntry;
 
-} /* End of rtos_processTriggeredEvents */
+} /* End of rtos_osProcessTriggeredEvents */
 
 
 
@@ -1941,7 +1974,7 @@ void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority)
            This doesn't matter, not even with respect to overhead and the number of
            function invocations. Not taking check and change into the CS just means to have
            a smaller CS. */
-        rtos_processTriggeredEvents(pEvToSchedulePossibly);
+        rtos_osProcessTriggeredEvents(pEvToSchedulePossibly);
         rtos_osResumeAllInterrupts();
     }
 } /* rtos_osResumeAllTasksByPriority */

@@ -631,7 +631,7 @@ rtos_isr_endIfPreemptable:
     e_stw       r3, INTC_EOIR_PRC0@l(r4)/* Write 0 to INTC_EOIR */
 
     /* The decision about task switches is taken in the C code implementation of the
-       scheduler, rtos_processTriggeredEvents(). However, before we do the expensive
+       scheduler, rtos_osProcessTriggeredEvents(). However, before we do the expensive
        function call we evaluate an indicator.
          The pointer either points to an event to schedule or it is set to 0xffff_ffff. */
     e_lwz       r3, rtos_pNextEventToSchedule@sda21(r13)/* r3: Event requires scheduling? */
@@ -652,7 +652,7 @@ rtos_isr_endIfPreemptable:
        critical section, which we had started before signalling end of IRQ to the INTC. */
     se_subi     r4, 1               /* r4: UINT_MAX, i.e. indication of "pointer unset" */
     e_stw       r4, rtos_pNextEventToSchedule@sda21(r13) /* Clear pointer to triggered Event */
-    e_bl        rtos_processTriggeredEvents     /* r3: Event to be scheduler first */
+    e_bl        rtos_osProcessTriggeredEvents   /* r3: Event to be scheduler first */
     
 iv4_noCallOfScheduler:
     /* Restore the process ID. A sync operation is not required since we are not switching
@@ -1026,8 +1026,8 @@ rut_endWithoutErr:
     e_stw       r0, rtos_currentPrio@sda21(13) /* Restore priority in global variable */
     .extern     rtos_getEventByPriority
     e_bl        rtos_getEventByPriority /* r3: prio before restore -> pEvent with that prio */
-    wrteei      0               /* Call of rtos_processTriggeredEvents requires MSR[EE] = 0 */
-    e_bl        rtos_processTriggeredEvents /* Check for possible task switches */
+    wrteei      0             /* Call of rtos_osProcessTriggeredEvents requires MSR[EE] = 0 */
+    e_bl        rtos_osProcessTriggeredEvents /* Check for possible task switches */
     wrteei      1
 rut_noRestoreCPR:
 

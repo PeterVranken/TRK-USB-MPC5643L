@@ -62,12 +62,30 @@
  * This function must be called from the OS context only. User tasks don't have the
  * privileges to call this function.
  */
-static inline unsigned int rtos_osGetCurrentInterruptPriority(void)
+static ALWAYS_INLINE unsigned int rtos_osGetCurrentInterruptPriority(void)
 {
     /* We query the INTC to find out on which interrupt level we are busy. */
     return (unsigned int)INTC.CPR_PRC0.R;
 
 } /* End of rtos_osGetCurrentInterruptPriority */
+
+
+
+/**
+ * Query if we are running code inside an ISR.
+ *   @return
+ * Get \a true if we are in an External Interrupt and \a false otherwise (i.e. including
+ * system calls, which are often considered software interrupts). 
+ *   @remark
+ * This function must be called from the OS context only. User tasks don't have the
+ * privileges to call this function.
+ */
+static ALWAYS_INLINE bool rtos_osIsInterrupt(void)
+{
+    /* We query the INTC to find out on which interrupt level we are busy. */
+    return rtos_osGetCurrentInterruptPriority() > 0;
+
+} /* End of rtos_osIsInterrupt */
 
 
 

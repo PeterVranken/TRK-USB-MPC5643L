@@ -332,17 +332,17 @@ rat_callSchedulerRecursively:
                                                        and return here. r4..r10 are retained */
     /* Here we are in a full conformance handler. r3 contains the PID of calling process. */
     
-    .extern     rtos_processTriggeredEvents
+    .extern     rtos_osProcessTriggeredEvents
     se_mr       r3, r4      /* r3: PID -> pEvent with prio@entry */
-    wrteei      0           /* Call of rtos_processTriggeredEvents requires MSR[EE] = 0 */
+    wrteei      0           /* Call of rtos_osProcessTriggeredEvents requires MSR[EE] = 0 */
 #ifdef DBG_COUNT_SCHEDULER_CALLS
     /* Count executions of system call handler as basic handler. */
     e_lwz       r4, _cntResumeWithScheduler@sda21(r13)
     se_addi     r4, 1
     e_stw       r4, _cntResumeWithScheduler@sda21(r13)
 #endif
-    e_b         rtos_processTriggeredEvents /* Check for possible task switches and return
-                                               from system call */
+    e_b         rtos_osProcessTriggeredEvents /* Check for possible task switches and return
+                                                 from system call */
 rat_return:
 #ifdef DBG_COUNT_SCHEDULER_CALLS
     /* Count executions of system call handler as basic handler. */

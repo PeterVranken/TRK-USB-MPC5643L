@@ -1275,9 +1275,9 @@ task.
 Most events are typically time triggered. The rest is triggered on demand.
 Here's the API to trigger such an event. Use cases are inter-process
 communication and deferred interrupt handling. This service is available
-to preemptable ISRs, OS and to user tasks and system call handlers of full
-conformance class. Non-preemptable ISRs and system call handlers of lower
-conformance class must not use it.
+to ISRs, OS and user tasks and system call handlers of full
+conformance class. System call handlers of lower conformance class must
+not use it.
 
     #include "rtos.h"
     bool rtos_osTriggerEvent(unsigned int idEvent);
