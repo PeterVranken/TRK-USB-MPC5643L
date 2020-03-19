@@ -43,11 +43,11 @@
 /* The enumeration of casues of task termination. */
 #define RTOS_CAUSE_TASK_ABBORTION_PROCESS_ABORT     0  /* Process abort from user/scheduler */
 #define RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK     1  /* IVOR #1, Machine check, mostly memory
-                                                         protection */
+                                                          protection */
 #define RTOS_CAUSE_TASK_ABBORTION_DEADLINE          2  /* Task exceeded deadline */
 #define RTOS_CAUSE_TASK_ABBORTION_DI_STORAGE        3  /* IVOR #2/#3, MMU storage error */
 #define RTOS_CAUSE_TASK_ABBORTION_SYS_CALL_BAD_ARG  4  /* Task referred to invalid system
-                                                         call */
+                                                          call */
 #define RTOS_CAUSE_TASK_ABBORTION_ALIGNMENT         5  /* IVOR #5, Alignment */
 #define RTOS_CAUSE_TASK_ABBORTION_PROGRAM_INTERRUPT 6  /* IVOR #6, mostly illegal
                                                           instruction */

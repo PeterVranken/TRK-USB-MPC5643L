@@ -88,40 +88,41 @@
 #define RTOS_NO_ERR_PRC                 13
 
 /** The enumeration of different kinds of process errors, which lead to task abortion.\n
-      Here: Process abort from user/scheduler */
+      Here: Process abort from user/scheduler. */
 #define RTOS_ERR_PRC_PROCESS_ABORT      0
 
-/** Kind of process error: IVOR #1, Machine check, mostly memory protection */
+/** Kind of process error: Exception IVOR #1, Machine check, mostly memory protection. */
 #define RTOS_ERR_PRC_MACHINE_CHECK      1
 
-/** Kind of process error: Task exceeded deadline */
+/** Kind of process error: Task exceeded deadline. */
 #define RTOS_ERR_PRC_DEADLINE           2
 
-/** Kind of process error: IVOR #2/#3, MMU storage error */
+/** Kind of process error: Exception IVOR #2 or #3, MMU storage error. */
 #define RTOS_ERR_PRC_DI_STORAGE         3
 
-/** Kind of process error: Task referred to invalid system call */
+/** Kind of process error: Task referred to invalid system call or an existing system call
+    has been made with invalid arguments. */
 #define RTOS_ERR_PRC_SYS_CALL_BAD_ARG   4
 
-/** Kind of process error: IVOR #5, Alignment */
+/** Kind of process error: Exception IVOR #5, Alignment. */
 #define RTOS_ERR_PRC_ALIGNMENT          5
 
-/** Kind of process error: IVOR #6, mostly illegal instruction */
+/** Kind of process error: Exception IVOR #6, mostly illegal instruction. */
 #define RTOS_ERR_PRC_PROGRAM_INTERRUPT  6
 
-/** Kind of process error: IVOR #7, Book E FPU instructions */
+/** Kind of process error: Exception IVOR #7, Book E FPU instructions. */
 #define RTOS_ERR_PRC_FPU_UNAVAIL        7
 
-/** Kind of process error: IVOR #13, TBL data access mismatch */
+/** Kind of process error: Exception IVOR #13, TBL data access mismatch. */
 #define RTOS_ERR_PRC_TBL_DATA           8
 
-/** Kind of process error: IVOR #14, TBL instr access mismatch */
+/** Kind of process error: Exception IVOR #14, TBL instr access mismatch. */
 #define RTOS_ERR_PRC_TBL_INSTRUCTION    9
 
-/** Kind of process error: IVOR #32, use of SPE instruction */
+/** Kind of process error: Exception IVOR #32, use of SPE instruction. */
 #define RTOS_ERR_PRC_SPE_INSTRUCTION    10
 
-/** Kind of process error: User code returned error code */
+/** Kind of process error: User code returned error code. */
 #define RTOS_ERR_PRC_USER_ABORT         11
 
 /** Kind of process error: Not yet in use, reserved for extensions. */

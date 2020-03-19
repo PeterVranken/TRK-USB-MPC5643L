@@ -342,6 +342,7 @@ void rtos_initMPU(void)
           );
     MPU.REGION[r].RGD_WORD0.R = (uintptr_t)ld_dataSharedStart; /* Start address data + bss */
     MPU.REGION[r].RGD_WORD1.R = (uintptr_t)ld_dataSharedEnd-1; /* End address, including. */
+/// @todo User code doesn't require instruction read access
     MPU.REGION[r].RGD_WORD2.R = WORD2(0b011111); /* S: d.c., U: RXW, PID: no */
     MPU.REGION[r].RGD_WORD3.R = WORD3(/* Pid */ 0);
     ++ r;

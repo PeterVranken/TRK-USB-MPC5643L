@@ -355,7 +355,7 @@ static void isrPit3(void)
  * Simulated user task. It is characterized mainly by the CPU load in percent is requires
  * to complete.
  *   A small, fixed fraction of the load is spent for the in- and output of the task. We
- * simluate the concept that at the beginning of the task some data is copied into local
+ * simulate the concept that at the beginning of the task some data is copied into local
  * task storage, before the actual task computations start and that - after computation -
  * another small fraction of the computation time is required to store the data for use by
  * other tasks.
