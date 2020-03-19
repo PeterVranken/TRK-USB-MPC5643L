@@ -115,7 +115,7 @@ available here in GitHub, or available as
 https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE/doc/manual/manual.pdf[printable^]
 document. The API is described in the online https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[Doxygen^] help, too.
 
-=== Differences to the ancestor RTOS
+=== Differences to the ancestor RTOSs
 
 The architecture of the RTOS is very simple and resembles its ancestors,
 which were the simple RTOS without safety concept and safe-RTOS-VLE with
@@ -125,7 +125,7 @@ software development environment.
 
 For an explanation of the scheduling scheme, you may still refer to the
 documentation of the simple RTOS, please look
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTOS-VLE#The-RTOS[here].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTOS-VLE#The-RTOS[here^].
 
 The differences between safe-RTOS and the simple RTOS are:
 
@@ -134,6 +134,9 @@ The differences between safe-RTOS and the simple RTOS are:
   used a one-by-one relation between events and tasks. (Having more than
   one task per event makes sense only in conjunction with the new process
   concept)
+* The implementation of the safety mechanisms means a performance loss.
+  The sample application "benchmark", which aims at simulating a typical
+  timing of a true application shows an increased CPU load of 1.7%.
 * The architecture of the RTOSs may be similar but the implementation
   isn't. The safety demands require a significant portion of assembler
   code for implementation
@@ -557,12 +560,12 @@ Only the code of the idle task is executed any longer.
 Workaround: Don't open the view of the INTC0 in the debugger when
 debugging a safe-RTOS application. Then the INTC and the code work fine.
 
-. A similar effect has been observed with the instructions to alter the
-External Interrupt enable bit, MSR[EE]. Do not single-step in the debugger
-over wrtee(i) instructions. The instruction may fail to change the bit. If
-the code approaches such an instruction you should use the right-click
-operation "Run to line", targeting the instruction behind the wrtee(i).
-This works fine.
+. Debugger: A similar effect has been observed with the instructions to
+alter the External Interrupt enable bit, MSR[EE]. Do not single-step in
+the debugger over wrtee(i) instructions. The instruction may fail to
+change the bit. If the code approaches such an instruction you should use
+the right-click operation "Run to line", targeting the instruction behind
+the wrtee(i). This works fine.
 
 . Debugger: It is not possible to hinder the P&E debugger from halting at
 an se_illegal instruction. (See https://community.nxp.com/thread/497533)
