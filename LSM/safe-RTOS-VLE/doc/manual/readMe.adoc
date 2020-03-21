@@ -390,23 +390,129 @@ state.
 
 === Deadline monitoring
 
-Sorry, this section is still missing.
+User tasks, regardless if triggered by events or run by services
+_rtos_osRunTask_() or _rtos_runTask_(), can have a limited timespan for
+completion. The ultimate end time is called the deadline of the task and
+the supervision is called deadline monitoring.
 
-TODOC: Principle and limitations
+The timespan is the world time, not an execution time budget. At the
+instance of starting the task its end time is defined. To the supervision,
+it doesn't matter whether the task really executes or if other tasks of
+higher priority get the CPU most of the time. It is considered a failure
+of the task if it doesn't terminate prior to its deadline. This causes an
+exception, which is counted in the process. The deadline exception has an
+own counter and so it can be distinguished from all other exceptions; this
+is essential because it'll mostly be necessary to judge differently on
+this exception in comparison to others (see below).
 
-* Checked at task resume: Low resolution. Little use e.g. for limiting a
-  regular 1ms task to 100us execution time. But even here useful for
-  failure detection and shutdown
- ** Trick: Have a regular 100us timer interrupt with empty ISR. Now we
-    have a resume and check every 100us
- ** Not critical: If there's no IRQ before it only matters to tasks of
-    lower priority, which must not be safety critical by design
-* An exception leaves task's data in inconsistent state. (Can abort task
-  in the middle of a critical section.) Generally no design tool for
-  limiting execution time. Just an error recognition and worst case
-  hindering tool
-* If short latency times in error recognition path is not critical then
-  relying only on activation loss is likely the better option
+The way it works is simple and efficient. The RTOS has a simple BCC
+kernel, that doesn't allow a task to suspend voluntarily. It is ready from
+triggering till termination. This leads to a strictly hierarchical
+preemption scheme (see <<figSchemeOfPreemptions>>) and, as a consequence,
+to a single, ordinary stack for the kernel process. Each started task is
+represented by a stack frame on this stack. When starting the task, the
+kernel creates the stack frame and stores the deadline as an element. (The
+deadline is no more than the cyclic, arithmetic sum of the current value
+of the CPU's time base and the known, statically defined maximum execution
+time span.) If the task is preempted then a new stack frame is put on the
+stack (for an ISR or a task of higher priority). During the execution of
+the preempting context the kernel doesn't care, whether the deadline of
+the preempted task is exceeded or not -- the task can't do any harm, it's
+not executing and the kernel could anyway not remove it from somewhere in
+the middle of the stack. Only on return from the preempting context, when
+normally all registers of the preempted context would be restored from the
+stack, the deadline condition is checked. This requires only a few
+instructions; it's an arithmetic comparison of the stored end time with
+the CPU's time base register. The decision is clear - either we complete
+the return to the preempted context or we raise an exception, which kills
+it. The implementation can be that easy because the check is done when and
+only when we return to the stack frame of the preempted, deadline
+monitored task: Now the end time is easily accessible and killing the task
+in case is simply doable, because it's on top of the stack.
+
+The deadline monitoring aims only at protecting a supervisor user task of
+high priority against starvation. Without it, a notification callback from
+an ISR could spin in an infinite (or very long lasting) loop and the
+supervisory task would not be scheduled until it returns.
+
+Deadline monitoring is not meant a mechanism to control some task timing
+in a functional sense. Any application design, which considers regular or
+even occasional intervention of the mechanism as normal, will be bad
+design! Therefore, a supervisory task should not generally tolerate
+deadline exceedance exceptions in the supervised processes. It may need to
+tolerate very rare occurrences due to exceptional high system load
+and an accordingly high jitter in the task timing.
+
+Understanding these aims of the mechanism it becomes clear, why its
+weaknesses are not painful. The check is only done on return from a
+preempting context to the monitored task. This limits the time resolution.
+The RTOS itself has a 1 ms interrupt, so the only general guarantee is an
+according time resolution. The idea to limit e.g. a notification callback
+to 50 µs will not work. If you think 50 µs should be enough under all
+circumstances then you should indeed specify this time span. But
+regardless, the callback may run up to 1 ms before it is surely killed.
+
+You can of course count on a better time resolution if you have an
+interrupt of higher frequency but if it pays off to install such an
+interrupt only for the particular purpose of increasing the time
+resolution will depend.
+
+Despite of the enormous possible relative timing error we see in our
+example it doesn't matter much with respect to the safety supervisory
+task. When it becomes due the next time this will surely be connected to
+an RTOS timer tick and this tick would mean the killing event for the bad
+callback. No blocking for the safety task.
+
+The worst thing, which can happen to the safety supervisory task: Its n-th
+activation may be preempted by an ISR which invokes a bad, non returning
+callback. The callback is killed at latest at the next RTOS timer tick. If
+this tick is the same one at which the safety task becomes due the (n+1)st
+time then the task would suffer from an activation loss; its n-th
+activation would be resumed rather than starting the (n+1)st. If this
+endangers the safety concept then the effect can be avoided by configuring
+the RTOS timer tick frequency higher than the activation frequency needed
+for the safety supervisory task.
+
+Less obvious is a priority issue. An ISR, which runs a potentially failing
+callback, can have an interrupt priority higher than the RTOS timer and
+any other regular interrupt. So that there's no upper boundary for the
+maximum execution time of the callback. This consideration leads to the
+safety requirement for the aimed operating system that any ISRs, which
+run at a priority higher than the RTOS timer interrupt must not make use
+of the service _rtos_osRunTask_(). The requirement is easy to fulfill as
+all affected code is in the trusted sphere and most of it are static
+configuration decisions.
+
+By principle, a deadline exception (as any other, too) can leave the
+system in an inconsistent (yet not instable) state. The task may have been
+killed in the middle of a critical section, in the middle of whatever
+transaction. This may make other tasks fail, too, and lead to more
+exceptions in the worst case. An important requirement for the safety
+process is (and actually not only because of this effect) that it must be
+functional regardless of the consistency of the data owned by the
+supervised processes.
+
+==== Deadline monitoring: To be used or better not?
+
+The design of an operating system building on this RTOS can make the
+consideration, whether or not deadline monitoring needs to be applied at
+all. If some design rules are obyed then the observation of the event
+activation loss counters from the safety supervisory task will be
+sufficient (see service _rtos_getNoActivationLoss()_.
+
+Using deadline monitoring is absolutely unavoidable if ISRs make use of
+callbacks into user processes. However, in many situations this construct
+can be replaced by deferred interrupt handling, i.e. by triggering an OS
+task that does do the work from the ISR. The triggered task would have a
+priority below the safety task and if it is blocked by a non-returning,
+bad callback into the user process then the safety task would immediately
+see the activation losses for the event triggered by the ISR and likely
+some other (timer) events.
+
+Typically, the latency times resulting from observation of activation
+losses will be a bit higher than when applying deadline monitoring. This
+may have an impact on the design decisions.
+
 
 === Differences to the ancestor RTOS
 
@@ -555,12 +661,14 @@ All other technical safety requirements are derived from this one.
 //*** Drivers can on-the-fly test user code specified memory areas, this
 //   make it possible to have system calls, which take the address of a data
 //   object as argument and place their result at that address
-//** Discussion of mutual exclusion with I/O driver interrupts: Interrupt
-//   priority below safety task, which may limit the technique to low
-//   throughput drivers. Or get/set methods need to become system calls,
-//   which degrades performance. Therefore, we define the different
-//   conformance classes; a simple get/set can be implemented relatively
-//   fast by a "Basic handler"
+//** Discussion of mutual exclusion with I/O driver interrupts: Possible
+//   only with deferred interrupt handling and mutual exclusion with
+//   triggered task. Such a task needs to have a priority below the safety
+//   task, which may limit the technique to low throughput drivers. Or
+//   get/set methods need to become system calls, which degrades
+//   performance. Therefore, we define the different conformance classes;
+//   a simple get/set can be implemented relatively fast by a "Basic
+//   handler"
 
 == I/O driver model
 
@@ -1618,8 +1726,6 @@ are shown as dark blue fields in both parts of <<figMemMap>>.
 Note that the OS process doesn't have the three areas. There are no access
 restrictions for this process and it uses a single memory area descriptor
 to access all of the used RAM space.
-
-// TODOC Did we mention the C heap? Only available to P1? In section C lib?
 
 === Linker script
 
