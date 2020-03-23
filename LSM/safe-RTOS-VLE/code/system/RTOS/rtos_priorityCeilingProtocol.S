@@ -194,7 +194,7 @@ rtos_getEventByPriority:
 # if RTOS_MAX_TASK_PRIORITY <= 32
     se_cmpli    r3, RTOS_MAX_TASK_PRIORITY
 # else
-    e_cmpl16    r3, RTOS_MAX_TASK_PRIORITY
+    e_cmpl16i   r3, RTOS_MAX_TASK_PRIORITY
 #endif
     se_bgt      .
 #endif
