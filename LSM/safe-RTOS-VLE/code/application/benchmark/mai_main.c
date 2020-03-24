@@ -314,11 +314,12 @@ static void isrPit2(void)
 {
     ++ mai_cntISRPit2;
 
-    /* This ISR delegates some computation to a user task. It triggers the task. Note, that
-       triggering will not necessarily succeed; see startup code, we have enebaled the
-       interrupts earlier than the task scheduler. */         
+    /* This ISR delegates some computation to a user task. It triggers the task. */
     const unsigned long tmpCntTaskUserPit2 ATTRIB_DBG_ONLY = mai_cntTaskUserPit2;
-    rtos_osTriggerEvent(idEvPit2);
+    const bool evCouldBeTriggered ATTRIB_DBG_ONLY =
+                        rtos_osTriggerEvent(idEvPit2, /* taskParam */ mai_cntTaskUserPit2);
+    assert(evCouldBeTriggered);
+
     /* There must be no immediate counter change of the task. It will be started after
        return from the ISR and depending on the task priorities. */
     assert(tmpCntTaskUserPit2 == mai_cntTaskUserPit2);
@@ -370,26 +371,30 @@ static void isrPit3(void)
  * compilation, when we have no assertions available.
  *   @param PID
  * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing.
  */
-static int32_t taskUserPit2(uint32_t PID ATTRIB_UNUSED)
-{                                                                                           
-    bool success = true;                                                                    
-                                                                                            
+static int32_t taskUserPit2(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_DBG_ONLY)
+{
+    bool success = true;
+
+    assert(taskParam == mai_cntTaskUserPit2);
+
     /* Simulate the task prologue: All input data is copied to local storage. A critical
        section is granted implicitly since this task has the highest priority. According
        code is ommitted and we can combine all busy waits to a single one. */
-                                                                                            
+
     /* Simulate the task activity: Computation of results. Note, this task is triggered by
        an asynchronous interrupt but we still use a regular one (5 kHz) so that we can use
        our normal macro to produce defined CPU load. */
     busyWait(LOAD_TASK_PIT2, /* tiCycleInMs */ 0.2f);
-    
-    /* Increment the alive counter of the task. */                                          
+
+    /* Increment the alive counter of the task. */
     ++ mai_cntTaskUserPit2;
-                                                                                            
-    return success? 0: -1;                                                                  
-                                                                                            
-} /* End of taskUser##tiCycleInMs##ms */
+
+    return success? 0: -1;
+
+} /* End of taskUserPit2 */
 
 
 
@@ -413,13 +418,17 @@ static int32_t taskUserPit2(uint32_t PID ATTRIB_UNUSED)
  * compilation, when we have no assertions available.
  *   @param PID
  * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
 #define USER_TASK(tiCycleInMs, cpuLoad, prioCritSec)                                        \
                                                                                             \
 /** Counter of cycles of infinite main loop. */                                             \
 volatile unsigned long SBSS_P1(mai_cntTaskUser##tiCycleInMs##ms) = 0;                       \
                                                                                             \
-static int32_t taskUser##tiCycleInMs##ms(uint32_t PID ATTRIB_UNUSED)                        \
+static int32_t taskUser##tiCycleInMs##ms( uint32_t PID ATTRIB_UNUSED                        \
+                                        , uintptr_t taskParam ATTRIB_UNUSED                 \
+                                        )                                                   \
 {                                                                                           \
     bool success = true;                                                                    \
                                                                                             \
@@ -469,13 +478,15 @@ USER_TASK(/* tiCycleInMs */ 1000, /* cpuLoad */ LOAD_TASK_1000MS, /* prioCritSec
  * However, it matters that copying data has to be done inside critical sections. This has
  * an impact on scheduling timing and it is a relative expensive operation for a safe
  * kernel, which must not offer the cheap suspension of all interrupts.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
 #define OS_TASK(tiCycleInMs, cpuLoad, prioCritSec)                                          \
                                                                                             \
 /** Counter of cycles of infinite main loop. */                                             \
 volatile unsigned long SBSS_OS(mai_cntTaskOS##tiCycleInMs##ms) = 0;                         \
                                                                                             \
-static void taskOS##tiCycleInMs##ms(void)                                                   \
+static void taskOS##tiCycleInMs##ms(uintptr_t taskParam ATTRIB_UNUSED)                      \
 {                                                                                           \
     /* Simulate the task prologue: All input data is copied to local storage. This is done  \
        in a critical section, which includes all competing tasks. */                        \
@@ -508,8 +519,10 @@ OS_TASK(/* tiCycleInMs */ 10, /* cpuLoad */ LOAD_TASK_OS_10MS, /* prioCritSec */
 /**
  * Simulated safety task. It is characterized mainly by the CPU load in percent is requires
  * to complete.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-static int32_t taskSafety1ms(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskSafety1ms(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     busyWait(LOAD_TASK_SAFETY_1MS, /* tiCycleInMs */ 1);
 
@@ -533,15 +546,15 @@ static void taskOSIdle(void)
        of the rest of the code in this function. Therefore, we can do some supervision and
        reporting without biasing the measurement results. */
     mai_cpuLoad = gsl_getSystemLoad();
-    const unsigned int simulatedCpuLoad = (LOAD_TASK_SAFETY_1MS    
+    const unsigned int simulatedCpuLoad = (LOAD_TASK_SAFETY_1MS
                                            + LOAD_TASK_PIT2
                                            + LOAD_TASK_1MS
-                                           + LOAD_TASK_10MS          
-                                           + LOAD_TASK_100MS         
-                                           + LOAD_TASK_1000MS        
-                                           + LOAD_TASK_OS_1MS        
-                                           + LOAD_TASK_OS_5MS        
-                                           + LOAD_TASK_OS_10MS       
+                                           + LOAD_TASK_10MS
+                                           + LOAD_TASK_100MS
+                                           + LOAD_TASK_1000MS
+                                           + LOAD_TASK_OS_1MS
+                                           + LOAD_TASK_OS_5MS
+                                           + LOAD_TASK_OS_10MS
                                           ) * 10;
     unsigned int cpuLoadKernel = simulatedCpuLoad;
     if(mai_cpuLoad > cpuLoadKernel)
@@ -606,7 +619,7 @@ static void taskOSIdle(void)
                           );
         assert((unsigned)noChar < sizeOfAry(msg));
         sio_osWriteSerial(msg, (unsigned)noChar);
-        
+
         noChar = sniprintf( msg, sizeof(msg)
                           , "Cycles of ISRs: %lu, %lu, %lu\r\n"
                           , mai_cntISRPit1
@@ -615,14 +628,14 @@ static void taskOSIdle(void)
                           );
         assert((unsigned)noChar < sizeOfAry(msg));
         sio_osWriteSerial(msg, (unsigned)noChar);
-        
+
     }
     else if(!rtos_isProcessSuspended(/* PID */ 1))
     {
         /* Transition to suspend state for process 1: Turn green LED off. */
         lbd_osSetLED(lbd_led_D4_grn, /* isOn */ false);
         rtos_osSuspendProcess(/* PID */ 1);
-        
+
         noChar = sniprintf( msg, sizeof(msg)
                           , "Fatal error detected. Process 1 is suspended!\r\n"
                           );
@@ -634,7 +647,7 @@ static void taskOSIdle(void)
         /* Failure: Let red LED blink. */
         lbd_osSetLED(lbd_led_D4_red, /* isOn */ (mai_cntTaskIdle & 1) != 0);
     }
-    
+
 } /* End of taskOSIdle */
 
 
@@ -670,7 +683,7 @@ static void installInterruptServiceRoutines(void)
                   , "By intention, at least one interrupt should have the priority of the"
                     " scheduler of the RTOS"
                   );
-                  
+
     /* 0x2: Disable all PIT timers during configuration. Note, this is a
        global setting for all four timers. Accessing the bits makes this rountine have race
        conditions with the RTOS initialization that uses timer PIT0. Both routines must not
@@ -782,6 +795,7 @@ int main(int noArgs ATTRIB_DBG_ONLY, const char *argAry[] ATTRIB_DBG_ONLY)
                              , /* priority */                 prioEv##name                  \
                              , /* minPIDToTriggerThisEvent */                               \
                                                          RTOS_EVENT_NOT_USER_TRIGGERABLE    \
+                             , /* taskParam */                0                             \
                              )                                                              \
            != rtos_err_noError                                                              \
       )                                                                                     \

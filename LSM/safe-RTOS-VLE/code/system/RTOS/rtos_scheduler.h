@@ -100,6 +100,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
                                    , unsigned int tiFirstActivationInMs
                                    , unsigned int priority
                                    , unsigned int minPIDToTriggerThisEvent
+                                   , uintptr_t taskParam
                                    );
 
 /** Task registration for user mode or operating system initialization task. */
@@ -110,13 +111,17 @@ rtos_errorCode_t rtos_osRegisterInitTask( int32_t (*initTaskFct)(uint32_t PID)
 
 /** Task registration for scheduled user mode tasks. */
 rtos_errorCode_t rtos_osRegisterUserTask( unsigned int idEvent
-                                        , int32_t (*userModeTaskFct)(uint32_t PID)
+                                        , int32_t (*userModeTaskFct)( uint32_t PID
+                                                                    , uintptr_t taskParam
+                                                                    )
                                         , unsigned int PID
                                         , unsigned int tiMaxInUs
                                         );
 
 /** Task registration for scheduled operating system tasks. */
-rtos_errorCode_t rtos_osRegisterOSTask(unsigned int idEvent, void (*osTaskFct)(void));
+rtos_errorCode_t rtos_osRegisterOSTask( unsigned int idEvent
+                                      , void (*osTaskFct)(uintptr_t taskParam)
+                                      );
 
 /** Kernel initialization. */
 rtos_errorCode_t rtos_osInitKernel(void);

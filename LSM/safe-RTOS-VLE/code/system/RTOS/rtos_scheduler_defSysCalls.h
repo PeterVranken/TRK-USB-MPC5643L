@@ -65,6 +65,8 @@
  */
 
 /** System call handler implementation to activate a task. */
-uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int idEvent);
-
+uint32_t rtos_scFlHdlr_triggerEvent( unsigned int pidOfCallingTask
+                                   , unsigned int idEvent
+                                   , uintptr_t taskParam
+                                   );
 #endif  /* RTOS_SCHEDULER_DEFSYSCALLS_INCLUDED */

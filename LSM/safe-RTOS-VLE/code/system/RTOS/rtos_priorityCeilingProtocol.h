@@ -48,7 +48,7 @@
 
 
 /* Define the field offsets and enumeration values in struct eventDesc_t. */
-#define PCP_SIZE_OF_EV_DESC         28
+#define PCP_SIZE_OF_EV_DESC         32
 #define PCP_O_EVDESC_state          0
 #define PCP_O_EVDESC_prio           16
 #define PCP_E_EVST_idle             0

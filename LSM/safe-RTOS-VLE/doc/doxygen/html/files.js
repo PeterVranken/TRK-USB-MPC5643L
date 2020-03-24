@@ -6,7 +6,6 @@ var files =
     [ "del_delay.h", "del__delay_8h.html", "del__delay_8h" ],
     [ "gsl_systemLoad.c", "gsl__system_load_8c.html", "gsl__system_load_8c" ],
     [ "gsl_systemLoad.h", "gsl__system_load_8h.html", "gsl__system_load_8h" ],
-    [ "rtos.config.h", "rtos_8config_8h.html", "rtos_8config_8h" ],
     [ "rtos.h", "rtos_8h.html", "rtos_8h" ],
     [ "rtos_externalInterrupt.c", "rtos__external_interrupt_8c.html", "rtos__external_interrupt_8c" ],
     [ "rtos_externalInterrupt.h", "rtos__external_interrupt_8h.html", "rtos__external_interrupt_8h" ],

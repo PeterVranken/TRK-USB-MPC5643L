@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['rtos_2econfig_2eh',['rtos.config.h',['../rtos_8config_8h.html',1,'']]],
   ['rtos_2eh',['rtos.h',['../rtos_8h.html',1,'']]],
   ['rtos_5fexternalinterrupt_2ec',['rtos_externalInterrupt.c',['../rtos__external_interrupt_8c.html',1,'']]],
   ['rtos_5fexternalinterrupt_2eh',['rtos_externalInterrupt.h',['../rtos__external_interrupt_8h.html',1,'']]],

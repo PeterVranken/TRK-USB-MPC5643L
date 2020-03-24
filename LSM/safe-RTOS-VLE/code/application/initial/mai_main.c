@@ -178,9 +178,13 @@ static int32_t taskInitProcess(uint32_t PID)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing.
  */
-static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
+static int32_t task1ms(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_DBG_ONLY)
 {
+    assert(taskParam == 0);
+
     /* Make spinning of the task observable in the debugger. */
     ++ mai_cntTask1ms;
 
@@ -221,9 +225,13 @@ static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
  * functions of our I/O drivers.\n
  *   This task is run in supervisor mode and it has no protection. The implementation
  * belongs into the sphere of trusted code.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing.
  */
-static void taskOs1ms(void)
+static void taskOs1ms(uintptr_t taskParam ATTRIB_DBG_ONLY)
 {
+    assert(taskParam == 0);
+
     /* Make spinning of the task observable in the debugger. */
     ++ mai_cntTaskOs1ms;
 
@@ -294,6 +302,7 @@ int main(int noArgs ATTRIB_DBG_ONLY, const char *argAry[] ATTRIB_DBG_ONLY)
                          , /* tiFirstActivationInMs */    10
                          , /* priority */                 prioEv1ms
                          , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         , /* taskParam */                0
                          )
        == rtos_err_noError
       )

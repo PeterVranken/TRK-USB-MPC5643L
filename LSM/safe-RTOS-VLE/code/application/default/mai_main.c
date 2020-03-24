@@ -593,8 +593,10 @@ static void isrPit3(void)
  * functions of our I/O drivers.\n
  *   This task is run in supervisor mode and it has no protection. The implementation
  * belongs into the sphere of trusted code.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-static void taskOs1ms(void)
+static void taskOs1ms(uintptr_t taskParam ATTRIB_UNUSED)
 {
     /* The I/O driver for the buttons is run from the OS task with priority
        prioTaskOs1ms = 2. The driver code and the callback onButtonChangeCallback it may
@@ -633,7 +635,7 @@ static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_UNUSED, uint8_t button
 #ifdef DEBUG
         bool bActivationAccepted =
 #endif
-        rtos_triggerEvent(idEvNonCyclic);
+        rtos_triggerEvent(idEvNonCyclic, /* taskParam */ 0);
         assert(bActivationAccepted);
 
         /* Activate our button down event task. The activation will normally succeed
@@ -642,7 +644,7 @@ static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_UNUSED, uint8_t button
 #ifdef DEBUG
         bActivationAccepted =
 #endif
-        rtos_triggerEvent(idEvOnButtonDown);
+        rtos_triggerEvent(idEvOnButtonDown, /* taskParam */ 0);
         //assert(bActivationAccepted);
 
         ++ cntButtonPress_;
@@ -662,8 +664,10 @@ static int32_t onButtonChangeCallback(uint32_t PID ATTRIB_UNUSED, uint8_t button
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
+static int32_t task1ms(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTask1ms);
     testPCP(idTask1ms);
@@ -674,7 +678,7 @@ static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
          Note, the non cyclic task is of higher priority than this task and it'll be
        executed immediately, preempting this task. The second activation below, on button
        down must not lead to an activation loss. */
-    rtos_triggerEvent(idEvNonCyclic);
+    rtos_triggerEvent(idEvNonCyclic, /* taskParam */ 0);
 
 #if TASKS_PRODUCE_GROUND_LOAD == 1
     /* Produce a bit of CPU load. This call simulates some true application software. */
@@ -700,8 +704,10 @@ static int32_t task1ms(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-static int32_t task3ms(uint32_t PID ATTRIB_UNUSED)
+static int32_t task3ms(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTask3ms);
     ++ mai_cntTask3ms;
@@ -724,8 +730,10 @@ static int32_t task3ms(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-static int32_t task1s(uint32_t PID ATTRIB_UNUSED)
+static int32_t task1s(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTask1s);
 
@@ -806,8 +814,10 @@ static int32_t task1s(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-static int32_t taskNonCyclic(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskNonCyclic(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTaskNonCyclic);
     ++ mai_cntTaskNonCyclic;
@@ -825,8 +835,10 @@ static int32_t taskNonCyclic(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
+static int32_t task17ms(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTask17ms);
     ++ mai_cntTask17ms;
@@ -834,7 +846,7 @@ static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
     /* This task has a higher priority than the software triggered, non cyclic task. Since
        the latter one is often active we have a significant likelihood of a failing
        activation from here -- always if we preempted the non cyclic task. */
-    if(!rtos_triggerEvent(idEvNonCyclic))
+    if(!rtos_triggerEvent(idEvNonCyclic, /* taskParam */ 0))
         ++ mai_cntActivationLossTaskNonCyclic;
 
 #if TASKS_PRODUCE_GROUND_LOAD == 1
@@ -847,7 +859,7 @@ static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
 #ifdef DEBUG
     bool bActivationAccepted =
 #endif
-    rtos_triggerEvent(idEv17ms);
+    rtos_triggerEvent(idEv17ms, /* taskParam */ 0);
     assert(!bActivationAccepted);
 
     return 0;
@@ -864,8 +876,10 @@ static int32_t task17ms(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-static int32_t taskOnButtonDown(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskOnButtonDown(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTaskOnButtonDown);
     ++ mai_cntTaskOnButtonDown;
@@ -902,6 +916,8 @@ static int32_t taskOnButtonDown(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  *   @remark
  * We need to consider that in this sample, the measurement is inaccurate because the
  * idle loop is not empty (besides measuring the load) and so the observation window is
@@ -909,7 +925,7 @@ static int32_t taskOnButtonDown(uint32_t PID ATTRIB_UNUSED)
  * observation window, which compensates for the effect of the discontinuous observation
  * window.
  */
-static int32_t taskCpuLoad(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskCpuLoad(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     checkAndIncrementTaskCnts(idTaskCpuLoad);
     testPCP(idTaskCpuLoad);
@@ -1103,6 +1119,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    10
                          , /* priority */                 prioTask1ms
                          , /* minPIDToTriggerThisEvent */ 1
+                         , /* taskParam */                0
                          )
        == rtos_err_noError
       )
@@ -1131,6 +1148,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    17
                          , /* priority */                 prioTask3ms
                          , /* minPIDToTriggerThisEvent */ 1
+                         , /* taskParam */                0
                          )
        == rtos_err_noError
       )
@@ -1155,6 +1173,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    100
                          , /* priority */                 prioTask1s
                          , /* minPIDToTriggerThisEvent */ 1
+                         , /* taskParam */                0
                          )
        == rtos_err_noError
       )
@@ -1179,6 +1198,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    0
                          , /* priority */                 prioTaskNonCyclic
                          , /* minPIDToTriggerThisEvent */ 1
+                         , /* taskParam */                0
                          )
        == rtos_err_noError
       )
@@ -1203,6 +1223,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    0
                          , /* priority */                 prioTask17ms
                          , /* minPIDToTriggerThisEvent */ 1
+                         , /* taskParam */                0
                          )
        == rtos_err_noError
       )
@@ -1227,6 +1248,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    0
                          , /* priority */                 prioTaskOnButtonDown
                          , /* minPIDToTriggerThisEvent */ 1
+                         , /* taskParam */                0
                          )
        == rtos_err_noError
       )
@@ -1251,6 +1273,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    3
                          , /* priority */                 prioTaskCpuLoad
                          , /* minPIDToTriggerThisEvent */ 1
+                         , /* taskParam */                0
                          )
        == rtos_err_noError
       )
@@ -1305,7 +1328,7 @@ void main(void)
 #ifdef DEBUG
         bool bActivationAccepted =
 #endif
-        rtos_osTriggerEvent(idEvNonCyclic);
+        rtos_osTriggerEvent(idEvNonCyclic, /* taskParam */ 0);
         assert(bActivationAccepted);
 
         /* Run a kind of idle task in process 2. */

@@ -421,7 +421,7 @@ static void injectError(void)
 
 #if PRF_ENA_TC_PRF_KOF_TRIGGER_UNAVAILABLE_EVENT == 1
     case prf_kof_triggerUnavailableEvent:
-        rtos_triggerEvent(syc_idEvTest);
+        rtos_triggerEvent(syc_idEvTest, 999);
         break;
 #endif
     
@@ -1038,14 +1038,16 @@ static void nestStackInjectError(unsigned int remainingLevels)
 
 
 /**
- * Task function, cyclically activated every 17ms.
+ * Task function, cyclically activated every 10ms.
  *   @return
  * If the task function returns a negative value then the task execution is counted as
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-int32_t prf_taskInjectError(uint32_t PID ATTRIB_UNUSED)
+int32_t prf_taskInjectError(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     nestStackInjectError(/* remainingLevels */ prf_cmdFailure.noRecursionsBeforeFailure);
     return 0;
@@ -1062,13 +1064,15 @@ int32_t prf_taskInjectError(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-int32_t prf_task17ms(uint32_t PID ATTRIB_UNUSED)
+int32_t prf_task17ms(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     /* We stay for a while here in this routine to enlarge the chance of becoming
        interrupted by the failure injecting task. Which means that this task's execution
        can be harmed by the injected errors, too. That should be caught, too. */
-    del_delayMicroseconds(/* tiCpuInUs */ 1700);
+    del_delayMicroseconds(/* tiCpuInUs */ 1700 /* 1700µs=10% load */);
 
     return 0;
     
@@ -1089,7 +1093,7 @@ int32_t prf_task17ms(uint32_t PID ATTRIB_UNUSED)
  * parameter. In this test we just apply it for a consistency check.
  *   
  */
-int32_t prf_task1ms(uint32_t PID ATTRIB_UNUSED, uint32_t taskParam)
+int32_t prf_task1ms(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam)
 {
     static uint32_t SDATA_PRC_FAIL(cnt_) = 0;
     

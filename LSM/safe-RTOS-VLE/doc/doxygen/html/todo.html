@@ -102,18 +102,12 @@ $(document).ready(function(){initNavTree('todo.html','');});
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><dl class="reflist">
-<dt><a class="anchor" id="_todo000005"></a>Global <a class="el" href="rtos__scheduler_8c.html#a850a7a3057073bf6601b9d469c64c8fe">osTriggerEvent</a>  (eventDesc_t *const pEvent, bool isInterrupt)</dt>
-<dd>If the function is called from an ISR then it would be better to use enter/leaveCriticalSection. The function would now work well for preemtable and non-preemptable ISRs. Generally using enter/leaveCriticalSection is not wrong but useless overhead for calls from non-ISR code. The current construct of using an inline implementation at the different calling situations cannot fully handle this. Do we have an option to avoid both, code duplication and useless overhead in all calling situations?  </dd>
-<dt><a class="anchor" id="_todo000006"></a>Global <a class="el" href="rtos__scheduler_8h.html#a9e214eed5eb27fd51e72227fb62f9b8a">rtos_osCreateEvent</a>  (unsigned int *pEventId, unsigned int tiCycleInMs, unsigned int tiFirstActivationInMs, unsigned int priority, unsigned int minPIDToTriggerThisEvent)</dt>
+<dt><a class="anchor" id="_todo000004"></a>Global <a class="el" href="rtos__scheduler_8h.html#a3b8a72b75ad042fe88206066a4c05869">rtos_osCreateEvent</a>  (unsigned int *pEventId, unsigned int tiCycleInMs, unsigned int tiFirstActivationInMs, unsigned int priority, unsigned int minPIDToTriggerThisEvent, uintptr_t taskParam)</dt>
 <dd>Effectively, this object can be considered the descriptor of the idle task.  </dd>
 <dt><a class="anchor" id="_todo000001"></a>Global <a class="el" href="rtos__external_interrupt_8h.html#ae8a0bcc3633298cc478ceb73b2aebabc">rtos_osRegisterInterruptHandler</a>  (rtos_interruptServiceRoutine_t interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</dt>
 <dd>Make function disappear and have a ROM table as for system calls  </dd>
 <dt><a class="anchor" id="_todo000001"></a>Global <a class="el" href="rtos__external_interrupt_8h.html#ae8a0bcc3633298cc478ceb73b2aebabc">rtos_osRegisterInterruptHandler</a>  (rtos_interruptServiceRoutine_t interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</dt>
-<dd>Make function disappear and have a ROM table as for system calls  </dd>
-<dt><a class="anchor" id="_todo000007"></a>Global <a class="el" href="rtos__scheduler_8c.html#a2436c0e309c481d81292b149f22520aa">rtos_osTriggerEvent</a>  (unsigned int idEvent)</dt>
-<dd>The new software scheduler would easily allow service triggerEvent to have an argument. A 32 Bit value would be passed to the associated tasks as task function argument. ISRs could send simple data to a task. More stringent would be an individual argument for each of the associated tasks but the runtime overhead would barely pay off for the few use cases.  </dd>
-<dt><a class="anchor" id="_todo000002"></a>Global <a class="el" href="rtos__scheduler_8c.html#a1ea249da6a9ce1049b5d17c41729ee1f">rtos_processTriggeredEvents</a>  (eventDesc_t *pEvent)</dt>
-<dd>Even if not an API it's still a global function and should be renamed to rtos_osXXX </dd>
+<dd>Make function disappear and have a ROM table as for system calls </dd>
 </dl>
 </div></div><!-- contents -->
 </div><!-- doc-content -->

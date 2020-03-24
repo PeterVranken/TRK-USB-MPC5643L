@@ -152,9 +152,11 @@ $(document).ready(function(){initNavTree('rtos__scheduler__def_sys_calls_8h_sour
 <div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;<span class="comment"> * Global prototypes</span></div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;<span class="comment"> */</span></div>
 <div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;uint32_t rtos_scFlHdlr_triggerEvent(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> pidOfCallingTask, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent);</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">/* RTOS_SCHEDULER_DEFSYSCALLS_INCLUDED */</span><span class="preprocessor"></span></div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;uint32_t rtos_scFlHdlr_triggerEvent( <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> pidOfCallingTask</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;                                   , <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> idEvent</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;                                   , uintptr_t taskParam</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;                                   );</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">/* RTOS_SCHEDULER_DEFSYSCALLS_INCLUDED */</span><span class="preprocessor"></span></div>
 <div class="ttc" id="rtos__scheduler_8h_html"><div class="ttname"><a href="rtos__scheduler_8h.html">rtos_scheduler.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

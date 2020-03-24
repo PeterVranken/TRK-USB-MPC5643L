@@ -157,8 +157,10 @@ int32_t prr_taskReportFailure( uint32_t PID ATTRIB_UNUSED
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED)
+int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     const uint64_t tiStart = GSL_PPC_GET_TIMEBASE();
     iprintf( "CPU load is %u.%u%%. Stack reserve:\r\n"
@@ -217,8 +219,12 @@ int32_t prr_taskReporting(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-int32_t prr_taskTestContextSwitches(uint32_t PID ATTRIB_UNUSED)
+int32_t prr_taskTestContextSwitches( uint32_t PID ATTRIB_UNUSED
+                                   , uintptr_t taskParam ATTRIB_UNUSED
+                                   )
 {
     /* The next call produces 100 * noCycles*(waitTimePerCycleInUS/1000) / 11 percent of
        CPU load. */

@@ -154,7 +154,8 @@ static void isrPit2(void)
 {
     /* Indirectly start a user task. It is executed asynchronously to this ISR and has its
        own, irrelated task priority level. */
-    rtos_osTriggerEvent(syc_idEvPIT2);
+    static long unsigned int cnt_ = 0;
+    rtos_osTriggerEvent(syc_idEvPIT2, cnt_++);
 
     /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
        code" that is running in supervisor mode. */
@@ -295,6 +296,7 @@ void main(void)
                     , /* tiFirstActivationInMs */    19
                     , /* priority */                 syc_prioEvReporting
                     , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                    , /* taskParam */                0
                     )
        != rtos_err_noError
       )
@@ -309,6 +311,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    0
                          , /* priority */                 syc_prioEvTest
                          , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         , /* taskParam */                0
                          )
        != rtos_err_noError
       )
@@ -323,6 +326,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    0
                          , /* priority */                 syc_prioEvTestCtxSw
                          , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         , /* taskParam */                0
                          )
        != rtos_err_noError
       )
@@ -337,6 +341,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    0
                          , /* priority */                 syc_prioEvPIT2
                          , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         , /* taskParam */                0
                          )
        != rtos_err_noError
       )
@@ -351,6 +356,7 @@ void main(void)
                          , /* tiFirstActivationInMs */    0
                          , /* priority */                 syc_prioEv17ms
                          , /* minPIDToTriggerThisEvent */ RTOS_EVENT_NOT_USER_TRIGGERABLE
+                         , /* taskParam */                0
                          )
        != rtos_err_noError
       )

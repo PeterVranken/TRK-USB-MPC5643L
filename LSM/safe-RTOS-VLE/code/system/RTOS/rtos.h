@@ -239,6 +239,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
                                    , unsigned int tiFirstActivationInMs
                                    , unsigned int priority
                                    , unsigned int minPIDToTriggerThisEvent
+                                   , uintptr_t taskParam
                                    );
 
 /** Task registration for user mode or operating system initialization task. */
@@ -249,13 +250,17 @@ rtos_errorCode_t rtos_osRegisterInitTask( int32_t (*initTaskFct)(uint32_t PID)
 
 /** Task registration for scheduled user mode tasks. */
 rtos_errorCode_t rtos_osRegisterUserTask( unsigned int idEvent
-                                        , int32_t (*userModeTaskFct)(uint32_t PID)
+                                        , int32_t (*userModeTaskFct)( uint32_t PID
+                                                                    , uintptr_t taskParam
+                                                                    )
                                         , unsigned int PID
                                         , unsigned int tiMaxInUs
                                         );
 
 /** Task registration for scheduled operating system tasks. */
-rtos_errorCode_t rtos_osRegisterOSTask(unsigned int idEvent, void (*osTaskFct)(void));
+rtos_errorCode_t rtos_osRegisterOSTask( unsigned int idEvent
+                                      , void (*osTaskFct)(uintptr_t taskParam)
+                                      );
 
 /** Initialize the interrupt controller INTC. */
 void rtos_osInitINTCInterruptController(void);
@@ -307,7 +312,7 @@ void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCallingTask
 rtos_errorCode_t rtos_osInitKernel(void);
 
 /** Software triggered task activation. Can be called from OS context (incl. interrupts). */
-bool rtos_osTriggerEvent(unsigned int idEvent);
+bool rtos_osTriggerEvent(unsigned int idEvent, uintptr_t taskParam);
 
 /** Enter critcal section; partially suspend task scheduling. */
 uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority);
@@ -776,11 +781,32 @@ static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)
  *   @param idEvent
  * The ID of the event to activate as it had been got by the creation call for that event.
  * (See rtos_osCreateEvent().)
+ *   @param taskParam
+ * All associated tasks will receive this value, when they are called because of this
+ * trigger.\n
+ *   The value is ignored if the function returns \a false.
  *   @remark
  * The function is indented to start a non cyclic task by application software trigger but
  * can be applied to cyclic tasks, too. In which case the task function of the cyclic task
  * would be invoked once additionally. Note, that an event activation loss is not unlikely
  * in this case; the cyclic task may currently be busy.
+ *   @remark
+ * It may look like an inconsistent API design if all associated tasks receive the same
+ * value \a taskParam from the triggering event. The service could easily offer an API,
+ * which provides an individual value to each associated task. The only reason not to do
+ * so is the additional overhead in combination with the very few imaginable use cases.
+ * In most cases an explicitly triggered event will have just one associated task; events
+ * with more than one task will mostly be regular timer tasks, which make rarely use of the
+ * task parameter.
+ *   @remark
+ * If \a idEvent addresses a regular, time triggered event and if triggering succeeds, then
+ * the regular tasks will receive the passed value from now on. (Instead of the initial
+ * value specified at event creation time, see rtos_osCreateEvent().) Note, there's likely
+ * no use case for this, it's just a side effect of the implementation. However, it should
+ * not do any harm, because mostly regular tasks don't make use of the task parameter and
+ * mostly this service is not permitted for such events. If it could be harmful, e.g. if a
+ * timer event exceptionally makes use of the task parameter, then explicit triggering of
+ * the event using this service needs to be inhibitted.
  *   @remark
  * It is not forbidden but useless to let a task activate itself by triggering the event it
  * is associated with. This will have no effect besides incrementing the activation loss
@@ -789,10 +815,10 @@ static ALWAYS_INLINE void rtos_osLeaveCriticalSection(uint32_t msr)
  * This function must be called from the user task context only. Any attempt to use it from
  * OS code will lead to a crash.
  */
-static inline bool rtos_triggerEvent(unsigned int idEvent)
+static inline bool rtos_triggerEvent(unsigned int idEvent, uintptr_t taskParam)
 {
     #define RTOS_IDX_SC_TRIGGER_EVENT   3
-    return (bool)rtos_systemCall(RTOS_IDX_SC_TRIGGER_EVENT, idEvent);
+    return (bool)rtos_systemCall(RTOS_IDX_SC_TRIGGER_EVENT, idEvent, taskParam);
 
 } /* End of rtos_triggerEvent */
 

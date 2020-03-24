@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['rtos_5fclock_5ftick_5fin_5fms',['RTOS_CLOCK_TICK_IN_MS',['../rtos_8config_8h.html#adac6ecd4fb33ad903127c325c5aff1e0',1,'rtos.config.h']]],
   ['rtos_5fdisarm_5fmpu',['RTOS_DISARM_MPU',['../rtos__system_memory_protection_unit_8c.html#af620f44dbc920ca8f7a2a92d67e70ff0',1,'rtos_systemMemoryProtectionUnit.c']]],
   ['rtos_5ferr_5fprc_5falignment',['RTOS_ERR_PRC_ALIGNMENT',['../rtos_8h.html#a3d24664c8ff5376976146cfa2950311f',1,'rtos.h']]],
   ['rtos_5ferr_5fprc_5fdeadline',['RTOS_ERR_PRC_DEADLINE',['../rtos_8h.html#a34966960c63fafadc4a26f975463ecf5',1,'rtos.h']]],
@@ -20,16 +19,10 @@ var searchData=
   ['rtos_5fhdlr_5fconf_5fclass_5ffull',['RTOS_HDLR_CONF_CLASS_FULL',['../rtos__system_call_8h.html#a28067013553598a98217116e03aca91a',1,'rtos_systemCall.h']]],
   ['rtos_5fhdlr_5fconf_5fclass_5fsimple',['RTOS_HDLR_CONF_CLASS_SIMPLE',['../rtos__system_call_8h.html#ad71ba99d7500f0d82ab40b64d3d1a7ab',1,'rtos_systemCall.h']]],
   ['rtos_5finvalid_5fevent_5fid',['RTOS_INVALID_EVENT_ID',['../rtos_8h.html#ac4ea516ad4edd46b1088804cf463bc84',1,'rtos.h']]],
-  ['rtos_5fkernel_5firq_5fpriority',['RTOS_KERNEL_IRQ_PRIORITY',['../rtos_8config_8h.html#a9f3892b7ba70de7367144de511111c59',1,'rtos.config.h']]],
-  ['rtos_5fmax_5flockable_5ftask_5fpriority',['RTOS_MAX_LOCKABLE_TASK_PRIORITY',['../rtos_8config_8h.html#a7c7e477ca4efe3a5b5502f91e0568d99',1,'rtos.config.h']]],
-  ['rtos_5fmax_5fno_5fevents',['RTOS_MAX_NO_EVENTS',['../rtos_8config_8h.html#a6f73e4184494130fdd081ee3b603a732',1,'rtos.config.h']]],
-  ['rtos_5fmax_5fno_5ftasks',['RTOS_MAX_NO_TASKS',['../rtos_8config_8h.html#a132fbde1ccf910d5a3ba069232db0709',1,'rtos.config.h']]],
-  ['rtos_5fmax_5ftask_5fpriority',['RTOS_MAX_TASK_PRIORITY',['../rtos_8config_8h.html#a43041ea621d7f741020ac4fca4c543c7',1,'rtos.config.h']]],
   ['rtos_5fno_5ferr_5fprc',['RTOS_NO_ERR_PRC',['../rtos_8h.html#a3e599fcdd6c1ffc7c78aa83bf3d890c6',1,'rtos.h']]],
   ['rtos_5fno_5fprocesses',['RTOS_NO_PROCESSES',['../rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e',1,'rtos.h']]],
   ['rtos_5fno_5fsystem_5fcalls',['RTOS_NO_SYSTEM_CALLS',['../rtos__system_call_8h.html#a84079b96a5d13d68009df8ba413e59ad',1,'rtos_systemCall.h']]],
   ['rtos_5fsc_5ftable_5fentry',['RTOS_SC_TABLE_ENTRY',['../rtos_8h.html#a7eac206295711ad1e5346d367f9ce74c',1,'rtos.h']]],
-  ['rtos_5fsupport_5fevents_5fof_5fsame_5fprority',['RTOS_SUPPORT_EVENTS_OF_SAME_PRORITY',['../rtos_8config_8h.html#aa7e65dd33e6a3ac1d6d1eb3831c198c0',1,'rtos.config.h']]],
   ['rtos_5fsyscall_5fdummy_5ftable_5fentry',['RTOS_SYSCALL_DUMMY_TABLE_ENTRY',['../rtos__system_call_8c.html#a84aeb758bcdf0f1f3b53503464c3ae35',1,'rtos_systemCall.c']]],
   ['rtos_5fsyscall_5fresume_5fall_5ftasks_5fby_5fpriority',['RTOS_SYSCALL_RESUME_ALL_TASKS_BY_PRIORITY',['../rtos__priority_ceiling_protocol_8h.html#a2dabd2911ae013122d4558f976d3b689',1,'rtos_priorityCeilingProtocol.h']]],
   ['rtos_5fsyscall_5frun_5ftask',['RTOS_SYSCALL_RUN_TASK',['../rtos__run_task_8h.html#a866e2069c380206deb52871acc8e6e2c',1,'rtos_runTask.h']]],

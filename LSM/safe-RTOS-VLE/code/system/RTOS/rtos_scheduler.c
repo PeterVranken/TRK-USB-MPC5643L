@@ -262,6 +262,11 @@ typedef struct eventDesc_t
         use. This is a safety constraint. */
     unsigned int priority;
 
+    /** The tasks associated with the event can receive an argument. It is send with the
+        triggerEvent operation and advanced to the task functions, when they are called
+        later. */
+    uintptr_t taskParam;
+
     /** We can't queue events. If at least one task is still busy, which had been activated
         by the event at its previous due time then an event (and the activation of the
         associated tasks) is lost. This situation is considered an overrun and it is
@@ -607,6 +612,18 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
  * Get \a true if event could be triggered, \a false otherwise.
  *   @param pEvent
  * The event to trigger by reference.
+ *   @param hasTaskParam
+ * Individual task parameter value for each activation of the tasks of thes event are not
+ * always used. They are not used for regular, timer triggered events. However the code in
+ * this function is shared between timer events and others. Specify \a true if \a taskParam
+ * should be adopted by the event and \a false if it should be ignored.\n
+ *   Only use Boolean literals but no Boolean expression, when calling this function: It is
+ * an inline implementation. The entire code for supporting \a taskParam will be discarded
+ * at compile time if the Boolean literal \a false is passed in and at least the decision
+ * logic is discarded if it is a \a true.
+ *   @param taskParam
+ * This is the value of the variable argument for all the associated task function, when
+ * they will be called later.
  *   @param isInterrupt
  * This function submits an immediate call of the scheduler if an event of accordingly high
  * priority is triggered. However, this call is postponed if we are currently still inside
@@ -616,7 +633,11 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
  * ISR and the user task API. Only the OS API, which is shared between ISRs and OS tasks
  * will really contain the run-time decision code.
  */
-static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInterrupt)
+static ALWAYS_INLINE bool osTriggerEvent( eventDesc_t * const pEvent
+                                        , const bool hasTaskParam
+                                        , uintptr_t taskParam
+                                        , const bool isInterrupt
+                                        )
 {
     bool success;
 
@@ -637,7 +658,13 @@ static ALWAYS_INLINE bool osTriggerEvent(eventDesc_t * const pEvent, bool isInte
         /* Operation successful. Event can be triggered. */
         pEvent->state = evState_triggered;
         success = true;
-
+        
+        /* Set the task function argument for this activation. (And for all future
+           activations of a regular, time triggered event if such an event should be
+           addressed from service rtos_triggerEvent().) */
+        if(hasTaskParam)
+            pEvent->taskParam = taskParam;
+        
         /* Setting an event means a possible context switch to another task. It depends on
            priority and interrupt state. If so, we need to run the scheduler.
              It is not necessary to run the scheduler if the triggered event has a priority
@@ -739,7 +766,11 @@ static inline void checkEventDue(void)
             if((signed int)(pEvent->tiDue - rtos_tiOs) <= 0)
             {
                 /* Trigger the event or count an activation loss error. */
-                osTriggerEvent(pEvent, /* isInterrupt */ true);
+                osTriggerEvent(pEvent
+                              , /* hasTaskParam */ false
+                              , /* taskParam */ 0 /* value doesn't care */
+                              , /* isInterrupt */ true
+                              );
 
                 /* Adjust the due time.
                      Note, we could queue task activations for cyclic tasks by not adjusting
@@ -804,12 +835,13 @@ static inline void launchAllTasksOfEvent(const eventDesc_t * const pEvent)
 {
     const rtos_taskDesc_t *pTaskConfig = &pEvent->taskAry[0];
     unsigned int u = (unsigned int)pEvent->noTasks;
+    const uintptr_t taskParam = pEvent->taskParam;
     while(u-- > 0)
     {
         if(pTaskConfig->PID > 0)
-            rtos_osRunTask(pTaskConfig, /* taskParam */ pTaskConfig->PID);
+            rtos_osRunTask(pTaskConfig, taskParam);
         else
-            ((void (*)(void))pTaskConfig->addrTaskFct)();
+            ((void (*)(uintptr_t))pTaskConfig->addrTaskFct)(taskParam);
 
         ++ pTaskConfig;
 
@@ -922,6 +954,14 @@ static void initRTOSClockTick(void)
  * mean, all processes may trigger the event, (#RTOS_NO_PROCESSES+1) means only OS code can
  * trigger the event. (#RTOS_NO_PROCESSES+1) is available as
  * #RTOS_EVENT_NOT_USER_TRIGGERABLE, too.
+ *   @param taskParam
+ * The event is used to trigger its associated tasks. An argument can be passed to the task
+ * functions, when they are called later. The initial value of this argument is set now.\n
+ *   Actually, the relevance of this initial value is little. It'll be used mainly for
+ * regular, time triggered tasks, but for these tasks, the task parameter will mostly (not
+ * always) be meaningless and event tasks will receive a specific argument, which is
+ * defined when triggering the event they are associated with. See rtos_triggerEvent() for
+ * more details.
  *   @remark
  * Never call this function after the call of rtos_osInitKernel()!
  *   @remark
@@ -932,6 +972,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
                                    , unsigned int tiFirstActivationInMs
                                    , unsigned int priority
                                    , unsigned int minPIDToTriggerThisEvent
+                                   , uintptr_t taskParam
                                    )
 {
     *pEventId = RTOS_INVALID_EVENT_ID;
@@ -985,6 +1026,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     pNewEvent->noActivationLoss = 0;
     pNewEvent->taskAry = NULL;
     pNewEvent->noTasks = 0;
+    pNewEvent->taskParam = taskParam;
     pNewEvent->pNextScheduledEvent = NULL;
 
     const unsigned int idNewEv = rtos_noEvents++;
@@ -1019,6 +1061,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
                              , .noActivationLoss = 0
                              , .taskAry = NULL
                              , .noTasks = 0
+                             , .taskParam = 0
                              , .pNextScheduledEvent = NULL
                              };
 
@@ -1136,7 +1179,9 @@ rtos_errorCode_t rtos_osRegisterInitTask( int32_t (*initTaskFct)(uint32_t PID)
  * This function must be called by trusted code in supervisor mode only.
  */
 rtos_errorCode_t rtos_osRegisterUserTask( unsigned int idEvent
-                                        , int32_t (*userModeTaskFct)(uint32_t PID)
+                                        , int32_t (*userModeTaskFct)( uint32_t PID
+                                                                    , uintptr_t taskParam
+                                                                    )
                                         , unsigned int PID
                                         , unsigned int tiTaskMaxInUs
                                         )
@@ -1180,7 +1225,7 @@ rtos_errorCode_t rtos_osRegisterUserTask( unsigned int idEvent
  * This function must be called by trusted code in supervisor mode only.
  */
 rtos_errorCode_t rtos_osRegisterOSTask( unsigned int idEvent
-                                      , void (*osTaskFct)(void)
+                                      , void (*osTaskFct)(uintptr_t taskParam)
                                       )
 {
     return registerTask(idEvent, (uintptr_t)osTaskFct, /* PID */ 0, /* tiTaskMaxInUs */ 0);
@@ -1557,11 +1602,32 @@ rtos_errorCode_t rtos_osInitKernel(void)
  *   @param idEvent
  * The ID of the event to activate as it had been got by the creation call for that event.
  * (See rtos_osCreateEvent().)
+ *   @param taskParam
+ * All associated tasks will receive this value, when they are called because of this
+ * trigger.\n
+ *   The value is ignored if the function returns \a false.
  *   @remark
  * The function is indented to start a non cyclic task by application software trigger but
  * can be applied to cyclic tasks, too. In which case the task function of the cyclic task
  * would be invoked once additionally. Note, that an event activation loss is not unlikely in
  * this case; the cyclic task may currently be busy.
+ *   @remark
+ * It may look like an inconsistent API design if all associated tasks receive the same
+ * value \a taskParam from the triggering event. The service could easily offer an API,
+ * which provides an individual value to each associated task. The only reason not to do
+ * so is the additional overhead in combination with the very few imaginable use cases.
+ * In most cases an explicitly triggered event will have just one associated task; events
+ * with more than one task will mostly be regular timer tasks, which make rarely use of the
+ * task parameter.
+ *   @remark
+ * If \a idEvent addresses a regular, time triggered event and if triggering succeeds, then
+ * the regular tasks will receive the passed value from now on. (Instead of the initial
+ * value specified at event creation time, see rtos_osCreateEvent().) Note, there's likely
+ * no use case for this, it's just a side effect of the implementation. However, it should
+ * not do any harm, because mostly regular tasks don't make use of the task parameter and
+ * mostly this service is not permitted for such events. If it could be harmful, e.g. if a
+ * timer event exceptionally makes use of the task parameter, then explicit triggering of
+ * the event using this service needs to be inhibitted.
  *   @remark
  * It is not forbidden but useless to let a task activate itself by triggering the event it
  * is associated with. This will have no effect besides incrementing the activation loss
@@ -1569,13 +1635,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
  *   @remark
  * This function must be called from the OS context only. It may be called from an ISR to
  * implement delegation to a user task.
- *   @todo The new software scheduler would easily allow service triggerEvent to have an
- * argument. A 32 Bit value would be passed to the associated tasks as task function
- * argument. ISRs could send simple data to a task. More stringent would be an individual
- * argument for each of the associated tasks but the runtime overhead would barely pay off
- * for the few use cases.
  */
-bool rtos_osTriggerEvent(unsigned int idEvent)
+bool rtos_osTriggerEvent(unsigned int idEvent, uintptr_t taskParam)
 {
     /* This function behaves differently depending on whether it is called from an ISR
        (task activation is deferred) or from an OS task (task activation immediately
@@ -1594,8 +1655,11 @@ bool rtos_osTriggerEvent(unsigned int idEvent)
     
     /* This function is shared between ISRs and OS tasks. We need to know because the
        behavior depends (2nd function argument). */
-    return osTriggerEvent(getEventByID(idEvent), isInterrupt);
-
+    return osTriggerEvent( getEventByID(idEvent)
+                         , /* hasTaskParam */ true
+                         , taskParam
+                         , isInterrupt
+                         );
 } /* End of rtos_osTriggerEvent */
 
 
@@ -1612,17 +1676,45 @@ bool rtos_osTriggerEvent(unsigned int idEvent)
  * Otherwise an exception is raised, which aborts the calling task.
  *   @param idEvent
  * The ID of the event to trigger. This is the ID got from rtos_osCreateEvent().
+ *   @param taskParam
+ * All associated tasks will receive this value, when they are called because of this
+ * trigger.\n
+ *   The value is ignored if the function returns \a false.
+ *   @remark
+ * It may look like an inconsistent API design if all associated tasks receive the same
+ * value \a taskParam from the triggering event. The service could easily offer an API,
+ * which provides an individual value to each associated task. The only reason not to do
+ * so is the additional overhead in combination with the very few imaginable use cases.
+ * In most cases an explicitly triggered event will have just one associated task; events
+ * with more than one task will mostly be regular timer tasks, which make rarely use of the
+ * task parameter.
+ *   @remark
+ * If \a idEvent addresses a regular, time triggered event and if triggering succeeds, then
+ * the regular tasks will receive the passed value from now on. (Instead of the initial
+ * value specified at event creation time, see rtos_osCreateEvent().) Note, there's likely
+ * no use case for this, it's just a side effect of the implementation. However, it should
+ * not do any harm, because mostly regular tasks don't make use of the task parameter and
+ * mostly this service is not permitted for such events. If it could be harmful, e.g. if a
+ * timer event exceptionally makes use of the task parameter, then explicit triggering of
+ * the event using service rtos_triggerEvent() needs to be inhibitted.
  *   @remark
  * This function must never be called directly. The function is only made for placing it in
  * the global system call table.
  */
-uint32_t rtos_scFlHdlr_triggerEvent(unsigned int pidOfCallingTask, unsigned int idEvent)
+uint32_t rtos_scFlHdlr_triggerEvent( unsigned int pidOfCallingTask
+                                   , unsigned int idEvent
+                                   , uintptr_t taskParam
+                                   )
 {
     if(idEvent < rtos_noEvents)
     {
         eventDesc_t * const pEvent = getEventByID(idEvent);
         if(pidOfCallingTask >= (unsigned int)pEvent->minPIDForTrigger)
-            return (uint32_t)osTriggerEvent(pEvent, /* isInterrupt */ false);
+            return (uint32_t)osTriggerEvent( pEvent
+                                           , /* hasTaskParam */ true
+                                           , taskParam
+                                           , /* isInterrupt */ false
+                                           );
     }
 
     /* The user specified event ID is not in range or the calling process doesn't have the

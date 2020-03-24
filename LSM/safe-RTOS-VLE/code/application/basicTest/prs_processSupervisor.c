@@ -125,14 +125,16 @@ static failureStatus_t BSS_PRC_SV(prs_status);
  */
 
 /**
- * Task function, cyclically activated every 17ms.
+ * Task function, cyclically activated every 10ms.
  *   @return
  * If the task function returns a negative value then the task execution is counted as
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
+int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     /* Don't inject more errors if an error had already been detected and the process had
        been halted. Return zero, do not count the same situation repeatedly. */
@@ -523,14 +525,16 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED)
 
 
 /**
- * Task function, cyclically activated every 17ms.
+ * Task function, cyclically activated every 10ms.
  *   @return
  * If the task function returns a negative value then the task execution is counted as
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here not used.
  */
-int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
+int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_UNUSED)
 {
     /* Don't repeat the error evaluation if an error had already been detected and the
        process had been halted. Return zero, do not count the same situation repeatedly. */
@@ -608,8 +612,11 @@ int32_t prs_taskEvaluateError(uint32_t PID ATTRIB_UNUSED)
  * error in the process.
  *   @param PID
  * A user task function gets the process ID as first argument.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing, we expect a linear counter
+ * starting at zero.
  */
-int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
+int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam)
 {
     const bool isPrcFailingTasksSuspended = rtos_isProcessSuspended(syc_pidFailingTasks);
     
@@ -636,7 +643,13 @@ int32_t prs_taskWatchdog(uint32_t PID ATTRIB_UNUSED)
         prs_status.status.stackResRep = rtos_getStackReserve(syc_pidReporting);
         prs_status.status.stackResOS = rtos_getStackReserve(/* PID */ 0 /* OS */);
         
-        bool isOk = prs_status.status.noActLossEvTest == 0
+        /* The first term in the failure condition is equivalent to a check of activation
+           losses for the supervisory process (event syc_idEvPIT2). The event triggering
+           ISR sends consecutive number 0, 1, 2... but we would see here a missing number
+           if the triggering the event should have failed. */
+        static uintptr_t SBSS_PRC_SV(expectedTaskParam_) = 0;
+        bool isOk = taskParam == expectedTaskParam_++
+                    &&  prs_status.status.noActLossEvTest == 0
                     &&  prs_status.status.noActLossEvPIT2 == 0
                     &&  prs_status.status.noTaskFailSV == 0
                     &&  prs_status.status.noTaskFailRep == 0

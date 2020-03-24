@@ -426,9 +426,9 @@ instructions; it's an arithmetic comparison of the stored end time with
 the CPU's time base register. The decision is clear - either we complete
 the return to the preempted context or we raise an exception, which kills
 it. The implementation can be that easy because the check is done when and
-only when we return to the stack frame of the preempted, deadline
-monitored task: Now the end time is easily accessible and killing the task
-in case is simply doable, because it's on top of the stack.
+only when we return to the stack frame of the preempted,
+deadline-monitored task: Now the end time is easily accessible and killing
+the task in case is simply doable, because it's on top of the stack.
 
 The deadline monitoring aims only at protecting a supervisor user task of
 high priority against starvation. Without it, a notification callback from
@@ -529,6 +529,8 @@ The differences to the simple RTOS are:
 
 * The safety concept
 * Any number of events can be created
+* An event now has an argument. This is a signal, which the associated
+  tasks receive as function argument
 * Any number of task priorities is available
 * Any number of tasks can be associated with an event. The simple RTOS had
   used a one-by-one relation between events and tasks. (Which was not a
@@ -1233,6 +1235,7 @@ activated. These are mostly (regular) time triggers but software trigger
                                        , unsigned int tiFirstActivationInMs
                                        , unsigned int priority
                                        , unsigned int minPIDToTriggerThisEvent
+                                       , uintptr_t taskParam
                                        );
 
 The returned event IDs form a sequence of numbers 0, 1, 2, ... in the
@@ -1246,6 +1249,9 @@ interrupt. See <<secPrioTaskAndISR>> and <<secApiRegisterIsr>> also.
 Parameter `minPIDToTriggerThisEvent` restricts the use of the API
 `rtos_triggerEvent` to processes of sufficient privileges.
 
+Parameter `taskParam` is provided to the task function as argument. It can
+be used as context informtion, e.g. if the same task function should be
+associated with different events.
 
 ==== Registering a task
 
@@ -1287,11 +1293,13 @@ stability.
     #include "rtos.h"
     rtos_errorCode_t rtos_osRegisterOSTask
                             ( unsigned int idEvent
-                            , void (*osTaskFct)(void)
+                            , void (*osTaskFct)(uintptr_t taskParam)
                             );
     rtos_errorCode_t rtos_osRegisterUserTask
                             ( unsigned int idEvent
-                            , int32_t (*userModeTaskFct)(uint32_t PID)
+                            , int32_t (*userModeTaskFct)( uint32_t PID
+                                                        , uintptr_t taskParam
+                                                        )
                             , unsigned int PID
                             , unsigned int tiMaxInUs
                             );
@@ -1307,6 +1315,13 @@ in their process if they fail. The return value permits to let the task
 voluntarily report a failure in their process the same way a kernel caught
 failure would. Use case is hindering the system from startup if something
 goes wrong during initialization.
+
+The task functions receive the 32 Bit argument `taskParam`. For regular
+timer tasks its widely irrelevant; they receive the constant value, which
+is specified at event creation time (see <<secApiCreateEvent>>). Event
+triggered tasks receive the value, which is sent with
+_rtos_osTriggerEvent()_ or _rtos_triggerEvent()_ (see
+<<secApiTriggerEvent>>).
 
 [[secApiRegisterIsr]]
 ==== Registering an ISR
@@ -1378,6 +1393,7 @@ task.
 
 === Run-time API
 
+[[secApiTriggerEvent]]
 ==== Trigger an event
 
 Most events are typically time triggered. The rest is triggered on demand.
@@ -1388,14 +1404,29 @@ conformance class. System call handlers of lower conformance class must
 not use it.
 
     #include "rtos.h"
-    bool rtos_osTriggerEvent(unsigned int idEvent);
-    bool rtos_triggerEvent(unsigned int idEvent);
+    bool rtos_osTriggerEvent(unsigned int idEvent, uintptr_t taskParam);
+    bool rtos_triggerEvent(unsigned int idEvent, uintptr_t taskParam);
 
 Triggering the event can fail if at least one of the associated tasks has
 not yet completed the previous activation. This is counted as an
 activation loss error for the event. In this situation, the new trigger is
 entirely lost, i.e. none of the associated tasks will be activated by the
 new trigger.
+
+The trigger of an event can be used to specify the value `taskParam`,
+which is delivered to the associated tasks as function argument, when they
+are activated. Main use case is deferred interrupt handling; an ISR
+can send some context information about what to do to the task. This is
+likely the most simple available coherent, process boundary crossing
+communication channel.
+  footnote:[It may look like an inconsistent API design if all associated
+tasks receive the same value `taskParam` from the triggering event. The
+service _rtos_triggerEvent()_ could easily offer an API, which provides an
+individual value to each associated task. The only reason not to do so is
+the additional overhead in combination with the very few imaginable use
+cases. In most cases an explicitly triggered event will have just one
+associated task; events with more than one task will mostly be regular
+timer tasks, which make rarely use of the task parameter.]
 
 Unrestricted use of event triggers would easily break the safety concept
 of the aimed software. Therefore, the use of this kernel service is

@@ -89,7 +89,7 @@ enum
     idEvTaskH,      /// Event for task of higer priority, which can preempt A, B, C
     idEvTaskT,      /// Event for cyclic task of same priority as H
     idEvTaskS,      /// Event for cyclic supervisor task in other process
-    
+
     /** The number of tasks to register. */
     noRegisteredEvents
 };
@@ -141,10 +141,10 @@ enum
 volatile unsigned long SBSS_OS(mai_cntTaskIdle) = 0;
 
 /** Counter of first round robin task. */
-volatile unsigned long long SBSS_P1(mai_cntTaskA) = 0;  
+volatile unsigned long long SBSS_P1(mai_cntTaskA) = 0;
 
 /** Counter of second round robin task. */
-volatile unsigned long long SBSS_P1(mai_cntTaskB) = 0;  
+volatile unsigned long long SBSS_P1(mai_cntTaskB) = 0;
 
 /** Counter of third round robin task. */
 volatile unsigned long long SBSS_P1(mai_cntTaskC) = 0;
@@ -214,14 +214,21 @@ static int32_t taskInitProcess(uint32_t PID)
  * compilation, when we have no assertions available.
  *   @param PID
  * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing, we expect a linear counter
+ * starting at zero.
  */
-static int32_t taskA(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskA(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam)
 {
+    static uint32_t SDATA_P1(cnt) = 0;
+    assert(taskParam == cnt);
+    cnt = taskParam+1;
+    
     /* Trigger the next task out of the three round robin tasks.
          The triggered task has same priority, so the trigger needs to be always possible. */
-    bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_triggerEvent(idEvTaskB);
+    bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_triggerEvent(idEvTaskB, mai_cntTaskB);
     assert(evCouldBeTriggered);
-    
+
     /* Scheduler test: No race conditions with other round robin tasks. */
     const bool success = mai_cntTaskA == mai_cntTaskB  &&  mai_cntTaskB == mai_cntTaskC;
     ++ mai_cntTaskA;
@@ -241,17 +248,22 @@ static int32_t taskA(uint32_t PID ATTRIB_UNUSED)
  * compilation, when we have no assertions available.
  *   @param PID
  * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing, we expect a linear counter
+ * starting at zero.
  */
-static int32_t taskB(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskB(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_DBG_ONLY)
 {
+    assert(taskParam == mai_cntTaskB);
+    
     /* Trigger the next task out of the three round robin tasks.
          The triggered task has same priority, so the trigger needs to be always possible. */
-    bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_triggerEvent(idEvTaskC);
+    bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_triggerEvent(idEvTaskC, mai_cntTaskB);
     assert(evCouldBeTriggered);
-    
+
     /* Trigger a task of higher priority. This will lead to an immediate task switch.
          The triggered task has same priority, so the trigger needs to be always possible. */
-    evCouldBeTriggered = rtos_triggerEvent(idEvTaskH);
+    evCouldBeTriggered = rtos_triggerEvent(idEvTaskH, mai_cntTaskH);
     assert(evCouldBeTriggered);
 
     /* Scheduler test: No race conditions with other round robin tasks. */
@@ -273,14 +285,19 @@ static int32_t taskB(uint32_t PID ATTRIB_UNUSED)
  * compilation, when we have no assertions available.
  *   @param PID
  * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing, we expect a linear counter
+ * starting at zero.
  */
-static int32_t taskC(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskC(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_DBG_ONLY)
 {
+    assert(taskParam+1 == mai_cntTaskB);
+    
     /* Trigger the next task out of the three round robin tasks.
          The triggered task has same priority, so the trigger needs to be always possible. */
-    bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_triggerEvent(idEvTaskA);
+    bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_triggerEvent(idEvTaskA, mai_cntTaskA);
     assert(evCouldBeTriggered);
-    
+
     /* Scheduler test: No race conditions with other round robin tasks. */
     ++ mai_cntTaskC;
     const bool success = mai_cntTaskA == mai_cntTaskB  &&  mai_cntTaskB == mai_cntTaskC;
@@ -302,9 +319,14 @@ static int32_t taskC(uint32_t PID ATTRIB_UNUSED)
  * compilation, when we have no assertions available.
  *   @param PID
  * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing, we expect a linear counter
+ * starting at zero.
  */
-static int32_t taskH(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskH(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_DBG_ONLY)
 {
+    assert(taskParam == mai_cntTaskH);
+
     /* Scheduler test: No race conditions with round robin tasks and nor with task T. */
     ++ mai_cntTaskH;
     ++ mai_cntSharedTaskHAndT;
@@ -332,15 +354,20 @@ static int32_t taskH(uint32_t PID ATTRIB_UNUSED)
  * compilation, when we have no assertions available.
  *   @param PID
  * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing, we expect the initial value
+ * defined at rtos_osCreateEvent().
  */
-static int32_t taskT(uint32_t PID ATTRIB_UNUSED)
+static int32_t taskT(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATTRIB_DBG_ONLY)
 {
+    assert(taskParam == idEvTaskT);
+    
     /* Scheduler test: No race conditions with task H. */
     ++ mai_cntTaskT;
     ++ mai_cntSharedTaskHAndT;
     const bool success = mai_cntSharedTaskHAndT == mai_cntTaskT + mai_cntTaskH;
     assert(success);
-    
+
     if((mai_cntTaskT & (256-1)) == 1)
     {
         iprintf( "Task S: %u cycles. Tasks A, B, C: %llu cycles, task H: %llu cycles"
@@ -368,18 +395,23 @@ static int32_t taskT(uint32_t PID ATTRIB_UNUSED)
  * compilation, when we have no assertions available.
  *   @param PID
  * The ID of the process, the task function is executed in.
+ *   @param taskParam
+ * A variable task parameter. Here just used for testing, we expect the initial value
+ * defined at rtos_osCreateEvent().
  */
-static int32_t taskS(uint32_t PID ATTRIB_DBG_ONLY)
+static int32_t taskS(uint32_t PID ATTRIB_DBG_ONLY, uintptr_t taskParam ATTRIB_DBG_ONLY)
 {
+    assert(taskParam == idEvTaskS);
+    
     /* This task runs in another process as the supervised tasks. */
     assert(PID == 2);
-    
+
     ++ mai_cntTaskS;
-    
+
     const unsigned int stackReserveOs = rtos_getStackReserve(pidOs)
                      , stackReserveP1 = rtos_getStackReserve(/* PID */ 1)
                      , stackReserveP2 = rtos_getStackReserve(/* PID */ 2);
-                     
+
     const bool success = rtos_getNoTotalTaskFailure(/* PID */ 1) == 0
                          &&  rtos_getNoTotalTaskFailure(/* PID */ 2) == 0
                          &&  stackReserveOs >= 4096
@@ -435,7 +467,7 @@ int main(int noArgs ATTRIB_DBG_ONLY, const char *argAry[] ATTRIB_DBG_ONLY)
        prior to entry into main() is code transparency. It would mean to have a lot of C
        code without an obvious point, where it is called. */
     ihw_initMcuCoreHW();
-    
+
     /* The core is now running in the desired state. I/O driver initialization follows to
        the extend required by this simple sample. */
 
@@ -470,6 +502,7 @@ int main(int noArgs ATTRIB_DBG_ONLY, const char *argAry[] ATTRIB_DBG_ONLY)
                          , /* minPIDToTriggerThisEvent */ tiCycleInMs == 0                  \
                                                           ? 1                               \
                                                           : RTOS_EVENT_NOT_USER_TRIGGERABLE \
+                         , /* taskParam */                idEvTask##name                    \
                          )                                                                  \
        == rtos_err_noError                                                                  \
       )                                                                                     \
@@ -526,9 +559,11 @@ int main(int noArgs ATTRIB_DBG_ONLY, const char *argAry[] ATTRIB_DBG_ONLY)
        computation time at their priority level and we must never get back into the idle
        task.
          Since we are here in idle, the trigger needs to be always possible. */
-    bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_osTriggerEvent(idEvTaskA);
+    bool evCouldBeTriggered ATTRIB_DBG_ONLY = rtos_osTriggerEvent( idEvTaskA
+                                                                 , /* taskParam */ 0
+                                                                 );
     assert(evCouldBeTriggered);
-    while(true)    
+    while(true)
     {
         assert(false);
 
