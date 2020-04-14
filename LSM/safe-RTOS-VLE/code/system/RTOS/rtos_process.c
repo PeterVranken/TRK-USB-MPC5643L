@@ -122,28 +122,28 @@ extern uint32_t ld_stackEndP1[0], ld_stackEndP2[0], ld_stackEndP3[0], ld_stackEn
 processDesc_t SECTION(.data.OS.rtos_processAry) rtos_processAry[RTOS_NO_PROCESSES] =
 {
     /** Process 1. */
-    [0] = { .userSP = (uint32_t)ld_stackEndP1 - 16
+    [0] = { .userSP = 0
             , .state = 0
             , .cntTotalTaskFailure = 0
             , .cntTaskFailureAry = {[0 ... (RTOS_NO_CAUSES_TASK_ABORTION-1)] = 0}
           }
 
     /** Process 2. */
-    , [1] = { .userSP = (uint32_t)ld_stackEndP2 - 16
+    , [1] = { .userSP = 0
               , .state = 0
               , .cntTotalTaskFailure = 0
               , .cntTaskFailureAry = {[0 ... (RTOS_NO_CAUSES_TASK_ABORTION-1)] = 0}
             }
 
     /** Process 3. */
-    , [2] = { .userSP = (uint32_t)ld_stackEndP3 - 16
+    , [2] = { .userSP = 0
               , .state = 0
               , .cntTotalTaskFailure = 0
               , .cntTaskFailureAry = {[0 ... (RTOS_NO_CAUSES_TASK_ABORTION-1)] = 0}
             }
 
     /** Process 4. */
-    , [3] = { .userSP = (uint32_t)ld_stackEndP2 - 16
+    , [3] = { .userSP = 0
               , .state = 0
               , .cntTotalTaskFailure = 0
               , .cntTaskFailureAry = {[0 ... (RTOS_NO_CAUSES_TASK_ABORTION-1)] = 0}
