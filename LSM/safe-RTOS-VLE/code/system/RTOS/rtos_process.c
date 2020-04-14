@@ -48,6 +48,7 @@
 #include "typ_types.h"
 #include "rtos_process.h"
 #include "rtos_process_defSysCalls.h"
+#include "rtos_kernelInstanceData.h"
 #include "rtos.h"
 #include "rtos_systemCall.h"
 #include "rtos_ivorHandler.h"
@@ -70,38 +71,6 @@
  * Local type definitions
  */
 
-/** Run-time data describing a process. An object of this type must be allocated in RAM,
-    which is not write-permitted for user code. */
-typedef struct processDesc_t
-{
-    /** When preempting a task that belongs to this process then the IVOR #4 handler will
-        store the current user mode stack pointer value in \a userSP. The stored value may
-        be used later as initial stack pointer value of a newly started task from the same
-        process.\n
-          In the assembler code addressed to by offset #O_PDESC_USP. */
-    uint32_t userSP;
-
-    /** The state of the process. This field is e.g. checked at the end of a preemption of
-        a task of this process to see if the task may be continued or if the process has
-        been stopped meanwhile.\n
-          A non zero value means process is running, zero means process stopped.\n
-          In the assembler code addressed to by offset #O_PDESC_ST. */
-    uint8_t state;
-
-    /** The total count of errors for the process since the start of the kernel. Or the sum
-        of all element in array \a cntTaskFailureAry. Or total number of abnormal abortions
-        of tasks belonging to the process. */
-    uint32_t cntTotalTaskFailure;
-
-    /** This is an array of counters for task termination. The tasks of a process are not
-        separated in these counters. Each array entry means another cause, where a cause
-        normally is a specific CPU exception.\n
-          See file rtos_ivorHandler.h, #RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK and
-        following, for the enumerated causes. */
-    uint32_t cntTaskFailureAry[RTOS_NO_CAUSES_TASK_ABORTION];
-
-} processDesc_t;
-
 
 /*
  * Local prototypes
@@ -111,61 +80,6 @@ typedef struct processDesc_t
 /*
  * Data definitions
  */
-
-/* Forward declaration of pointers to boundaries of stack areas, which are actually
-   defined in the linker script. Used to initialize the global process structure. */
-extern uint32_t ld_stackEndP1[0], ld_stackEndP2[0], ld_stackEndP3[0], ld_stackEndP4[0];
-
-/** Array holding run-time data for all processes. Note the process IDs have a one based
-    index (as 0 is reserved for the kernel process) but this is a normal array with zero
-    based index. Use PID-1 as index into the array. */
-processDesc_t SECTION(.data.OS.rtos_processAry) rtos_processAry[RTOS_NO_PROCESSES] =
-{
-    /** Process 1. */
-    [0] = { .userSP = 0
-            , .state = 0
-            , .cntTotalTaskFailure = 0
-            , .cntTaskFailureAry = {[0 ... (RTOS_NO_CAUSES_TASK_ABORTION-1)] = 0}
-          }
-
-    /** Process 2. */
-    , [1] = { .userSP = 0
-              , .state = 0
-              , .cntTotalTaskFailure = 0
-              , .cntTaskFailureAry = {[0 ... (RTOS_NO_CAUSES_TASK_ABORTION-1)] = 0}
-            }
-
-    /** Process 3. */
-    , [2] = { .userSP = 0
-              , .state = 0
-              , .cntTotalTaskFailure = 0
-              , .cntTaskFailureAry = {[0 ... (RTOS_NO_CAUSES_TASK_ABORTION-1)] = 0}
-            }
-
-    /** Process 4. */
-    , [3] = { .userSP = 0
-              , .state = 0
-              , .cntTotalTaskFailure = 0
-              , .cntTaskFailureAry = {[0 ... (RTOS_NO_CAUSES_TASK_ABORTION-1)] = 0}
-            }
-};
-
-
-/** The option to let a task of process A suspend process B (system call
-    rtos_suspendProcess()) is potentially harmful, as a safety relevant supervisory task
-    could be hindered from running. This is of course not generally permittable. An
-    all-embracing privilege rule cannot be defined because of the different use cases of
-    the mechanism. Therefore, we have an explicit table of granted permissions, which can
-    be configured at startup time as an element of the operating system initialization
-    code.\n
-      The bits of the word correspond to the 16 possible combinations of four possible
-    caller processes in four possible target processes.
-      By default, no permission is granted. */
-#if RTOS_NO_PROCESSES == 4
-static uint16_t SDATA_OS(_suspendProcess_permissions) = 0;
-#else
-# error Implementation depends on four being the number of processes
-#endif
 
 
 /*
@@ -188,6 +102,8 @@ static uint16_t SDATA_OS(_suspendProcess_permissions) = 0;
  */
 rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCESSES])
 {
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+
     /* The C code has an interface with the assembler code. It is used to exchange process
        and task related information. The interface is modeled twice, once as structs for C
        code and once as set of preprocessor macros, which hold size of data structures and
@@ -204,6 +120,17 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
 
     /* If the kernel process wouldn't be configured correctly then we would never get here. */
     isProcessConfiguredAry[0] = true;
+    
+    /* This code, like all other using core-related global linker symbols ld_*, needs
+       migration. We can't do that here and immediately as it requires a revision of the
+       linker script, which is actually useless and unwanted for the given MCU derivative.
+       We just place an assertion to avoid problem when running this code on another
+       derivative. */
+    /// @todo Make code core dependent if running the RTOS on a multi-core
+#ifdef DEBUG
+    extern rtos_kernelInstanceData_t rtos_kernelInstanceDataAry[RTOS_NO_CORES];
+    assert(pIData == &rtos_kernelInstanceDataAry[0]);
+#endif
 
     /* Fill all process stacks with the empty-pattern, which is applied for computing the
        stackusage. */
@@ -224,7 +151,7 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
     for(idxP=0; idxP<RTOS_NO_PROCESSES; ++idxP)
     {
         /* Disable the process by default. */
-        rtos_processAry[idxP].state = 0;
+        pIData->processAry[idxP].state = 0;
         isProcessConfiguredAry[idxP+1] = false;
 
         /* Stack size: May be zero if process is not used at all. Otherwise we demand a
@@ -248,8 +175,8 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
                 stackStartAry[idxP][sizeOfStack/4 - 3] = 0xffffffffu;
                 stackStartAry[idxP][sizeOfStack/4 - 2] = 0xffffffffu;
                 stackStartAry[idxP][sizeOfStack/4 - 1] = 0xffffffffu;
-                rtos_processAry[idxP].userSP = (uint32_t)stackEndAry[idxP] - 16;
-                rtos_processAry[idxP].state = 1;
+                pIData->processAry[idxP].userSP = (uint32_t)stackEndAry[idxP] - 16;
+                pIData->processAry[idxP].state = 1;
 
                 /* Stack alright, process may be used. */
                 isProcessConfiguredAry[idxP+1] = true;
@@ -265,12 +192,12 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
                 errCode = rtos_err_prcStackInvalid;
         }
         else
-            rtos_processAry[idxP].userSP = 0;
+            pIData->processAry[idxP].userSP = 0;
 
-        rtos_processAry[idxP].cntTotalTaskFailure = 0;
-        memset( &rtos_processAry[idxP].cntTaskFailureAry[0]
+        pIData->processAry[idxP].cntTotalTaskFailure = 0;
+        memset( &pIData->processAry[idxP].cntTaskFailureAry[0]
               , /* c */ 0
-              , sizeOfAry(rtos_processAry[idxP].cntTaskFailureAry)
+              , sizeOfAry(pIData->processAry[idxP].cntTaskFailureAry)
               );
     } /* End for(All processes) */
 
@@ -280,7 +207,7 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
            rtos_osGrantPermissionSuspendProcess() and rtos_scSmplHdlr_suspendProcess(). */
         assert(maxPIDInUse >= 1  &&  maxPIDInUse <= 4);
         const uint16_t mask = 0x1111 << (maxPIDInUse-1);
-        if((_suspendProcess_permissions & mask) != 0)
+        if((pIData->suspendProcess_permissions & mask) != 0)
             errCode = rtos_err_suspendPrcBadPermission;
     }
 
@@ -336,7 +263,7 @@ void rtos_osGrantPermissionSuspendProcess( unsigned int pidOfCallingTask
 #endif
     const unsigned int idxCalledPrc = targetPID - 1u;
     const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
-    _suspendProcess_permissions |= mask;
+    rtos_getInstancePtr()->suspendProcess_permissions |= mask;
 
 } /* End of rtos_osGrantPermissionSuspendProcess */
 
@@ -379,8 +306,9 @@ void rtos_scSmplHdlr_suspendProcess(uint32_t pidOfCallingTask, uint32_t PID)
     if(idxCalledPrc > 3)
         rtos_osSystemCallBadArgument();
 
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
     const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
-    if((_suspendProcess_permissions & mask) != 0)
+    if((pIData->suspendProcess_permissions & mask) != 0)
         rtos_osSuspendProcess(PID);
     else
     {
@@ -413,8 +341,9 @@ void rtos_osReleaseProcess(uint32_t PID)
        results. */
     -- PID;
 
-    assert(PID < sizeOfAry(rtos_processAry));
-    rtos_processAry[PID].state = 1;
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    assert(PID < sizeOfAry(pIData->processAry));
+    pIData->processAry[PID].state = 1;
 
 } /* End of rtos_osReleaseProcess */
 
@@ -440,8 +369,9 @@ void rtos_osSuspendProcess(uint32_t PID)
        results. */
     -- PID;
 
-    assert(PID < sizeOfAry(rtos_processAry));
-    rtos_processAry[PID].state = 0;
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    assert(PID < sizeOfAry(pIData->processAry));
+    pIData->processAry[PID].state = 0;
 
 } /* End of rtos_osSuspendProcess */
 
@@ -464,8 +394,9 @@ bool rtos_isProcessSuspended(uint32_t PID)
        results. */
     -- PID;
 
-    assert(PID < sizeOfAry(rtos_processAry));
-    return rtos_processAry[PID].state == 0;
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    assert(PID < sizeOfAry(pIData->processAry));
+    return pIData->processAry[PID].state == 0;
 
 } /* End of rtos_isProcessSuspended */
 
@@ -485,8 +416,9 @@ bool rtos_isProcessSuspended(uint32_t PID)
  */
 unsigned int rtos_getNoTotalTaskFailure(unsigned int PID)
 {
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
     if(--PID < RTOS_NO_PROCESSES)
-        return rtos_processAry[PID].cntTotalTaskFailure;
+        return pIData->processAry[PID].cntTotalTaskFailure;
     else
     {
         assert(false);
@@ -514,11 +446,12 @@ unsigned int rtos_getNoTotalTaskFailure(unsigned int PID)
  */
 unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr)
 {
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
     if(--PID < RTOS_NO_PROCESSES
-       &&  kindOfErr < sizeOfAry(rtos_processAry[PID].cntTaskFailureAry)
+       &&  kindOfErr < sizeOfAry(pIData->processAry[PID].cntTaskFailureAry)
       )
     {
-        return rtos_processAry[PID].cntTaskFailureAry[kindOfErr];
+        return pIData->processAry[PID].cntTaskFailureAry[kindOfErr];
     }
     else
     {
@@ -575,6 +508,18 @@ unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr)
  */
 unsigned int rtos_getStackReserve(unsigned int PID)
 {
+    /* This code, like all other using core-related global linker symbols ld_*, needs
+       migration. We can't do that here and immediately as it requires a revision of the
+       linker script, which is actually useless and unwanted for the given MCU derivative.
+       We just place an assertion to avoid problem when running this code on another
+       derivative. */
+    /// @todo Make code core dependent if running the RTOS on a multi-core
+#ifdef DEBUG
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    extern rtos_kernelInstanceData_t rtos_kernelInstanceDataAry[RTOS_NO_CORES];
+    assert(pIData == &rtos_kernelInstanceDataAry[0]);
+#endif
+
     if(PID <= RTOS_NO_PROCESSES)
     {
         /* The stack area is defined by the linker script. We can access the information by

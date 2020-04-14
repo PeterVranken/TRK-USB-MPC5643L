@@ -7,6 +7,10 @@
  *   This module is based on the interrupt handler for External Interrupts from the
  * standard startup code (file int_INTCInterruptHandler.S). It replaces the IVOR #4 handler
  * from this file and most of the other dummy IVOR handlers.
+ *   Much of the documentation in this source file refers to either "Core RM" or CRM. Meant
+ * is in either case: "e200z4 Power Architecture Core Reference Manual", Supports
+ * e200z446n3, e200z4RM Rev. 0 10/2009, e.g.
+ * https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/doc/e200zCore/e200z4-PowerArchitectureCoreReferenceManual.pdf
  *
  * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -65,13 +69,16 @@
 /** Address of interrupt controller INTC0 in memory map. */
 #define INTC0           0xfff48000
 
-/** Address of INTC current priority register in memory map, for processor 0. */
+/** Address of INTC current priority register in memory map, for processor 0. The
+    registers for the others cores are expected at subsequent 4 Byte addresses. */
 #define INTC_CPR_PRC0   (INTC0+0x8)
 
-/** Address of INTC interrupt acknowledge register in memory map, for processor 0. */
+/** Address of INTC interrupt acknowledge register in memory map, for processor 0. The
+    registers for the others cores are expected at subsequent 4 Byte addresses. */
 #define INTC_IACKR_PRC0 (INTC0+0x10)
 
-/** Address of INTC end of interrupt register in memory map, for processor 0. */
+/** Address of INTC end of interrupt register in memory map, for processor 0. The
+    registers for the others cores are expected at subsequent 4 Byte addresses. */
 #define INTC_EOIR_PRC0  (INTC0+0x18)
 
 /** SPR index of SRR0. */
@@ -104,6 +111,9 @@
 /** SPR index of Time Base (lower) register. */
 #define SPR_TBL     284
 
+/** Preprocessor computation of address of symbol s, which yields same result as assembler
+    compile-time expression s@ha. */
+#define AT_HA(s)    (((s)+0x8000)>>16)
 
 /*
  * External function declarations
@@ -605,8 +615,13 @@ ivr4_endSwitchSP:
     e_stmvsprw  O_CR(sp)     /* CR, LR, CTR, XER: 4*4 Byte */
     e_stmvsrrw  O_SRRi(sp)   /* SRR0/SRR1: 2*4 Byte */
 
-    /* Clear request to processor; r3 contains the address of the ISR */
-    e_lis       r3, INTC_IACKR_PRC0@ha      /* Read pointer into ISR Vector Table
+    /* Clear request to processor; r3 contains the address of the ISR. On a multi-core
+       derivative, the register to read, IACKR, is found for the calling core i at this
+       address: INTC base + 10h offset + (4d × i), where i=0d to 1d (e.g. RM MPC5775B/E,
+       15.7.3, p545f). */
+    mfspr       r3, SPR_PIR                 /* r3: idxCore */
+    se_slwi     r3, 2                       /* r3: idxCore*sizeof(INTC_IACKR_PRCi) */
+    e_add2is    r3, INTC_IACKR_PRC0@ha      /* Read pointer into ISR Vector Table
                                                rtos_INTCInterruptHandlerAry */
     e_lwz       r3, INTC_IACKR_PRC0@l(r3)   /* Load INTC_IACKR, which clears request to
                                                processor */
@@ -624,24 +639,33 @@ rtos_isr_endIfPreemptable:
     se_blrl             /* Branch to ISR, but return here */
 
     /* Write 0 to INTC_EOIR, informing INTC to restore priority as it was on entry to this
-       handler. */
+       handler. On a multi-core derivative, the register to read, EOIR, is found for the
+       calling core i at this address: INTC base + 18h offset + (4d × i), where i=0d to 1d
+       (e.g. RM MPC5775B/E, 15.7.4, p546). */
     se_li       r3, 0
-    e_lis       r4, INTC_EOIR_PRC0@ha   /* Load upper half of INTC_EOIR address */
+    mfspr       r4, SPR_PIR                 /* r4: idxCore */
+    se_slwi     r4, 2                       /* r4: idxCore*sizeof(INTC_EOIR_PRCi) */
+    e_add2is    r4, INTC_EOIR_PRC0@ha       /* Load upper half of INTC_EOIR address */
     wrteei      0   /* Disable interrupt processing prior to IRQ acknowledge at INTC */
-    e_stw       r3, INTC_EOIR_PRC0@l(r4)/* Write 0 to INTC_EOIR */
+    e_stw       r3, INTC_EOIR_PRC0@l(r4)    /* Write 0 to INTC_EOIR */
 
     /* The decision about task switches is taken in the C code implementation of the
        scheduler, rtos_osProcessTriggeredEvents(). However, before we do the expensive
        function call we evaluate an indicator.
          The pointer either points to an event to schedule or it is set to 0xffff_ffff. */
-    e_lwz       r3, rtos_pNextEventToSchedule@sda21(r13)/* r3: Event requires scheduling? */
+    mfspr       r5, SPR_G4_CDATA_RO         /* r5: rtos_getInstancePtr() */
+    e_lwz       r3, O_ID_NEXT_EV_TO_SCH(r5) /* r3: Event requires scheduling? */
     e_cmp16i    r3, -1
     se_beq      iv4_noCallOfScheduler
     
     /* We check for possible task switch because of an event being set in the ISR only if
        we return from the last ISR - but not (yet) if this is the return from a potential
-       preempting, nested ISR. */
-    e_lis       r4, INTC_CPR_PRC0@ha    /* Load upper half of INTC_CPR address */
+       preempting, nested ISR. On a multi-core derivative, the register to check, CPR, is
+       found for the calling core i at this address: INTC base + 8h offset + (4d × i),
+       where i=0d to 1d (e.g. RM MPC5775B/E, 15.7.2, p544f). */
+#if AT_HA(INTC_CPR_PRC0) != AT_HA(INTC_EOIR_PRC0)
+# error Expect all INTC_xxx@ha to be identical. Code needs adaptation
+#endif
     e_lwz       r4, INTC_CPR_PRC0@l(r4) /* r4: Current IRQ priority in INTC */
     se_cmpli    r4, 1                   /* No activity if we are still in a nested ISR. */
     se_bge      iv4_noCallOfScheduler
@@ -651,7 +675,7 @@ rtos_isr_endIfPreemptable:
          Note, to avoid stack overflow we need to enter the function still within the
        critical section, which we had started before signalling end of IRQ to the INTC. */
     se_subi     r4, 1               /* r4: UINT_MAX, i.e. indication of "pointer unset" */
-    e_stw       r4, rtos_pNextEventToSchedule@sda21(r13) /* Clear pointer to triggered Event */
+    e_stw       r4, O_ID_NEXT_EV_TO_SCH(r5)     /* Clear pointer to triggered Event */
     e_bl        rtos_osProcessTriggeredEvents   /* r3: Event to be scheduler first */
     
 iv4_noCallOfScheduler:
@@ -765,8 +789,11 @@ rtos_osRunUserTask:
 # error Optimize multiplication with constant
     e_mull2i    r6, SIZE_OF_PROCESS_DESC
 #endif
-    e_add2is    r6, rtos_processAry@ha
-    e_add16i    r6, r6, rtos_processAry@l
+    mfspr       r7, SPR_G4_CDATA_RO     /* r7: rtos_getInstancePtr() = processAry */
+#if O_ID_PROC_ARY != 0
+# error Expect processAry to be first element of instance data structure
+#endif
+    se_add      r6, r7                  /* r6: &processAry[PID] */
 
     /* We check the process abort condition. The scheduler will set the process abort
        flag asynchronous to the actual task execution. So it may be set even before we
@@ -801,8 +828,11 @@ rtos_osRunInitTask:
 # error Optimize multiplication with constant
     e_mull2i    r6, SIZE_OF_PROCESS_DESC
 #endif
-    e_add2is    r6, rtos_processAry@ha
-    e_add16i    r6, r6, rtos_processAry@l
+    mfspr       r7, SPR_G4_CDATA_RO     /* r7: rtos_getInstancePtr() = processAry */
+#if O_ID_PROC_ARY != 0
+# error Expect processAry to be first element of instance data structure
+#endif
+    se_add      r6, r7                  /* r6: &processAry[PID] */
 
 rut_continueTaskExecution:
     /* Create stack frame and save stack pointer and return address. */
@@ -834,7 +864,8 @@ rut_noTimeBudget:
 
     /* Store the current task priority at task start. This is a prerequiste of a protected
        implementation of the system calls for the priority ceiling protocol. */
-    e_lwz       r7, rtos_currentPrio@sda21(13)
+    mfspr       r7, SPR_G4_CDATA_RO     /* r7: rtos_getInstancePtr() */
+    e_lwz       r7, O_ID_CUR_PRIO(r7)   /* r7: rtos_kernelInstanceDataAry[PIR].currentPrio */
     se_stw      r7, RUT_O_CPR(sp)       /* Store it for use by PCP system call */
 
     /* Let LR point to a system call for task termination. This permits the user code to
@@ -972,7 +1003,7 @@ rut_endWithErr:
     se_addi     r3, O_PDESC_CNTTARY /* Add offset of array of cause counters in descriptor */
     lwzx        r5, r6, r3
     e_addi.     r5, r5, 1
-    se_beq      rut_saturateCnt    /* Avoid wrapping around of failure counter */
+    se_beq      rut_saturateCnt     /* Avoid wrapping around of failure counter */
     stwx        r5, r6, r3
 rut_saturateCnt:
     se_lwz      r5, O_PDESC_CNTTOT(r6)
@@ -1017,13 +1048,14 @@ rut_endWithoutErr:
        potential entry in a subsequent user task. Note, these operations are nearly always
        useless. */
     se_lwz      r0, RUT_O_CPR(sp)       /* r0: Prio of user task start */
-    e_lwz       r3, rtos_currentPrio@sda21(13) /* r3: Current prio value, to be checked */
+    mfspr       r5, SPR_G4_CDATA_RO     /* r5: rtos_getInstancePtr() */
+    e_lwz       r3, O_ID_CUR_PRIO(r5)   /* r3: Current prio value, to be checked */
     se_cmpl     r0, r3
 #ifdef DEBUG
     se_bgt      .                       /* assert(prio@TaskStart <= rtos_currentPrio); */
 #endif
     se_beq      rut_noRestoreCPR        /* r0==r3: No restore of current prio required */
-    e_stw       r0, rtos_currentPrio@sda21(13) /* Restore priority in global variable */
+    e_stw       r0, O_ID_CUR_PRIO(r5)   /* Restore priority in global instance data */
     .extern     rtos_getEventByPriority
     e_bl        rtos_getEventByPriority /* r3: prio before restore -> pEvent with that prio */
     wrteei      0             /* Call of rtos_osProcessTriggeredEvents requires MSR[EE] = 0 */
@@ -1220,9 +1252,11 @@ ivr8_isSVEnabledSysCall:
 # error Assembler code requires adaptation. (Definition of properties of system call handler)
 #endif
 
-    se_slwi     r3, 3   /* r3: idxSC*SIZE_OF_SC_DESC */
-    e_add16i    r3, r3, rtos_systemCallDescAry@l    /* Wrong if address above 0x8000. We have
-                                                       an according assertion in the C code. */
+    e_slwi      r0, r3, 3                   /* r0: idxSC*SIZE_OF_SC_DESC */
+    mfspr       r3, SPR_G4_CDATA_RO         /* r3: rtos_getInstancePtr() */
+    e_lwz       r3, O_ID_SYS_CALL_TBL(r3)   /* r3: &systemCallDescAry[0] */
+    se_add      r3, r0                      /* r3: &systemCallDescAry[idxSysCall] */
+
     se_lwz      r0, O_SCDESC_confCls(r3)    /* r0: Conformance class of system call handler. */
     se_cmpli    r0, E_SCDESC_simpleHdlr
     se_bge      ivr8_noStartBasicHandler
@@ -1307,7 +1341,7 @@ ivr8_startFullHandler:
          Use case: A handler is responsible for occasional actions. The decision, whether
        to do it now is simple and can be done in a basic handler. The action is complex and
        implemented in C. The overhead for a fully conformant handler is spent only when the
-       action is occasionally taken.
+       decision is occasionally taken.
          lr: Address of normal C function, which is executed as full conformant part of the
        system call. The system call ends with return from this function and the return
        value from the function is the return value of the system call.
@@ -1368,7 +1402,7 @@ rtos_ivr8_switchBasicToFullHandler:
     mtspr       SPR_PID0, r0
     e_lmvsrrw   IV8_O_SRRi(sp)      /* SRR0/SRR1: 2*4 Byte */
 
-    /* O_PDESC_USP or rtos_processAry.userSP doesn't need restauration: We will surely
+    /* O_PDESC_USP or processAry[].userSP doesn't need restauration: We will surely
        return to a user mode context and at its first future preemption the switch to SV sp
        will anyway update this field. It can't happen that a non-sp-switching preemption
        happens as next, which would make use of the bad, not restored field. */
@@ -1382,7 +1416,7 @@ rtos_ivr8_switchBasicToFullHandler:
 
 /**
  *   @func rtos_systemCall
- * General system call code, useable for all system call handlers. The system call index \a
+ * General system call code, usable for all system call handlers. The system call index \a
  * idxSysCall is expected in r3, the variable function argument list in the remaining
  * volatile EABI registers r4..r10. The system call code can be invoked as C function using
  * the following signature:\n
@@ -1423,7 +1457,7 @@ rtos_systemCall:
     handler. See CRM, 5.7.10, p. 186. */
 
 /** The IVOR #10 till #12 handlers are not required. CRM, 5.1.2, Table 5-3, p. 165 and
-    sectios 5.7.11 till 5.7.13, p. 187ff. These exceptions are caused by timers,
+    sections 5.7.11 till 5.7.13, p. 187ff. These exceptions are caused by timers,
     decrementer, time base (with fixed interval interrupt) and watchdog. Our startup code
     has not configured these timer interrupts. An true application of our RTOS would likely
     configure the watchdog timer. Maybe a specific handler needed then to be added but it
@@ -1513,7 +1547,7 @@ rtos_ivor14Handler:
     .global     rtos_ivor15Handler
     .p2align    4
 rtos_ivor15Handler:
-    wrteei      0           /* By default debug interrupts don't disable External Interrupt
+    wrteei      0           /* By default, debug interrupts don't disable External Interrupt
                                handling. We consider it a fatal error if we ever get here
                                and want to halt the SW execution in this case. Therefore we
                                disable interrupt handling. See HID0, DCLREE and DCLRCE, too */

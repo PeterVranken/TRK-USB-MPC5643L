@@ -114,69 +114,84 @@ $(document).ready(function(){initNavTree('rtos__process_8h_source.html','');});
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="comment"> * Include files</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="comment"> */</span></div>
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;stdint.h&gt;</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &lt;stdbool.h&gt;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="typ__types_8h.html">typ_types.h</a>&quot;</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;rtos_ivorHandler.h&quot;</span></div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="rtos_8h.html">rtos.h</a>&quot;</span></div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="comment">/*</span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="comment"> * Defines</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="comment"> */</span></div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;</div>
-<div class="line"><a name="l00042"></a><span class="lineno"><a class="line" href="rtos__process_8h.html#a643cf094ea71fd6e396ad6e7147bb23c">   42</a></span>&#160;<span class="preprocessor">#define RTOS_SYSCALL_SUSPEND_PROCESS     5</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="comment">/*</span></div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="comment"> * Global type definitions</span></div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="comment"> */</span></div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="comment">/*</span></div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="comment"> * Global data declarations</span></div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="comment"> */</span></div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;<span class="comment">/*</span></div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<span class="comment"> * Global prototypes</span></div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<span class="comment"> */</span></div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<a class="code" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a> rtos_initProcesses(<span class="keywordtype">bool</span> isProcessConfiguredAry[1+<a class="code" href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a>]);</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;<span class="keywordtype">void</span> <a class="code" href="rtos__process_8h.html#a68f8200c57d5390e8937fc2a78af55b6">rtos_osGrantPermissionSuspendProcess</a>( <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> pidOfCallingTask</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;                                         , <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> targetPID</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;                                         );</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;<span class="keywordtype">void</span> rtos_osReleaseProcess(uint32_t PID);</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<span class="keywordtype">void</span> <a class="code" href="rtos__process_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_osSuspendProcess</a>(uint32_t PID);</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;<span class="keywordtype">bool</span> <a class="code" href="rtos__process_8h.html#a63296923146f8dff5b8754ca1c6003dc">rtos_isProcessSuspended</a>(uint32_t PID);</div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="typ__types_8h.html">typ_types.h</a>&quot;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;rtos_ivorHandler.h&quot;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="rtos_8h.html">rtos.h</a>&quot;</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="comment">/*</span></div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="comment"> * Defines</span></div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="comment"> */</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;</div>
+<div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="rtos__process_8h.html#a643cf094ea71fd6e396ad6e7147bb23c">   39</a></span>&#160;<span class="preprocessor">#define RTOS_SYSCALL_SUSPEND_PROCESS     5</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="comment">/*</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="comment"> * Global type definitions</span></div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="comment"> */</span></div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;</div>
+<div class="line"><a name="l00048"></a><span class="lineno"><a class="line" href="structrtos__process_desc__t.html">   48</a></span>&#160;<span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="structrtos__process_desc__t.html">rtos_processDesc_t</a></div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;{</div>
+<div class="line"><a name="l00055"></a><span class="lineno"><a class="line" href="structrtos__process_desc__t.html#a5ba5366b37cb85cb12b0547a80efc70e">   55</a></span>&#160;    uint32_t <a class="code" href="structrtos__process_desc__t.html#a5ba5366b37cb85cb12b0547a80efc70e">userSP</a>;</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;</div>
+<div class="line"><a name="l00062"></a><span class="lineno"><a class="line" href="structrtos__process_desc__t.html#a96885bb2718324875cbcaadefde19143">   62</a></span>&#160;    uint8_t <a class="code" href="structrtos__process_desc__t.html#a96885bb2718324875cbcaadefde19143">state</a>;</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;</div>
+<div class="line"><a name="l00067"></a><span class="lineno"><a class="line" href="structrtos__process_desc__t.html#a2dae39877686760583a9b6e18e6fa047">   67</a></span>&#160;    uint32_t <a class="code" href="structrtos__process_desc__t.html#a2dae39877686760583a9b6e18e6fa047">cntTotalTaskFailure</a>;</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;</div>
+<div class="line"><a name="l00074"></a><span class="lineno"><a class="line" href="structrtos__process_desc__t.html#a23ec6c7765eab8a7c0b167be933f44c2">   74</a></span>&#160;    uint32_t <a class="code" href="structrtos__process_desc__t.html#a23ec6c7765eab8a7c0b167be933f44c2">cntTaskFailureAry</a>[RTOS_NO_CAUSES_TASK_ABORTION];</div>
 <div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos__process_8h.html#ab0f1e1a247f858577c1d9d04e4a4331c">rtos_getNoTotalTaskFailure</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID);</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;} <a class="code" href="rtos__process_8h.html#a5602cfecfa4dcc525695c0903c14d9e4">rtos_processDesc_t</a>;</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;</div>
 <div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos__process_8h.html#abb25bad5cf1976808e7acb79c30290bd">rtos_getNoTaskFailure</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> kindOfErr);</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos__process_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID);</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="comment">/*</span></div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;<span class="comment"> * Inline functions</span></div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="comment"> */</span></div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">/* RTOS_PROCESS_INCLUDED */</span><span class="preprocessor"></span></div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;<span class="comment">/*</span></div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;<span class="comment"> * Global data declarations</span></div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="comment"> */</span></div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;<span class="comment">/*</span></div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;<span class="comment"> * Global prototypes</span></div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="comment"> */</span></div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<a class="code" href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a> rtos_initProcesses(<span class="keywordtype">bool</span> isProcessConfiguredAry[1+<a class="code" href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a>]);</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;<span class="keywordtype">void</span> <a class="code" href="rtos__process_8h.html#a68f8200c57d5390e8937fc2a78af55b6">rtos_osGrantPermissionSuspendProcess</a>( <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> pidOfCallingTask</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;                                         , <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> targetPID</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;                                         );</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;<span class="keywordtype">void</span> rtos_osReleaseProcess(uint32_t PID);</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;<span class="keywordtype">void</span> <a class="code" href="rtos__process_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_osSuspendProcess</a>(uint32_t PID);</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;<span class="keywordtype">bool</span> <a class="code" href="rtos__process_8h.html#a63296923146f8dff5b8754ca1c6003dc">rtos_isProcessSuspended</a>(uint32_t PID);</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;</div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos__process_8h.html#ab0f1e1a247f858577c1d9d04e4a4331c">rtos_getNoTotalTaskFailure</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID);</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;</div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos__process_8h.html#abb25bad5cf1976808e7acb79c30290bd">rtos_getNoTaskFailure</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> kindOfErr);</div>
+<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="rtos__process_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> PID);</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;</div>
+<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;<span class="comment">/*</span></div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;<span class="comment"> * Inline functions</span></div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;<span class="comment"> */</span></div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">/* RTOS_PROCESS_INCLUDED */</span><span class="preprocessor"></span></div>
+<div class="ttc" id="rtos__process_8h_html_a5602cfecfa4dcc525695c0903c14d9e4"><div class="ttname"><a href="rtos__process_8h.html#a5602cfecfa4dcc525695c0903c14d9e4">rtos_processDesc_t</a></div><div class="ttdeci">struct rtos_processDesc_t rtos_processDesc_t</div></div>
 <div class="ttc" id="typ__types_8h_html"><div class="ttname"><a href="typ__types_8h.html">typ_types.h</a></div></div>
-<div class="ttc" id="rtos__process_8h_html_a68f8200c57d5390e8937fc2a78af55b6"><div class="ttname"><a href="rtos__process_8h.html#a68f8200c57d5390e8937fc2a78af55b6">rtos_osGrantPermissionSuspendProcess</a></div><div class="ttdeci">void rtos_osGrantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:322</div></div>
-<div class="ttc" id="rtos_8h_html_a18500a557ecd5ebbcefbacba22b58d7e"><div class="ttname"><a href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a></div><div class="ttdeci">#define RTOS_NO_PROCESSES</div><div class="ttdef"><b>Definition:</b> rtos.h:68</div></div>
-<div class="ttc" id="rtos__process_8h_html_a240a9b010103563bb950b8d69017703b"><div class="ttname"><a href="rtos__process_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a></div><div class="ttdeci">unsigned int rtos_getStackReserve(unsigned int PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:576</div></div>
+<div class="ttc" id="rtos__process_8h_html_a68f8200c57d5390e8937fc2a78af55b6"><div class="ttname"><a href="rtos__process_8h.html#a68f8200c57d5390e8937fc2a78af55b6">rtos_osGrantPermissionSuspendProcess</a></div><div class="ttdeci">void rtos_osGrantPermissionSuspendProcess(unsigned int pidOfCallingTask, unsigned int targetPID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:249</div></div>
+<div class="ttc" id="rtos_8h_html_a18500a557ecd5ebbcefbacba22b58d7e"><div class="ttname"><a href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a></div><div class="ttdeci">#define RTOS_NO_PROCESSES</div><div class="ttdef"><b>Definition:</b> rtos.h:78</div></div>
+<div class="ttc" id="rtos__process_8h_html_a240a9b010103563bb950b8d69017703b"><div class="ttname"><a href="rtos__process_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a></div><div class="ttdeci">unsigned int rtos_getStackReserve(unsigned int PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:509</div></div>
 <div class="ttc" id="rtos_8h_html"><div class="ttname"><a href="rtos_8h.html">rtos.h</a></div></div>
-<div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a></div><div class="ttdeci">rtos_errorCode_t</div><div class="ttdef"><b>Definition:</b> rtos.h:167</div></div>
-<div class="ttc" id="rtos__process_8h_html_aeddb4b88dd8c1052eb41763e7164e7fa"><div class="ttname"><a href="rtos__process_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_osSuspendProcess</a></div><div class="ttdeci">void rtos_osSuspendProcess(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:437</div></div>
-<div class="ttc" id="rtos__process_8h_html_abb25bad5cf1976808e7acb79c30290bd"><div class="ttname"><a href="rtos__process_8h.html#abb25bad5cf1976808e7acb79c30290bd">rtos_getNoTaskFailure</a></div><div class="ttdeci">unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:515</div></div>
-<div class="ttc" id="rtos__process_8h_html_a63296923146f8dff5b8754ca1c6003dc"><div class="ttname"><a href="rtos__process_8h.html#a63296923146f8dff5b8754ca1c6003dc">rtos_isProcessSuspended</a></div><div class="ttdeci">bool rtos_isProcessSuspended(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:461</div></div>
-<div class="ttc" id="rtos__process_8h_html_ab0f1e1a247f858577c1d9d04e4a4331c"><div class="ttname"><a href="rtos__process_8h.html#ab0f1e1a247f858577c1d9d04e4a4331c">rtos_getNoTotalTaskFailure</a></div><div class="ttdeci">unsigned int rtos_getNoTotalTaskFailure(unsigned int PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:486</div></div>
+<div class="ttc" id="structrtos__process_desc__t_html_a5ba5366b37cb85cb12b0547a80efc70e"><div class="ttname"><a href="structrtos__process_desc__t.html#a5ba5366b37cb85cb12b0547a80efc70e">rtos_processDesc_t::userSP</a></div><div class="ttdeci">uint32_t userSP</div><div class="ttdef"><b>Definition:</b> rtos_process.h:55</div></div>
+<div class="ttc" id="rtos_8h_html_ae6a79bdc418d571b34528a8d2c9f49d1"><div class="ttname"><a href="rtos_8h.html#ae6a79bdc418d571b34528a8d2c9f49d1">rtos_errorCode_t</a></div><div class="ttdeci">rtos_errorCode_t</div><div class="ttdef"><b>Definition:</b> rtos.h:185</div></div>
+<div class="ttc" id="rtos__process_8h_html_aeddb4b88dd8c1052eb41763e7164e7fa"><div class="ttname"><a href="rtos__process_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa">rtos_osSuspendProcess</a></div><div class="ttdeci">void rtos_osSuspendProcess(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:366</div></div>
+<div class="ttc" id="structrtos__process_desc__t_html"><div class="ttname"><a href="structrtos__process_desc__t.html">rtos_processDesc_t</a></div><div class="ttdef"><b>Definition:</b> rtos_process.h:48</div></div>
+<div class="ttc" id="structrtos__process_desc__t_html_a2dae39877686760583a9b6e18e6fa047"><div class="ttname"><a href="structrtos__process_desc__t.html#a2dae39877686760583a9b6e18e6fa047">rtos_processDesc_t::cntTotalTaskFailure</a></div><div class="ttdeci">uint32_t cntTotalTaskFailure</div><div class="ttdef"><b>Definition:</b> rtos_process.h:67</div></div>
+<div class="ttc" id="structrtos__process_desc__t_html_a23ec6c7765eab8a7c0b167be933f44c2"><div class="ttname"><a href="structrtos__process_desc__t.html#a23ec6c7765eab8a7c0b167be933f44c2">rtos_processDesc_t::cntTaskFailureAry</a></div><div class="ttdeci">uint32_t cntTaskFailureAry[RTOS_NO_CAUSES_TASK_ABORTION]</div><div class="ttdef"><b>Definition:</b> rtos_process.h:74</div></div>
+<div class="ttc" id="rtos__process_8h_html_abb25bad5cf1976808e7acb79c30290bd"><div class="ttname"><a href="rtos__process_8h.html#abb25bad5cf1976808e7acb79c30290bd">rtos_getNoTaskFailure</a></div><div class="ttdeci">unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:447</div></div>
+<div class="ttc" id="rtos__process_8h_html_a63296923146f8dff5b8754ca1c6003dc"><div class="ttname"><a href="rtos__process_8h.html#a63296923146f8dff5b8754ca1c6003dc">rtos_isProcessSuspended</a></div><div class="ttdeci">bool rtos_isProcessSuspended(uint32_t PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:391</div></div>
+<div class="ttc" id="rtos__process_8h_html_ab0f1e1a247f858577c1d9d04e4a4331c"><div class="ttname"><a href="rtos__process_8h.html#ab0f1e1a247f858577c1d9d04e4a4331c">rtos_getNoTotalTaskFailure</a></div><div class="ttdeci">unsigned int rtos_getNoTotalTaskFailure(unsigned int PID)</div><div class="ttdef"><b>Definition:</b> rtos_process.c:417</div></div>
+<div class="ttc" id="structrtos__process_desc__t_html_a96885bb2718324875cbcaadefde19143"><div class="ttname"><a href="structrtos__process_desc__t.html#a96885bb2718324875cbcaadefde19143">rtos_processDesc_t::state</a></div><div class="ttdeci">uint8_t state</div><div class="ttdef"><b>Definition:</b> rtos_process.h:62</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

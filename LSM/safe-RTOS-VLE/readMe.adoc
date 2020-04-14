@@ -57,6 +57,106 @@ out.) The Baud rate has been selected as 115200 Bd in files
 and stop Bit. The terminal should print the messages, which are regularly
 sent by the sample code running on the evaluation board.
 
+== About this branch
+
+This branch has been made with the intention to prepare the RTOS for use
+on a multi-core platform. This decision has been made just to have a safe
+and smooth development process but not because we'd indent to run it on
+the MPC5643L (i.e. in "decoupled parallel mode", DPM). Target MCU are
+rather the native multi-cores, MPC5744P, MPC5748G and MPC5775B/E).
+
+There are two ways to make a single-core kernel run coincidentally on
+different cores. 
+
+The first possibility is to compile the same source code with different
+memory locations. The different memory locations can be achieved by
+independent runs of the linker with different, disjunct memory layout
+configurations and a final merge of the binaries. The advantage of
+separate runs of the linker is that we can use the same symbols (e.g. API
+functions of the RTOS) in each run. The disadvantage is that the physical
+memory needs to be partitioned in a static way in the linker
+configuration. To avoid static partitioning, we can build the software in
+a single run of the linker, too, but now we need to handle clashes with
+the symbol names. 
+
+Each time we compile the RTOS source code we need to rename the symbols -
+which can be done using the preprocessor. A source file S would initially
+include a header file H1, H2, .., or Hn - depending on core 1, 2, .., or
+n, which maps each relevant symbol s onto s_core1, s_core2, .., or
+s_coren. So each data object exists under n different names and each
+function is compiled n times with different names and referencing
+different data objects.
+
+The trick is that the application code for core _i_, when including the RTOS
+header files, will also first read the particular header Hi. Therefore,
+the application code neither sees nor needs to bother with the different
+symbol names. On all cores, the application source code would use the same
+symbol _s_ - not knowing that this will become s_corei for compiler and
+linker.
+
+Effectively, this would mean a kind of template based programming of the
+RTOS. Main drawback would be the complexity of handling the different
+files and the risk of intransparency and complicated maintenance.
+
+The second possibility is to compile the code once and run it on all
+cores. We no longer need different symbols for the code. However, instead
+of having individual symbols for data objects, we now need to decide at
+run-time, which data objects to use on which core. This means a run-time
+penalty for the execution time and a advantage in code size.
+
+The implementation in this branch uses the run-time decision. The
+complexity of the compilation and linkage process is not much higher than
+for a single-core configuration. The execution-time penalty is very
+little, since we can bundle all data objects to a large structure and
+permanently hold a pointer to this struct in the CPU (the pointer has a
+different value in each of the cores).
+
+A user readable general purpose SPR is applied to hold the pointer. A
+single instruction is required to load the pointer and then the access to
+the members is as fast as a small data access through the SDA pointers.
+
+A few more code locations need attention. In particular all access to the
+interrupt controller INTC had to be migrated. In the MPC family the
+multi-cores typically still have a single instance of the INTC but it now
+has register arrays with one entry per core. Particularly the IVOR #4
+handler is affected. It needs to use indexed access when reading the
+interrupt vector or acknowledging the interrupt. This means a run-time
+penalty of two to three instructions for each access.
+
+Details may be different for different members of the MPC family and a
+dedicated port of the code will be needed for each supported member.
+
+Mixed implementation modes are applicable, too. Particularly the assembly
+language supports template based programming. If the run-time penalty for
+the IVOR #4 handler should hurt one could easily make the implementation
+become a macro. As many macro instantiations as cores are present would
+duplicate the code -- with all needed disambiguations of labels -- and
+the startup code would become core-sensitive: Each core would install
+another handler address for the IVOR #4 exception.
+
+An operating system building on this RTOS will likely not offer the same
+set of services on all the cores and even if then it would likely not use
+one and the same implementation on all cores. A realistic scenario would
+be having one core doing (most) of the I/O and the other core(s) running
+application code. The first core would have "normal" I/O drivers with
+"normal" APIs and the other(s) would see the I/O services through some
+appropriate inter-core communication mechanisms. On all cores, the RTOS
+can offer system calls for these services but it'll be different
+implementations. To support this concept, the RTOS port in this branch has
+duplicated the system call table. The system call tables of any two cores
+can contain identical or different entries. The services, the RTOS offers
+are for example identical in all core's system call tables (i.e. all cores
+share the same code) but all further entries can be configured
+individually for the cores. The mechanism, how to do this with dedicated
+header files and preprocessor constructs has not been changed.
+
+The code in this branch is meant a starting point for multi-core ports of
+safe-RTOS but it is not intended for real use. Therefore, the
+documentation has not been updated, only this explanatory section has been
+added. Actually running and testing of the code in this branch has been
+done solely on the MPC5643L in LSM (lock-step mode, i.e. as a
+single-core).
+
 == The RTOS
 
 The proposed RTOS is little exciting with respect to its functionality.

@@ -30,6 +30,7 @@
   /* Place #include statements here, which are only read by C source files. */
 #endif
 
+#include "rtos.config.h"
 #include "rtos_systemCall.h"
 
 
@@ -66,22 +67,52 @@
    are not considered here. */
 #define RTOS_SIZE_OF_SF(sizeOfPayload)      ((((sizeOfPayload)+15)/8)*8)
 
-/* Define the offsets of fields in struct rtos_userTaskDesc_t. */
-#define SIZE_OF_TASK_DESC       4
-#define O_TDESC_ti              0
+/* Define size and field offsets of the kernel instance data set rtos_kernelInstanceData_t.
+   Not all of the elements are shared with the assembler code but for sake of
+   maintainability we have a define for each struct member. The static assertion defined
+   below needs to double check at least size and offset of all those definitions, which are
+   actually shared with the assembler code. */
+#define SIZE_OF_INSTANCE_DATA   (O_ID_RUN_TSK_PRIO+4)
+#define O_ID_PROC_ARY           0                                       /* Assembler used */
+#define O_ID_TSK_CFG_ARY        (O_ID_PROC_ARY+4*SIZE_OF_PROCESS_DESC)
+#define O_ID_ITSK_CFG_ARY       (O_ID_TSK_CFG_ARY+RTOS_MAX_NO_TASKS*SIZE_OF_TASK_CONF)
+#define O_ID_NO_TSKS            (O_ID_ITSK_CFG_ARY+(1+4)*SIZE_OF_TASK_CONF)
+#define O_ID_EV_ARY             (O_ID_NO_TSKS+4)
+#define O_ID_MAP_ID_TO_EV       (O_ID_EV_ARY+(RTOS_MAX_NO_EVENTS+1)*SIZE_OF_EV_DESC)
+#define O_ID_MAP_PRIO_TO_EV     (O_ID_MAP_ID_TO_EV+RTOS_MAX_NO_EVENTS*4)/* Assembler used */
+#define O_ID_NO_EV              (O_ID_MAP_PRIO_TO_EV+(RTOS_MAX_TASK_PRIORITY+1)*4)
+#define O_ID_NEXT_EV_TO_SCH     (O_ID_NO_EV+4)                          /* Assembler used */
+#define O_ID_END_EV             (O_ID_NEXT_EV_TO_SCH+4)
+#define O_ID_CUR_EV             (O_ID_END_EV+4)
+#define O_ID_SYS_CALL_TBL       (O_ID_CUR_EV+4)                         /* Assembler used */
+#define O_ID_CUR_PRIO           (O_ID_SYS_CALL_TBL+4)                   /* Assembler used */
+#define O_ID_TI_OS_STEP         (O_ID_CUR_PRIO+4)
+#define O_ID_TI_OS              (O_ID_TI_OS_STEP+4)
+#define O_ID_SUSP_PRC_PERM      (O_ID_TI_OS+4)
+#define O_ID_RUN_TSK_PERM       (O_ID_SUSP_PRC_PERM+2)
+#define O_ID_RUN_TSK_PRIO       (O_ID_RUN_TSK_PERM+2)
 
-/* Define the offsets of fields in struct rtos_taskDesc_t. */
-#define SIZE_OF_TASK_CONF       12
-#define O_TCONF_pFct            0
-#define O_TCONF_tiMax           4
-#define O_TCONF_pid             8
-
-/* Define the offsets of fields in struct processDesc_t. */
+/* Define the offsets of fields in struct rtos_processDesc_t. */
 #define SIZE_OF_PROCESS_DESC    (12+(RTOS_NO_CAUSES_TASK_ABORTION)*4)
 #define O_PDESC_USP             0
 #define O_PDESC_ST              4
 #define O_PDESC_CNTTOT          8
 #define O_PDESC_CNTTARY         12
+
+/* Define the offsets of fields in struct rtos_userTaskDesc_t. */
+/// @todo rename to SIZE_OF_UTASK_DESC and O_UTDESC
+#define SIZE_OF_TASK_DESC       4
+#define O_TDESC_ti              0
+
+/* Define the offsets of fields in struct rtos_taskDesc_t. */
+/// @todo rename to SIZE_OF_TASK_DESC and O_TDESC
+#define SIZE_OF_TASK_CONF       12
+#define O_TCONF_pFct            0
+#define O_TCONF_tiMax           4
+#define O_TCONF_pid             8
+
+/* Define the offsets of fields in struct rtos_eventDesc_t. */
+#define SIZE_OF_EV_DESC         32
 
 /* Define the field offsets and enumeration values in struct systemCallDesc_t. */
 #define SIZE_OF_SC_DESC         8
@@ -125,23 +156,56 @@
     duplicate with its original definition. */
 #define RTOS_SYSCALL_ASSERT_FUNC    6
 
+/** SPR index of PIR. */
+#define SPR_PIR         286
+
 /** SPR index of SPRG0. We use it for temporary storage of the SV stack pointer. It is
     possible to hold it in RAM, too, using the SPR is just to have more concise code for
     the frequently accessed variable. */
-#define SPR_G0_SVSP 272
+#define SPR_G0_SVSP     272
 
 /** SPR index of SPRG1. It permanently holds the value of r13, the SDA base pointer. This
     value needs to be restored at any return from user mode and it is constant all the
     time. */
-#define SPR_G1_SDA  273
+#define SPR_G1_SDA      273
 
 /** SPR index of SPRG2. It permanently holds the value of r2, the SDA2 base pointer. This
     value needs to be restored at any return from user mode and it is constant all the
     time. */
-#define SPR_G2_SDA2 274
+#define SPR_G2_SDA2     274
 
+/** SPR index of SPRG4 for read and write in supervisor mode. It permanently holds the
+    instance pointer on a multi-core architecture. Each of the cores will load the address
+    of the core specific data set.\n Note, user code can read but not alter this SPR. */
+#define SPR_G4_CDATA_RW 276
+
+/** SPR index of SPRG4 for read only access in both, supervisor and user mode. It
+    permanently holds the instance pointer on a multi-core architecture. Each of the cores
+    will load the address of the core specific data set.\n Note, user code can read but not
+    alter this SPR. */
+#define SPR_G4_CDATA_RO 260
 
 #ifdef __STDC_VERSION__
+
+/** This is an expression, which needs to be used in C unit rtos_kernelInstanceData.c as
+    condition for a static assertion. It double-checks the interface between C and assembly
+    code and shapes a kind of minimalistic type-safety. */
+#define RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_INSTANCE_DATA (                              \
+            SIZE_OF_INSTANCE_DATA < 0x8000                                                  \
+            &&  offsetof(rtos_kernelInstanceData_t, processAry) == 0                        \
+            &&  sizeof(rtos_eventDesc_t) == SIZE_OF_EV_DESC                                 \
+            &&  sizeof(rtos_kernelInstanceData_t) == SIZE_OF_INSTANCE_DATA                  \
+            &&  offsetof(rtos_kernelInstanceData_t, processAry) == O_ID_PROC_ARY            \
+            &&  offsetof(rtos_kernelInstanceData_t, mapPrioToEvent) == O_ID_MAP_PRIO_TO_EV  \
+            &&  sizeof(rtos_eventDesc_t*) == 4                                              \
+            &&  offsetof(rtos_kernelInstanceData_t, pNextEventToSchedule)                   \
+                == O_ID_NEXT_EV_TO_SCH                                                      \
+            &&  sizeoffield(rtos_kernelInstanceData_t, pNextEventToSchedule) == 4           \
+            &&  offsetof(rtos_kernelInstanceData_t, systemCallDescAry) == O_ID_SYS_CALL_TBL \
+            &&  sizeoffield(rtos_kernelInstanceData_t, systemCallDescAry) == 4              \
+            &&  offsetof(rtos_kernelInstanceData_t, currentPrio) == O_ID_CUR_PRIO           \
+            &&  sizeoffield(rtos_kernelInstanceData_t, currentPrio) == 4                    \
+        )
 
 /** This is an expression, which needs to be used in C unit rtos_process.c as condition for
     a static assertion. It double-checks the interface between C and assembly code and
@@ -158,15 +222,15 @@
             &&  sizeoffield(rtos_taskDesc_t, tiTaskMax) == 4                                \
             &&  offsetof(rtos_taskDesc_t, PID) == O_TCONF_pid                               \
             &&  sizeoffield(rtos_taskDesc_t, PID) == 1                                      \
-            &&  sizeof(processDesc_t) == SIZE_OF_PROCESS_DESC                               \
-            &&  offsetof(processDesc_t, userSP) == O_PDESC_USP                              \
+            &&  sizeof(rtos_processDesc_t) == SIZE_OF_PROCESS_DESC                          \
+            &&  offsetof(rtos_processDesc_t, userSP) == O_PDESC_USP                         \
             &&  O_PDESC_USP == 0                                                            \
-            &&  offsetof(processDesc_t, state) == O_PDESC_ST                                \
-            &&  sizeoffield(processDesc_t, state) == 1                                      \
-            &&  offsetof(processDesc_t, cntTotalTaskFailure) == O_PDESC_CNTTOT              \
-            &&  sizeoffield(processDesc_t, cntTotalTaskFailure) == 4                        \
-            &&  offsetof(processDesc_t, cntTaskFailureAry) == O_PDESC_CNTTARY               \
-            &&  sizeoffield(processDesc_t, cntTaskFailureAry)                               \
+            &&  offsetof(rtos_processDesc_t, state) == O_PDESC_ST                           \
+            &&  sizeoffield(rtos_processDesc_t, state) == 1                                 \
+            &&  offsetof(rtos_processDesc_t, cntTotalTaskFailure) == O_PDESC_CNTTOT         \
+            &&  sizeoffield(rtos_processDesc_t, cntTotalTaskFailure) == 4                   \
+            &&  offsetof(rtos_processDesc_t, cntTaskFailureAry) == O_PDESC_CNTTARY          \
+            &&  sizeoffield(rtos_processDesc_t, cntTaskFailureAry)                          \
                 == RTOS_NO_CAUSES_TASK_ABORTION*4                                           \
         )
 
@@ -184,11 +248,11 @@
     type-safety. See #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PROCESS and
     #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PCP, too. */
 #define RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL (                                   \
-            sizeof(systemCallDesc_t) == SIZE_OF_SC_DESC                                     \
-            &&  offsetof(systemCallDesc_t, addressOfFct) == O_SCDESC_sr                     \
-            &&  sizeoffield(systemCallDesc_t, addressOfFct) == 4                            \
-            &&  offsetof(systemCallDesc_t, conformanceClass) == O_SCDESC_confCls            \
-            &&  sizeoffield(systemCallDesc_t, conformanceClass) == 4                        \
+            sizeof(rtos_systemCallDesc_t) == SIZE_OF_SC_DESC                                \
+            &&  offsetof(rtos_systemCallDesc_t, addressOfFct) == O_SCDESC_sr                \
+            &&  sizeoffield(rtos_systemCallDesc_t, addressOfFct) == 4                       \
+            &&  offsetof(rtos_systemCallDesc_t, conformanceClass) == O_SCDESC_confCls       \
+            &&  sizeoffield(rtos_systemCallDesc_t, conformanceClass) == 4                   \
         )
 
 /** This is an expression, which needs to be used in C unit rtos_systemCall.c as condition

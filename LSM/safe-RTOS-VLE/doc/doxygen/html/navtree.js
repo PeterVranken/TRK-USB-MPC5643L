@@ -10,7 +10,8 @@ var NAVTREE =
       [ "Data Structure Index", "classes.html", null ],
       [ "Data Fields", "functions.html", [
         [ "All", "functions.html", null ],
-        [ "Variables", "functions_vars.html", null ]
+        [ "Variables", "functions_vars.html", null ],
+        [ "Enumerations", "functions_enum.html", null ]
       ] ]
     ] ],
     [ "Files", null, [
@@ -30,7 +31,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"typ__types_8h.html#a656ff394e214e309e6217ade0f640d69"
+"rtos__system_call_8c.html#a5aa1087a050d22133e8609d82aef1c79"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

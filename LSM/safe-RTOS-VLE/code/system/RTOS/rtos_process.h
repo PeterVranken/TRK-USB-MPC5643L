@@ -24,9 +24,6 @@
  * Include files
  */
 
-#include <stdint.h>
-#include <stdbool.h>
-
 #include "typ_types.h"
 #include "rtos_ivorHandler.h"
 #include "rtos.h"
@@ -45,6 +42,38 @@
 /*
  * Global type definitions
  */
+
+/** Run-time data describing a process. An object of this type must be allocated in RAM,
+    which is not write-permitted for user code. */
+typedef struct rtos_processDesc_t
+{
+    /** When preempting a task that belongs to this process then the IVOR #4 handler will
+        store the current user mode stack pointer value in \a userSP. The stored value may
+        be used later as initial stack pointer value of a newly started task from the same
+        process.\n
+          In the assembler code addressed to by offset #O_PDESC_USP. */
+    uint32_t userSP;
+
+    /** The state of the process. This field is e.g. checked at the end of a preemption of
+        a task of this process to see if the task may be continued or if the process has
+        been stopped meanwhile.\n
+          A non zero value means process is running, zero means process stopped.\n
+          In the assembler code addressed to by offset #O_PDESC_ST. */
+    uint8_t state;
+
+    /** The total count of errors for the process since the start of the kernel. Or the sum
+        of all element in array \a cntTaskFailureAry. Or total number of abnormal abortions
+        of tasks belonging to the process. */
+    uint32_t cntTotalTaskFailure;
+
+    /** This is an array of counters for task termination. The tasks of a process are not
+        separated in these counters. Each array entry means another cause, where a cause
+        normally is a specific CPU exception.\n
+          See file rtos_ivorHandler.h, #RTOS_CAUSE_TASK_ABBORTION_MACHINE_CHECK and
+        following, for the enumerated causes. */
+    uint32_t cntTaskFailureAry[RTOS_NO_CAUSES_TASK_ABORTION];
+
+} rtos_processDesc_t;
 
 
 /*

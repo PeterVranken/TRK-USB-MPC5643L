@@ -130,6 +130,8 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
+<tr class="memitem:ab004fb06d9894fe6afdc8385f33602cb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos_8h.html#ab004fb06d9894fe6afdc8385f33602cb">RTOS_NO_CORES</a>&#160;&#160;&#160;1</td></tr>
+<tr class="separator:ab004fb06d9894fe6afdc8385f33602cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a18500a557ecd5ebbcefbacba22b58d7e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e">RTOS_NO_PROCESSES</a>&#160;&#160;&#160;4</td></tr>
 <tr class="separator:a18500a557ecd5ebbcefbacba22b58d7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac4ea516ad4edd46b1088804cf463bc84"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos_8h.html#ac4ea516ad4edd46b1088804cf463bc84">RTOS_INVALID_EVENT_ID</a>&#160;&#160;&#160;(RTOS_MAX_NO_EVENTS)</td></tr>
@@ -172,6 +174,9 @@ Macros</h2></td></tr>
 <tr class="separator:af6f4937c654a76ca43d70366f0f461cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50879c034063dd071531d12bc8c3f6d6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos_8h.html#a50879c034063dd071531d12bc8c3f6d6">RTOS_TI_US2TICKS</a>(tiInUs)&#160;&#160;&#160;((tiInUs)*120u)</td></tr>
 <tr class="separator:a50879c034063dd071531d12bc8c3f6d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4679400d0f8b946b562d7efd20d09573"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4679400d0f8b946b562d7efd20d09573"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>RTOS_SPR_PIR</b>&#160;&#160;&#160;286 /* SPR index of PIR. */</td></tr>
+<tr class="separator:a4679400d0f8b946b562d7efd20d09573"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -278,6 +283,8 @@ Functions</h2></td></tr>
 <tr class="separator:aeddb4b88dd8c1052eb41763e7164e7fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a63296923146f8dff5b8754ca1c6003dc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos_8h.html#a63296923146f8dff5b8754ca1c6003dc">rtos_isProcessSuspended</a> (uint32_t PID)</td></tr>
 <tr class="separator:a63296923146f8dff5b8754ca1c6003dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6621923bed2b7ca031f158a305704048"><td class="memItemLeft" align="right" valign="top">static unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos_8h.html#a6621923bed2b7ca031f158a305704048">rtos_osGetIdxCore</a> (void)</td></tr>
+<tr class="separator:a6621923bed2b7ca031f158a305704048"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a585062ee728ec5d30b078964aa1f0862"><td class="memItemLeft" align="right" valign="top">static int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos_8h.html#a585062ee728ec5d30b078964aa1f0862">rtos_osRunTask</a> (const <a class="el" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig, uintptr_t taskParam)</td></tr>
 <tr class="separator:a585062ee728ec5d30b078964aa1f0862"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae1f6778a3742632e1d754dc916a1aeff"><td class="memItemLeft" align="right" valign="top">static int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff">rtos_runTask</a> (const <a class="el" href="structrtos__task_desc__t.html">rtos_taskDesc_t</a> *pUserTaskConfig, uintptr_t taskParam)</td></tr>
@@ -308,6 +315,20 @@ Functions</h2></td></tr>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.</p>
 <p>You should have received a copy of the GNU Lesser General Public License along with this program. If not, see <a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>. </p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
+<a class="anchor" id="ab004fb06d9894fe6afdc8385f33602cb"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define RTOS_NO_CORES&#160;&#160;&#160;1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>The number of cores in the MCU running the RTOS.<br />
+ </p><dl class="section remark"><dt>Remarks</dt><dd>Although this macro is application dependent, we decided to not put it into the user configuration file rtos.config.h. The reason is that the configuration of another number of cores requires more changes than just this macro. Mainly the linker script is additionally affected and it can reasonably be made dependent on this macro. Putting the macro here effectively expresses that the RTOS needs migration and not just re-configuration if run on another MCU derivative. </dd></dl>
+
+</div>
+</div>
 <a class="anchor" id="a18500a557ecd5ebbcefbacba22b58d7e"></a>
 <div class="memitem">
 <div class="memproto">
@@ -317,7 +338,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>The number of configured processes.<br />
+<p>The number of configured processes per core.<br />
  Although it looks like a matter of application dependent configuration, this is a fixed setting in our RTOS. We have the HW constraint of a limited number of memory region descriptors in MMU and MPU. Four processes can be comfortably supported with enough descriptors each. Having less regions per process is possible with reduced programming comfort and so we could have more processes even without changing the run-time code (i.e. implementation of dynamic change of regions). However, the aimed use cases of this RTOS, applications with higher safety integrity level, can be handled with two or three processes so that pre-configured four should always be fine.<br />
  The big advantage of having a fixed number of processes is the avoidance of configuration changes. The MMU and MPU configuration would need changes on C code level and the linker script would need more or altered section filters.<br />
  No using all pre-configured processes doesn't matter. Just use a process in a task specification or leave it. An unused process doesn't produce any overhead. </p>
@@ -360,7 +381,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>An RTOS event can normally be triggered by user tasks belonging to a process of sufficient privileges. See field <em>minPIDToTriggerThisEvent</em> of struct <em>rtos_eventDesc_t</em>. If it should not be accessible even by the process of highest privileges than <a class="el" href="rtos_8h.html#a7c87eedf96c681bbc685574bfd5a6bc3">RTOS_EVENT_NOT_USER_TRIGGERABLE</a> can be specified for <em>minPIDToTriggerThisEvent</em>. </p>
+<p>An RTOS event can normally be triggered by user tasks belonging to a process of sufficient privileges. See field <em>minPIDToTriggerThisEvent</em> of struct <em><a class="el" href="structrtos__event_desc__t.html">rtos_eventDesc_t</a></em>. If it should not be accessible even by the process of highest privileges than <a class="el" href="rtos_8h.html#a7c87eedf96c681bbc685574bfd5a6bc3">RTOS_EVENT_NOT_USER_TRIGGERABLE</a> can be specified for <em>minPIDToTriggerThisEvent</em>. </p>
 
 </div>
 </div>
@@ -805,7 +826,7 @@ Functions</h2></td></tr>
 <dl class="section remark"><dt>Remarks</dt><dd>Never call this function after the call of <a class="el" href="rtos__scheduler_8c.html#ab24d0fa9208d5675e03cc931a08e52fd">rtos_osInitKernel()</a>! </dd>
 <dd>
 This function must be called by trusted code in supervisor mode only. </dd></dl>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000004">Todo:</a></b></dt><dd>Effectively, this object can be considered the descriptor of the idle task. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000008">Todo:</a></b></dt><dd>Effectively, this object can be considered the descriptor of the idle task. </dd></dl>
 
 </div>
 </div>
@@ -1439,6 +1460,7 @@ The C signature for system calls is formally not correct. The assembly code, whi
 <dl class="section remark"><dt>Remarks</dt><dd>The counterpart function <a class="el" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr()</a> is implemented as inline function in the RTOS API header file, <a class="el" href="rtos_8h.html">rtos.h</a>. </dd>
 <dd>
 Although this function is intended for use inside a system call handler it can be safely used from user code, too. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000012">Todo:</a></b></dt><dd>Make code core dependent if running the RTOS on a multi-core </dd></dl>
 
 </div>
 </div>
@@ -1576,6 +1598,7 @@ Although this function is intended for use inside a system call handler it can b
 <dl class="section remark"><dt>Remarks</dt><dd>The computation is a linear search for the first non-pattern word and thus relatively expensive. It's suggested to call it only in some specific diagnosis compilation or occasionally from the idle task. </dd>
 <dd>
 This function can be called from both, the OS context and a user task. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000005">Todo:</a></b></dt><dd>Make code core dependent if running the RTOS on a multi-core </dd></dl>
 
 </div>
 </div>
@@ -1627,6 +1650,32 @@ This function must be called from the OS context only. Any attempt to use it in 
   </dd>
 </dl>
 <dl class="section remark"><dt>Remarks</dt><dd>This function can be called from OS and user context. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="a6621923bed2b7ca031f158a305704048"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static unsigned int rtos_osGetIdxCore </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>This function returns the content of the read-only CPU register PIR. </p><dl class="section return"><dt>Returns</dt><dd>Get the zero based index of the core the calling code is excuted on. The range depends on the derivative of the MCU. </dd></dl>
+<dl class="section remark"><dt>Remarks</dt><dd>This function may be called from all supervisor contexts, i.e. OS tasks and ISRs. A call from a user task will cause an exception. </dd></dl>
 
 </div>
 </div>
@@ -1996,6 +2045,7 @@ This function must be called from the user task context only. Any attempt to use
 <dl class="section remark"><dt>Remarks</dt><dd>Use the counterpart function <a class="el" href="rtos_8h.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos_checkUserCodeWritePtr()</a> if a system call handler should do a write access via a user code provided pointer. </dd>
 <dd>
 Although this function is intended for use inside a system call handler it can be safely used from user code, too. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000001">Todo:</a></b></dt><dd>Make code core dependent if running the RTOS on a multi-core </dd></dl>
 
 </div>
 </div>

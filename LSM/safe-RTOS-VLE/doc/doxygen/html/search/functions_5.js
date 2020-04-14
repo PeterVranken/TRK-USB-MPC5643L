@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['launchalltasksofevent',['launchAllTasksOfEvent',['../rtos__scheduler_8c.html#abd18df6c5ffb1669d93edceb95c8e06d',1,'rtos_scheduler.c']]]
+  ['ostriggerevent',['osTriggerEvent',['../rtos__scheduler_8c.html#aca47528d03257cac7674c4127734867a',1,'rtos_scheduler.c']]]
 ];

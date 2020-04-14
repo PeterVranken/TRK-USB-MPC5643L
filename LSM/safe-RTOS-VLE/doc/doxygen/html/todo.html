@@ -102,11 +102,19 @@ $(document).ready(function(){initNavTree('todo.html','');});
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><dl class="reflist">
-<dt><a class="anchor" id="_todo000004"></a>Global <a class="el" href="rtos__scheduler_8h.html#a3b8a72b75ad042fe88206066a4c05869">rtos_osCreateEvent</a>  (unsigned int *pEventId, unsigned int tiCycleInMs, unsigned int tiFirstActivationInMs, unsigned int priority, unsigned int minPIDToTriggerThisEvent, uintptr_t taskParam)</dt>
+<dt><a class="anchor" id="_todo000003"></a>Global <a class="el" href="rtos__kernel_instance_data_8c.html#a9f1a3a25e2a206453d88bba53d438bb7">dummyFctToCheckStaticAssertions</a>  (void)</dt>
+<dd>As soon as runtime checks are defined (see #RTOS_CONSTRAINTS_INTERFACE_C_AS_INSTANCE_DATA) we need to call this function. This requires a documentation change of the function, too.  </dd>
+<dt><a class="anchor" id="_todo000001"></a>Global <a class="el" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr</a>  (const void *address, size_t noBytes)</dt>
+<dd>Make code core dependent if running the RTOS on a multi-core  </dd>
+<dt><a class="anchor" id="_todo000012"></a>Global <a class="el" href="rtos__system_memory_protection_unit_8h.html#a4f1f4dbf31cbe5dd7c48a1f4ea2d594f">rtos_checkUserCodeWritePtr</a>  (unsigned int PID, const void *address, size_t noBytes)</dt>
+<dd>Make code core dependent if running the RTOS on a multi-core  </dd>
+<dt><a class="anchor" id="_todo000005"></a>Global <a class="el" href="rtos__process_8h.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a>  (unsigned int PID)</dt>
+<dd>Make code core dependent if running the RTOS on a multi-core  </dd>
+<dt><a class="anchor" id="_todo000008"></a>Global <a class="el" href="rtos__scheduler_8h.html#a3b8a72b75ad042fe88206066a4c05869">rtos_osCreateEvent</a>  (unsigned int *pEventId, unsigned int tiCycleInMs, unsigned int tiFirstActivationInMs, unsigned int priority, unsigned int minPIDToTriggerThisEvent, uintptr_t taskParam)</dt>
 <dd>Effectively, this object can be considered the descriptor of the idle task.  </dd>
-<dt><a class="anchor" id="_todo000001"></a>Global <a class="el" href="rtos__external_interrupt_8h.html#ae8a0bcc3633298cc478ceb73b2aebabc">rtos_osRegisterInterruptHandler</a>  (rtos_interruptServiceRoutine_t interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</dt>
+<dt><a class="anchor" id="_todo000002"></a>Global <a class="el" href="rtos__external_interrupt_8h.html#ae8a0bcc3633298cc478ceb73b2aebabc">rtos_osRegisterInterruptHandler</a>  (rtos_interruptServiceRoutine_t interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</dt>
 <dd>Make function disappear and have a ROM table as for system calls  </dd>
-<dt><a class="anchor" id="_todo000001"></a>Global <a class="el" href="rtos__external_interrupt_8h.html#ae8a0bcc3633298cc478ceb73b2aebabc">rtos_osRegisterInterruptHandler</a>  (rtos_interruptServiceRoutine_t interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</dt>
+<dt><a class="anchor" id="_todo000002"></a>Global <a class="el" href="rtos__external_interrupt_8h.html#ae8a0bcc3633298cc478ceb73b2aebabc">rtos_osRegisterInterruptHandler</a>  (rtos_interruptServiceRoutine_t interruptServiceRoutine, unsigned int vectorNum, unsigned int psrPriority, bool isPreemptable)</dt>
 <dd>Make function disappear and have a ROM table as for system calls </dd>
 </dl>
 </div></div><!-- contents -->

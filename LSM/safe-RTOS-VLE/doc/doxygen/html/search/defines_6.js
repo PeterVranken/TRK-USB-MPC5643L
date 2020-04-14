@@ -19,6 +19,7 @@ var searchData=
   ['rtos_5fhdlr_5fconf_5fclass_5ffull',['RTOS_HDLR_CONF_CLASS_FULL',['../rtos__system_call_8h.html#a28067013553598a98217116e03aca91a',1,'rtos_systemCall.h']]],
   ['rtos_5fhdlr_5fconf_5fclass_5fsimple',['RTOS_HDLR_CONF_CLASS_SIMPLE',['../rtos__system_call_8h.html#ad71ba99d7500f0d82ab40b64d3d1a7ab',1,'rtos_systemCall.h']]],
   ['rtos_5finvalid_5fevent_5fid',['RTOS_INVALID_EVENT_ID',['../rtos_8h.html#ac4ea516ad4edd46b1088804cf463bc84',1,'rtos.h']]],
+  ['rtos_5fno_5fcores',['RTOS_NO_CORES',['../rtos_8h.html#ab004fb06d9894fe6afdc8385f33602cb',1,'rtos.h']]],
   ['rtos_5fno_5ferr_5fprc',['RTOS_NO_ERR_PRC',['../rtos_8h.html#a3e599fcdd6c1ffc7c78aa83bf3d890c6',1,'rtos.h']]],
   ['rtos_5fno_5fprocesses',['RTOS_NO_PROCESSES',['../rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e',1,'rtos.h']]],
   ['rtos_5fno_5fsystem_5fcalls',['RTOS_NO_SYSTEM_CALLS',['../rtos__system_call_8h.html#a84079b96a5d13d68009df8ba413e59ad',1,'rtos_systemCall.h']]],

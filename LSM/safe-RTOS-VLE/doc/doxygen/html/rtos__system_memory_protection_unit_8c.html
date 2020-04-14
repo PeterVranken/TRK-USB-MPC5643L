@@ -117,6 +117,7 @@ $(document).ready(function(){initNavTree('rtos__system_memory_protection_unit_8c
 <code>#include &quot;MPC5643L.h&quot;</code><br />
 <code>#include &quot;<a class="el" href="typ__types_8h_source.html">typ_types.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos_8h_source.html">rtos.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="rtos__kernel_instance_data_8h_source.html">rtos_kernelInstanceData.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos__system_memory_protection_unit_8h_source.html">rtos_systemMemoryProtectionUnit.h</a>&quot;</code><br />
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
@@ -233,6 +234,7 @@ Functions</h2></td></tr>
 <dl class="section remark"><dt>Remarks</dt><dd>The counterpart function <a class="el" href="rtos_8h.html#aac7a5ed04ef56818262cd5288d327648">rtos_checkUserCodeReadPtr()</a> is implemented as inline function in the RTOS API header file, <a class="el" href="rtos_8h.html">rtos.h</a>. </dd>
 <dd>
 Although this function is intended for use inside a system call handler it can be safely used from user code, too. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000012">Todo:</a></b></dt><dd>Make code core dependent if running the RTOS on a multi-core </dd></dl>
 
 </div>
 </div>

@@ -20,6 +20,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module inline interface
+ *   rtos_osGetIdxCore
  *   rtos_osRunTask
  *   rtos_runTask
  *   rtos_terminateTask
@@ -51,7 +52,16 @@
  * Defines
  */
 
-/** The number of configured processes.\n
+/** The number of cores in the MCU running the RTOS.\n
+      @remark Although this macro is application dependent, we decided to not put it into
+    the user configuration file rtos.config.h. The reason is that the configuration of
+    another number of cores requires more changes than just this macro. Mainly the linker
+    script is additionally affected and it can reasonably be made dependent on this macro.
+    Putting the macro here effectively expresses that the RTOS needs migration and not just
+    re-configuration if run on another MCU derivative. */
+#define RTOS_NO_CORES               1      
+
+/** The number of configured processes per core.\n
       Although it looks like a matter of application dependent configuration, this is a
     fixed setting in our RTOS. We have the HW constraint of a limited number of memory
     region descriptors in MMU and MPU. Four processes can be comfortably supported with
@@ -151,6 +161,14 @@
     clock ticks. Using this macro one can specify it more conveniently in Microseconds. The
     macro just converts its argument from Microseconds to clock ticks. */
 #define RTOS_TI_US2TICKS(tiInUs) ((tiInUs)*120u)
+
+/** \cond Two nested macros are used to convert a constant expression to a string which can be
+    used e.g. as part of some inline assembler code.\n
+      If for example PI is defined to be (355/113) you could use STR(PI) instead of
+    "(355/113)" in the source code. ARG2STR is not called directly. */
+#define ARG2STR(x) #x
+#define STR(x) ARG2STR(x)
+/** \endcond */
 
 
 /*
@@ -501,6 +519,32 @@ bool rtos_isProcessSuspended(uint32_t PID);
 /*
  * Inline functions
  */
+
+/**
+ * This function returns the content of the read-only CPU register PIR.
+ *   @return
+ * Get the zero based index of the core the calling code is excuted on. The range depends
+ * on the derivative of the MCU.
+ *   @remark
+ * This function may be called from all supervisor contexts, i.e. OS tasks and ISRs. A call
+ * from a user task will cause an exception.
+ */
+static inline unsigned int rtos_osGetIdxCore(void)
+{
+#define RTOS_SPR_PIR 286 /* SPR index of PIR. */
+
+    uint32_t idxCore;
+    asm volatile ( /* AssemblerTemplate */
+                   "mfspr   %0, " STR(RTOS_SPR_PIR) "\n\t"
+                 : /* OutputOperands */ "=r" (idxCore)
+                 : /* InputOperands */
+                 : /* Clobbers */
+                 );
+    return (unsigned int)idxCore;
+
+} /* End of rtos_osGetIdxCore */
+
+
 
 /**
  * Start a user task. A user task is a C function, which is executed in user mode and in a
@@ -856,6 +900,13 @@ static inline bool rtos_triggerEvent(unsigned int idEvent, uintptr_t taskParam)
  */
 static inline bool rtos_checkUserCodeReadPtr(const void *address, size_t noBytes)
 {
+    /* This code, like all other using core-related global linker symbols ld_*, needs
+       migration. We can't do that here and immediately as it requires a revision of the
+       linker script, which is actually useless and unwanted for the given MCU derivative.
+       We just place an assertion to avoid problem when running this code on another
+       derivative. */
+    /// @todo Make code core dependent if running the RTOS on a multi-core
+
     const uint8_t * const p = (uint8_t*)address;
     extern uint8_t ld_ramStart[0], ld_ramEnd[0], ld_romStart[0], ld_romEnd[0];
 

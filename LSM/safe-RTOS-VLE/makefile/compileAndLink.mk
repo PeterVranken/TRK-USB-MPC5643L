@@ -102,8 +102,8 @@ h help targets usage:
 	$(info - cleanDep: Delete all dependency files, e.g. after changes of #include \
              statements or file renaming)
 	$(info - rebuild: Same as clean and build together)
-	$(info - bin/ppc/<configuration>/obj/<cFileName>.o: Compile a single C(++) or \
-             assembler module)
+	$(info - bin/ppc/<appName>/<configuration>/obj/<cFileName>.o: Compile a single C(++) or \
+             assembler module, e.g. $(targetDir)obj/mai_main.o)
 	$(info - <cFileName>.i: Preprocess a single C(++) or assembler module. Build product \
              is sibling of source file)
 	$(info - <cFileName>.asm: Generate an assembler listing for a single C(++) or \

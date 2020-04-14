@@ -166,6 +166,7 @@
 #include "rtos_systemMemoryProtectionUnit.h"
 #include "rtos_scheduler_defSysCalls.h"
 #include "rtos_scheduler.h"
+#include "rtos_kernelInstanceData.h"
 #include "rtos_runTask.h"
 #include "rtos.h"
 
@@ -190,7 +191,8 @@
     ||  RTOS_ERR_PRC_TBL_INSTRUCTION != RTOS_CAUSE_TASK_ABBORTION_TBL_INSTRUCTION       \
     ||  RTOS_ERR_PRC_SPE_INSTRUCTION != RTOS_CAUSE_TASK_ABBORTION_SPE_INSTRUCTION       \
     ||  RTOS_ERR_PRC_USER_ABORT != RTOS_CAUSE_TASK_ABBORTION_USER_ABORT                 \
-    ||  RTOS_ERR_PRC_RESERVED != RTOS_CAUSE_TASK_ABBORTION_RESERVED
+    ||  RTOS_ERR_PRC_RESERVED != RTOS_CAUSE_TASK_ABBORTION_RESERVED                     \
+    ||  RTOS_SPR_PIR != SPR_PIR
 # error Inconsistencies found between definitions made in C and assembler code
 #endif
 
@@ -214,75 +216,6 @@
  * Local type definitions
  */
 
-/** The runtime information for a task triggering event.
-      Note, we use a statically allocated array of fixed size for all possible events. A
-    resource optimized implementation could use an application defined macro to tailor the
-    size of the array and it could put the event and task configuration data into ROM.
-    (Instead of offering the run-time configuration by APIs.) */
-typedef struct eventDesc_t
-{
-    /** The current state of the event.\n
-          This field is shared with the assembly code. The PCP implementation reads it. */
-    enum eventState_t { evState_idle, evState_triggered, evState_inProgress } state;
-
-    /** An event can be triggered by user code, using rtos_triggerEvent(). However, tasks
-        belonging to less privileged processes must not generally granted permission to
-        trigger events that may activate tasks of higher privileged processes. Since an
-        event is not process related, we make the minimum process ID an explicitly
-        configured, which is required to trigger this event.\n
-          Only tasks belonging to a process with PID >= \a minPIDToTriggerThisEvent are
-        permitted to trigger this event.\n
-          The range of \a minPIDToTriggerThisEvent is 0 ... (#RTOS_NO_PROCESSES+1). 0 and 1
-        both mean, all processes may trigger the event, #RTOS_NO_PROCESSES+1 means only OS
-        code can trigger the event. */
-    uint8_t minPIDForTrigger;
-
-    /** The set of associated tasks, which are activated by the event, is implemented by an
-        array and the number of entries. Here we have the number of entries. */
-    uint16_t noTasks;
-
-    /** The set of associated tasks, which are activated by the event, is implemented by an
-        array and the number of entries. Here we have the array. */
-    const rtos_taskDesc_t * taskAry;
-
-    /** The next due time. At this time, the event will activate the associated task set.*/
-    unsigned int tiDue;
-
-    /** The period time of the (cyclic) event in ms. The permitted range is 0..2^30-1.\n
-          0 means no regular, timer controlled activation. The event is only enabled for
-        software trigger using rtos_triggerEvent() (by interrupts or other tasks). */
-    unsigned int tiCycleInMs;
-
-    /** The priority of the event (and thus of all associated user tasks, which inherit the
-        prioritry) in the range 1..UINT_MAX. Different events can share the same priority.
-        If they do then the execution of their associated tasks will be sequenced when they
-        become due at same time or with overlap.\n
-          Note, if the event has a priority above #RTOS_MAX_LOCKABLE_TASK_PRIORITY then
-        only those tasks can be associated, which belong to the process with highest PID in
-        use. This is a safety constraint. */
-    unsigned int priority;
-
-    /** The tasks associated with the event can receive an argument. It is send with the
-        triggerEvent operation and advanced to the task functions, when they are called
-        later. */
-    uintptr_t taskParam;
-
-    /** We can't queue events. If at least one task is still busy, which had been activated
-        by the event at its previous due time then an event (and the activation of the
-        associated tasks) is lost. This situation is considered an overrun and it is
-        counted for diagnostic purpose. The counter is saturated and will halt at the
-        implementation maximum.
-          @remark This field is shared with the external client code of the module. There,
-        it is read only. Only the scheduler code must update the field. */
-    unsigned int noActivationLoss;
-
-    /** Support the scheduler: If this event has been processed then check event * \a
-        this->pNextScheduledEvent as next one. */
-    struct eventDesc_t *pNextScheduledEvent;
-
-} eventDesc_t;
-
-
 
 /*
  * Local prototypes
@@ -295,96 +228,12 @@ typedef struct eventDesc_t
     files.
       @param pEvent
     The first event in global list, which is to be considered for scheduling. */
-void rtos_osProcessTriggeredEvents(eventDesc_t *pEvent);
+void rtos_osProcessTriggeredEvents(rtos_eventDesc_t *pEvent);
 
 
 /*
  * Data definitions
  */
-
-/* Note, in this module, the naming convention of not using a mnemonic of the unit name as
-   common prefix for all static data objects has been replaced by the convention for global
-   data objects for sake of easier source code debugging. The debugger lists all RTOS data
-   objects, including the non-global, as rtos_*. */
-
-/** The list of all tasks. */
-static rtos_taskDesc_t DATA_OS(rtos_taskCfgAry)[RTOS_MAX_NO_TASKS] =
-    { [0 ... (RTOS_MAX_NO_TASKS-1)] = { .addrTaskFct = 0
-                                        , .PID = 0
-                                        , .tiTaskMax = 0
-                                      }
-    };
-
-/** The list of all process initialization tasks. */
-static rtos_taskDesc_t DATA_OS(rtos_initTaskCfgAry)[1+RTOS_NO_PROCESSES] =
-    { [0 ... RTOS_NO_PROCESSES] = { .addrTaskFct = 0
-                                    , .PID = 0
-                                    , .tiTaskMax = 0
-                                  }
-    };
-
-/** The number of registered tasks. The range is 0..#RTOS_MAX_NO_TASKS. */
-static unsigned int SDATA_OS(rtos_noTasks) = 0;
-
-/** The list of task activating events. Plus a zero element as end of list guard.\n
-      Note, this variable is an interface with the assembly code. It may need to pick an
-    element from the list if lowering the current priority in the implementation of the PCP
-    requires the recursive call of the scheduler. */
-eventDesc_t BSS_OS(rtos_eventAry)[RTOS_MAX_NO_EVENTS+1];
-
-/** For performance reasons, all events are internally ordered by priority. At user API,
-    they are identified by an ID, which can have an ordering. We need a mapping for the
-    implementation of APIs that refer to an event. */
-static eventDesc_t * BSS_OS(rtos_mapEventIDToPtr)[RTOS_MAX_NO_EVENTS];
-
-/** The PCP, which changes the current priority needs the mapping from priority to the
-    first event in the list that has this priority. The map is implemented as direct lookup
-    table.\n
-      Note the map object is shared with the assembly code. */
-eventDesc_t * BSS_OS(rtos_mapPrioToEvent)[RTOS_MAX_TASK_PRIORITY+1];
-
-/** The number of created events. The range is 0..#RTOS_MAX_NO_EVENTS. */
-static unsigned int SDATA_OS(rtos_noEvents) = 0;
-
-/** A pointer to event, which has to be served next by the scheduler. Points to an element of
-    array rtos_eventAry if an event requires the call of the scheduler (i.e.
-    rtos_isEventPending is true) or behind the end of the array otherwise.\n
-      This variable is an interface with the assembly code. It may call the scheduler with
-    this variable as argument after an ISR (postponed task activation). */
-eventDesc_t * SDATA_OS(rtos_pNextEventToSchedule) = (eventDesc_t*)(uintptr_t)-1;
-
-/** Pointer to guard element at the end of the list of events.\n
-      Since the guard itself is used as list termination this explicit pointer is just used
-    for self-tests in DEBUG compilation. */
-static const eventDesc_t *BSS_OS(rtos_pEndEvent) = NULL;
-
-/** Pointer to currently active event. This event is the one, whose associated tasks are
-    currently executed. Using this pointer, some informative services can be implemented
-    for the tasks. */
-static const eventDesc_t *BSS_OS(rtos_pCurrentEvent) = NULL;
-
-/** The priority of the currently executed task.\n
-      This variable is an interface with the assembly code. The implementation of the PCP
-    requires access to the variable to terminate a critical section if a user task should
-    end without doing so.\n
-      Note the use of qualifier volatile: This data object is shared between different
-    nesting levels of the scheduler but it is not - and this makes the difference to nearly
-    all other shared objects - accessed solely from inside of critical sections. */
-volatile uint32_t SDATA_OS(rtos_currentPrio) = 0;
-
-/** Time increment of one tick of the RTOS system clock. It is set at kernel initialization
-    time to the configured period time of the system clock in Milliseconds
-    (#RTOS_CLOCK_TICK_IN_MS). This way the unit of all time designations in the RTOS API
-    always stays Milliseconds despite of the actually chosen clock rate. (An application of
-    the RTOS can reduce the clock rate to the lowest possible value in order to save
-    overhead.) The normal settings are a clock rate of 1 kHz and
-    #RTOS_CLOCK_TICK_IN_MS=1.\n
-      The variable is initially set to zero to hold the scheduler during RTOS
-    initialization. */
-static unsigned long SDATA_OS(rtos_tiOsStep) = 0;
-
-/** RTOS sytem time in Milliseconds since start of kernel. */
-static unsigned long SDATA_OS(rtos_tiOs) = (unsigned long)-1;
 
 
 /*
@@ -403,10 +252,11 @@ static unsigned long SDATA_OS(rtos_tiOs) = (unsigned long)-1;
  * restrictions on the configuration API then we could have a implicit one-by-one mapping
  * without any loss of functionality.
  */
-static ALWAYS_INLINE eventDesc_t *getEventByID(unsigned int idEvent)
+static ALWAYS_INLINE rtos_eventDesc_t *getEventByID(unsigned int idEvent)
 {
-    assert(idEvent < rtos_noEvents);
-    return rtos_mapEventIDToPtr[idEvent];
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    assert(idEvent < pIData->noEvents);
+    return pIData->mapEventIDToPtr[idEvent];
 
 } /* End of getEventByID */
 
@@ -419,11 +269,12 @@ static ALWAYS_INLINE eventDesc_t *getEventByID(unsigned int idEvent)
  *   @return
  * Get the event object by reference.
  *   @param idxEvent
- * Index of event object in the array rtos_eventAry.
+ * Index of event object in the array rtos_getInstancePtr()->eventAry.
  */
-static ALWAYS_INLINE eventDesc_t *getEventByIdx(unsigned int idxEvent)
+static ALWAYS_INLINE rtos_eventDesc_t *getEventByIdx(unsigned int idxEvent)
 {
-    return &rtos_eventAry[idxEvent];
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    return &pIData->eventAry[idxEvent];
 
 } /* End of getEventByIdx */
 
@@ -487,12 +338,14 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
                                     , unsigned int tiTaskMaxInUs
                                     )
 {
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+
     /* The scheduler should be in halted state. */
-    if(rtos_tiOsStep != 0)
+    if(pIData->tiOsStep != 0)
         return rtos_err_configurationOfRunningKernel;
 
     /* The event need to be created before the task can be registered. */
-    if(idEvent >= rtos_noEvents  &&  idEvent != EVENT_ID_INIT_TASK)
+    if(idEvent >= pIData->noEvents  &&  idEvent != EVENT_ID_INIT_TASK)
         return rtos_err_badEventId;
 
     /* The process ID needs to be in the fixed and limited range. */
@@ -500,12 +353,12 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
         return rtos_err_badProcessId;
 
     /* The number of runtime tasks is constraint by compile time configuration. */
-    if(rtos_noTasks >= RTOS_MAX_NO_TASKS  &&  idEvent != EVENT_ID_INIT_TASK)
+    if(pIData->noTasks >= RTOS_MAX_NO_TASKS  &&  idEvent != EVENT_ID_INIT_TASK)
         return rtos_err_tooManyTasksRegistered;
 
     /* The event's field noTasks is of smaller size. */
     if(idEvent != EVENT_ID_INIT_TASK
-       &&  getEventByIdx(idEvent)->noTasks >= UINT_T_MAX(((eventDesc_t*)NULL)->noTasks)
+       &&  getEventByIdx(idEvent)->noTasks >= UINT_T_MAX(((rtos_eventDesc_t*)NULL)->noTasks)
       )
     {
         return rtos_err_tooManyTasksRegistered;
@@ -533,13 +386,13 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
         /* An initialization task must not be configured repeatedly for one and the same
            process. */
         const unsigned int idxP = PID;
-        assert(idxP < sizeOfAry(rtos_initTaskCfgAry));
-        if(rtos_initTaskCfgAry[idxP].addrTaskFct != 0)
+        assert(idxP < sizeOfAry(pIData->initTaskCfgAry));
+        if(pIData->initTaskCfgAry[idxP].addrTaskFct != 0)
             return rtos_err_initTaskRedefined;
 
-        rtos_initTaskCfgAry[idxP].addrTaskFct = addrTaskFct;
-        rtos_initTaskCfgAry[idxP].tiTaskMax = tiTaskMaxInUs * 120;
-        rtos_initTaskCfgAry[idxP].PID = PID;
+        pIData->initTaskCfgAry[idxP].addrTaskFct = addrTaskFct;
+        pIData->initTaskCfgAry[idxP].tiTaskMax = tiTaskMaxInUs * 120;
+        pIData->initTaskCfgAry[idxP].PID = PID;
     }
     else
     {
@@ -547,13 +400,13 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
            to form a consecutive list. We need to find the right location to insert the
            task and we need to consider an update of all events with refer to tasks with
            higher index. */
-        eventDesc_t * const pEvent = getEventByID(idEvent);
+        rtos_eventDesc_t * const pEvent = getEventByID(idEvent);
         rtos_taskDesc_t *pNewTaskDesc;
         if(pEvent->taskAry == NULL)
         {
             /* First task of given event, we append a new sequence of tasks to the end of
                the task list so far. Done. */
-            pEvent->taskAry = pNewTaskDesc = &rtos_taskCfgAry[rtos_noTasks];
+            pEvent->taskAry = pNewTaskDesc = &pIData->taskCfgAry[pIData->noTasks];
 
             /* Associate the task with the specified event. */
             pEvent->noTasks = 1;
@@ -566,8 +419,8 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
 
             /* The event's task sequence can be in the middle of the task list. So need to
                check if we have to move some rightmost list entries. */
-            rtos_taskDesc_t *pTaskCfg = &rtos_taskCfgAry[rtos_noTasks];
-            assert(rtos_noTasks >= 2  ||  pTaskCfg <= pNewTaskDesc);
+            rtos_taskDesc_t *pTaskCfg = &pIData->taskCfgAry[pIData->noTasks];
+            assert(pIData->noTasks >= 2  ||  pTaskCfg <= pNewTaskDesc);
             for(; pTaskCfg>pNewTaskDesc; --pTaskCfg)
                 *pTaskCfg = *(pTaskCfg-1);
 
@@ -576,9 +429,9 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
                particular order with respect to the user specified index. (Instead, they
                are sorted by priority.) */
             unsigned int idxEv;
-            for(idxEv=0; idxEv<rtos_noEvents; ++idxEv)
+            for(idxEv=0; idxEv<pIData->noEvents; ++idxEv)
             {
-                eventDesc_t * const pCheckedEvent = getEventByIdx(idxEv);
+                rtos_eventDesc_t * const pCheckedEvent = getEventByIdx(idxEv);
                 if(pCheckedEvent != pEvent  &&  pCheckedEvent->taskAry >= pNewTaskDesc)
                     ++ pCheckedEvent->taskAry;
             }
@@ -592,8 +445,8 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
         pNewTaskDesc->addrTaskFct = addrTaskFct;
         pNewTaskDesc->tiTaskMax = tiTaskMaxInUs * 120;
         pNewTaskDesc->PID = PID;
-        ++ rtos_noTasks;
-        assert(rtos_noTasks > 0);
+        ++ pIData->noTasks;
+        assert(pIData->noTasks > 0);
     }
 
     return rtos_err_noError;
@@ -633,12 +486,14 @@ static rtos_errorCode_t registerTask( unsigned int idEvent
  * ISR and the user task API. Only the OS API, which is shared between ISRs and OS tasks
  * will really contain the run-time decision code.
  */
-static ALWAYS_INLINE bool osTriggerEvent( eventDesc_t * const pEvent
+static ALWAYS_INLINE bool osTriggerEvent( rtos_eventDesc_t * const pEvent
                                         , const bool hasTaskParam
                                         , uintptr_t taskParam
                                         , const bool isInterrupt
                                         )
 {
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+
     bool success;
 
     /* If the function is called from an ISR then we need to use enter/leaveCriticalSection
@@ -668,16 +523,15 @@ static ALWAYS_INLINE bool osTriggerEvent( eventDesc_t * const pEvent
         /* Setting an event means a possible context switch to another task. It depends on
            priority and interrupt state. If so, we need to run the scheduler.
              It is not necessary to run the scheduler if the triggered event has a priority
-           equal 
-           to or lower than the priority of the currently processed event. In this case the
-           scheduler would anyway not change the current task right now.
+           equal to or lower than the priority of the currently processed event. In this
+           case the scheduler would anyway not change the current task right now.
              The scheduler must not be called if this function is called from inside an
            ISR. ISRs will call the function a bit later, when the interrupt context is
            cleared and only if they serve the root level interrupt (i.e. not from a nested
            interrupt). In this case calling rtos_osProcessTriggeredEvents() is postponed and
            done from the assembly code (IVOR #4 handler) but not yet here. The global flag
-           rtos_pNextEventToSchedule is set to command this. */
-        if(pEvent->priority > rtos_currentPrio)
+           pIData->pNextEventToSchedule is set to command this. */
+        if(pEvent->priority > pIData->currentPrio)
         {
             if(isInterrupt)
             {
@@ -689,8 +543,8 @@ static ALWAYS_INLINE bool osTriggerEvent( eventDesc_t * const pEvent
                    events and the scheduler needs to start with the one of highest
                    priority. The array of events is sorted in order of decreasing priority,
                    therefore a simple comparison is sufficient. */
-                if(pEvent < rtos_pNextEventToSchedule)
-                    rtos_pNextEventToSchedule = pEvent;
+                if(pEvent < pIData->pNextEventToSchedule)
+                    pIData->pNextEventToSchedule = pEvent;
             }
             else
             {
@@ -755,15 +609,17 @@ static ALWAYS_INLINE bool osTriggerEvent( eventDesc_t * const pEvent
  */
 static inline void checkEventDue(void)
 {
-    eventDesc_t *pEvent = getEventByIdx(0);
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    
+    rtos_eventDesc_t *pEvent = getEventByIdx(0);
 
     /* We iterate the events in order for decreasing priority. */
-    const eventDesc_t * const pEndEvent = rtos_pEndEvent;
+    const rtos_eventDesc_t * const pEndEvent = pIData->pEndEvent;
     while(pEvent < pEndEvent)
     {
         if(pEvent->tiCycleInMs > 0)
         {
-            if((signed int)(pEvent->tiDue - rtos_tiOs) <= 0)
+            if((signed int)(pEvent->tiDue - pIData->tiOs) <= 0)
             {
                 /* Trigger the event or count an activation loss error. */
                 osTriggerEvent(pEvent
@@ -808,8 +664,10 @@ static inline void checkEventDue(void)
  */
 static void onOsTimerTick(void)
 {
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    
     /* Update the system time. */
-    rtos_tiOs += rtos_tiOsStep;
+    pIData->tiOs += pIData->tiOsStep;
 
     /* The scheduler is most simple; the only condition to make a task ready is the next
        periodic due time. The task activation is left to the pseudo-software-interrupt,
@@ -831,7 +689,7 @@ static void onOsTimerTick(void)
  *   @param pEvent
  * The event by reference, whose tasks are to be executed one after another.
  */
-static inline void launchAllTasksOfEvent(const eventDesc_t * const pEvent)
+static inline void launchAllTasksOfEvent(const rtos_eventDesc_t * const pEvent)
 {
     const rtos_taskDesc_t *pTaskConfig = &pEvent->taskAry[0];
     unsigned int u = (unsigned int)pEvent->noTasks;
@@ -975,10 +833,13 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
                                    , uintptr_t taskParam
                                    )
 {
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+
     *pEventId = RTOS_INVALID_EVENT_ID;
 
-    /* The number of events is constraint by hardware (INTC) */
-    if(rtos_noEvents >= RTOS_MAX_NO_EVENTS)
+    /* The number of events is constraint in order to let our mapping tables not grow more
+       thatreasonable */
+    if(pIData->noEvents >= RTOS_MAX_NO_EVENTS)
         return rtos_err_tooManyEventsCreated;
 
     if(priority == 0  ||  priority > RTOS_MAX_TASK_PRIORITY)
@@ -1009,16 +870,16 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     /* Insert the new event into the array and initialize the data structure. The position
        to insert is such that the events appear in order of decreasing priority. */
     unsigned int idxNewEv, v;
-    for(idxNewEv=0; idxNewEv<rtos_noEvents; ++idxNewEv)
+    for(idxNewEv=0; idxNewEv<pIData->noEvents; ++idxNewEv)
     {
         if(getEventByIdx(idxNewEv)->priority < priority)
             break;
     }
 
-    for(v=rtos_noEvents; v>idxNewEv; --v)
+    for(v=pIData->noEvents; v>idxNewEv; --v)
         *getEventByIdx(v) = *getEventByIdx(v-1);
 
-    eventDesc_t *pNewEvent = getEventByIdx(idxNewEv);
+    rtos_eventDesc_t *pNewEvent = getEventByIdx(idxNewEv);
     pNewEvent->tiCycleInMs = tiCycleInMs;
     pNewEvent->tiDue = tiFirstActivationInMs;
     pNewEvent->priority = priority;
@@ -1029,15 +890,15 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     pNewEvent->taskParam = taskParam;
     pNewEvent->pNextScheduledEvent = NULL;
 
-    const unsigned int idNewEv = rtos_noEvents++;
-    assert(rtos_noEvents > 0);
+    const unsigned int idNewEv = pIData->noEvents++;
+    assert(pIData->noEvents > 0);
 
     /* Update the mapping of (already issued, publically known) event IDs onto the (now
        modified) internal arry index. */
-    rtos_mapEventIDToPtr[idNewEv] = getEventByIdx(idxNewEv);
+    pIData->mapEventIDToPtr[idNewEv] = getEventByIdx(idxNewEv);
     for(v=0; v<idNewEv; ++v)
-        if(rtos_mapEventIDToPtr[v] >= getEventByIdx(idxNewEv))
-            ++ rtos_mapEventIDToPtr[v];
+        if(pIData->mapEventIDToPtr[v] >= getEventByIdx(idxNewEv))
+            ++ pIData->mapEventIDToPtr[v];
 
     /* Install the guard element at the end of the list. Essential is a priority value of
        zero, i.e. below any true, scheduled task. */
@@ -1053,20 +914,20 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     _Static_assert( RTOS_EVENT_NOT_USER_TRIGGERABLE <= UINT_T_MAX(pNewEvent->minPIDForTrigger)
                   , "Integer overflow"
                   );
-    *getEventByIdx(rtos_noEvents) = 
-                (eventDesc_t){ .tiCycleInMs = 0
-                             , .tiDue = 0
-                             , .priority = 0
-                             , .minPIDForTrigger = RTOS_EVENT_NOT_USER_TRIGGERABLE
-                             , .noActivationLoss = 0
-                             , .taskAry = NULL
-                             , .noTasks = 0
-                             , .taskParam = 0
-                             , .pNextScheduledEvent = NULL
-                             };
-
+    *getEventByIdx(pIData->noEvents) = 
+                (rtos_eventDesc_t){ .tiCycleInMs = 0
+                                    , .tiDue = 0
+                                    , .priority = 0
+                                    , .minPIDForTrigger = RTOS_EVENT_NOT_USER_TRIGGERABLE
+                                    , .noActivationLoss = 0
+                                    , .taskAry = NULL
+                                    , .noTasks = 0
+                                    , .taskParam = 0
+                                    , .pNextScheduledEvent = NULL
+                                  };
+  
 #ifdef DEBUG
-    for(v=1; v<=rtos_noEvents; ++v)
+    for(v=1; v<=pIData->noEvents; ++v)
         if(getEventByIdx(v)->priority > getEventByIdx(v-1)->priority)
             return rtos_err_invalidEventPrio; /* Actually an internal implementation error */
 #endif
@@ -1260,6 +1121,8 @@ rtos_errorCode_t rtos_osRegisterOSTask( unsigned int idEvent
  */
 rtos_errorCode_t rtos_osInitKernel(void)
 {
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+
     /* If this assertion fires then you
        - should double-check if you can redefine your task priorities such that they use
          consecutive numbers, 1, 2, 3 ...
@@ -1291,23 +1154,23 @@ rtos_errorCode_t rtos_osInitKernel(void)
 
     rtos_errorCode_t errCode = rtos_err_noError;
 
-    /* The pointer rtos_pNextEventToSchedule is either unset or it points to the event of
+    /* The pointer pIData->pNextEventToSchedule is either unset or it points to the event of
        highest priority which has been triggered but which cannot be scheduled yet because
        we are still in an ISR. The value "unset" need to maintain the ordering of pointers,
        the higher the value the lesser the priority of an event it points to. NULL would
        not fulfill both condition and therefore require additional runtime code. We choose
        UINT_MAX as indication of "unset". */
-    rtos_pNextEventToSchedule = (eventDesc_t*)(uintptr_t)-1;
+    pIData->pNextEventToSchedule = (rtos_eventDesc_t*)(uintptr_t)-1;
 
-    rtos_pEndEvent     =
-    rtos_pCurrentEvent = getEventByIdx(rtos_noEvents);
-    rtos_currentPrio = 0;
+    pIData->pEndEvent     =
+    pIData->pCurrentEvent = getEventByIdx(pIData->noEvents);
+    pIData->currentPrio = 0;
 
     /* The user must have registered at minimum one task and must have associated it with a
        event. */
-    if(rtos_tiOsStep != 0)
+    if(pIData->tiOsStep != 0)
         errCode = rtos_err_configurationOfRunningKernel;
-    else if(rtos_noEvents == 0  ||  rtos_noTasks == 0)
+    else if(pIData->noEvents == 0  ||  pIData->noTasks == 0)
         errCode = rtos_err_noEvOrTaskRegistered;
 
     /* Fill all process stacks with the empty-pattern, which is applied for computing the
@@ -1319,19 +1182,19 @@ rtos_errorCode_t rtos_osInitKernel(void)
     unsigned int idxTask
                , maxPIDInUse = 0;
     /* Find the highest PID in use. */
-    for(idxTask=0; idxTask<rtos_noTasks; ++idxTask)
-        if(rtos_taskCfgAry[idxTask].PID > maxPIDInUse)
-            maxPIDInUse = rtos_taskCfgAry[idxTask].PID;
+    for(idxTask=0; idxTask<pIData->noTasks; ++idxTask)
+        if(pIData->taskCfgAry[idxTask].PID > maxPIDInUse)
+            maxPIDInUse = pIData->taskCfgAry[idxTask].PID;
 
     /* A task must not belong to an invalid configured process. This holds for init and for
        run time tasks. */
     unsigned int idxP;
     if(errCode == rtos_err_noError)
     {
-        for(idxTask=0; idxTask<rtos_noTasks; ++idxTask)
+        for(idxTask=0; idxTask<pIData->noTasks; ++idxTask)
         {
-            assert(rtos_taskCfgAry[idxTask].PID < sizeOfAry(isProcessConfiguredAry));
-            if(!isProcessConfiguredAry[rtos_taskCfgAry[idxTask].PID])
+            assert(pIData->taskCfgAry[idxTask].PID < sizeOfAry(isProcessConfiguredAry));
+            if(!isProcessConfiguredAry[pIData->taskCfgAry[idxTask].PID])
                 errCode = rtos_err_taskBelongsToInvalidPrc;
 
         } /* For(All registered runtime tasks) */
@@ -1339,12 +1202,12 @@ rtos_errorCode_t rtos_osInitKernel(void)
         for(idxP=0; idxP<1+RTOS_NO_PROCESSES; ++idxP)
         {
             /* Note, the init task array is - different to the runtime task array
-               rtos_taskCfgAry - ordered by PID. The field PID in the array entries are
+               pIData->taskCfgAry - ordered by PID. The field PID in the array entries are
                redundant. A runtime check is not appropriate as this had happened at
                registration time. We can place a simple assertion here. */
-            if(rtos_initTaskCfgAry[idxP].addrTaskFct != 0)
+            if(pIData->initTaskCfgAry[idxP].addrTaskFct != 0)
             {
-                assert(rtos_initTaskCfgAry[idxP].PID == idxP);
+                assert(pIData->initTaskCfgAry[idxP].PID == idxP);
                 if(!isProcessConfiguredAry[idxP])
                     errCode = rtos_err_taskBelongsToInvalidPrc;
             }
@@ -1369,9 +1232,9 @@ rtos_errorCode_t rtos_osInitKernel(void)
     if(errCode == rtos_err_noError)
     {
         unsigned int idxEv;
-        for(idxEv=0; idxEv<rtos_noEvents; ++idxEv)
+        for(idxEv=0; idxEv<pIData->noEvents; ++idxEv)
         {
-            const eventDesc_t * const pEvent = getEventByIdx(idxEv);
+            const rtos_eventDesc_t * const pEvent = getEventByIdx(idxEv);
             const unsigned int noAssociatedTasks = (unsigned int)pEvent->noTasks;
 
             /* Check task configuration: Events without an associated task are useless and
@@ -1401,10 +1264,10 @@ rtos_errorCode_t rtos_osInitKernel(void)
     if(errCode == rtos_err_noError)
     {
         unsigned int idxEv, idxEvNextPrio;
-        unsigned int lastPrio = sizeOfAry(rtos_mapPrioToEvent);
-        for(idxEv=0; idxEv<=rtos_noEvents; ++idxEv)
+        unsigned int lastPrio = sizeOfAry(pIData->mapPrioToEvent);
+        for(idxEv=0; idxEv<=pIData->noEvents; ++idxEv)
         {
-            eventDesc_t * const pEvent = getEventByIdx(idxEv);
+            rtos_eventDesc_t * const pEvent = getEventByIdx(idxEv);
 
             /* Is this event the first one of the group of next lower priority? */
             if(idxEv == 0  ||  pEvent->priority < lastPrio)
@@ -1414,7 +1277,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
                 
                 /* The first event in such a group is linked to the next one in order of
                    the list. */
-                if(idxEv < rtos_noEvents)
+                if(idxEv < pIData->noEvents)
                 {
                     pEvent->pNextScheduledEvent = getEventByIdx(idxEv+1);
                     assert(priority > 0);
@@ -1431,8 +1294,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
                 unsigned int idxMapEntry = lastPrio-1;
                 do
                 {
-                    assert(idxMapEntry < sizeOfAry(rtos_mapPrioToEvent));
-                    rtos_mapPrioToEvent[idxMapEntry] = pEvent;
+                    assert(idxMapEntry < sizeOfAry(pIData->mapPrioToEvent));
+                    pIData->mapPrioToEvent[idxMapEntry] = pEvent;
                 }
                 while(idxMapEntry-- > priority);
 
@@ -1476,8 +1339,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
 
     /* Stop the scheduler. It won't run although the RTOS clock starts spinning. We don't
        want to see a running user task during execution of the init tasks. */
-    rtos_tiOs = (unsigned long)-1;
-    rtos_tiOsStep = 0;
+    pIData->tiOs     = (unsigned long)-1;
+    pIData->tiOsStep = 0;
 
     /* We can register the interrupt service routine for the scheduler timer tick. */
     if(errCode == rtos_err_noError)
@@ -1514,7 +1377,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
 
         /* The specification of an initialization task is an option only. Check for NULL
            pointer. */
-        if(rtos_initTaskCfgAry[idxP].addrTaskFct != 0)
+        if(pIData->initTaskCfgAry[idxP].addrTaskFct != 0)
         {
             if(isProcessConfiguredAry[idxP])
             {
@@ -1522,18 +1385,19 @@ rtos_errorCode_t rtos_osInitKernel(void)
                    value is defined to be an error. (This needs to be considered by the
                    implementation of the task.) */
                 int32_t resultInit;
-                if(rtos_initTaskCfgAry[idxP].PID == 0)
+                if(pIData->initTaskCfgAry[idxP].PID == 0)
                 {
                     /* OS initialization function: It is a normal sub-function call; we are
                        here in the OS context. */
-                    resultInit = ((int32_t (*)(void))rtos_initTaskCfgAry[idxP].addrTaskFct)();
+                    resultInit =
+                        ((int32_t (*)(void))pIData->initTaskCfgAry[idxP].addrTaskFct)();
                 }
                 else
                 {
                     /* The initialization function of a process is run as a task in that
                        process, which involves full exception handling and possible abort
                        causes. */
-                    resultInit = rtos_osRunInitTask(&rtos_initTaskCfgAry[idxP]);
+                    resultInit = rtos_osRunInitTask(&pIData->initTaskCfgAry[idxP]);
                 }
                 if(resultInit < 0)
                     errCode = rtos_err_initTaskFailed;
@@ -1563,7 +1427,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
                 rtos_osReleaseProcess(/* PID */ idxP);
 
         /* Release scheduler. */
-        rtos_tiOsStep = RTOS_CLOCK_TICK_IN_MS;
+        pIData->tiOsStep = RTOS_CLOCK_TICK_IN_MS;
 
         rtos_osResumeAllInterrupts();
     }
@@ -1706,9 +1570,10 @@ uint32_t rtos_scFlHdlr_triggerEvent( unsigned int pidOfCallingTask
                                    , uintptr_t taskParam
                                    )
 {
-    if(idEvent < rtos_noEvents)
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    if(idEvent < pIData->noEvents)
     {
-        eventDesc_t * const pEvent = getEventByID(idEvent);
+        rtos_eventDesc_t * const pEvent = getEventByID(idEvent);
         if(pidOfCallingTask >= (unsigned int)pEvent->minPIDForTrigger)
             return (uint32_t)osTriggerEvent( pEvent
                                            , /* hasTaskParam */ true
@@ -1741,7 +1606,7 @@ uint32_t rtos_scFlHdlr_triggerEvent( unsigned int pidOfCallingTask
  * event.
  */
 SECTION(.text.ivor.rtos_osProcessTriggeredEvents) void rtos_osProcessTriggeredEvents
-                                                               (eventDesc_t *pEvent)
+                                                               (rtos_eventDesc_t *pEvent)
 {
     /* This function and particularly this loop is the essence of the task scheduler. There
        are some tricky details to be understood.
@@ -1801,21 +1666,23 @@ SECTION(.text.ivor.rtos_osProcessTriggeredEvents) void rtos_osProcessTriggeredEv
        less invariants for checking. Note, this is still an option if minimizing the CS
        is rated higher than transparency of behavior. */
 
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+
     /* Here, we are inside a critical section. External Interrupt handling is disabled. */
     assert(rtos_osGetAllInterruptsSuspended());
 
     /* If we were called because of pending, postponed events, which are indicated by
-       rtos_pNextEventToSchedule then the caller must have acknowledged the request by
+       pIData->pNextEventToSchedule then the caller must have acknowledged the request by
        setting the pointer back to "unset". */
-    assert((uintptr_t)rtos_pNextEventToSchedule == (uintptr_t)-1);
+    assert((uintptr_t)pIData->pNextEventToSchedule == (uintptr_t)-1);
 
     /* Safe the current state: It'll be updated with each of the events, we find to be
        served, but finally we will have to restore these values here. */
-    const eventDesc_t * const pCurrentEvent = rtos_pCurrentEvent;
-    const unsigned int prioAtEntry = rtos_currentPrio;
+    const rtos_eventDesc_t * const pCurrentEvent = pIData->pCurrentEvent;
+    const unsigned int prioAtEntry = pIData->currentPrio;
 
     /* We iterate the events in order of decreasing priority. */
-    assert(pEvent < rtos_pEndEvent &&  pEvent->priority >= prioAtEntry);
+    assert(pEvent < pIData->pEndEvent &&  pEvent->priority >= prioAtEntry);
     while(true)
     {
         if(pEvent->priority <= prioAtEntry)
@@ -1839,8 +1706,8 @@ SECTION(.text.ivor.rtos_osProcessTriggeredEvents) void rtos_osProcessTriggeredEv
 
             /* The current priority is changed synchronously with the acknowledge of the
                event. We need to do this still inside the same critical section. */
-            rtos_pCurrentEvent = pEvent;
-            rtos_currentPrio = pEvent->priority;
+            pIData->pCurrentEvent = pEvent;
+            pIData->currentPrio = pEvent->priority;
 
             /* Now handle the event, i.e. launch and execute all associated tasks. This is
                of course not done inside the critical section. We leave it now. */
@@ -1851,7 +1718,7 @@ SECTION(.text.ivor.rtos_osProcessTriggeredEvents) void rtos_osProcessTriggeredEv
                here it needs to be the event's priority again.
                  The assertion can fire if an OS task raised the priority using the PCP API
                but didn't restore it again. */
-            assert(rtos_currentPrio == pEvent->priority);
+            assert(pIData->currentPrio == pEvent->priority);
 
             /* The event is entirely processed, we can release it. This must not be done
                before we are again in the next critical section. */
@@ -1912,8 +1779,8 @@ SECTION(.text.ivor.rtos_osProcessTriggeredEvents) void rtos_osProcessTriggeredEv
     /* Here we are surely still or again inside a critical section. */
 
     /* Restored the initial state. */
-    rtos_pCurrentEvent = pCurrentEvent;
-    rtos_currentPrio = prioAtEntry;
+    pIData->pCurrentEvent = pCurrentEvent;
+    pIData->currentPrio = prioAtEntry;
 
 } /* End of rtos_osProcessTriggeredEvents */
 
@@ -1992,16 +1859,10 @@ SECTION(.text.ivor.rtos_osProcessTriggeredEvents) void rtos_osProcessTriggeredEv
  */
 uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority)
 {
-#if 0
-    /* The OS version of the API may even lock the supervisory tasks. Justification: All OS
-       code belongs to the sphere of trusted code and generally has full control. OS code
-       can e.g. lock all interrupts, which is even more blocking than this function. */
-    if(suspendUpToThisTaskPriority > RTOS_MAX_LOCKABLE_TASK_PRIORITY)
-        return rtos_currentPrio;
-#endif
-    const uint32_t prioBeforeChange = rtos_currentPrio;
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    const uint32_t prioBeforeChange = pIData->currentPrio;
     if(suspendUpToThisTaskPriority > prioBeforeChange)
-        rtos_currentPrio = suspendUpToThisTaskPriority;
+        pIData->currentPrio = suspendUpToThisTaskPriority;
 
     return prioBeforeChange;
 
@@ -2040,7 +1901,8 @@ uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority)
  */
 void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority)
 {
-    if(resumeDownToThisTaskPriority < rtos_currentPrio)
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    if(resumeDownToThisTaskPriority < pIData->currentPrio)
     {
         /* Identify the events, which could possibly require the recursive call of the
            scheduler.
@@ -2057,8 +1919,9 @@ void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority)
            a system call. In the majority of cases, the system call will find that calling
            the scheduler is not needed so that this effectively is a significant
            optimization. The OS code here would not benefit from the same strategy. */
-        eventDesc_t * const pEvToSchedulePossibly = rtos_getEventByPriority(rtos_currentPrio);
-        rtos_currentPrio = resumeDownToThisTaskPriority;
+        rtos_eventDesc_t * const pEvToSchedulePossibly = 
+                                                rtos_getEventByPriority(pIData->currentPrio);
+        pIData->currentPrio = resumeDownToThisTaskPriority;
 
         rtos_osSuspendAllInterrupts();
         /* Note, because check and change of the current prio are not inside the critical
@@ -2092,7 +1955,8 @@ void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority)
  */
 unsigned int rtos_getNoActivationLoss(unsigned int idEvent)
 {
-    if(idEvent < rtos_noEvents)
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    if(idEvent < pIData->noEvents)
         return getEventByID(idEvent)->noActivationLoss;
     else
     {
@@ -2124,7 +1988,8 @@ unsigned int rtos_getNoActivationLoss(unsigned int idEvent)
  */
 unsigned int rtos_getTaskBasePriority(void)
 {
-    return rtos_pCurrentEvent->priority;
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    return pIData->pCurrentEvent->priority;
 
 } /* End of rtos_getTaskBasePriority */
 
@@ -2150,6 +2015,7 @@ unsigned int rtos_getTaskBasePriority(void)
  */
 unsigned int rtos_getCurrentTaskPriority(void)
 {
-    return (unsigned int)rtos_currentPrio;
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    return (unsigned int)pIData->currentPrio;
 
 } /* End of rtos_getCurrentTaskPriority */

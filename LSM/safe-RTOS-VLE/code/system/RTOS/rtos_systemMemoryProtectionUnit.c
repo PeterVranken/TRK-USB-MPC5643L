@@ -85,6 +85,7 @@
 #include "typ_types.h"
 
 #include "rtos.h"
+#include "rtos_kernelInstanceData.h"
 #include "rtos_systemMemoryProtectionUnit.h"
 
 
@@ -124,6 +125,19 @@
  */
 void rtos_initMPU(void)
 {
+    /* This code, like all other using core-related global linker symbols ld_*, needs
+       migration. We can't do that here and immediately as it requires a revision of the
+       linker script, which is actually useless and unwanted for the given MCU derivative.
+       We just place an assertion to avoid problem when running this code on another
+       derivative. */
+    /// @todo Make code core dependent if running the RTOS on a multi-core
+    /// @todo See rtos_checkUserCodeWritePtr() in this module and rtos_checkUserCodeReadPtr() in rtos.h, too
+#ifdef DEBUG
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    extern rtos_kernelInstanceData_t rtos_kernelInstanceDataAry[RTOS_NO_CORES];
+    assert(pIData == &rtos_kernelInstanceDataAry[0]);
+#endif
+
     /* See RM, 31, p. 1039ff. */
 
     /* This function must not be used repeatedly during system initialization. */
@@ -393,6 +407,13 @@ void rtos_initMPU(void)
  */
 bool rtos_checkUserCodeWritePtr(unsigned int PID, const void *address, size_t noBytes)
 {
+    /* This code, like all other using core-related global linker symbols ld_*, needs
+       migration. We can't do that here and immediately as it requires a revision of the
+       linker script, which is actually useless and unwanted for the given MCU derivative.
+       We just place an assertion to avoid problem when running this code on another
+       derivative. */
+    /// @todo Make code core dependent if running the RTOS on a multi-core
+
     const uint8_t * const p = (uint8_t*)address;
 
     /* The function doesn't support the kernel process with ID zero. We consider the index

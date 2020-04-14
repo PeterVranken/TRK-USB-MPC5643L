@@ -37,8 +37,7 @@
 
 #include "rtos_runTask_defSysCalls.h"
 #include "rtos_runTask.h"
-#include "rtos_ivorHandler.h"
-#include "rtos_scheduler.h"
+#include "rtos_kernelInstanceData.h"
 #include "rtos.h"
 
 
@@ -69,23 +68,6 @@
  * Data definitions
  */
  
-/** The option for inter-process communication to let a task of process A run a task in
-    process B (system call rtos_runTask()) is potentially harmful, as the started task can
-    destroy on behalf of process A all data structures of the other process B. It's of
-    course not generally permittable. An all-embracing privilege rule cannot be defined
-    because of the different use cases of the mechanism. Therefore, we have an explicit
-    table of granted permissions, which can be configured at startup time as an element of
-    the operating system initialization code.\n
-      The bits of the word correspond to the 16 possible combinations of four possible
-    caller processes in four possible target processes.
-      By default, no permission is granted. */
-#if RTOS_NO_PROCESSES == 4
-static uint16_t SDATA_OS(rtos_runTask_permissions) = 0;
-#else
-# error Implementation depends on four being the number of processes
-#endif
-
-
 
 /*
  * Function implementation
@@ -151,7 +133,8 @@ void rtos_osGrantPermissionRunTask(unsigned int pidOfCallingTask, unsigned int t
 #endif
     const unsigned int idxCalledPrc = targetPID - 1u;
     const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
-    rtos_runTask_permissions |= mask;
+    rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+    pIData->runTask_permissions |= mask;
 
 } /* End of rtos_osGrantPermissionRunTask */
 
@@ -209,8 +192,9 @@ bool rtos_checkPermissionRunTask(unsigned int pidOfCallingTask, unsigned int tar
     /* No range check is required for pidOfCallingTask. We implicitly get the wanted result
        false if it would be out of range 1..4. */
 
+    const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
     const uint16_t mask = 0x1 << (4u*(pidOfCallingTask-1u) + idxCalledPrc);
-    return (rtos_runTask_permissions & mask) != 0;
+    return (pIData->runTask_permissions & mask) != 0;
 
 } /* End of rtos_checkPermissionRunTask */
 
@@ -262,6 +246,8 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
 
     if(rtos_checkPermissionRunTask(pidOfCallingTask, /* targetPID */ pUserTaskConfig->PID))
     {
+        rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
+        
         /* We forbid recursive use of this system call not because it would be technically
            not possible but to avoid an overflow of the supervisor stack. Each creation of
            a user task puts a stack frame on the SV stack. We cannot detect a recursion but
@@ -271,16 +257,15 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
            this is generally the case for interrupts.
              The number of available task base priority levels is strictly limited and so
            is then the number of possible recursions. The SV stack is protected. */
-        static uint32_t SDATA_OS(minPriorityLevel_) = 0;
         unsigned int currentLevel = rtos_getTaskBasePriority()
                    , minPriorityLevelOnEntry;
 
         rtos_osSuspendAllInterrupts();
-        const bool isEnabled = currentLevel >= minPriorityLevel_;
+        const bool isEnabled = currentLevel >= pIData->runTask_minPriorityLevel;
         if(isEnabled)
         {
-            minPriorityLevelOnEntry = minPriorityLevel_;
-            minPriorityLevel_ = currentLevel+1;
+            minPriorityLevelOnEntry = pIData->runTask_minPriorityLevel;
+            pIData->runTask_minPriorityLevel = currentLevel+1;
         }
         rtos_osResumeAllInterrupts();
 
@@ -297,7 +282,7 @@ uint32_t rtos_scFlHdlr_runTask( unsigned int pidOfCallingTask
                is initialized, too. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-            minPriorityLevel_ = minPriorityLevelOnEntry;
+            pIData->runTask_minPriorityLevel = minPriorityLevelOnEntry;
 #pragma GCC diagnostic pop
 
             rtos_osResumeAllInterrupts();

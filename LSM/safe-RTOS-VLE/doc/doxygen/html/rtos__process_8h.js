@@ -1,6 +1,8 @@
 var rtos__process_8h =
 [
+    [ "rtos_processDesc_t", "structrtos__process_desc__t.html", "structrtos__process_desc__t" ],
     [ "RTOS_SYSCALL_SUSPEND_PROCESS", "rtos__process_8h.html#a643cf094ea71fd6e396ad6e7147bb23c", null ],
+    [ "rtos_processDesc_t", "rtos__process_8h.html#a5602cfecfa4dcc525695c0903c14d9e4", null ],
     [ "rtos_osGrantPermissionSuspendProcess", "rtos__process_8h.html#a68f8200c57d5390e8937fc2a78af55b6", null ],
     [ "rtos_osSuspendProcess", "rtos__process_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa", null ],
     [ "rtos_isProcessSuspended", "rtos__process_8h.html#a63296923146f8dff5b8754ca1c6003dc", null ],

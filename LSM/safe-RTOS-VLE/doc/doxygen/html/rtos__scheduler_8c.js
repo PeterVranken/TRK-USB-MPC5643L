@@ -1,11 +1,11 @@
 var rtos__scheduler_8c =
 [
-    [ "rtos_osProcessTriggeredEvents", "rtos__scheduler_8c.html#acdd3143b2fa495973d05510cc24c582d", null ],
-    [ "BSS_OS", "rtos__scheduler_8c.html#a3c3bad3c57d1f79ad9220af0835b137e", null ],
-    [ "getEventByIdx", "rtos__scheduler_8c.html#a98d613dd931e4c0da491286113480327", null ],
-    [ "osTriggerEvent", "rtos__scheduler_8c.html#acaf50edcb1628419d13d87d883764676", null ],
+    [ "rtos_osProcessTriggeredEvents", "rtos__scheduler_8c.html#a6df3cc99cb0ded5e70c194d61ffcafea", null ],
+    [ "getEventByID", "rtos__scheduler_8c.html#ac7021bd19346a72c3aca8a64218821d8", null ],
+    [ "getEventByIdx", "rtos__scheduler_8c.html#a2616e7008443d2acabaa337a4b0ab37f", null ],
+    [ "osTriggerEvent", "rtos__scheduler_8c.html#aca47528d03257cac7674c4127734867a", null ],
     [ "checkEventDue", "rtos__scheduler_8c.html#a8df7dcfd985b3ab2261eb3d506b1d7dd", null ],
-    [ "launchAllTasksOfEvent", "rtos__scheduler_8c.html#abd18df6c5ffb1669d93edceb95c8e06d", null ],
+    [ "launchAllTasksOfEvent", "rtos__scheduler_8c.html#abf2f8a8976a2557ca47b7049b355d460", null ],
     [ "initRTOSClockTick", "rtos__scheduler_8c.html#aa619cb414884cbb1f9811966a9151cf8", null ],
     [ "rtos_osCreateEvent", "rtos__scheduler_8c.html#a3b8a72b75ad042fe88206066a4c05869", null ],
     [ "rtos_osRegisterInitTask", "rtos__scheduler_8c.html#ad638a1d6495b0948343a90257e6410d4", null ],

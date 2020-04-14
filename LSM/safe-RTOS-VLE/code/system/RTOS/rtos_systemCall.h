@@ -37,10 +37,10 @@
 
 /** The number of supported system calls.
       @remark If this define is increased than the initializer expression of \a
-    rtos_systemCallDescAry and the list of conditional defines #RTOS_SYSCALL_TABLE_ENTRY_0000,
-    #RTOS_SYSCALL_TABLE_ENTRY_0001, and so on, found in file rtos_systemCall.c, need to be
-    extended, too. */
-#define RTOS_NO_SYSTEM_CALLS  64
+    rtos_systemCallDescAry and the list of conditional defines
+    #RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0000, #RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0001, and so
+    on, found in file rtos_systemCall.c, need to be extended, too. */
+#define RTOS_NO_SYSTEM_CALLS        64
 
 /** Definition of the enumeration of the supported conformance classes for system call
     handlers. We have:\n\n
@@ -63,19 +63,32 @@
       Note, we need to use a define for this enumeration as the definition is shared with
     the implementing assembler code.\n
       Here, we have the enumeration value to declare a basic handler. */
-#define RTOS_HDLR_CONF_CLASS_BASIC    0
+#define RTOS_HDLR_CONF_CLASS_BASIC  0
 
 /** Declaration of a simple handler. See #RTOS_HDLR_CONF_CLASS_BASIC for details. */
-#define RTOS_HDLR_CONF_CLASS_SIMPLE   1   
+#define RTOS_HDLR_CONF_CLASS_SIMPLE 1   
 
 /** Declaration of a full handler. See #RTOS_HDLR_CONF_CLASS_BASIC for details. */
-#define RTOS_HDLR_CONF_CLASS_FULL     2   
+#define RTOS_HDLR_CONF_CLASS_FULL   2   
 
 
 #ifdef __STDC_VERSION__
 /*
  * Global type definitions
  */
+
+/** An entry in the table of system call service descriptors. */
+typedef struct rtos_systemCallDesc_t
+{
+    /** The pointer to the service implementation.\n
+          This field is address at offset O_SCDESC_sr from the assembler code. */
+    uint32_t addressOfFct;
+
+    /** Conformance class of service handler. The values are according to enum
+        #RTOS_HDLR_CONF_CLASS_BASIC and following. */
+    uint32_t conformanceClass;
+
+} rtos_systemCallDesc_t;
 
 
 /*

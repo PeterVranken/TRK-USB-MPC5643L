@@ -1,6 +1,7 @@
 var rtos_8h =
 [
     [ "rtos_taskDesc_t", "structrtos__task_desc__t.html", "structrtos__task_desc__t" ],
+    [ "RTOS_NO_CORES", "rtos_8h.html#ab004fb06d9894fe6afdc8385f33602cb", null ],
     [ "RTOS_NO_PROCESSES", "rtos_8h.html#a18500a557ecd5ebbcefbacba22b58d7e", null ],
     [ "RTOS_INVALID_EVENT_ID", "rtos_8h.html#ac4ea516ad4edd46b1088804cf463bc84", null ],
     [ "RTOS_TI_DEADLINE_MAX_IN_US", "rtos_8h.html#a1f387767ac5768e23a4a7aa1ef5084f7", null ],
@@ -22,6 +23,7 @@ var rtos_8h =
     [ "RTOS_SC_TABLE_ENTRY", "rtos_8h.html#a7eac206295711ad1e5346d367f9ce74c", null ],
     [ "RTOS_TI_MS2TICKS", "rtos_8h.html#af6f4937c654a76ca43d70366f0f461cd", null ],
     [ "RTOS_TI_US2TICKS", "rtos_8h.html#a50879c034063dd071531d12bc8c3f6d6", null ],
+    [ "RTOS_SPR_PIR", "rtos_8h.html#a4679400d0f8b946b562d7efd20d09573", null ],
     [ "rtos_interruptServiceRoutine_t", "rtos_8h.html#a671a05cb46411e64b58a457394c3e749", null ],
     [ "rtos_errorCode_t", "rtos_8h.html#ab0180bfcbb98cc099bb6b00999a488ba", null ],
     [ "rtos_taskDesc_t", "rtos_8h.html#a594b547ccdf2a1d473ea55ef612d7558", null ],
@@ -71,6 +73,7 @@ var rtos_8h =
     [ "rtos_getStackReserve", "rtos_8h.html#a240a9b010103563bb950b8d69017703b", null ],
     [ "rtos_osSuspendProcess", "rtos_8h.html#aeddb4b88dd8c1052eb41763e7164e7fa", null ],
     [ "rtos_isProcessSuspended", "rtos_8h.html#a63296923146f8dff5b8754ca1c6003dc", null ],
+    [ "rtos_osGetIdxCore", "rtos_8h.html#a6621923bed2b7ca031f158a305704048", null ],
     [ "rtos_osRunTask", "rtos_8h.html#a585062ee728ec5d30b078964aa1f0862", null ],
     [ "rtos_runTask", "rtos_8h.html#ae1f6778a3742632e1d754dc916a1aeff", null ],
     [ "rtos_terminateTask", "rtos_8h.html#a50aa791209542d3078b18c24acbb46c1", null ],

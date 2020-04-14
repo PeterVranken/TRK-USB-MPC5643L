@@ -36,7 +36,9 @@
  * Defines
  */
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0006
+#if !defined(RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0006)    \
+    && !defined(RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0006) \
+    && !defined(RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0006)
 # define ASSERT_SYSCALL_ASSERT_FUNC 6
 
 /* Assembler implemented code in assert_sysCall.S. Note, despite of the C style prototype,
@@ -46,13 +48,29 @@ extern void _Noreturn assert_scBscHdlr_assert_func( const char *fileName
                                                   , const char *funcName
                                                   , const char *expression
                                                   );
-# define RTOS_SYSCALL_TABLE_ENTRY_0006 RTOS_SC_TABLE_ENTRY(assert_scBscHdlr_assert_func, BASIC)
+# if RTOS_NO_CORES >= 1
+#  define RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0006 \
+                                    RTOS_SC_TABLE_ENTRY(assert_scBscHdlr_assert_func, BASIC)
+# endif
+# if RTOS_NO_CORES >= 2
+#  define RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0006 \
+                                    RTOS_SC_TABLE_ENTRY(assert_scBscHdlr_assert_func, BASIC)
+# endif
+# if RTOS_NO_CORES >= 3
+#  define RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0006 \
+                                    RTOS_SC_TABLE_ENTRY(assert_scBscHdlr_assert_func, BASIC)
+# endif
+# if RTOS_NO_CORES >= 4
+#  error System call definition requires extension for more than three cores
+# endif
 #else
 # error System call 0006 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
-   make the compiler emit a message with the location of the conflicting previous
+   makes the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0006    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0006    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0006    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0006    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 

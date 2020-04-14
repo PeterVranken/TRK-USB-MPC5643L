@@ -271,6 +271,30 @@ void main(void)
     /* Initialize the serial output channel as prerequisite of using printf. */
     sio_osInitSerialInterface(/* baudRate */ 115200);
 
+    /* Print greeting */ 
+    const char greeting[] =
+            "basicTest - A sample application of safe-RTOS"
+#ifdef DEBUG
+            " (DEBUG compilation)"
+#endif
+            "\r\n"
+            "Copyright (C) 2018-2020  Peter Vranken\r\n"
+            "\r\n"
+            "This program is free software: you can redistribute it and/or modify\r\n"
+            "it under the terms of the GNU Lesser General Public License as published\r\n"
+            "by the Free Software Foundation, either version 3 of the License, or\r\n"
+            "(at your option) any later version.\r\n"
+            "\r\n"
+            "This program is distributed in the hope that it will be useful,\r\n"
+            "but WITHOUT ANY WARRANTY; without even the implied warranty of\r\n"
+            "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\r\n"
+            "GNU Lesser General Public License for more details.\r\n"
+            "\r\n"
+            "You should have received a copy of the GNU Lesser General Public License\r\n"
+            "along with this program.  If not, see <https://www.gnu.org/licenses/>.\r\n"
+            "\r\n";
+    sio_osWriteSerial(greeting, sizeof(greeting)-1);
+            
     /* Register the process initialization tasks. Here, we used always the same function. */
     bool initOk = true;
     unsigned int u;

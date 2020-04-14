@@ -38,43 +38,89 @@
  * Defines
  */
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0001
+#if !defined(RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0001)    \
+    && !defined(RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0001) \
+    && !defined(RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0001)
+    
 # if RTOS_SYSCALL_SUSPEND_ALL_TASKS_BY_PRIORITY != 1
 #  error Inconsistent definition of system call
 # endif
+
 /* Assembler implemented code in rtos_priorityCeilingProtocol.S. Note, despite of the C
    style prototype, this is not a C callable function. The calling convention is different
    to C. This is the reason, why we declare it here instead of publishing it globally in
    rtos_priorityCeilingProtocol.h. */
 extern uint32_t rtos_scBscHdlr_suspendAllTasksByPriority(uint32_t suspendUpToThisPrio);
-# define RTOS_SYSCALL_TABLE_ENTRY_0001  \
+
+# if RTOS_NO_CORES >= 1
+#  define RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0001  \
                 RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_suspendAllTasksByPriority, BASIC)
+# endif
+# if RTOS_NO_CORES >= 2
+#  define RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0001  \
+                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_suspendAllTasksByPriority, BASIC)
+# endif
+# if RTOS_NO_CORES >= 3
+#  define RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0001  \
+                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_suspendAllTasksByPriority, BASIC)
+# endif
+# if RTOS_NO_CORES >= 4
+#  error System call definition requires extension for more than three cores
+# endif
+
 #else
+
 # error System call 0001 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    makes the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0001    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0001    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0001    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0001    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+
 #endif
 
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0002
+#if !defined(RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0002)    \
+    && !defined(RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0002) \
+    && !defined(RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0002)
+    
 # if RTOS_SYSCALL_RESUME_ALL_TASKS_BY_PRIORITY != 2
 #  error Inconsistent definition of system call
 # endif
+
 /* Assembler implemented code in rtos_priorityCeilingProtocol.S. Note, despite of the C
    style prototype, this is not a C callable function. The calling convention is different
    to C. This is the reason, why we declare it here instead of publishing it globally in
    rtos_priorityCeilingProtocol.h. */
 extern uint32_t rtos_scBscHdlr_resumeAllTasksByPriority(uint32_t resumeDownToThisPrio);
-# define RTOS_SYSCALL_TABLE_ENTRY_0002  \
+
+# if RTOS_NO_CORES >= 1
+#  define RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0002  \
                 RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_resumeAllTasksByPriority, BASIC)
+# endif
+# if RTOS_NO_CORES >= 2
+#  define RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0002  \
+                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_resumeAllTasksByPriority, BASIC)
+# endif
+# if RTOS_NO_CORES >= 3
+#  define RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0002  \
+                RTOS_SC_TABLE_ENTRY(rtos_scBscHdlr_resumeAllTasksByPriority, BASIC)
+# endif
+# if RTOS_NO_CORES >= 4
+#  error System call definition requires extension for more than three cores
+# endif
+
 #else
+
 # error System call 0002 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    makes the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0002    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0002    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_1_SYSCALL_TABLE_ENTRY_0002    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_2_SYSCALL_TABLE_ENTRY_0002    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+
 #endif
 
 

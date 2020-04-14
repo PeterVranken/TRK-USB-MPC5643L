@@ -1,10 +1,10 @@
 /**
- * @file assert_sysCall.c
+ * @file assert_sysCall.S
  * Assert function: Implementation as basic system call handler. The basic type is required
  * in order to make the system call work well in all contexts, the OS contexts in
  * supervisor mode or the normal user tasks.
  *
- * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2019-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the

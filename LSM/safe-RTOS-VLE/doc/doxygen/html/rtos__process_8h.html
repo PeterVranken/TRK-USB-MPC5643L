@@ -104,24 +104,34 @@ $(document).ready(function(){initNavTree('rtos__process_8h.html','');});
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Data Structures</a> &#124;
 <a href="#define-members">Macros</a> &#124;
+<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">rtos_process.h File Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;stdint.h&gt;</code><br />
-<code>#include &lt;stdbool.h&gt;</code><br />
-<code>#include &quot;<a class="el" href="typ__types_8h_source.html">typ_types.h</a>&quot;</code><br />
+<div class="textblock"><code>#include &quot;<a class="el" href="typ__types_8h_source.html">typ_types.h</a>&quot;</code><br />
 <code>#include &quot;rtos_ivorHandler.h&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos_8h_source.html">rtos.h</a>&quot;</code><br />
 </div>
 <p><a href="rtos__process_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
+Data Structures</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structrtos__process_desc__t.html">rtos_processDesc_t</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
 <tr class="memitem:a643cf094ea71fd6e396ad6e7147bb23c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__process_8h.html#a643cf094ea71fd6e396ad6e7147bb23c">RTOS_SYSCALL_SUSPEND_PROCESS</a>&#160;&#160;&#160;5</td></tr>
 <tr class="separator:a643cf094ea71fd6e396ad6e7147bb23c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
+Typedefs</h2></td></tr>
+<tr class="memitem:a5602cfecfa4dcc525695c0903c14d9e4"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structrtos__process_desc__t.html">rtos_processDesc_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__process_8h.html#a5602cfecfa4dcc525695c0903c14d9e4">rtos_processDesc_t</a></td></tr>
+<tr class="separator:a5602cfecfa4dcc525695c0903c14d9e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
@@ -155,6 +165,20 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Index of implemented system call for aborting running tasks belonging to a given process and stopping that process forever (i.e. no further task or I/O driver callback execution). </p>
+
+</div>
+</div>
+<h2 class="groupheader">Typedef Documentation</h2>
+<a class="anchor" id="a5602cfecfa4dcc525695c0903c14d9e4"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef struct <a class="el" href="structrtos__process_desc__t.html">rtos_processDesc_t</a>  <a class="el" href="structrtos__process_desc__t.html">rtos_processDesc_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Run-time data describing a process. An object of this type must be allocated in RAM, which is not write-permitted for user code. </p>
 
 </div>
 </div>
@@ -340,6 +364,7 @@ This function must be called from the OS context only. Any attempt to use it in 
 <dl class="section remark"><dt>Remarks</dt><dd>The computation is a linear search for the first non-pattern word and thus relatively expensive. It's suggested to call it only in some specific diagnosis compilation or occasionally from the idle task. </dd>
 <dd>
 This function can be called from both, the OS context and a user task. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000005">Todo:</a></b></dt><dd>Make code core dependent if running the RTOS on a multi-core </dd></dl>
 
 </div>
 </div>

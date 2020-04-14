@@ -37,17 +37,18 @@
  * Defines
  */
 
-#ifndef RTOS_SYSCALL_TABLE_ENTRY_0020
+#ifndef RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0020
 # if SIO_SYSCALL_WRITE_SERIAL != 20
 #  error Inconsistent definition of system call
 # endif
-# define RTOS_SYSCALL_TABLE_ENTRY_0020  RTOS_SC_TABLE_ENTRY(sio_scFlHdlr_writeSerial, FULL)
+# define RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0020 \
+                                        RTOS_SC_TABLE_ENTRY(sio_scFlHdlr_writeSerial, FULL)
 #else
 # error System call 0020 is ambiguously defined
 /* We purposely redefine the table entry and despite of the already reported error; this
    makes the compiler emit a message with the location of the conflicting previous
    definition.*/
-# define RTOS_SYSCALL_TABLE_ENTRY_0020    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
+# define RTOS_CORE_0_SYSCALL_TABLE_ENTRY_0020    RTOS_SYSCALL_DUMMY_TABLE_ENTRY
 #endif
 
 

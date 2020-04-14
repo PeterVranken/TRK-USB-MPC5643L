@@ -15,6 +15,7 @@
  *   - Initializes the stack\n
  *   - Presets the small data pointers r2 and r13\n
  *   - Copy initial values to RAM for all initialized data sections\n
+ *   - Load instance pointer for given core into USPR
  *   - Branches into the C main function\n
  *   The further HW initialization is left to the C code and needs to be called from the
  * begining of the main function. A minumum configuration would be:\n
@@ -23,7 +24,7 @@
  *   - Peripheral bridge\n
  *   - Interrupt controller for External Interrupts\n
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -254,6 +255,15 @@ su_loopFillStack:
     se_mtlr     r3
     se_blrl
 
+    /* Load the pointer to the core instance pointer, i.e. the pointer to the data, which
+       is individual to each core. */
+    .extern     rtos_kernelInstanceDataAry
+    mfspr       r3, SPR_PIR
+    e_mull2i    r3, SIZE_OF_INSTANCE_DATA   /* Requires SIZE_OF_INSTANCE_DATA < 0x8000 */
+    e_add2is    r3, rtos_kernelInstanceDataAry@ha
+    e_add16i    r3, r3, rtos_kernelInstanceDataAry@l
+    mtspr       SPR_G4_CDATA_RW, r3
+
     /* Calling main: Load EABI function argument registers with argc=0, argv=NULL. */
     e_lis       r3, main@h
     e_or2i      r3, main@l
@@ -419,7 +429,6 @@ zeroizeRegisters:
  * exceptions. These handlers loop infinitely so that you will see a caught exception in
  * the debugger.
  */
-    .extern     int_INTCInterruptHandler
     .extern     rtos_ivor1Handler, rtos_ivor2Handler, rtos_ivor3Handler, rtos_ivor4Handler
     .extern     rtos_ivor5Handler, rtos_ivor6Handler, rtos_ivor7Handler, rtos_ivor8Handler
     .extern     rtos_ivor13Handler, rtos_ivor14Handler, rtos_ivor15Handler, rtos_ivor32Handler

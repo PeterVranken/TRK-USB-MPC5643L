@@ -104,8 +104,7 @@ $(document).ready(function(){initNavTree('rtos__process_8c.html','');});
 
 <div class="header">
   <div class="summary">
-<a href="#func-members">Functions</a> &#124;
-<a href="#var-members">Variables</a>  </div>
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">rtos_process.c File Reference</div>  </div>
 </div><!--header-->
@@ -121,6 +120,7 @@ $(document).ready(function(){initNavTree('rtos__process_8c.html','');});
 <code>#include &quot;<a class="el" href="typ__types_8h_source.html">typ_types.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos__process_8h_source.html">rtos_process.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos__process__def_sys_calls_8h_source.html">rtos_process_defSysCalls.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="rtos__kernel_instance_data_8h_source.html">rtos_kernelInstanceData.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos_8h_source.html">rtos.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="rtos__system_call_8h_source.html">rtos_systemCall.h</a>&quot;</code><br />
 <code>#include &quot;rtos_ivorHandler.h&quot;</code><br />
@@ -139,21 +139,6 @@ Functions</h2></td></tr>
 <tr class="separator:abb25bad5cf1976808e7acb79c30290bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a240a9b010103563bb950b8d69017703b"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="rtos__process_8c.html#a240a9b010103563bb950b8d69017703b">rtos_getStackReserve</a> (unsigned int PID)</td></tr>
 <tr class="separator:a240a9b010103563bb950b8d69017703b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:a14e0e2e5c15e40a97f9ea2053c6ba7d3"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a14e0e2e5c15e40a97f9ea2053c6ba7d3"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>ld_stackEndP1</b> [0]</td></tr>
-<tr class="separator:a14e0e2e5c15e40a97f9ea2053c6ba7d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4dfc8a856d9724404bae4b8339aba6a7"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4dfc8a856d9724404bae4b8339aba6a7"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>ld_stackEndP2</b> [0]</td></tr>
-<tr class="separator:a4dfc8a856d9724404bae4b8339aba6a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a910988a88e8f9e91753c462f6746dcd8"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a910988a88e8f9e91753c462f6746dcd8"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>ld_stackEndP3</b> [0]</td></tr>
-<tr class="separator:a910988a88e8f9e91753c462f6746dcd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af1e19b4fb447cb0e356e2a866eb9e4a6"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af1e19b4fb447cb0e356e2a866eb9e4a6"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>ld_stackEndP4</b> [0]</td></tr>
-<tr class="separator:af1e19b4fb447cb0e356e2a866eb9e4a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This module implements the process related functionality like querying the number of errors, recognized and counted for a process and suspension of a (failing) process.</p>
@@ -337,6 +322,7 @@ This function must be called from the OS context only. Any attempt to use it in 
 <dl class="section remark"><dt>Remarks</dt><dd>The computation is a linear search for the first non-pattern word and thus relatively expensive. It's suggested to call it only in some specific diagnosis compilation or occasionally from the idle task. </dd>
 <dd>
 This function can be called from both, the OS context and a user task. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000005">Todo:</a></b></dt><dd>Make code core dependent if running the RTOS on a multi-core </dd></dl>
 
 </div>
 </div>

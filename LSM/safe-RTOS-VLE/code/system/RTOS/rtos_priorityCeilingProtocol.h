@@ -61,16 +61,16 @@
     of minimalistic type-safety. See #RTOS_CONSTRAINTS_INTERFACE_C_AS_PCP,
     #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_SYS_CALL  and
     #RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PROCESS, too. */
-#define RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PCP (                \
-            sizeof(rtos_mapPrioToEvent[0]) == 4                     \
-            && sizeof(rtos_currentPrio) == 4                        \
-            && PCP_SIZE_OF_EV_DESC == sizeof(eventDesc_t)           \
-            && PCP_O_EVDESC_state == offsetof(eventDesc_t, state)   \
-            && PCP_O_EVDESC_prio == offsetof(eventDesc_t, priority) \
-            && sizeoffield(eventDesc_t, state) == 1                 \
-            && sizeoffield(eventDesc_t, priority) == 4              \
-            && PCP_E_EVST_idle == evState_idle                      \
-            && PCP_E_EVST_triggered == evState_triggered            \
+#define RTOS_STATIC_CONSTRAINTS_INTERFACE_C_AS_PCP (                                    \
+            sizeof(((const rtos_kernelInstanceData_t*)NULL)->mapPrioToEvent[0]) == 4    \
+            && sizeoffield(rtos_kernelInstanceData_t, currentPrio) == 4                 \
+            && PCP_SIZE_OF_EV_DESC == sizeof(rtos_eventDesc_t)                          \
+            && PCP_O_EVDESC_state == offsetof(rtos_eventDesc_t, state)                  \
+            && PCP_O_EVDESC_prio == offsetof(rtos_eventDesc_t, priority)                \
+            && sizeoffield(rtos_eventDesc_t, state) == 1                                \
+            && sizeoffield(rtos_eventDesc_t, priority) == 4                             \
+            && PCP_E_EVST_idle == evState_idle                                          \
+            && PCP_E_EVST_triggered == evState_triggered                                \
         )
 
 /** This is an expression, which needs to be used in a C unit as condition for a runtime
@@ -87,7 +87,7 @@
 
 /** Hidden type, owned by and local to rtos_scheduler.c, but needed here as opaque pointer
     type. */
-struct eventDesc_t;
+struct rtos_eventDesc_t;
 
 
 /*
@@ -127,7 +127,7 @@ void rtos_resumeAllTasksByPriority(uint32_t resumeDownToThisPriority);
  * The function can be called from assembly and C code and from any context, OS and user
  * tasks and ISRs.
  */
-struct eventDesc_t *rtos_getEventByPriority(uint32_t priority);
+struct rtos_eventDesc_t *rtos_getEventByPriority(uint32_t priority);
 
 #endif  /* For C code compilation only */
 #endif  /* RTOS_PRIORITY_CEILING_PROTOCOL_INCLUDED */

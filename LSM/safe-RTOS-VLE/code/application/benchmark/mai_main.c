@@ -175,7 +175,7 @@ enum prioEvent_t
 };
 
 
-/** The INTC riorities of the interrupts in use. These priorities constitute another space
+/** The INTC priorities of the interrupts in use. These priorities constitute another space
     as the task priorities. */
 enum prioIRQ_t
 {

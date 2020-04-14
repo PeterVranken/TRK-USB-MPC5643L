@@ -39,13 +39,17 @@
 
 #include "typ_types.h"
 #include "rtos.h"
-#include "gsl_systemLoad.h"
 #include "lbd_ledAndButtonDriver.h"
-#include "rtos_ivorHandler.h"
 #include "syc_systemConfiguration.h"
 #include "prf_processFailureInjection.h"
 #include "prr_processReporting.h"
 #include "prs_processSupervisor.h"
+
+/* This test accesses internal functions and data objects from the RTOS (intrusion tests).
+   We load some of the RTOS internal headers, which are normally not made available to the
+   RTOS application code. */
+#include "rtos_ivorHandler.h"
+#include "rtos_kernelInstanceData.h"
 
 
 /*
@@ -207,16 +211,8 @@ int32_t prs_taskCommandError(uint32_t PID ATTRIB_UNUSED, uintptr_t taskParam ATT
         expectedValue = rtos_getNoTotalTaskFailure(syc_pidSupervisor);
         value = ~expectedValue;
         
-        /* This is, what we would do in C:
-             address = (uint32_t)&rtos_processAry[syc_pidSupervisor-1].cntTotalTaskFailure;
-             Unfortunately, rtos_processAry and its type are not public. The data is
-           however shared with the assembly code and we can use the same interfacing size
-           and field offset macros to compute the required address exactly as the assembler
-           code does. */
-        extern uint8_t rtos_processAry[];
-        address = (uint32_t)&rtos_processAry
-                  + SIZE_OF_PROCESS_DESC*(syc_pidSupervisor-1)
-                  + O_PDESC_CNTTOT;
+        address = (uint32_t)&rtos_getInstancePtr()
+                             ->processAry[syc_pidSupervisor-1].cntTotalTaskFailure;
         maxNoExpectedFailures = 1;
         break;
 #endif

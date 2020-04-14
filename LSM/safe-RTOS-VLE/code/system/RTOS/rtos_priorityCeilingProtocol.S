@@ -48,14 +48,6 @@
  * Defines
  */
 
-/** To generate some profiling code? Does the switching from basic to full conformance
-    class for the PCP system call to lower the current priority pay off? We expect to see
-    much more ends of critical sections without the expensive call of the scgeduler than
-    with this call. This can be proven by counting the calls. */
-#ifdef DEBUG
-# define DBG_COUNT_SCHEDULER_CALLS
-#endif
-
 
 /*
  * External function declarations
@@ -115,13 +107,11 @@ rtos_scBscHdlr_suspendAllTasksByPriority:
 #endif
     e_bgt       rtos_osSystemCallBadArgument  /* r4>MAX: Abort task, demanded prio too high */
    
-    mfspr       r13, SPR_G1_SDA     /* Basic handlers need to repair possibly destroyed SDA
-                                       pointers prior to first use. */
-    e_lwz       r3, rtos_currentPrio@sda21(r13) /* r3: Current prio value, before change.
-                                                   For return */
+    mfspr       r5, SPR_G4_CDATA_RO     /* r5: rtos_getInstancePtr() */
+    e_lwz       r3, O_ID_CUR_PRIO(r5)   /* r3: Current prio value, before change. For return */
     se_cmpl     r4, r3
     se_ble      sat_return              /* r4<=r3: No change of current prio */
-    e_stw       r4, rtos_currentPrio@sda21(r13) /* Store checked, demanded val in prio var */
+    e_stw       r4, O_ID_CUR_PRIO(r5)   /* Store checked, demanded val in prio var */
 sat_return:
     se_rfi
 
@@ -198,16 +188,11 @@ rtos_getEventByPriority:
 #endif
     se_bgt      .
 #endif
-    e_lwz       r5, _mapPrioToEvent@sda21(r13) /* r5: &rtos_mapPrioToEvent[0] */
     se_slwi     r3, 2   /* r3: priority*4; each array element is a pointer */
+    mfspr       r5, SPR_G4_CDATA_RO     /* r5+O_ID_MAP_PRIO_TO_EV: &mapPrioToEvent[0] */
     se_add      r5, r3
-    e_lwz       r3, 0(r5)   /* r3: rtos_mapPrioToEvent[priority] */
+    e_lwz       r3, O_ID_MAP_PRIO_TO_EV(r5) /* r3: rtos_mapPrioToEvent[priority] */
     se_blr
-
-    .section    .sdata.OS._mapPrioToEvent
-    .extern     rtos_mapPrioToEvent
-_mapPrioToEvent:
-    .dc.l       rtos_mapPrioToEvent
 
 /* End of rtos_getEventByPriority */
 
@@ -245,9 +230,6 @@ _mapPrioToEvent:
 
 rtos_scBscHdlr_resumeAllTasksByPriority:
 
-    mfspr       r13, SPR_G1_SDA     /* Basic handlers need to repair possibly destroyed SDA
-                                       pointers prior to first use. */
-                                       
     /* The yielded priority must be within the permitted range: Not at level of safety
        tasks or above and not below the level we had at entry into the task.
          The first condition is always fulfilled, since we only change downwards but we can
@@ -271,14 +253,15 @@ rtos_scBscHdlr_resumeAllTasksByPriority:
     /* The function allows to change the task priority only downwards. It is not an error
        if the aimed priority is above from or same as current one: This happens if several
        critical sections or get/release resource pairs are nested. */
-    e_lwz       r3, rtos_currentPrio@sda21(r13) /* r3: Current prio value, before change */
+    mfspr       r5, SPR_G4_CDATA_RO     /* r5: rtos_getInstancePtr() */
+    e_lwz       r3, O_ID_CUR_PRIO(r5)   /* r3: Current prio value, before change */
     se_cmpl     r4, r3
     se_bge      rat_return              /* r4>=r3: No change of current prio */
-    e_stw       r4, rtos_currentPrio@sda21(r13) /* Store checked, demanded value in prio var */
+    e_stw       r4, O_ID_CUR_PRIO(r5)   /* Store checked, demanded value in prio var */
     se_mr       r7, r4      /* r6+r7 are persistent with respect to next function call */
     se_bl       rtos_getEventByPriority /* r3: prio@entry -> pEvent with that prio */
     
-    /* We will no visit the returned event, and all of its successors, to see whether at
+    /* We will now visit the returned event, and all of its successors, to see whether at
        least one has been triggered. If so, we need to recursively call the scheduler to
        process this event (and maybe others, which can be left to the scheduler). The
        iteration ends when we see an event of priority lower than or equal to the new,
@@ -287,7 +270,7 @@ rtos_scBscHdlr_resumeAllTasksByPriority:
     se_mr       r4, r3      /* r4: pEv under progress */
     
 #ifdef DEBUG
-    /* The iteration ends at latest at the gurad element at the end of the list, which has
+    /* The iteration ends at latest at the guard element at the end of the list, which has
        priority zero. Moreover, before that we need to stop at an event of currently
        scheduled priority. We can add an assertion. */
     se_mr       r3, r7      /* r3: restored value of current prio */
@@ -335,12 +318,6 @@ rat_callSchedulerRecursively:
     .extern     rtos_osProcessTriggeredEvents
     se_mr       r3, r4      /* r3: PID -> pEvent with prio@entry */
     wrteei      0           /* Call of rtos_osProcessTriggeredEvents requires MSR[EE] = 0 */
-#ifdef DBG_COUNT_SCHEDULER_CALLS
-    /* Count executions of system call handler as basic handler. */
-    e_lwz       r4, _cntResumeWithScheduler@sda21(r13)
-    se_addi     r4, 1
-    e_stw       r4, _cntResumeWithScheduler@sda21(r13)
-#endif
     e_b         rtos_osProcessTriggeredEvents /* Check for possible task switches and return
                                                  from system call */
 rat_return:
@@ -352,21 +329,6 @@ rat_return:
 #endif
     se_rfi
     
-
-#ifdef DBG_COUNT_SCHEDULER_CALLS
-    .section    .sdata.OS._cntResumeNoScheduler
-    .global     _cntResumeNoScheduler
-    .balign     4
-_cntResumeNoScheduler:
-    .dc.l       0
-    
-    .section    .sdata.OS._cntResumeWithScheduler
-    .global     _cntResumeWithScheduler
-    .balign     4
-_cntResumeWithScheduler:
-    .dc.l       0
-#endif
-
 /* End of rtos_scBscHdlr_resumeAllTasksByPriority */
 
 
