@@ -84,11 +84,10 @@ w2u = $(subst \,/,$(1))
 
 
 # Test for equality: A wrapper around the required ugly string comparison operations.
-#   This code downloaded from
-# http://stackoverflow.com/questions/7324204/how-to-check-if-a-variable-is-equal-to-one-of-two-values-using-the-if-or-and-fun
-# on March 22, 2017.
-eq = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
-
+#   The macro returns either the empty string (condition is false) or the string "true".
+#   $(1) and $(2) are the two compared strings.
+eq = $(if $(1)$(2),$(and $(findstring $(1),$(2)),$(findstring $(2),$(1)),true),true)
+#$(info 2==3: $(call eq,2,3), 2==2: $(call eq,2,2), ""=="": $(call eq,,), 1=="": $(call eq,1,),""==1: $(call eq,,1))
 
 
 # Test if a file is in a list of such. Can be used in conditional expressions to handle

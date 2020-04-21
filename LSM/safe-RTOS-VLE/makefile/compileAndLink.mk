@@ -75,6 +75,16 @@ include $(sharedMakefilePath)locateTools.mk
 # calling makefile but we have a reasonable default.
 project ?= appName
 
+# Using the default value for the sample application to link against safe-RTOS can be an
+# annoying source of failure. We issue a warning.
+ifneq (,$(and $(call eq,$(filter h help targets usage,$(MAKECMDGOALS)),),$(call eq,$(MAKELEVEL),0)))
+    ifneq ($(origin APP),command line)
+        $(warning No application code has been specified on the makefile's command line and \
+                  "$(APP)" is used by default. You should consider setting variable APP. \
+                  Type mingw32-make help to get more information)
+    endif
+endif
+
 # To support the build of different (test) applications, we append the name of those.
 target := $(project)
 
@@ -102,8 +112,8 @@ h help targets usage:
 	$(info - cleanDep: Delete all dependency files, e.g. after changes of #include \
              statements or file renaming)
 	$(info - rebuild: Same as clean and build together)
-	$(info - bin/ppc/<configuration>/obj/<cFileName>.o: Compile a single C(++) or \
-             assembler module)
+	$(info - bin/ppc/<appName>/<configuration>/obj/<cFileName>.o: Compile a single C(++) or \
+             assembler module, e.g. $(targetDir)obj/mai_main.o)
 	$(info - <cFileName>.i: Preprocess a single C(++) or assembler module. Build product \
              is sibling of source file)
 	$(info - <cFileName>.asm: Generate an assembler listing for a single C(++) or \
@@ -240,7 +250,7 @@ endif
     # O3: 41%
     # O2: 41%
     # O1: 52%
-    # Os: 50%, requires linkage of crtsavres.S
+    # Os: 50%
     # Ofast: 41%, likely same as -O3
 productionCodeOptimization := -Ofast
 # Choose C library.
@@ -272,8 +282,6 @@ $(targetDir)obj/%.o: %.S
 
 # Pattern rules for compilation of, C and C++ source files.
 
-# TODO We could decide to not add -Winline if we optimize for size. With -Os it's quite
-# normal that an inline function is not implemented as such.
 cFlags = $(targetFlags) -mno-string                                                         \
          -fno-common -fno-exceptions -ffunction-sections -fdata-sections                    \
          -fshort-enums -fdiagnostics-show-option -finline-functions -fmessage-length=0      \
