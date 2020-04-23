@@ -171,10 +171,17 @@ volatile unsigned long sio_serialOutNoLostMsgBytes SECTION(.sbss.OS) = 0;
     strong dependency on the linker control file, too. The log2(sizeOfBuffer) least
     significant bits of the buffer address need to be zero. The buffer address (and thus
     its alignment) is specified in the linker file, which therefore limits the maximum size
-    of the buffer. */
-static _Alignas(SERIAL_OUTPUT_RING_BUFFER_SIZE) uint8_t
-                                    _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE]
-                                    SECTION(.dmaRingBuffer._serialOutRingBuf);
+    of the buffer.
+      @remark We must not use _Alignas(SERIAL_OUTPUT_RING_BUFFER_SIZE) as type decoration
+    instead. This works basically but the only way the compiler can realize it is to relate
+    the position of the data object to the section start of this compilation unit and to
+    force an according alignment for the entire output section. This makes it much harder
+    to make reasonable use of the memory address gap introduced by the alignment. Doing
+    this on for a particular input section in the linker file allows for example placing
+    the very section behind the heap so that the memory address gap becomes part of the
+    heap memory - where it is usefully invested. */
+static  uint8_t _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE]
+                                                        SECTION(.sio_bss._serialOutRingBuf);
 
 /** The write index into the ring buffer used for serial output. Since we use bytes and
     since the log2(sizeOfBuffer) least significant bits of the buffer address are zero
