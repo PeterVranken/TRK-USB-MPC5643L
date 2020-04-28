@@ -140,7 +140,7 @@ void rtos_dummyINTCInterruptHandler(void)
  *   The interrupt default handler is rtos_dummyINTCInterruptHandler(). It does nothing in
  * PRODUCTION compilation but an assertion will fire in DEBUG compilation in order to
  * indicate the missing true handler for an enabled interrupt.\n
- *   Note, this function temporarily clears the enable external interrupts bit in the
+ *   Note, this function temporarily clears the enable External Interrupts bit in the
  * machine status register but doesn't have changed it on return. You will call it normally
  * at system startup time, when all interrupts are still disabled, then call
  * rtos_osRegisterInterruptHandler() repeatedly for all interrupts your code is interested in
