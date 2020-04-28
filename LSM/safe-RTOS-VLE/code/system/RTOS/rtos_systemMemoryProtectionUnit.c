@@ -349,7 +349,7 @@ void rtos_initMPU(void)
     ++ r;
 #endif
 
-    /* A shared memory area. ALl processes can write. */
+    /* A shared memory area. All processes can write. */
     extern uint8_t ld_dataSharedStart[0], ld_dataSharedEnd[0];
     assert(((uintptr_t)ld_dataSharedStart & 0x1f) == 0
            &&  ((uintptr_t)ld_dataSharedEnd & 0x1f) == 0

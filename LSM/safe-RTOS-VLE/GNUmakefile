@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2014 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -65,36 +65,16 @@
 # The name of the project is used for several build products.
 project := TRK-USB-MPC5643L-safe-RTOS-VLE
 
-# safe-RTOS-VLE can only be compiled together with an application, which is kept in a
-# dedicated folder subtree, usually inside folder code/application/. The application is
-# selected by makefile argument. Here, we ensure that the application has been specified by
-# the user.
-ifneq ($(filter-out h help targets usage,$(MAKECMDGOALS)),)
-    ifeq ($(APP),)
-        $(info No application code has been specified on the makefile's command line. \
-               You should consider setting variable APP. Type mingw32-make help to get \
-               more information)
-    endif
-endif
-
-
-# The directory, from where to run the compiled target when yielding target run. Defaults
-# to the directory, where the compiled target is located.
-#targetRunDir :=
-
-# A list of arguments passed to the compiled target when yielding target run.
-targetRunArgs := $(ARG)
-
-# Specify a blank separated list of directories holding source files. The
-# directories are searched recursively for C/C++ and assembler source
-# files.
-srcDirList := code/system/ code/serial/
-
 # safe-RTOS-VLE is a kind of library (although distributed as source code). It requires
 # some application code. A few samples are part of this repository. The sample to compile
 # can be selected through the makefile command line. Specify a source code folder, which
 # contains the application code. This folder shall be added to the list srcDirList.
 APP ?= code/application/default/
+
+# Specify a blank separated list of directories holding source files. The
+# directories are searched recursively for C/C++ and assembler source
+# files.
+srcDirList := code/system/ code/serial/
 
 # Exclusion list: Edit the list of excluded files. A blank separated list of source files
 # (with extension but without path) is expected, which are excluded from the compilation of
