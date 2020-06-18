@@ -19,6 +19,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
+ *   rtos_initProcesses
  *   rtos_osGrantPermissionSuspendProcess
  *   rtos_scSmplHdlr_suspendProcess
  *   rtos_osReleaseProcess
@@ -94,7 +95,7 @@
  * configuration error is detected. The software must not start up in this case. Normally,
  * you will always receive a \a rtos_err_noError (zero). Since it is only about static
  * configuration, the returned error may be appropriately handled by an assertion.
-*   @param isProcessConfiguredAry
+ *   @param isProcessConfiguredAry
  * This array contains an entry for each of the supported processes. After return, the
  * entry with index i tells, whether the process with PID i is configured for use. (Which
  * mainly relates to some stack space configured or not in the linker script.)\n
@@ -201,7 +202,7 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
               );
     } /* End for(All processes) */
 
-    if(errCode == rtos_err_noError)
+    if(errCode == rtos_err_noError  &&  maxPIDInUse >= 1)
     {
         /* Caution: Maintenance of this code is required consistently with
            rtos_osGrantPermissionSuspendProcess() and rtos_scSmplHdlr_suspendProcess(). */
