@@ -513,13 +513,13 @@ static ALWAYS_INLINE bool osTriggerEvent( rtos_eventDesc_t * const pEvent
         /* Operation successful. Event can be triggered. */
         pEvent->state = evState_triggered;
         success = true;
-        
+
         /* Set the task function argument for this activation. (And for all future
            activations of a regular, time triggered event if such an event should be
            addressed from service rtos_triggerEvent().) */
         if(hasTaskParam)
             pEvent->taskParam = taskParam;
-        
+
         /* Setting an event means a possible context switch to another task. It depends on
            priority and interrupt state. If so, we need to run the scheduler.
              It is not necessary to run the scheduler if the triggered event has a priority
@@ -550,7 +550,7 @@ static ALWAYS_INLINE bool osTriggerEvent( rtos_eventDesc_t * const pEvent
             {
                 /* We will get here only if the function is called from a task (OS or user
                    through system call) */
-                
+
                 /* The recursive call of the scheduler is immediately done. We return here
                    only after a couple of other task executions.
                      Note, the critical section, we are currently in, will be left by the
@@ -594,7 +594,7 @@ static ALWAYS_INLINE bool osTriggerEvent( rtos_eventDesc_t * const pEvent
         success = false;
     }
     rtos_osLeaveCriticalSection(stateIrqAtEntry);
-    
+
     return success;
 
 } /* End of osTriggerEvent */
@@ -610,7 +610,7 @@ static ALWAYS_INLINE bool osTriggerEvent( rtos_eventDesc_t * const pEvent
 static inline void checkEventDue(void)
 {
     const rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
-    
+
     rtos_eventDesc_t *pEvent = getEventByIdx(0);
 
     /* We iterate the events in order for decreasing priority. */
@@ -665,7 +665,7 @@ static inline void checkEventDue(void)
 static void onOsTimerTick(void)
 {
     rtos_kernelInstanceData_t * const pIData = rtos_getInstancePtr();
-    
+
     /* Update the system time. */
     pIData->tiOs += pIData->tiOsStep;
 
@@ -914,7 +914,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
     _Static_assert( RTOS_EVENT_NOT_USER_TRIGGERABLE <= UINT_T_MAX(pNewEvent->minPIDForTrigger)
                   , "Integer overflow"
                   );
-    *getEventByIdx(pIData->noEvents) = 
+    *getEventByIdx(pIData->noEvents) =
                 (rtos_eventDesc_t){ .tiCycleInMs = 0
                                     , .tiDue = 0
                                     , .priority = 0
@@ -925,7 +925,7 @@ rtos_errorCode_t rtos_osCreateEvent( unsigned int *pEventId
                                     , .taskParam = 0
                                     , .pNextScheduledEvent = NULL
                                   };
-  
+
 #ifdef DEBUG
     for(v=1; v<=pIData->noEvents; ++v)
         if(getEventByIdx(v)->priority > getEventByIdx(v-1)->priority)
@@ -1135,7 +1135,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
                   , "The used range of task priorities has been chosen such large that the"
                     " implementation becomes quite inefficient in terms of memory usage"
                   );
-                  
+
     /* The C code has an interface with the assembler code. It is used to exchange process
        and task related information. The interface is modeled twice, once as structs for C
        code and once as set of preprocessor macros, which hold size of data structures and
@@ -1188,9 +1188,9 @@ rtos_errorCode_t rtos_osInitKernel(void)
 
     /* A task must not belong to an invalid configured process. This holds for init and for
        run time tasks. */
-    unsigned int idxP;
     if(errCode == rtos_err_noError)
     {
+        unsigned int idxP;
         for(idxTask=0; idxTask<pIData->noTasks; ++idxTask)
         {
             assert(pIData->taskCfgAry[idxTask].PID < sizeOfAry(isProcessConfiguredAry));
@@ -1212,7 +1212,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
                     errCode = rtos_err_taskBelongsToInvalidPrc;
             }
         } /* for(All possibly used processes) */
-    }
+    } /* End if(No initialization error yet) */
 
     /* Now knowing, which is the process with highest privileges we can double-check the
        permissions granted for using the service rtos_runTask(). It must not be possible to
@@ -1223,7 +1223,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
         for(callingPID=1; callingPID<=maxPIDInUse; ++callingPID)
             if(rtos_checkPermissionRunTask(callingPID, /* targetPID */ maxPIDInUse))
                 errCode = rtos_err_runTaskBadPermission;
-    }
+
+    } /* End if(No initialization error yet) */
 
     /* We could check if a process, an init task is registered for, has a least one runtime
        task. However, it is not harmful if not and there might be pathologic applications,
@@ -1255,7 +1256,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
                 }
             } /* End if(Unblockable priority is in use by event) */
         } /* for(All registered events) */
-    }
+    } /* End if(No initialization error yet) */
 
     /* The scheduling of events of potentially same priority is supported by a link
        pointer, which points the scheduler to the next event to check after the event had
@@ -1274,7 +1275,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
             {
                 const uint32_t priority = pEvent->priority;
                 idxEvNextPrio = idxEv;
-                
+
                 /* The first event in such a group is linked to the next one in order of
                    the list. */
                 if(idxEv < pIData->noEvents)
@@ -1287,7 +1288,7 @@ rtos_errorCode_t rtos_osInitKernel(void)
                     pEvent->pNextScheduledEvent = NULL;
                     assert(priority == 0);
                 }
-                    
+
                 /* Add an entry to the map from priority to event. Assertions are fine to
                    make the code safe - the according object properties have already been
                    validated when creating the event objects. */
@@ -1363,54 +1364,59 @@ rtos_errorCode_t rtos_osInitKernel(void)
        could override settings made by its predecessor.
          In this consideration and despite of its PID zero, the operating system process
        has the highest privileges. This requires a loop counter like 1, 2, ..., N, 0. */
-    idxP = 0;
-    do
+    if(errCode == rtos_err_noError)
     {
+        unsigned int idxP = 0;
+        do
+        {
 #if RTOS_NO_PROCESSES > 0
-        if(idxP < RTOS_NO_PROCESSES)
-            ++ idxP;
-        else
-            idxP = 0;
+            if(idxP < RTOS_NO_PROCESSES)
+                ++ idxP;
+            else
+                idxP = 0;
 #else
-        /* No processes, just initialize the OS. idxP=0 is only loop cycle. */
+            /* No processes, just initialize the OS. idxP=0 is only loop cycle. */
 #endif
 
-        /* The specification of an initialization task is an option only. Check for NULL
-           pointer. */
-        if(pIData->initTaskCfgAry[idxP].addrTaskFct != 0)
-        {
-            if(isProcessConfiguredAry[idxP])
+            /* The specification of an initialization task is an option only. Check for
+               NULL pointer. */
+            if(pIData->initTaskCfgAry[idxP].addrTaskFct != 0)
             {
-                /* Everything is alright. Run the initialization task. A negative return
-                   value is defined to be an error. (This needs to be considered by the
-                   implementation of the task.) */
-                int32_t resultInit;
-                if(pIData->initTaskCfgAry[idxP].PID == 0)
+                if(isProcessConfiguredAry[idxP])
                 {
-                    /* OS initialization function: It is a normal sub-function call; we are
-                       here in the OS context. */
-                    resultInit =
-                        ((int32_t (*)(void))pIData->initTaskCfgAry[idxP].addrTaskFct)();
+                    /* Everything is alright. Run the initialization task. A negative
+                       return value is defined to be an error. (This needs to be considered
+                       by the implementation of the task.) */
+                    int32_t resultInit;
+                    if(pIData->initTaskCfgAry[idxP].PID == 0)
+                    {
+                        /* OS initialization function: It is a normal sub-function call; we
+                           are here in the OS context. */
+                        resultInit =
+                            ((int32_t (*)(void))pIData->initTaskCfgAry[idxP].addrTaskFct)();
+                    }
+                    else
+                    {
+                        /* The initialization function of a process is run as a task in
+                           that process, which involves full exception handling and
+                           possible abort causes. */
+                        resultInit = rtos_osRunInitTask(&pIData->initTaskCfgAry[idxP]);
+                    }
+                    if(resultInit < 0)
+                        errCode = rtos_err_initTaskFailed;
                 }
                 else
                 {
-                    /* The initialization function of a process is run as a task in that
-                       process, which involves full exception handling and possible abort
-                       causes. */
-                    resultInit = rtos_osRunInitTask(&pIData->initTaskCfgAry[idxP]);
+                    /* An initialization task must not be registered for a process, which
+                       is not configured. This had been checked above and we can never get
+                       here. */
+                    assert(false);
                 }
-                if(resultInit < 0)
-                    errCode = rtos_err_initTaskFailed;
-            }
-            else
-            {
-                /* An initialization task must not be registered for a process, which is not
-                   configured. This had been checked above and we can never get here. */
-                assert(false);
-            }
-        } /* End if(Init task configured for process?) */
-    }
-    while(idxP != 0);  /* End for(All possible processes, OS as last one) */
+            } /* End if(Init task configured for process?) */
+        }
+        while(idxP != 0);  /* End for(All possible processes, OS as last one) */
+
+    } /* End if(No error so far?) */
 
     /* After successfully completing all the initialization tasks, we can release the
        scheduler and the processes. We do this in a critical section in order to not
@@ -1430,7 +1436,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
         pIData->tiOsStep = RTOS_CLOCK_TICK_IN_MS;
 
         rtos_osResumeAllInterrupts();
-    }
+
+    } /* End if(No error so far?) */
 
     /* @todo Shall we offer idle tasks per process? If so, we cannot leave the routine but
        would need to enter an infinite loop - and had to offer such a function for OS, too.
@@ -1508,7 +1515,7 @@ bool rtos_osTriggerEvent(unsigned int idEvent, uintptr_t taskParam)
        tasks and ISRs then we need to have run-time code to decide. This is a little
        performance degradation for sake of ease of use and transparency of the API. */
     const bool isInterrupt = rtos_osIsInterrupt();
-    
+
     /* Although it is not generally forbidden to call this function from a task while under
        lock of External Interrupt processing it's at least very suspicious; the function
        will unconditionally remove the lock, which is likely not what a calling context
@@ -1516,7 +1523,7 @@ bool rtos_osTriggerEvent(unsigned int idEvent, uintptr_t taskParam)
          If this assertion fires then there's likely a misunderstanding of the semantics of
        rtos_osTriggerEvent() in the calling code. */
     assert(isInterrupt || !rtos_osGetAllInterruptsSuspended());
-    
+
     /* This function is shared between ISRs and OS tasks. We need to know because the
        behavior depends (2nd function argument). */
     return osTriggerEvent( getEventByID(idEvent)
@@ -1919,7 +1926,7 @@ void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority)
            a system call. In the majority of cases, the system call will find that calling
            the scheduler is not needed so that this effectively is a significant
            optimization. The OS code here would not benefit from the same strategy. */
-        rtos_eventDesc_t * const pEvToSchedulePossibly = 
+        rtos_eventDesc_t * const pEvToSchedulePossibly =
                                                 rtos_getEventByPriority(pIData->currentPrio);
         pIData->currentPrio = resumeDownToThisTaskPriority;
 
