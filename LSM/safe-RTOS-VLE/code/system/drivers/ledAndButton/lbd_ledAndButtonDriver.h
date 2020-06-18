@@ -2,10 +2,10 @@
 #define LBD_LEDANDBUTTONDRIVER_INCLUDED
 /**
  * @file lbd_ledAndButtonDriver.h
- * Definition of global interface of module lbd_ledAndButtonDriver.c
- * Simple hardware driver for the LEDs and buttons on the eval board TRK-USB-MPC5643L.
+ * Definition of global interface of module lbd_ledAndButtonDriver.\n
+ *   Simple hardware driver for the LEDs and buttons on the eval board TRK-USB-MPC5643L.
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -21,7 +21,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
- *   lbd_osInitLEDAndButtonDriver
  *   lbd_setLED
  *   lbd_osSetLED
  *   lbd_getButton
@@ -43,16 +42,6 @@
 /*
  * Defines
  */
-
-/* The software is written as portable as reasonably possible. This requires the awareness
-   of the C language standard it is compiled with. */
-#if defined(__STDC_VERSION__)
-# if (__STDC_VERSION__)/100 == 2011
-#  define _STDC_VERSION_C11
-# elif (__STDC_VERSION__)/100 == 1999
-#  define _STDC_VERSION_C99
-# endif
-#endif
 
 /** The debounce time of the read process of the button states in ticks, where one tick is
     the time between two invokations of interface function lbd_osGetButton.
@@ -202,6 +191,10 @@ static inline bool lbd_osGetButtonSw2(void)
                   , "Debounce time configuration out of range"
                   );
 
+	/// @todo Here we have a bug: The static data will be located in P1 although this is an OS
+	// function. This makes the function vulnerable. It would even become a safety issue if the
+	// button is safety relevant (e.g. the emergency off).
+	/// @todo Check entire unit for similar problems.
     static int cntDebounce_ = 0;
     static bool buttonState_ = false;
     cntDebounce_ += SIU.GPDI[lbd_bt_button_SW2].B.PDI? -1: 1;
