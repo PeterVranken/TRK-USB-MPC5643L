@@ -10,7 +10,7 @@
  * rtos_osCreateEvent() to define the conditions or points in time, when the tasks have to
  * become due.\n
  *   Prior to the start of the scheduler (and thus prior to the beginning of the
- * pseudo-parallel, concurrent execution of the tasks) all later used task are registered
+ * pseudo-parallel, concurrent execution of the tasks) all later used tasks are registered
  * at the scheduler; an application will repeatedly use the APIs rtos_osRegisterUserTask()
  * and rtos_osRegisterOSTask().\n
  *   After all needed tasks are registered the application will start the RTOS' kernel
@@ -78,7 +78,7 @@
  * conformance classes.\n
  *   Basic conformance class means that a task cannot suspend intentionally and ahead of
  * its normal termination. Once started, it needs to be entirely executed. Due to the
- * strict priority scheme it'll temporarily suspend only for the sake of tasks of higher
+ * strict priority scheme it'll temporarily suspend only for sake of tasks of higher
  * priority (but not voluntarily or on own desire). Another aspect of the same is that the
  * RTOS doesn't know task to task events -- such events are usually the way intentional
  * suspension and later resume of tasks is implemented.
@@ -101,7 +101,7 @@
  *   More details can be found at
  * https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE#3-the-safety-concept.
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -1053,9 +1053,9 @@ rtos_errorCode_t rtos_osInitKernel(void)
 
     /* A task must not belong to an invalid configured process. This holds for init and for
        run time tasks. */
-    unsigned int idxP;
     if(errCode == rtos_err_noError)
     {
+        unsigned int idxP;
         for(idxTask=0; idxTask<_noTasks; ++idxTask)
         {
             assert(_taskCfgAry[idxTask].PID < sizeOfAry(isProcessConfiguredAry));
@@ -1077,7 +1077,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
                     errCode = rtos_err_taskBelongsToInvalidPrc;
             }
         } /* for(All possibly used processes) */
-    }
+
+    } /* End if(No error so far?) */
 
     /* Now knowing, which is the process with highest privileges we can double-check the
        permissions granted for using the service rtos_runTask(). It must not be possible to
@@ -1092,7 +1093,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
                               : 0xffff;                     /* No process in use */
         if((_runTask_permissions & mask) != 0)
             errCode = rtos_err_runTaskBadPermission;
-    }
+
+    } /* End if(No error so far?) */
 
     /* We could check if a process, an init task is registered for, has a least one runtime
        task. However, it is not harmful if not and there might be pathologic applications,
@@ -1120,8 +1122,10 @@ rtos_errorCode_t rtos_osInitKernel(void)
                         errCode = rtos_err_highPrioTaskInLowPrivPrc;
                 }
             } /* End if(Unblockable priority is in use by event) */
+
         } /* for(All registered events) */
-    }
+
+    } /* End if(No error so far?) */
 
     /* After checking the static configuration, we can enable the dynamic processes.
        Outline:
@@ -1206,7 +1210,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
              Note, that this doesn't release the scheduler yet; the step size is still zero
            and the system time doesn't advance despite of the starting timer interrupt. */
         PIT.PITMCR.R = 0x1;
-    }
+
+    } /* End if(No error so far?) */
 
     /* All processes are initialized by rtos_initProcesses() in stopped state: We don't want
        to see a callback from an I/O driver after resuming interrupt processing and while
@@ -1225,53 +1230,58 @@ rtos_errorCode_t rtos_osInitKernel(void)
        could override settings made by its predecessor.
          In this consideration and despite of its PID zero, the operating system process
        has the highest privileges. This requires a loop counter like 1, 2, ..., N, 0. */
-    idxP = 0;
-    do
+    if(errCode == rtos_err_noError)
     {
+        unsigned int idxP = 0;
+        do
+        {
 #if RTOS_NO_PROCESSES > 0
-        if(idxP < RTOS_NO_PROCESSES)
-            ++ idxP;
-        else
-            idxP = 0;
+            if(idxP < RTOS_NO_PROCESSES)
+                ++ idxP;
+            else
+                idxP = 0;
 #else
-        /* No processes, just initialize the OS. idxP=0 is only loop cycle. */
+            /* No processes, just initialize the OS. idxP=0 is only loop cycle. */
 #endif
 
-        /* The specification of an initialization task is an option only. Check for NULL
-           pointer. */
-        if(_initTaskCfgAry[idxP].addrTaskFct != 0)
-        {
-            if(isProcessConfiguredAry[idxP])
+            /* The specification of an initialization task is an option only. Check for
+               NULL pointer. */
+            if(_initTaskCfgAry[idxP].addrTaskFct != 0)
             {
-                /* Everything is alright. Run the initialization task. A negative return
-                   value is defined to be an error. (This needs to be considered by the
-                   implementation of the task.) */
-                int32_t resultInit;
-                if(_initTaskCfgAry[idxP].PID == 0)
+                if(isProcessConfiguredAry[idxP])
                 {
-                    /* OS initialization function: It is a normal sub-function call; we are
-                       here in the OS context. */
-                    resultInit = ((int32_t (*)(void))_initTaskCfgAry[idxP].addrTaskFct)();
+                    /* Everything is alright. Run the initialization task. A negative
+                       return value is defined to be an error. (This needs to be considered
+                       by the implementation of the task.) */
+                    int32_t resultInit;
+                    if(_initTaskCfgAry[idxP].PID == 0)
+                    {
+                        /* OS initialization function: It is a normal sub-function call; we
+                           are here in the OS context. */
+                        resultInit = ((int32_t (*)(void))_initTaskCfgAry[idxP].addrTaskFct)();
+                    }
+                    else
+                    {
+                        /* The initialization function of a process is run as a task in
+                           that process, which involves full exception handling and
+                           possible abort causes. */
+                        resultInit = rtos_osRunInitTask(&_initTaskCfgAry[idxP]);
+                    }
+                    if(resultInit < 0)
+                        errCode = rtos_err_initTaskFailed;
                 }
                 else
                 {
-                    /* The initialization function of a process is run as a task in that
-                       process, which involves full exception handling and possible abort
-                       causes. */
-                    resultInit = rtos_osRunInitTask(&_initTaskCfgAry[idxP]);
+                    /* An initialization task must not be registered for a process, which
+                       is not configured. This had been checked above and we can never get
+                       here. */
+                    assert(false);
                 }
-                if(resultInit < 0)
-                    errCode = rtos_err_initTaskFailed;
-            }
-            else
-            {
-                /* An initialization task must not be registered for a process, which is not
-                   configured. This had been checked above and we can never get here. */
-                assert(false);
-            }
-        } /* End if(Init task configured for process?) */
-    }
-    while(idxP != 0);  /* End for(All possible processes, OS as last one) */
+            } /* End if(Init task configured for process?) */
+        }
+        while(idxP != 0);  /* End for(All possible processes, OS as last one) */
+
+    } /* End if(No error so far?) */
 
     /* After successfully completing all the initialization tasks, we can release the
        scheduler and the processes. We do this in a critical section in order to not
@@ -1291,7 +1301,8 @@ rtos_errorCode_t rtos_osInitKernel(void)
         _tiOsStep = RTOS_CLOCK_TICK_IN_MS;
 
         rtos_osResumeAllInterrupts();
-    }
+
+    } /* End if(No error so far?) */
 
     /* @todo Shall we offer idle tasks per process? If so, we cannot leave the routine but
        would need to enter an infinite loop - and had to offer such a function for OS, too.

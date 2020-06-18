@@ -8,6 +8,12 @@
  * standard startup code (file int_INTCInterruptHandler.S). It replaces the IVOR #4 handler
  * from this file and most of the other dummy IVOR handlers.
  *
+ * @remark
+ * - "CRM" down here refers to NXP document "e200z4 Core Reference Manual, Supports\n
+ *   e200z446n3"\n
+ * - "EREF" down here refers to NXP document "EREF 2.0: A Programmer's Reference
+ *   Manual for Freescale Power Architecture Processors"\n
+ *
  * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
