@@ -9,11 +9,11 @@
  * download large data amounts, e.g. for a kind of boot loader.\n
  *   The API is a small set of basic read and write routines, which adopt the conventions
  * of the C standard library so that the C functions for formatted output become usable.\n
- * Note, the binding to the formatted output functions of the C library is not part of
+ *   Note, the binding to the formatted output functions of the C library is not part of
  * this module.\n
  *   Note, formatted input is not possible through C standard functions.
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -83,13 +83,14 @@
 #define INTC_PRIO_IRQ_UART_FOR_SERIAL_INPUT     6
 
 /** The size of the ring buffer for serial output can be chosen as a power of two of bytes.
-      @remark Note, the permitted range of values depends on the reservation of space made
+      @remark The permitted range of values depends on the reservation of space made
     in the linker control file. The macro here needs to be maintained in sync with the
     symbol ld_noBitsDmaRingBuffer, that is maintained in the linker file. */
 #define SERIAL_OUTPUT_RING_BUFFER_SIZE_PWR_OF_TWO   10
 
 /** The size of the ring buffer for serial input as number of bytes. The maximum capacity
-    is one Byte less than the size. */
+    is one Byte less than the size. For this buffer, there's no penalty in not using a
+    power-of-two size. */
 #define SERIAL_INPUT_RING_BUFFER_SIZE   257
 
 /** The default behavior of terminal programs is to send a CR at the end of a message. By
@@ -144,7 +145,7 @@
  
 /** This development support variable counts the number of DMA transfers intiated since
     power-up, to do the serial output */
-volatile unsigned long sio_serialOutNoDMATransfers SECTION(.sbss.OS) = 0;
+volatile unsigned long SBSS_OS(sio_serialOutNoDMATransfers) = 0;
 
 /** The ring buffer for serial output can be momentarily full. In such a case a sent
     message can be truncated (from a few bytes shortend up to entirely lost). This
@@ -155,7 +156,7 @@ volatile unsigned long sio_serialOutNoDMATransfers SECTION(.sbss.OS) = 0;
     particular character or message it sends with sio_osWriteSerial(). In particular, it must
     not try to reset the counter prior to a read operation in order to establish such a
     relation. The application will just know that there are garbled messages. */
-volatile unsigned long sio_serialOutNoTruncatedMsgs SECTION(.sbss.OS) = 0;
+volatile unsigned long SBSS_OS(sio_serialOutNoTruncatedMsgs) = 0;
 
 /** The ring buffer for serial output can be momentarily full. In such a case a sent
     message can be truncated (from a few bytes shortend up to entirely lost). This
@@ -163,8 +164,8 @@ volatile unsigned long sio_serialOutNoTruncatedMsgs SECTION(.sbss.OS) = 0;
     since power-up.
       @remark See \a sio_serialOutNoTruncatedMsgs for race conditions with the output
     functions of this module's API. Just the same holds for \a
-    sio_serialOutNoLostMsgBytes. */ 
-volatile unsigned long sio_serialOutNoLostMsgBytes SECTION(.sbss.OS) = 0;
+    sio_serialOutNoLostMsgBytes. */
+volatile unsigned long SBSS_OS(sio_serialOutNoLostMsgBytes) = 0;
 
 /** The ring buffer used for the DMA based serial output.
       @remark The size of the buffer is defined here in the C source code but there is a
@@ -190,41 +191,40 @@ static  uint8_t _serialOutRingBuf[SERIAL_OUTPUT_RING_BUFFER_SIZE]
       @remark The variable is only used modulo SERIAL_OUTPUT_RING_BUFFER_SIZE, i.e. the more
     significant bits don't care (but aren't necessarily zero). This is indicated by the M
     at the end of the name. */
-static volatile unsigned int _serialOutRingBufIdxWrM SECTION(.sbss.OS) = 0;
+static volatile unsigned int SBSS_OS(_serialOutRingBufIdxWrM) = 0;
 
 /** The ring buffer used for the interrupt based serial input. No particular section is
     required. Due to the low performance requirements we can use any location and do normal
     address arithmetics. */
-static volatile uint8_t _serialInRingBuf[SERIAL_INPUT_RING_BUFFER_SIZE] SECTION(.sbss.OS);
+static volatile uint8_t BSS_OS(_serialInRingBuf)[SERIAL_INPUT_RING_BUFFER_SIZE];
 
 /** A pointer to the end of the ring buffer used for serial input. This pointer facilitates
     the cyclic pointer update.
       @remark Note, the pointer points to the last byte in the buffer, not to the first
     address beyond as usually done. */
+/// @todo Remove section statement. This is const data and implicitly implemented, not by memory allocation   
 static volatile const uint8_t * _pEndSerialInRingBuf SECTION(.sdata.OS) =
                                     &_serialInRingBuf[SERIAL_INPUT_RING_BUFFER_SIZE-1];
 
 /** The pointer to the next write position in the ring buffer used for serial input. */
-static volatile uint8_t * volatile _pWrSerialInRingBuf SECTION(.sdata.OS) =
-                                                                    &_serialInRingBuf[0];
+static volatile uint8_t * volatile SDATA_OS(_pWrSerialInRingBuf) = &_serialInRingBuf[0];
 
 /** The pointer to the next read position from the ring buffer used for serial input. The
     buffer is considered empty if \a _pWrSerialInRingBuf equals \a _pRdSerialInRingBuf,
     i.e. the buffer can contain up to SERIAL_INPUT_RING_BUFFER_SIZE-1 characters. */
-static volatile uint8_t * volatile _pRdSerialInRingBuf SECTION(.sdata.OS) =
-                                                                    &_serialInRingBuf[0];
+static volatile uint8_t * volatile SDATA_OS(_pRdSerialInRingBuf) = &_serialInRingBuf[0];
 
 /** The number of received but not yet consumed end of line characters. Required for read
     line API function. */
-static volatile unsigned int _serialInNoEOL SECTION(.sbss.OS) = 0;
+static volatile unsigned int SBSS_OS(_serialInNoEOL) = 0;
 
 /** The number of lost characters due to overfull input ring buffer. */
-volatile unsigned long sio_serialInLostBytes SECTION(.sbss.OS) = 0; 
+volatile unsigned long SBSS_OS(sio_serialInLostBytes) = 0; 
 
 #ifdef DEBUG
 /** Count all characters received since last reset. This variable is supported in DEBUG
     compilation only. */
-volatile unsigned long sio_serialInNoRxBytes SECTION(.sbss.OS) = 0;
+volatile unsigned long SBSS_OS(sio_serialInNoRxBytes) = 0;
 #endif
 
  
@@ -599,7 +599,8 @@ static void registerInterrupts(void)
 
 /**
  * Initialize the I/O devices for serial output, in particular, these are the LINFlex
- * device plus a DMA channel to serve it.
+ * device plus a DMA channel to serve it. To commiunicate with the real world we need two
+ * ports from the SIUL.
  *   @param baudRate
  * The Baud rate of in- and output in Hz. Allow values range from 10 .. 1000000, proven
  * values range from 300 till 115200 Hz.
@@ -698,9 +699,7 @@ unsigned int sio_scFlHdlr_writeSerial( uint32_t PID ATTRIB_UNUSED
  * This function must be called by trusted code in supervisor mode only. It belongs to the
  * sphere of trusted code itself.
  */
-unsigned int sio_osWriteSerial( const char *msg
-                              , unsigned int noBytes
-                              )
+unsigned int sio_osWriteSerial(const char *msg, unsigned int noBytes)
 {
     /* Do not interfere with a (possibly) running DMA transfer if we don't really need to
        do anything. */
@@ -824,6 +823,7 @@ unsigned int sio_osWriteSerial( const char *msg
 
 
 
+
 /**
  * Application API function to read a single character from serial input or EOF if there's
  * no such character received meanwhile.
@@ -899,7 +899,7 @@ signed int sio_osGetChar(void)
  * have been received meanwhile to form a complete line of text.\n
  *   Note the special situation of a full receive buffer without having received any end of
  * line character. The system would be stuck - later received end of line characters would
- * be discarded becaus eof the full buffer and this function could never again return a
+ * be discarded because of the full buffer and this function could never again return a
  * line of text. Therefore the function will return the complete buffer contents at once as
  * a line of input.
  *   @param str
