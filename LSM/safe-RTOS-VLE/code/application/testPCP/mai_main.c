@@ -66,10 +66,6 @@
  * Defines
  */
 
-/** The demo can be compiled with a ground load. Most tasks produce some CPU load if this
-    switch is set to 1. */
-#define TASKS_PRODUCE_GROUND_LOAD   1
-
 /** A wrapper around the API for the priority ceiling protocal (PCP), which lets the API
     for mutual exclusion of a task set look like the API calls from the OSEK/VDX standard.
       Here, for getting the resource, i.e. for entering a critical section of code. */

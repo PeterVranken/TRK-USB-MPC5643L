@@ -77,15 +77,15 @@
  *   @param f
  * The float value is expected as 32 Bit input in r3.
  */
-    .section .text.f2d, "ax", @progbits
-    .global f2d
-    .type   f2d, @function
+    .section    .text.f2d, "ax", @progbits
+    .global     f2d
+    .type       f2d, @function
 f2d:
 #ifdef __VLE__
 
-    e_stwu  sp, -16(sp)     /* Create stack frame */
-    mflr    r0              /* Save return address in local stack space */
-    se_stw  r0, 20(sp)
+    e_stwu      sp, -16(sp)     /* Create stack frame */
+    mflr        r0              /* Save return address in local stack space */
+    se_stw      r0, 20(sp)
     
     /* Call the required function in the library. The effect results from a basic error: We
        don't have a suiting library, which has been compiled with the same settings as our
@@ -95,18 +95,18 @@ f2d:
        interface with 32 Bit pseudo double values from our code compilation. Normally this
        leads to bad results, here it is the wanted effect: we get a real 64 Bit value
        back in r3/r4. */
-    e_bl    __extendsfdf2
+    e_bl        __extendsfdf2
 
-    se_lwz  r0, 20(sp)      /* Load return address back into linkr register */
-    mtlr    r0
-    e_la    sp, 16(sp)      /* Delete stack frame */
+    se_lwz      r0, 20(sp)      /* Load return address back into linkr register */
+    mtlr        r0
+    e_la        sp, 16(sp)      /* Delete stack frame */
     se_blr                  /* Return */
     
 #else /* Book E */
 
-    stwu    sp, -16(sp)     /* Create stack frame */
-    mflr    r0              /* Save return address in local stack space */
-    stw     r0, 20(sp)
+    stwu        sp, -16(sp)     /* Create stack frame */
+    mflr        r0              /* Save return address in local stack space */
+    stw         r0, 20(sp)
     
     /* Call the required function in the library. The effect results from a basic error: We
        don't have a suiting library, which has been compiled with the same settings as our
@@ -116,11 +116,11 @@ f2d:
        interface with 32 Bit pseudo double values from our code compilation. Normally this
        leads to bad results, here it is the wanted effect: we get a real 64 Bit value
        back in r3/r4. */
-    bl      __extendsfdf2
+    bl          __extendsfdf2
 
-    lwz     r0, 20(sp)      /* Load return address back into linkr register */
-    mtlr    r0
-    la      sp, 16(sp)      /* Delete stack frame */
+    lwz         r0, 20(sp)      /* Load return address back into linkr register */
+    mtlr        r0
+    la          sp, 16(sp)      /* Delete stack frame */
     blr                     /* Return */
 
 #endif

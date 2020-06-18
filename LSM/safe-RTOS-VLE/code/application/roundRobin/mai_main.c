@@ -62,9 +62,6 @@
  * Defines
  */
 
-/** The demo can be compiled with a ground load. Most tasks produce some CPU load if this
-    switch is set to 1. */
-#define TASKS_PRODUCE_GROUND_LOAD   1
 
 
 /*

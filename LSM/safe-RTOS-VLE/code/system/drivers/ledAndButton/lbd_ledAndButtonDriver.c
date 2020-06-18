@@ -125,7 +125,7 @@ void lbd_osInitLEDAndButtonDriver( lbd_onButtonChangeCallback_t onButtonChangeCa
         
         /* A difficult descision: Shall we generally set a time budget for all user code?
            This may rarely produce an exception, which can leave the user code in an
-           inconsistent state, such set subsequent failures result. Even in safe system, a
+           inconsistent state, such that subsequent failures result. Even in a safe system, a
            potentially not returning user function may be not critical: There will be a
            higher prioritized supervisory task to recognize this situation and to bring the
            system in a safe state. */
