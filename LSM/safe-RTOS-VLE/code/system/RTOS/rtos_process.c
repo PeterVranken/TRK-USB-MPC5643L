@@ -19,6 +19,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 /* Module interface
+ *   rtos_initProcesses
  *   rtos_osGrantPermissionSuspendProcess
  *   rtos_scSmplHdlr_suspendProcess
  *   rtos_osReleaseProcess
@@ -307,7 +308,7 @@ rtos_errorCode_t rtos_initProcesses(bool isProcessConfiguredAry[1+RTOS_NO_PROCES
               );
     } /* End for(All processes) */
 
-    if(errCode == rtos_err_noError)
+    if(errCode == rtos_err_noError  &&  maxPIDInUse >= 1)
     {
         /* Caution: Maintenance of this code is required consistently with
            rtos_osGrantPermissionSuspendProcess() and rtos_scSmplHdlr_suspendProcess(). */
