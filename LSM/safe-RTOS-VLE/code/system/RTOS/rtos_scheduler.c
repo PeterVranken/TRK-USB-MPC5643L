@@ -1325,9 +1325,9 @@ rtos_errorCode_t rtos_osInitKernel(void)
 
     /* A task must not belong to an invalid configured process. This holds for init and for
        run time tasks. */
-    unsigned int idxP;
     if(errCode == rtos_err_noError)
     {
+        unsigned int idxP;
         for(idxTask=0; idxTask<rtos_noTasks; ++idxTask)
         {
             assert(rtos_taskCfgAry[idxTask].PID < sizeOfAry(isProcessConfiguredAry));
@@ -1500,53 +1500,59 @@ rtos_errorCode_t rtos_osInitKernel(void)
        could override settings made by its predecessor.
          In this consideration and despite of its PID zero, the operating system process
        has the highest privileges. This requires a loop counter like 1, 2, ..., N, 0. */
-    idxP = 0;
-    do
+    if(errCode == rtos_err_noError)
     {
+        unsigned int idxP = 0;
+        do
+        {
 #if RTOS_NO_PROCESSES > 0
-        if(idxP < RTOS_NO_PROCESSES)
-            ++ idxP;
-        else
-            idxP = 0;
+            if(idxP < RTOS_NO_PROCESSES)
+                ++ idxP;
+            else
+                idxP = 0;
 #else
-        /* No processes, just initialize the OS. idxP=0 is only loop cycle. */
+            /* No processes, just initialize the OS. idxP=0 is only loop cycle. */
 #endif
 
-        /* The specification of an initialization task is an option only. Check for NULL
-           pointer. */
-        if(rtos_initTaskCfgAry[idxP].addrTaskFct != 0)
-        {
-            if(isProcessConfiguredAry[idxP])
+            /* The specification of an initialization task is an option only. Check for
+               NULL pointer. */
+            if(rtos_initTaskCfgAry[idxP].addrTaskFct != 0)
             {
-                /* Everything is alright. Run the initialization task. A negative return
-                   value is defined to be an error. (This needs to be considered by the
-                   implementation of the task.) */
-                int32_t resultInit;
-                if(rtos_initTaskCfgAry[idxP].PID == 0)
+                if(isProcessConfiguredAry[idxP])
                 {
-                    /* OS initialization function: It is a normal sub-function call; we are
-                       here in the OS context. */
-                    resultInit = ((int32_t (*)(void))rtos_initTaskCfgAry[idxP].addrTaskFct)();
+                    /* Everything is alright. Run the initialization task. A negative
+                       return value is defined to be an error. (This needs to be considered
+                       by the implementation of the task.) */
+                    int32_t resultInit;
+                    if(rtos_initTaskCfgAry[idxP].PID == 0)
+                    {
+                        /* OS initialization function: It is a normal sub-function call; we
+                           are here in the OS context. */
+                        resultInit =
+                            ((int32_t (*)(void))rtos_initTaskCfgAry[idxP].addrTaskFct)();
+                    }
+                    else
+                    {
+                        /* The initialization function of a process is run as a task in
+                           that process, which involves full exception handling and
+                           possible abort causes. */
+                        resultInit = rtos_osRunInitTask(&rtos_initTaskCfgAry[idxP]);
+                    }
+                    if(resultInit < 0)
+                        errCode = rtos_err_initTaskFailed;
                 }
                 else
                 {
-                    /* The initialization function of a process is run as a task in that
-                       process, which involves full exception handling and possible abort
-                       causes. */
-                    resultInit = rtos_osRunInitTask(&rtos_initTaskCfgAry[idxP]);
+                    /* An initialization task must not be registered for a process, which
+                       is not configured. This had been checked above and we can never get
+                       here. */
+                    assert(false);
                 }
-                if(resultInit < 0)
-                    errCode = rtos_err_initTaskFailed;
-            }
-            else
-            {
-                /* An initialization task must not be registered for a process, which is not
-                   configured. This had been checked above and we can never get here. */
-                assert(false);
-            }
-        } /* End if(Init task configured for process?) */
-    }
-    while(idxP != 0);  /* End for(All possible processes, OS as last one) */
+            } /* End if(Init task configured for process?) */
+        }
+        while(idxP != 0);  /* End for(All possible processes, OS as last one) */
+        
+    } /* End if(No error so far?) */
 
     /* After successfully completing all the initialization tasks, we can release the
        scheduler and the processes. We do this in a critical section in order to not
