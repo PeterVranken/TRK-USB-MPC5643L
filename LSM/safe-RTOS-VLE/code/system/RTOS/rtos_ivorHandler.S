@@ -615,10 +615,10 @@ ivr4_endSwitchSP:
     e_stmvsprw  O_CR(sp)     /* CR, LR, CTR, XER: 4*4 Byte */
     e_stmvsrrw  O_SRRi(sp)   /* SRR0/SRR1: 2*4 Byte */
 
-    /* Clear request to processor; r3 contains the address of the ISR. On a multi-core
-       derivative, the register to read, IACKR, is found for the calling core i at this
-       address: INTC base + 10h offset + (4d × i), where i=0d to 1d (e.g. RM MPC5775B/E,
-       15.7.3, p545f). */
+    /* Clear request to processor; afterwards, r3 contains the address of the ISR. On a
+       multi-core derivative, the register to read, IACKR, is found for the calling core i
+       at this address: INTC base + 10h offset + (4d × i), where i=0d to 1d (e.g. RM
+       MPC5775B/E, 15.7.3, p545f). */
     mfspr       r3, SPR_PIR                 /* r3: idxCore */
     se_slwi     r3, 2                       /* r3: idxCore*sizeof(INTC_IACKR_PRCi) */
     e_add2is    r3, INTC_IACKR_PRC0@ha      /* Read pointer into ISR Vector Table
@@ -657,7 +657,7 @@ rtos_isr_endIfPreemptable:
     e_lwz       r3, O_ID_NEXT_EV_TO_SCH(r5) /* r3: Event requires scheduling? */
     e_cmp16i    r3, -1
     se_beq      iv4_noCallOfScheduler
-    
+
     /* We check for possible task switch because of an event being set in the ISR only if
        we return from the last ISR - but not (yet) if this is the return from a potential
        preempting, nested ISR. On a multi-core derivative, the register to check, CPR, is
@@ -669,7 +669,7 @@ rtos_isr_endIfPreemptable:
     e_lwz       r4, INTC_CPR_PRC0@l(r4) /* r4: Current IRQ priority in INTC */
     se_cmpli    r4, 1                   /* No activity if we are still in a nested ISR. */
     se_bge      iv4_noCallOfScheduler
-    
+
     /* Run the scheduler if we have the indication of newly triggered events. This may
        involve a recursion inside of which new tasks are run.
          Note, to avoid stack overflow we need to enter the function still within the
@@ -677,13 +677,13 @@ rtos_isr_endIfPreemptable:
     se_subi     r4, 1               /* r4: UINT_MAX, i.e. indication of "pointer unset" */
     e_stw       r4, O_ID_NEXT_EV_TO_SCH(r5)     /* Clear pointer to triggered Event */
     e_bl        rtos_osProcessTriggeredEvents   /* r3: Event to be scheduler first */
-    
+
 iv4_noCallOfScheduler:
     /* Restore the process ID. A sync operation is not required since we are not switching
        to another, PID-aware memory region. MMU and MPU grant all required permissions in
        SV mode. */
     se_lbz      r0, O_PID(sp)   /* PID0 (1 Byte) loaded from stack frame */
-    se_cmpi     r0, 0           /* Check can be done still outside critical section */
+    se_cmpi     r0, 0           /* Check if we return to the kernel process */
     mtspr       SPR_PID0, r0
     se_beq      iv4_retToPreemptedCtxt  /* CR0: Holds PID0!=0. 0: Return to other OS context */
 
@@ -1040,7 +1040,7 @@ rut_endWithoutErr:
 
     /* Process context is completely reset to kernel mode. We can again permit preemptions. */
     wrteei      1
-    
+
     /* The end of the user task is not necessarily the end of processing the causing event;
        several tasks can be associated with a single event, which means that they are
        consecutively run in one and the same OS context. We must not rely on the current
@@ -1334,7 +1334,7 @@ ivr8_startFullHandler:
     se_lwz      r3, O_SCDESC_sr(r3) /* r3: Address of handler implementation, replaces 1st */
     se_mtlr     r3                  /* function argument, which is anyway obsolete inside
                                        the handler */
-    
+
     /* ivr8_switchBasicToFullHandler: Entry point for mixed mode system call handlers. A
        handler can be declared a basic handler and decide later to become fully conformant
        depending on what it needs to do.
