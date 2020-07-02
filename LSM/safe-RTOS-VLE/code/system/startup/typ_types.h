@@ -2,9 +2,9 @@
 #define TYP_TYPES_INCLUDED
 /**
  * @file typ_types.h
- * Definition of global, basic types.
+ * Definition of global, basic types and convenience macros.
  *
- * Copyright (C) 2013-2017 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2013-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -157,6 +157,21 @@
 
 /** The number of elements of a one dimensional array. */
 #define sizeOfAry(a)    (sizeof(a)/sizeof(a[0]))
+
+/** Companion of C's offsetof: The size of a field inside a struct. */
+#define sizeoffield(type, fieldName) (sizeof(((type*)0)->fieldName))
+
+/** Support of uintX_t types, X=8, 16, 32: Get the implementation maximum of such a
+    variable. */
+#define UINT_T_MAX(var) ((uint32_t)((1ull<<(sizeof(var)*8u))-1ull))
+
+/** Support of intX_t types, X=8, 16, 32: Get the implementation maximum of such a
+    variable. */
+#define INT_T_MAX(var)  ((int32_t)((1ul<<((sizeof(var)*8u)-1u))-1ul))
+
+/** Support of intX_t types, X=8, 16, 32: Get the implementation minimum of such a
+    variable. */
+#define INT_T_MIN(var)  ((int32_t)(1ul<<((sizeof(var)*8u)-1u)))
 
 
 /*

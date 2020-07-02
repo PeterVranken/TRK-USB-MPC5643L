@@ -1379,7 +1379,7 @@ ivr8_startFullHandler:
 
 /**
  *   @func rtos_systemCall
- * General system call code, useable for all system call handlers. The system call index \a
+ * General system call code, usable for all system call handlers. The system call index \a
  * idxSysCall is expected in r3, the variable function argument list in the remaining
  * volatile EABI registers r4..r10. The system call code can be invoked as C function using
  * the following signature:\n
@@ -1420,7 +1420,7 @@ rtos_systemCall:
     handler. See CRM, 5.7.10, p. 186. */
 
 /** The IVOR #10 till #12 handlers are not required. CRM, 5.1.2, Table 5-3, p. 165 and
-    sectios 5.7.11 till 5.7.13, p. 187ff. These exceptions are caused by timers,
+    sections 5.7.11 till 5.7.13, p. 187ff. These exceptions are caused by timers,
     decrementer, time base (with fixed interval interrupt) and watchdog. Our startup code
     has not configured these timer interrupts. An true application of our RTOS would likely
     configure the watchdog timer. Maybe a specific handler needed then to be added but it
