@@ -6,7 +6,7 @@
  *   This file contains all global difinitions, which are used by the assembler
  * implementation. The file is shared between C and assembler code.
  *
- * Copyright (C) 2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2019-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -134,7 +134,7 @@
 #define RUT_O_NVGPR             (8+20)  /* Non volatile GPR: r14 .. r31 = 18*4 = 72 Bytes */
 #define RUT_SIZE_OF_SF_PAYLOAD  92      /* Size of user data in stack frame */
 
-/* Define the offsets of the stack frame of the launch code for system  handlers of full
+/* Define the offsets of the stack frame of the launch code for system handlers of full
    conformance class. The definitions have been made public as they are shared between the
    implementations of the IVO #8 handler, system calls, and of the PCP, priority ceiling
    protocol. */
@@ -320,7 +320,9 @@ uint32_t rtos_systemCall(uint32_t idxSysCall, ...);
     to the init function. Just by uncommenting the second argument it would work. We have
     the function argument commented as there's currently no use case for it and it saves us
     from loading a dummy value into register GPR4 at the calling code location. */
-int32_t rtos_osRunInitTask(const struct rtos_taskDesc_t *pUserTaskConfig);
+int32_t rtos_osRunInitTask( const struct rtos_taskDesc_t *pUserTaskConfig
+                       // , uintptr_t taskParam
+                          );
 
 /** C signature to call a C function in a user process context. Must be called from OS
     context only.

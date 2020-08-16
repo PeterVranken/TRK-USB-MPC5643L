@@ -4,7 +4,7 @@
  * @file rtos.h
  * Definition of global interface of module rtos.c
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -204,6 +204,7 @@ typedef enum rtos_errorCode_t
     , rtos_err_highPrioTaskInLowPrivPrc /// Task of highest prio belongs to process of low privileges
     , rtos_err_runTaskBadPermission /// "Unsafe" permissions granted to rtos_runTask()
     , rtos_err_suspendPrcBadPermission/// "Unsafe" permissions granted to rtos_suspendProcess()
+
     , rtor_err_noErrorCodes
 
 } rtos_errorCode_t;
@@ -900,13 +901,6 @@ static inline bool rtos_triggerEvent(unsigned int idEvent, uintptr_t taskParam)
  */
 static inline bool rtos_checkUserCodeReadPtr(const void *address, size_t noBytes)
 {
-    /* This code, like all other using core-related global linker symbols ld_*, needs
-       migration. We can't do that here and immediately as it requires a revision of the
-       linker script, which is actually useless and unwanted for the given MCU derivative.
-       We just place an assertion to avoid problem when running this code on another
-       derivative. */
-    /// @todo Make code core dependent if running the RTOS on a multi-core
-
     const uint8_t * const p = (uint8_t*)address;
     extern uint8_t ld_ramStart[0], ld_ramEnd[0], ld_romStart[0], ld_romEnd[0];
 

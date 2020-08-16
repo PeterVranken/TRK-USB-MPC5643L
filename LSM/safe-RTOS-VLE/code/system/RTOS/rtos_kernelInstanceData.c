@@ -1,7 +1,6 @@
 /**
  * @file rtos_kernelInstanceData.c
  * Definition of global data of one instance of the RTOS on a multi-core MCU.
-
  *
  * Copyright (C) 2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
@@ -45,13 +44,13 @@
 /*
  * Local type definitions
  */
- 
- 
+
+
 /*
  * Local prototypes
  */
- 
- 
+
+
 /*
  * Data definitions
  */
@@ -217,13 +216,14 @@ rtos_kernelInstanceData_t DATA_OS(rtos_kernelInstanceDataAry)[RTOS_NO_CORES] =
  * Function implementation
  */
 
+
 /**
  * The C code has an interface with the assembler code. It is used to exchange process
  * and task related information. The interface is modeled twice, once as structs for C
  * code and once as set of preprocessor macros, which hold size of data structures and
  * offsets of fields. Here, we have macros, which support double-checking the
  * equivalence of both definitions. The compiler will abort the compilation if there is
- * a static inconsistency. 
+ * a static inconsistency.
  *   @remark
  * This function neds to be compiled but doesn't need to be called. Nonelthelees, to avoid
  * a compiler warning like "static but never used" we define it public.
