@@ -516,17 +516,6 @@ initExceptionHandlers:
     e_or2i      r3, rtos_ivor33And34Handler@l
     mtspr       530, r3      /* IVOR34 SPE round exception */
 
-    /* The IVOR handlers require to restore the SDA pointers in r2 and r13 since they could
-       have been clobbered by the preempted, untrusted user code. We place the values in
-       the general purpose special registers, which are not accessible from user mode. In
-       these registers the values stay all time long. */
-    e_lis       r3, _SDA_BASE_@h
-    e_or2i      r3, _SDA_BASE_@l
-    mtspr       SPR_G1_SDA, r3
-    e_lis       r3, _SDA2_BASE_@h
-    e_or2i      r3, _SDA2_BASE_@l
-    mtspr       SPR_G2_SDA2, r3
-
     se_blr
 
 /* End of initExceptionHandlers */
@@ -1066,6 +1055,13 @@ initSDataRegisters:
     e_or2i      r13, _SDA_BASE_@l
     e_lis       r2, _SDA2_BASE_@h       /* Load .sdata2 base into r2 */
     e_or2i      r2, _SDA2_BASE_@l
+
+    /* The IVOR handlers require to restore the SDA pointers in r2 and r13 since they could
+       have been clobbered by the preempted, untrusted user code. We place the values in
+       the general purpose special registers, which are not accessible from user mode. In
+       these registers the original values stay all time long. */
+    mtspr       SPR_G1_SDA, r13
+    mtspr       SPR_G2_SDA2, r2
 
     se_blr
 

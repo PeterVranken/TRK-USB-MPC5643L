@@ -252,7 +252,7 @@ endif
     # O1: 52%
     # Os: 50%
     # Ofast: 41%, likely same as -O3
-productionCodeOptimization := -Ofast
+productionCodeOptimization := -Os
 # Choose C library.
 #   The switch -specs=nosys.specs links the generically implemented C library against a
 # stub library that satisfies the low level I/O routines without providing true
