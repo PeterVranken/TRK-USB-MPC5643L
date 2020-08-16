@@ -154,7 +154,7 @@ static void isrPit2(void)
 {
     /* Indirectly start a user task. It is executed asynchronously to this ISR and has its
        own, irrelated task priority level. */
-    static long unsigned int cnt_ = 0;
+    static long unsigned int SBSS_OS(cnt_) = 0;
     rtos_osTriggerEvent(syc_idEvPIT2, cnt_++);
 
     /* Acknowledge the interrupt in the causing HW device. Can be done as this is "trusted
