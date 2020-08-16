@@ -142,7 +142,7 @@ sup_startUp:
        #15. */
     mfspr       r0, 1008    /* Read register Hardware implementation dependent (HID) 0 */
     se_bseti    r0, 19      /* Set bit DCLREE, Debug Interrupt Clears MSR[EE] */
-    se_bseti    r0, 20      /* Set bit DCLREE, Debug Interrupt Clears MSR[CE] */
+    se_bseti    r0, 20      /* Set bit DCLRCE, Debug Interrupt Clears MSR[CE] */
     mtspr       1008, r0    /* Write updated value back to HID0 */
 
 #if ENABLE_BRANCH_PREDICTION == 1
