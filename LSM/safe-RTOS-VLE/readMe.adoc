@@ -104,22 +104,21 @@ API to halt the execution of a process. Permission to use this API is
 granted only to what is considered the safety process or task.
 
 Many more details can be found in the manual, which is available
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE/doc/manual/readMe.adoc[online^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/readMe.adoc[online^]
 in GitHub or as
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE/doc/manual/manual.pdf[printable^]
-document. The API is described in the online https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[Doxygen^] help, too.
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/manual.pdf[printable^]
+document. The API is described in the online https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/master/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[Doxygen^] help, too.
 
 === Differences to the ancestor RTOSs
 
 The architecture of the RTOS is very simple and resembles its ancestors,
 which were the simple RTOS without safety concept and safe-RTOS-VLE with
-hardware scheduler (still provided on the master branch). This simplicity
-significantly supports the validation of the code in a safety-critical
-software development environment.
+hardware scheduler. This simplicity significantly supports the validation
+of the code in a safety-critical software development environment.
 
 For an explanation of the scheduling scheme, you may still refer to the
 documentation of the simple RTOS, please look
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTOS-VLE#The-RTOS[here^].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS-VLE#The-RTOS[here^].
 
 The differences between safe-RTOS and the simple RTOS are:
 
@@ -161,7 +160,7 @@ This has its pros and cons:
 
 For small applications, where the hardware given maximum of eight events
 is no issue, the hardware solution may still be the better choice. For now,
-it is still available on the master branch of the repository.
+it is still available on branch safe-RTOS-hwScheduler of the repository.
 
 == The safety concept
 
@@ -532,7 +531,7 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation[TRK
 This TRK-USB-MPC5643L sample builds on the other sample "RTOS-VLE" located
 in a sibling folder. "safe-RTOS-VLE" is compiled for the VLE instruction
 set. The build settings are identical to "startup-VLE". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-swScheduler/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc^]
 for details.
 
 === Book E versus VLE

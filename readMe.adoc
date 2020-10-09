@@ -69,7 +69,7 @@ section gives an overview.
 == The samples
 
 The most prominent embedded sample is the blinking LED, called
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/startup["startup"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup["startup"]
 in this project. While it is not of any use as such it does contain a lot
 of reusable stuff for real development: As there is the toolchain setup
 (compiler, linker, flash tool, debugger), a powerful, generic, fully
@@ -78,37 +78,33 @@ VLE instruction set -- , which will suffice for most applications. Remove
 the LED blink code and start writing your application but don't loose time
 with setting up your development environment.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/printf["printf"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/printf["printf"]
 adds a serial communication interface with a terminal program running on
 the host computer that can be used with formatted output through the C
 library functions `printf` and Co.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/ADC["ADC"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/ADC["ADC"]
 adds the reusable implementation of an analog input driver. Furthermore it
 provides a reusable module for reading the test and calibration data page
 of the MPC5643L.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTOS["RTOS"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS["RTOS"]
 is the very lean implementation of a reusable real time operating system
 offering the functionality similar to an OSEK/VDX kernel of conformance
 class BCC1 or BCC2.
 
-image:LSM/safe-RTOS-VLE/doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="3%", pdfwidth="5%"] https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE["safe-RTOS"]
+image:LSM/safe-RTOS-VLE/doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="3%", pdfwidth="5%"] https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE["safe-RTOS"]
 is the not so lean technically ISO 26262 compliant variant of the previous
 with an additional process and privileges management concept that
 implements the _freedom-from-interference_ paradigm.
 
-TIP: On this branch, safe-RTOS-VLE is available with a new software
-scheduler. An unlimited number of events and tasks can be created but the
-CPU load is a bit higher.
-
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/kernelBuilder["kernelBuilder"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder["kernelBuilder"]
 is an assembler written software platform that provides a C API for
 interrupt processing, system calls and context switches: Design your own
 RTOS in plain C, without (inline) assembler and in a race condition free
 coding paradigm.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTuinOS["RTuinOS"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTuinOS["RTuinOS"]
 is the proof of concept of kernelBuilder: RTuinOS, the event based Real
 Time Operating System (RTOS) for Arduino, could be ported to the e200z4
 core with a surprisingly little amount of changes.
@@ -140,5 +136,5 @@ and Installation].
 * The code and scripts are documented by source code comments
 * Most relevant documentation about the evaluation board and the
   microcontroller has been collected in folder
-  https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/doc[doc]
+  https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/doc[doc]
   and much, much more can be found in the Internet
