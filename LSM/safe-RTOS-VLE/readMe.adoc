@@ -135,9 +135,9 @@ The differences between safe-RTOS and the simple RTOS are:
   code for implementation
 * The Book E instruction set is no longer supported
 
-The major difference between the two branches of safe-RTOS is the
-substitution of the hardware based scheduler by a pure software solution.
-This has its pros and cons:
+The major difference between safe-RTOS found in this branch and in the
+elder branch safe-RTOS-hwScheduler is the substitution of the hardware
+based scheduler by a pure software solution. This has its pros and cons:
 
 * The performance of the software solution is worse. The sample
   application "benchmark" shows an increased CPU load of about 0.3%. For
@@ -159,8 +159,10 @@ This has its pros and cons:
   particularity, which won't have an impact on the choice to make
 
 For small applications, where the hardware given maximum of eight events
-is no issue, the hardware solution may still be the better choice. For now,
-it is still available on branch safe-RTOS-hwScheduler of the repository.
+is no issue, the hardware solution may still be the better choice. For
+now, it is still available on branch safe-RTOS-hwScheduler of the
+repository. Note, a variant of the (simple) RTOS without safety concept
+but with software scheduler is not available.
 
 == The safety concept
 
