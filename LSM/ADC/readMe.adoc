@@ -74,9 +74,9 @@ be done by the client code prior to starting the conversions.
 
 The configuration of the driver is done at compile time and using
 preprocessor #define's. See files
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.h[`adc_eTimerClockedAdc.h`]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/ADC/code/ADC/adc_eTimerClockedAdc.h[`adc_eTimerClockedAdc.h`]
 and
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c[`adc_eTimerClockedAdc.c`]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c[`adc_eTimerClockedAdc.c`]
 for details.
 
 The principal setting is the definition of the set of channels, which is
@@ -295,7 +295,7 @@ This sample builds on the basic sample "startup" located in a sibling
 folder and it integrates the other packages "printf" and "RTOS". "ADC" is
 compiled for the Book E instruction set. All build settings and the
 software architecture are identical to "startup". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
 for details.
 
 === Book E versus VLE
@@ -315,12 +315,12 @@ will properly compile in the VLE environment, too.
 The ADC driver offers an API for using it.
   footnote:[If coherent reading of more than one channel result from one
 conversion cycle is a requirement then the
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/startup/readMe.adoc[API
 offered by the startup code] is required, too, for implementing critical
 sections.]
   This section outlines, which functions are available and how to use
 them. Detailed information is found as
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c[source
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/ADC/code/ADC/adc_eTimerClockedAdc.c[source
 code] comments.
 
 ==== Read the MCU's test and calibration data
@@ -444,7 +444,7 @@ demonstrates this possibility by clocking the RTOS from the notification
 callback
 * The application reads all channels in a critical section. The methods
 from the startup code can be used, see
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup#api
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/startup#api
 * If our RTOS is used then its priority ceiling protocol API can be
 applied to mutually exclude the application code and the ADC ISR
 * If the concern only is reading the value of a single channel coherently

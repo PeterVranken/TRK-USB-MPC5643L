@@ -56,7 +56,7 @@ normally is one of those, which had been left by a similar, earlier
 decision, i.e. which had _not_ been continued at that time.
 
 Our simplest sample code,
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder/code/samples/alternatingContexts[alternatingContexts],
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/kernelBuilder/code/samples/alternatingContexts[alternatingContexts],
 is a "scheduler", which implements a regular timer interrupt as kernel
 relevant ISR. Unconditionally in each tick, it demands a context switch
 between two existing execution contexts. The CPU executes both program
@@ -447,7 +447,7 @@ execution speed. It just saves the stack headroom memory.
 The support of stack sharing is enabled or disabled at compile time by
 configuration macro `INT_USE_SHARED_STACKS`. A kernelBuilder project will
 copy file
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.config.h.template[`int_interruptHandler.config.h.template`]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.config.h.template[`int_interruptHandler.config.h.template`]
 as `int_interruptHandler.config.h` into the build set and adjust the
 contained configuration items.
 
@@ -728,7 +728,7 @@ kernelBuilder consists of the source code folders `code\startup` and
 other samples "startup" and "startup-VLE", only the standard IVOR #4
 handler has been removed to avoid a conflict with kernelBuilder's
 implementation of the handlers. Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
 for details.
 
 The sub-folders of folder `code\samples` contain a kernelBuilder client
@@ -780,11 +780,11 @@ another argument to select the instruction set, too.
 === API
 
 kernelBuilder offers a C API for using it. This API is an extension to the
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/startup/readMe.adoc[API
 offered by the startup code], which is still required, too. This
 section outlines, which functions and data structures are available and how to use them.
 More detailed information is found as
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.h[source
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.h[source
 code] comments.
 
 ==== Registering an ISR
@@ -814,7 +814,7 @@ In comparison to our startup sample, the signature of the function has
 changed to differentiate ordinary and kernel relevant ISRs. This affects
 the two explained arguments, all others are as they used to be, please
 refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup[sample
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/startup[sample
 startup] for details.
 
 ==== The ordinary ISR
@@ -863,7 +863,7 @@ the entered context had been preempted and suspended by an External
 Interrupt.
 
 The source code comments in file
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.h[`int_interruptHandler.h`]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/kernelBuilder/code/kernelBuilder/int_interruptHandler.h[`int_interruptHandler.h`]
 explain all further details.
 
 ==== Creating context descriptors
@@ -1107,7 +1107,7 @@ mechanisms are:
 * Lock-free data exchange using memory barriers: `atomic_thread_fence()`
 
 Please find the details in the other
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup#mutual-exclusion-of-contexts[sample
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/startup#mutual-exclusion-of-contexts[sample
 startup].
 
 These mechanisms may be used from the code that implements a kernelBuilder
@@ -1162,7 +1162,7 @@ Now, the simplest possible RTOS built on kernelBuilder is presented. The
 main implementation file is included here as a short yet complete sample.
 You will find all the sub-ordinated remaining files as a buildable,
 flashable and executable kernelBuilder sample application, please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder/code/samples/simpleSampleFromReadme[simpleSampleFromReadme].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/kernelBuilder/code/samples/simpleSampleFromReadme[simpleSampleFromReadme].
 
 [source,C,options="nowrap"]
 ----

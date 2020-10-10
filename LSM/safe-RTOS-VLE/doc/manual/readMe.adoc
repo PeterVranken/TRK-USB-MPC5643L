@@ -20,7 +20,7 @@ endif::[]
 == Scope
 
 safe-RTOS is a successor of the simple RTOS
-(https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS[Ref.
+(https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/RTOS[Ref.
  1^]) previously published in GitHub. The successor RTOS implements the
 mechanisms, which are the prerequisite for an operating system kernel that
 is intended for use in the software for a safe system, according to the
@@ -64,7 +64,7 @@ relevant safety standards, like ISO 26262.
 |=======
 || Document | Description
 | Ref. 1
-  | https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS
+  | https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/RTOS
   | Simple RTOS
 |=======
 
@@ -353,7 +353,7 @@ ancestor. This simplicity significantly supports the validation of the
 code in a safety-critical software development environment. The
 explanation is that both RTOSs build directly on the hardware capabilities
 of the MCU. Please refer to the
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS-VLE#The-RTOS[readme^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/RTOS-VLE#The-RTOS[readme^]
 of the simple RTOS for a detailed explanation of the kernel concept.
 
 The differences to the simple RTOS are:
@@ -642,7 +642,7 @@ There are several significant differences between both solutions:
   this means only eight events in total
 
 Please refer to the sample I/O driver
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE/code/system/drivers/ledAndButton[ledAndButton^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/code/system/drivers/ledAndButton[ledAndButton^]
 for additional details. This drivers uses the first method to implement an
 immediate notification of a user process when a button on the evaluation
 board is pressed or released.
@@ -918,9 +918,9 @@ into serial port
 ==== Sample code
 
 Please refer to the sample I/O drivers
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE/code/system/drivers/ledAndButton[ledAndButton^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/code/system/drivers/ledAndButton[ledAndButton^]
 and
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE/code/system/drivers/serial[serialIO^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/code/system/drivers/serial[serialIO^]
 for additional details and consider using these files as starting point
 for your own system call based I/O driver.
 
@@ -930,10 +930,10 @@ for your own system call based I/O driver.
 The RTOS offers an API for using it. The available functions are outlined
 here; more detailed information is found as source code comments in the
 files in folder
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/RTOS[code/system/RTOS^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/code/system/RTOS[code/system/RTOS^]
 and particularly in the main header file,
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/RTOS/rtos.h[code/system/RTOS/rtos.h^]. Furthermore, there is the Doxygen API reference at
-https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/master/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[doc/doxygen/html^].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/code/system/RTOS/rtos.h[code/system/RTOS/rtos.h^]. Furthermore, there is the Doxygen API reference at
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[doc/doxygen/html^].
 
 === Naming conventions
 
@@ -1004,7 +1004,7 @@ initializations using this configuration won't ever fail again. (Therefore
 even a simple assertion would suffice to evaluate the error return codes.)
 
 Please refer to the definition of the enumeration in
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/RTOS/rtos.h[`rtos.h`^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/code/system/RTOS/rtos.h[`rtos.h`^]
 for the list of recognized configuration errors.
 
     #include "rtos.h"
@@ -1617,7 +1617,7 @@ Similar constructs can be found for SDA and SDA2 data:
 The actual size and address location of the areas are communicated to the
 C source code by means of linker defined symbols. By convention, all of
 these symbols begin with `ld_`. In the MPU configuration code (file
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/RTOS/rtos_systemMemoryProtectionUnit.c[rtos_systemMemoryProtectionUnit.c^]),
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/code/system/RTOS/rtos_systemMemoryProtectionUnit.c[rtos_systemMemoryProtectionUnit.c^]),
 you can find the initialization of three memory area descriptors, which
 are based on the address boundaries:
 
@@ -1663,7 +1663,7 @@ instead of the previous example. Both are equivalent.
 Similar macros are defined for uninitialized data objects or to place a
 variable in the SDA or SDA2 RAM or accordingly in the other processes'
 memory areas (including OS memory). They are defined in file
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/code/system/startup/typ_types.h[typ_types.h^],
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/code/system/startup/typ_types.h[typ_types.h^],
 please #include this header file.
 
 If the macros are applied to arrays then the array index(es) are placed

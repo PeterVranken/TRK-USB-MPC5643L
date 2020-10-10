@@ -9,7 +9,7 @@
 == About this sample
 
 This sample is a proof of concept for package
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder[kernelBuilder].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/kernelBuilder[kernelBuilder].
 RTuinOS, the event controlled real time operating system for Arduino, has
 been migrated for the e200z4 core and all original RTuinOS samples run on
 the TRK-USB-MPC5643L evaluation board. RTuinOS makes use of kernel
@@ -63,7 +63,7 @@ RTuinOS as such is not in the focus of this project. It's an Arduino
 project and you can refer to its
 https://sourceforge.net/projects/rtuinos/[original location]. The
 documentation is distributed as
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTuinOS/doc/manual/RTuinOS-1.0-UserGuide.pdf[PDF manual].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/RTuinOS/doc/manual/RTuinOS-1.0-UserGuide.pdf[PDF manual].
 
 The manual has not been edited with respect to differences due to e200z4
 and board migration. To a small extend, the source code documentation of
@@ -104,7 +104,7 @@ implementation.
 
 The new way to deal with interrupts is demonstrated in sample application
 tc14. The ADC driver known from the other TRK-USB-MPC5643L sample
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/ADC[ADC]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/ADC[ADC]
 has been integrated and slightly modified; a few lines of code changes
 make its on-conversion-callback become an RTuinOS kernel interrupt, which
 can control task activations synchronously with the ADC conversion cycle.
@@ -314,7 +314,7 @@ This sample builds on sample "kernelBuilder" located in a sibling folder.
 "RTuinOS" can be compiled for both, the Book E and the VLE instruction
 set. All build settings and the software architecture are identical to
 "kernelBuilder". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/kernelBuilder/readMe.adoc[LSM/kernelBuilder/readMe.adoc]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/kernelBuilder/readMe.adoc[LSM/kernelBuilder/readMe.adoc]
 for details.
 
 === Book E versus VLE

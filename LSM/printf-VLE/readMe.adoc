@@ -33,7 +33,7 @@ running on the evaluation board.
 == The UART driver
 
 The UART driver (including MCU pin configuration) is implemented in
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/printf/code/serial/sio_serialIO.c[`code/serial/sio_serialIO.c`].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/printf/code/serial/sio_serialIO.c[`code/serial/sio_serialIO.c`].
 The initialization function configures the MCU devices LINFlexD_0, DMA_MUX
 and eDMA. The eDMA is configured to operate in modulo mode. The DMA
 implements a ring buffer, which fits well to the continuous character
@@ -74,7 +74,7 @@ implementation in hardware superimposes tight constraints on the address
 and size of the memory area used for that buffer. These constraints can't
 be fulfilled by C source code. It's necessary to define the buffer in the
 linker command file, see
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/printf/makefile/linkerControlFile.ld[`makefile/linkerControlFile.ld`].
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/printf/makefile/linkerControlFile.ld[`makefile/linkerControlFile.ld`].
 
 === Using DMA not only for the serial interface
 
@@ -320,7 +320,7 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 This sample builds on the basic sample "startup" located in a sibling folder. 
 "printf" is compiled for the VLE instruction set. All build settings
 and the software architecture are identical to "startup-VLE". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup-VLE/readMe.adoc
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/startup-VLE/readMe.adoc
 for details.
 
 == Known issues

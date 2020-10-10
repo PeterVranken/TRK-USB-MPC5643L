@@ -111,10 +111,10 @@ API to halt the execution of a process. Permission to use this API is
 granted only to what is considered the safety process or task.
 
 Many more details can be found in the manual, which is
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/readMe.adoc[online^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/doc/manual/readMe.adoc[online^]
 available here in GitHub, or available as
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/manual.pdf[printable^]
-document. The API is described in the online https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/master/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[Doxygen^] help, too.
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/doc/manual/manual.pdf[printable^]
+document. The API is described in the online https://htmlpreview.github.io/?https://raw.githubusercontent.com/PeterVranken/TRK-USB-MPC5643L/safe-RTOS-hwScheduler/LSM/safe-RTOS-VLE/doc/doxygen/html/globals_func.html[Doxygen^] help, too.
 
 === Differences to the ancestor RTOS
 
@@ -123,7 +123,7 @@ ancestor. This simplicity significantly supports the validation of the
 code in a safety-critical software development environment. The
 explanation is that both RTOSs build directly on the hardware capabilities
 of the MCU. Please look
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS-VLE#The-RTOS[here]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-hwScheduler/LSM/RTOS-VLE#The-RTOS[here]
 for a detailed explanation of the kernel concept.
 
 The differences to the simple RTOS are:
@@ -506,7 +506,7 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation[TRK
 This sample builds on the other sample "RTOS-VLE" located in a sibling
 folder. "safe-RTOS-VLE" is compiled for the VLE instruction set. The build
 settings are identical to "startup-VLE". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc^]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-hwScheduler/LSM/startup-VLE/readMe.adoc[LSM/startup-VLE/readMe.adoc^]
 for details.
 
 === Book E versus VLE
