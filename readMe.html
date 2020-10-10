@@ -449,6 +449,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
 <li><a href="#_introduction">Introduction</a></li>
+<li><a href="#_this_branch">This branch</a></li>
 <li><a href="#_the_samples">The samples</a></li>
 <li><a href="#_installation">Installation</a></li>
 <li><a href="#_documentation">Documentation</a></li>
@@ -513,7 +514,7 @@ that this has not been tested yet.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Host</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Windows 7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Windows 10</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">C compiler</p></td>
@@ -543,11 +544,26 @@ section gives an overview.</p>
 </div>
 </div>
 <div class="sect1">
+<h2 id="_this_branch">This branch</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This branch has been made to do the first development of a multi-core
+RTOS. Meanwhile, the RTOS is running on several multi-core derivatives of
+the MPC family but it has never been tested in dual core mode (DPM) of the
+MPC5643L. Although the RTOS is running on the MPC5643L in lockstep mode
+(LSM), it has simply no advantage to use the multi-core in this
+configuration. Therefore, the code found in this development branch is not
+of any practical use and maybe, we will even delete this branch in the
+future.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_the_samples">The samples</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The most prominent embedded sample is the blinking LED, called
-<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/startup">"startup"</a>
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/startup">"startup"</a>
 in this project. While it is not of any use as such it does contain a lot
 of reusable stuff for real development: As there is the toolchain setup
 (compiler, linker, flash tool, debugger), a powerful, generic, fully
@@ -557,52 +573,45 @@ the LED blink code and start writing your application but don&#8217;t loose time
 with setting up your development environment.</p>
 </div>
 <div class="paragraph">
-<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/printf">"printf"</a>
+<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/printf">"printf"</a>
 adds a serial communication interface with a terminal program running on
 the host computer that can be used with formatted output through the C
 library functions <code>printf</code> and Co.</p>
 </div>
 <div class="paragraph">
-<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/ADC">"ADC"</a>
+<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/ADC">"ADC"</a>
 adds the reusable implementation of an analog input driver. Furthermore it
 provides a reusable module for reading the test and calibration data page
 of the MPC5643L.</p>
 </div>
 <div class="paragraph">
-<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTOS">"RTOS"</a>
+<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/RTOS">"RTOS"</a>
 is the very lean implementation of a reusable real time operating system
 offering the functionality similar to an OSEK/VDX kernel of conformance
 class BCC1 or BCC2.</p>
 </div>
 <div class="paragraph">
-<p><span class="image"><img src="LSM/safe-RTOS-VLE/doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg" alt="iconSafeRTOS asColoredIcon" width="3%"></span> <a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/safe-RTOS-VLE">"safe-RTOS"</a>
+<p><span class="image"><img src="LSM/safe-RTOS-VLE/doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg" alt="iconSafeRTOS asColoredIcon" width="3%"></span>
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/safe-RTOS-VLE">"safe-RTOS"</a>
 is the not so lean technically ISO 26262 compliant variant of the previous
 with an additional process and privileges management concept that
-implements the <em>freedom-from-interference</em> paradigm.</p>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title=":bulb:"></i>
-</td>
-<td class="content">
-On this branch, safe-RTOS-VLE is available with a software scheduler.
-An unlimited number of events and tasks can be created but the CPU load is
-a bit higher.
-</td>
-</tr>
-</table>
+implements the <em>freedom-from-interference</em> paradigm. In this branch,
+safe-RTOS has been extended for multi-core use. This has not been tested
+with both cores of the MPC5643L in DPM but was the basis for the migration
+of safe-RTOS for
+<a href="https://github.com/PeterVranken/DEVKIT-MPC5748G/tree/master/samples/safe-RTOS" target="_blank" rel="noopener">MPC5748G</a>
+(three cores) and MPC5775B/E (dual core). It&#8217;s not recommended to use this
+code.</p>
 </div>
 <div class="paragraph">
-<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/kernelBuilder">"kernelBuilder"</a>
+<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/kernelBuilder">"kernelBuilder"</a>
 is an assembler written software platform that provides a C API for
 interrupt processing, system calls and context switches: Design your own
 RTOS in plain C, without (inline) assembler and in a race condition free
 coding paradigm.</p>
 </div>
 <div class="paragraph">
-<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/LSM/RTuinOS">"RTuinOS"</a>
+<p><a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/RTuinOS">"RTuinOS"</a>
 is the proof of concept of kernelBuilder: RTuinOS, the event based Real
 Time Operating System (RTOS) for Arduino, could be ported to the e200z4
 core with a surprisingly little amount of changes.</p>
@@ -651,7 +660,7 @@ particular added value</p>
 <li>
 <p>Most relevant documentation about the evaluation board and the
 microcontroller has been collected in folder
-<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/master/doc">doc</a>
+<a href="https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/doc">doc</a>
 and much, much more can be found in the Internet</p>
 </li>
 </ul>
@@ -667,7 +676,7 @@ and much, much more can be found in the Internet</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-02-27 21:56:05 +0100
+Last updated 2020-10-10 14:43:40 +0200
 </div>
 </div>
 </body>

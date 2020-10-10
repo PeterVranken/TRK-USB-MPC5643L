@@ -52,7 +52,7 @@ The configuration for this project is:
 |=======
 |Microcontroller|https://www.nxp.com/products/microcontrollers-and-processors/power-architecture-processors/mpc5xxx-55xx-32-bit-mcus/ultra-reliable-mpc56xx-32-bit-automotive-and-industrial-microcontrollers-mcus/ultra-reliable-dual-core-32-bit-mcu-for-automotive-and-industrial-applications:MPC564xL[NXP PowerPC MPC5643L]
 |Evaluation board|https://www.nxp.com/support/developer-resources/hardware-development-tools/startertrak-development-boards/mpc5643l-startertrak-for-safety-applications:TRK-USB-MPC5643L[NXP TRK-USB-5643L]
-|Host|Windows 7
+|Host|Windows 10
 |C compiler|https://drive.google.com/open?id=0B_3zBh2c7LroNEFIOVlJcUVKRWc[MinGW-powerpc-eabivle-4.9.4]
 |Unix tools|http://www.cygwin.com/[Cygwin]
 |Flash tool|https://www.nxp.com/pages/codewarrior-for-mcus-eclipse-ide-coldfire.-56800-e-dsc-kinetis.-nxp-56xx-rs08-s08-s12z-v10.7:CW-MCU10?tab=Design_Tools_Tab[NXP CodeWarrior 10.7]footnote:[Check page https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation#CodeWarrior[Tools
@@ -66,10 +66,21 @@ development. They are no fully elaborated, functional applications but
 they offer high quality building blocks for a true application. The next
 section gives an overview.
 
+== This branch
+ 
+This branch has been made to do the first development of a multi-core
+RTOS. Meanwhile, the RTOS is running on several multi-core derivatives of
+the MPC family but it has never been tested in dual core mode (DPM) of the
+MPC5643L. Although the RTOS is running on the MPC5643L in lockstep mode
+(LSM), it has simply no advantage to use the multi-core in this
+configuration. Therefore, the code found in this development branch is not
+of any practical use and maybe, we will even delete this branch in the
+future.
+
 == The samples
 
 The most prominent embedded sample is the blinking LED, called
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/startup["startup"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/startup["startup"]
 in this project. While it is not of any use as such it does contain a lot
 of reusable stuff for real development: As there is the toolchain setup
 (compiler, linker, flash tool, debugger), a powerful, generic, fully
@@ -78,37 +89,41 @@ VLE instruction set -- , which will suffice for most applications. Remove
 the LED blink code and start writing your application but don't loose time
 with setting up your development environment.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/printf["printf"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/printf["printf"]
 adds a serial communication interface with a terminal program running on
 the host computer that can be used with formatted output through the C
 library functions `printf` and Co.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/ADC["ADC"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/ADC["ADC"]
 adds the reusable implementation of an analog input driver. Furthermore it
 provides a reusable module for reading the test and calibration data page
 of the MPC5643L.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTOS["RTOS"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/RTOS["RTOS"]
 is the very lean implementation of a reusable real time operating system
 offering the functionality similar to an OSEK/VDX kernel of conformance
 class BCC1 or BCC2.
 
-image:LSM/safe-RTOS-VLE/doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="3%", pdfwidth="5%"] https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/safe-RTOS-VLE["safe-RTOS"]
+image:LSM/safe-RTOS-VLE/doc/manual/theme/iconSafeRTOS-asColoredIcon.jpg[width="3%",
+pdfwidth="5%"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/safe-RTOS-VLE["safe-RTOS"]
 is the not so lean technically ISO 26262 compliant variant of the previous
 with an additional process and privileges management concept that
-implements the _freedom-from-interference_ paradigm.
+implements the _freedom-from-interference_ paradigm. In this branch,
+safe-RTOS has been extended for multi-core use. This has not been tested
+with both cores of the MPC5643L in DPM but was the basis for the migration
+of safe-RTOS for
+https://github.com/PeterVranken/DEVKIT-MPC5748G/tree/master/samples/safe-RTOS[MPC5748G^]
+(three cores) and MPC5775B/E (dual core). It's not recommended to use this
+code.
 
-TIP: On this branch, safe-RTOS-VLE is available with a new software
-scheduler. An unlimited number of events and tasks can be created but the
-CPU load is a bit higher.
-
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/kernelBuilder["kernelBuilder"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/kernelBuilder["kernelBuilder"]
 is an assembler written software platform that provides a C API for
 interrupt processing, system calls and context switches: Design your own
 RTOS in plain C, without (inline) assembler and in a race condition free
 coding paradigm.
 
-https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/LSM/RTuinOS["RTuinOS"]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/LSM/RTuinOS["RTuinOS"]
 is the proof of concept of kernelBuilder: RTuinOS, the event based Real
 Time Operating System (RTOS) for Arduino, could be ported to the e200z4
 core with a surprisingly little amount of changes.
@@ -140,5 +155,5 @@ and Installation].
 * The code and scripts are documented by source code comments
 * Most relevant documentation about the evaluation board and the
   microcontroller has been collected in folder
-  https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-swScheduler/doc[doc]
+  https://github.com/PeterVranken/TRK-USB-MPC5643L/tree/safe-RTOS-multiInstance/doc[doc]
   and much, much more can be found in the Internet

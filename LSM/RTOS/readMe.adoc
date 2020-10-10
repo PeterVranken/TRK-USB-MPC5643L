@@ -164,7 +164,7 @@ priority than an interrupt.
 
 ISRs are installed using the known API from the startup code:
 `ihw_installINTCInterruptHandler()`, see
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc],
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-multiInstance/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc],
 section _Code architecture/API_, for details.
 
 A noticeable difference between ISRs and tasks is the option for ISRs to
@@ -348,17 +348,17 @@ https://github.com/PeterVranken/TRK-USB-MPC5643L/wiki/Tools-and-Installation.
 This sample builds on the basic sample "startup" located in a sibling folder. 
 "RTOS" is compiled for the Book E instruction set. All build settings
 and the software architecture are identical to "startup". Please refer to
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-multiInstance/LSM/startup/readMe.adoc[LSM/startup/readMe.adoc]
 for details.
 
 === API
 
 The RTOS offers an API for using it. This API is an extension to the
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/startup/readMe.adoc[API
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-multiInstance/LSM/startup/readMe.adoc[API
 offered by the startup code] and which is still required, too. This
 section outlines, which functions are available and how to use them.
 Detailed information is found as
-https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/RTOS/code/RTOS/rtos.c[source
+https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/safe-RTOS-multiInstance/LSM/RTOS/code/RTOS/rtos.c[source
 code] comments.
 
 ==== Registering a task
