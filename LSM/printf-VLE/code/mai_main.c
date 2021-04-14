@@ -569,9 +569,10 @@ void main()
                            variants of printf from the new C library and do not link the
                            floating point standard implementation. This will save ROM space and
                            a lot of CPU load. */
+                        const unsigned long noMillis = mai_cntIntPIT0;
                         unsigned int h, m, s, ms;
-                        h = mai_cntIntPIT0 / 3600000;
-                        m = s = mai_cntIntPIT0 - h*3600000;
+                        h = noMillis / 3600000;
+                        m = s = noMillis - h*3600000;
                         m /= 60000;
                         s = ms = s - m*60000;
                         s /= 1000;
@@ -628,7 +629,7 @@ void main()
             {
                 if(++cntIdleLoops >= 1000)
                 {
-                    puts("Type help to get software usage information\r\n");
+                    puts("Type `help' to get software usage information\r\n");
                     cntIdleLoops = 0;
                 }
 
