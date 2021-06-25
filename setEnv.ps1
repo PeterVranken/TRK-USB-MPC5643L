@@ -18,7 +18,7 @@ if ("$env:UNIX_TOOLS_HOME" -eq "")
     write-host ("setEnv.ps1: You need to configure this script prior to first use: Specify location of UNIX tools for Windows")
     Write-Host "Press any key to continue ..."; $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
-    $env:UNIX_TOOLS_HOME = "C:\ProgramFiles\cygwin"
+    $env:UNIX_TOOLS_HOME = "C:\ProgramFiles\Git\usr"
     write-host ('Environment variable UNIX_TOOLS_HOME is set to ' + $env:UNIX_TOOLS_HOME)
 }
 else
@@ -35,7 +35,7 @@ if ("$env:GCC_POWERPC_HOME" -eq "")
     write-host ("setEnv.ps1: You need to configure this script prior to first use: Specify location of GCC for PowerPC")
     Write-Host "Press any key to continue ..."; $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
-    $env:GCC_POWERPC_HOME = "C:\ProgramFiles\MinGW-powerpc-eabivle-4.9.4"
+    $env:GCC_POWERPC_HOME = "C:\ProgramFiles\powerpc-eabivle-4.9.4"
     write-host ('Environment variable GCC_POWERPC_HOME is set to ' + $env:GCC_POWERPC_HOME)
 }
 else
