@@ -51,10 +51,10 @@
  *   @param testDataAry
  * The MCU test and calibration data is placed in this array.
  *   @param noUInt16Words
- * The test and calibration data is organized in words of this size. \a noUInt16Words the
- * number of 16 Bit words to copy into the array. Copying always starts with the first word
- * from the test and calibration data area but the client code doesn't need to copy all of
- * the data.\n
+ * The test and calibration data is organized in words of this size. \a noUInt16Words is
+ * the number of 16 Bit words to copy into the array. Copying always starts with the first
+ * word from the test and calibration data area but the client code doesn't need to copy
+ * all of the data.\n
  *   To know, how many words are needed to copy you can refer to the MCU reference manual,
  * section 23.1.8, p. 591. The buildup of the test data area is shown in table 23-24.
  *   @remark

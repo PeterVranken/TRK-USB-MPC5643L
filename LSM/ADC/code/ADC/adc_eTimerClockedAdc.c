@@ -14,7 +14,7 @@
  *     eTimer_0 or eTimer_1 (module eTimer_2 is not connected to the CTU)\n
  *   - The CTU is configured to command the ADCs to do the sampling. It has the eTimer
  *     module as input\n
- *   - The two ADCs are identical configured such that they wait for the CTU commands and
+ *   - The two ADCs are identically configured such that they wait for the CTU commands and
  *     do the conversions\n
  *   The ADC conversion results are written into a global array of values, which serves as
  * API of the module. The array is updated after each conversion cycle. The application
@@ -811,13 +811,13 @@ static void isrAdcAllConversionsDone(void)
 #endif
 # if ADC_USE_ADC_0_CHANNEL_15 == 1
             _TSENS_0[_TSENSOR_SEL] = _TSENS_0[_TSENSOR_SEL] * ADC_FILTER_COEF_TSENS
-                                    + (1.0f - ADC_FILTER_COEF_TSENS)
-                                      * (float)_conversionResAry[adc_adc0_idxChn15];
+                                     + (1.0f - ADC_FILTER_COEF_TSENS)
+                                       * (float)_conversionResAry[adc_adc0_idxChn15];
 #endif
 # if ADC_USE_ADC_1_CHANNEL_15 == 1
             _TSENS_1[_TSENSOR_SEL] = _TSENS_1[_TSENSOR_SEL] * ADC_FILTER_COEF_TSENS
-                                    + (1.0f - ADC_FILTER_COEF_TSENS)
-                                      * (float)_conversionResAry[adc_adc1_idxChn15];
+                                     + (1.0f - ADC_FILTER_COEF_TSENS)
+                                       * (float)_conversionResAry[adc_adc1_idxChn15];
 #endif
 # if ADC_USE_ADC_0_CHANNEL_15 == 1  ||  ADC_USE_ADC_1_CHANNEL_15 == 1
             _TSENSOR_SEL = (_TSENSOR_SEL+1) & 0x1;
