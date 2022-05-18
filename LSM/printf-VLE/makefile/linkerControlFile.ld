@@ -1,7 +1,7 @@
 /*
  * GNU GCC Memory map for Freescale MPC5643L in Lock Step Mode
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2022 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -216,6 +216,7 @@ SECTIONS
     .sdata  : ALIGN(8)
     {
         ld_sdataStart = ABSOLUTE(.);
+        _SDA_BASE_ = ABSOLUTE(ld_sdataStart) + 0x8000 ;
 
         /* Some empty fragments from the C library go here. */
         *(.rela.sdata)
@@ -247,6 +248,8 @@ SECTIONS
     .sdata2 : ALIGN(4)
     {
         ld_sdata2Start = ABSOLUTE(.);
+        _SDA2_BASE_ = ABSOLUTE(ld_sdata2Start) + 0x8000 ;
+
         *(.sdata2)
         *(.sdata2.*)
 

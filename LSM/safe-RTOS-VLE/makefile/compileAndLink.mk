@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2018 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2022 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -233,7 +233,6 @@ VPATH := $(srcDirListExpanded) $(targetDir)
 # disabling the mode you should first try to reduce the size limit to 4 or 2 Byte.
 useSoftwareEmulation := 0
 targetFlags := -mcpu=e200z4 -mbig-endian -mvle -misel=yes -meabi -msdata=default -G8        \
-               -mregnames                                                                   \
                -fshort-double -fsingle-precision-constant
 ifeq ($(useSoftwareEmulation),1)
     targetFlags += -msoft-float
@@ -264,7 +263,7 @@ cClibSpec := --sysroot=$(call w2u,$(GCC_POWERPC_HOME))/powerpc-eabivle/newlib
 
 # Pattern rules for assembler language source files.
 asmFlags = $(targetFlags)                                                                   \
-           -Wall                                                                            \
+           -mregnames -Wall                                                                 \
            -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                             \
            $(foreach path,$(call noTrailingSlash,$(srcDirListExpanded) $(incDirList)),-I$(path))\
            $(cDefines) $(foreach def,$(defineList),-D$(def))                                \

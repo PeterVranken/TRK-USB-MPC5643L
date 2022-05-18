@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2022 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -219,8 +219,7 @@ VPATH := $(srcDirListExpanded) $(targetDir)
 # disabling the mode you should first try to reduce the size limit to 4 or 2 Byte.
 useSoftwareEmulation := 0
 targetFlags := -mcpu=e200z4 -mbig-endian -mvle -misel=yes                                   \
-               -meabi -msdata=default -G8                                                   \
-               -mregnames
+               -meabi -msdata=default -G8
 ifeq ($(useSoftwareEmulation),1)
     targetFlags += -msoft-float -fshort-double
 else
@@ -236,13 +235,13 @@ endif
     # O3: 41%
     # O2: 41%
     # O1: 52%
-    # Os: 50%, requires linkage of crtsavres.S
+    # Os: 50%
     # Ofast: 41%, likely same as -O3
 productionCodeOptimization := -Os
 
 # Pattern rules for assembler language source files.
 asmFlags = $(targetFlags)                                                                   \
-           -Wall                                                                            \
+           -mregnames -Wall                                                                 \
            -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                             \
            $(foreach path,$(call noTrailingSlash,$(srcDirListExpanded) $(incDirList)),-I$(path))\
            $(cDefines) $(foreach def,$(defineList),-D$(def))                                \
@@ -334,7 +333,7 @@ $(targetDir)obj/%.o: %.cc
 # will only pass the name of this file to the linker.
 $(targetDir)obj/listOfObjFiles.txt: $(objListWithPath)
 	$(info Create linker input file $@)
-	$(file >$@,$^)
+	$(file >$@,$(sort $^))
 
 # Let the linker create the flashable binary file.
 #   CAUTION: An unsolved problem with GCC 4.9.4 is the switch -fshort-double, which is
