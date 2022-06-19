@@ -220,11 +220,11 @@ VPATH := $(srcDirListExpanded) $(targetDir)
 useSoftwareEmulation := 0
 targetFlags := -mcpu=e200z4 -mbig-endian -mno-vle -misel=yes                                \
                -meabi -msdata=default -G8                                                   \
-               -mregnames
+               -fshort-double -fsingle-precision-constant
 ifeq ($(useSoftwareEmulation),1)
-    targetFlags += -msoft-float -fshort-double
+    targetFlags += -msoft-float
 else
-    targetFlags += -mhard-float -fshort-double
+    targetFlags += -mhard-float
 endif
 
 # Choose optimization level for production compilation.
@@ -241,7 +241,7 @@ endif
 productionCodeOptimization := -Os
 
 # Pattern rules for assembler language source files.
-asmFlags = $(targetFlags)                                                                   \
+asmFlags = $(targetFlags) -mregnames                                                        \
            -Wall                                                                            \
            -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                             \
            $(foreach path,$(call noTrailingSlash,$(srcDirListExpanded) $(incDirList)),-I$(path))\
