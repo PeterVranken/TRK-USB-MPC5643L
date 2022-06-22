@@ -282,7 +282,7 @@ zeroizeRegisters:
                                Anyway, isync does both. */
 
     /* Initialize the 64-bits of GPR0 to 0 */
-    e_li      r1, 0         /* Initialize the lower 32-bits of GPR1 to 0. */
+    se_li       r1, 0       /* Initialize the lower 32-bits of GPR1 to 0. */
     evmergelo r0, r1, r1    /* Write the lower 32-bits of GPR1 into both halfs of GPR0. */
     evmergelo r1, r0, r0    /* Clear 64 Bit of r1, r2 ... */
     evmergelo r2 ,r0 ,r0
@@ -438,9 +438,9 @@ initExceptionHandlers:
     e_li        r3, sup_IVOR7trap@l
     mtspr       407, r3     /* IVOR7 Floating-point unavailable */
     
-    e_lis       r0, int_systemCallHandler@ha
-    e_la        r0, int_systemCallHandler@l(r0)
-    mtspr       408, r0     /* IVOR8 System call */
+    e_lis       r3, int_systemCallHandler@ha
+    e_la        r3, int_systemCallHandler@l(r3)
+    mtspr       408, r3     /* IVOR8 System call */
 
     e_li        r3, sup_IVOR9trap@l
     mtspr       409, r3     /* IVOR9 AP unavailable (not used by this core) */
@@ -863,19 +863,15 @@ initMMU:
  */
 writeMMUTableEntryS:
 
-    /* Write MMU Assist Register 0 (MAS0); SPR 624 */
-    mtspr   624, r3
-    /* Write MMU Assist Register 1 (MAS1); SPR 625 */
-    mtspr   625, r4
-    /* Write MMU Assist Register 2 (MAS2); SPR 626 */
-    mtspr   626, r5
-    /* Write MMU Assist Register 3 (MAS3); SPR 627 */
-    mtspr   627, r6
+    mtspr       624, r3 /* SPR 624: MMU Assist Register 0 (MAS0) */
+    mtspr       625, r4 /* SPR 625: MMU Assist Register 1 (MAS1) */
+    mtspr       626, r5 /* SPR 626: MMU Assist Register 2 (MAS2) */
+    mtspr       627, r6 /* SPR 627: MMU Assist Register 3 (MAS3) */
 
     /* Write the table entry.
-         All instruction will complete here in current context. */
+         All instructions will complete here in current context. */
     msync
-    tlbwe
+    tlbwe               /* Copy contents of assist registers into the MMU table entry */
 
     /* Synchronize instruction fetches and data accesses in respect with the new created
        TLB entry. */
@@ -898,16 +894,12 @@ writeMMUTableEntryS:
  */
 writeMMUTableEntry:
 
-    /* Write MMU Assist Register 0 (MAS0); SPR 624 */
-    mtspr   624, r3
-    /* Write MMU Assist Register 1 (MAS1); SPR 625 */
-    mtspr   625, r4
-    /* Write MMU Assist Register 2 (MAS2); SPR 626 */
-    mtspr   626, r5
-    /* Write MMU Assist Register 3 (MAS3); SPR 627 */
-    mtspr   627, r6
-    /* Write the table entry */
-    tlbwe
+
+    mtspr       624, r3 /* SPR 624: MMU Assist Register 0 (MAS0) */
+    mtspr       625, r4 /* SPR 625: MMU Assist Register 1 (MAS1) */
+    mtspr       626, r5 /* SPR 626: MMU Assist Register 2 (MAS2) */
+    mtspr       627, r6 /* SPR 627: MMU Assist Register 3 (MAS3) */
+    tlbwe               /* Copy contents of assist registers into the MMU table entry */
 
     se_blr
 
@@ -1004,21 +996,21 @@ initSDataRegisters:
  * sample NXP sample MPC5643L-LINFlex-UART-DMA-CW210, file main.c, l. 221ff.
  */
 disableWatchdog:
-    // SWT.SR.R = 0x0000c520;   /* Write 1st key to clear soft lock bit */
+    /* SWT.SR.R = 0x0000c520. Write 1st key to clear soft lock bit */
     e_lis   r9, 0xfff3
     e_or2i  r9, 0x8000
     e_li    r10, 0
     e_or2i  r10, 0xc520
     e_stw   r10, 16(r9)
-    // SWT.SR.R = 0x0000d928;   /* Write 2nd key to clear soft lock bit */
+    /* SWT.SR.R = 0x0000d928. Write 2nd key to clear soft lock bit */
     e_li    r10, 0
     e_or2i  r10, 0xd928
     e_stw   r10, 16(r9)
-    // SWT.CR.R = 0x8000010A;   /* Clear watchdog enable (WEN) */
+    /* SWT.CR.R = 0x8000010A. Clear watchdog enable (WEN) */
     e_lis   r10, 0x8000
     e_or2i  r10, 0x10a
     e_stw   r10, 0(r9)
-    // Clear e200 Core Watchdog Timer
+    /* Clear e200 Core Watchdog Timer */
     e_li    r9, 0
     mtspr   340, r9
 
@@ -1066,7 +1058,7 @@ initFlash:
        and prefetch of buffers on instruction read, prefetch on miss or hit. */
     e_lis   r3, 0x18c7
     e_or2i  r3, 0xeded
-    e_lis   r4, 0xc3f8      /* &CFLASH.PFCR0.R: Configuration register of flash controller */
+    e_lis   r4, 0xc3f8  /* CFLASH.PFCR0: Configuration register of flash controller */
     e_or2i  r4, 0x801c
     
     /* Call sub-routine, which is in the stack area. */

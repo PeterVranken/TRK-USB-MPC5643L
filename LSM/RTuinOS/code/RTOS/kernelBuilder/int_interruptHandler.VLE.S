@@ -376,9 +376,9 @@ int_eeh_endCallSimpleIsr:
     e_stw   r0, INTC_EOIR_PRC0@l(r3)    /* Write 0 to INTC_EOIR, pop priority */
 
 #if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
-    e_lwz   r3, int_cntRetFromIsr@sda21(%r0)
+    e_lwz   r3, int_cntRetFromIsr@sda21(0)
     se_addi r3, 1
-    e_stw   r3, int_cntRetFromIsr@sda21(%r0)
+    e_stw   r3, int_cntRetFromIsr@sda21(0)
 #endif
 
     /* Restore all remaining GPRegisters and SPR, which are volatile according to the EABI. */
@@ -457,9 +457,9 @@ int_simpleSystemCall:
     /* System call result is in r3 and can be returned just like that. */
 
 #if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
-    e_lwz   r4, int_cntRetFromSimpleSc@sda21(%r0)
+    e_lwz   r4, int_cntRetFromSimpleSc@sda21(0)
     se_addi r4, 1
-    e_stw   r4, int_cntRetFromSimpleSc@sda21(%r0)
+    e_stw   r4, int_cntRetFromSimpleSc@sda21(0)
 #endif
 
     /* Disable handling of External Interrupts is required for savely accessing the SSRi */
@@ -726,15 +726,15 @@ int_sch_swCtxt_endSaveCtxt:
     e_cmpi  cr0, r15, 0         /* Test flag: return from ISR of system call */
     se_blt  int_sch_cntIsrToSc  /* -1: we return from ISR */
 
-    e_lwz   r15, int_cntScToSc@sda21(%r0)
+    e_lwz   r15, int_cntScToSc@sda21(0)
     e_add16i r15, r15, 1
-    e_stw   r15, int_cntScToSc@sda21(%r0)
+    e_stw   r15, int_cntScToSc@sda21(0)
     se_b    int_sch_endCntIsrToSc
 
 int_sch_cntIsrToSc:
-    e_lwz   r15, int_cntIsrToSc@sda21(%r0)
+    e_lwz   r15, int_cntIsrToSc@sda21(0)
     e_add16i r15, r15, 1
-    e_stw   r15, int_cntIsrToSc@sda21(%r0)
+    e_stw   r15, int_cntIsrToSc@sda21(0)
 
 int_sch_endCntIsrToSc:
 #endif
@@ -764,15 +764,15 @@ int_sch_retFromIvor4:
     e_cmpi  cr0, r15, 0         /* Test flag: return from ISR or system call */
     se_blt  int_sch_cntIsrToIsr /* -1: we return from ISR */
 
-    e_lwz   r15, int_cntScToIsr@sda21(%r0)
+    e_lwz   r15, int_cntScToIsr@sda21(0)
     e_add16i r15, r15, 1
-    e_stw   r15, int_cntScToIsr@sda21(%r0)
+    e_stw   r15, int_cntScToIsr@sda21(0)
     se_b    int_sch_endCntIsrToIsr
 
 int_sch_cntIsrToIsr:
-    e_lwz   r15, int_cntIsrToIsr@sda21(%r0)
+    e_lwz   r15, int_cntIsrToIsr@sda21(0)
     e_add16i r15, r15, 1
-    e_stw   r15, int_cntIsrToIsr@sda21(%r0)
+    e_stw   r15, int_cntIsrToIsr@sda21(0)
 
 int_sch_endCntIsrToIsr:
 #endif
@@ -834,15 +834,15 @@ int_sch_newCtxt_endSaveCtxt:
     e_cmpi  cr0, r14, 0         /* Test flag: return from ISR or system call */
     se_blt  int_sch_cntIsrToNewCtxt /* -1: we return from ISR */
 
-    e_lwz   r14, int_cntScToNewCtxt@sda21(%r0)
+    e_lwz   r14, int_cntScToNewCtxt@sda21(0)
     e_add16i r14, r14, 1
-    e_stw   r14, int_cntScToNewCtxt@sda21(%r0)
+    e_stw   r14, int_cntScToNewCtxt@sda21(0)
     se_b    int_sch_endCntIsrToNewCtxt
 
 int_sch_cntIsrToNewCtxt:
-    e_lwz   r14, int_cntIsrToNewCtxt@sda21(%r0)
+    e_lwz   r14, int_cntIsrToNewCtxt@sda21(0)
     e_add16i r14, r14, 1
-    e_stw   r14, int_cntIsrToNewCtxt@sda21(%r0)
+    e_stw   r14, int_cntIsrToNewCtxt@sda21(0)
 
 int_sch_endCntIsrToNewCtxt:
 #endif
@@ -895,9 +895,9 @@ int_sch_endPrivilegedMode:
 int_sch_endSystemCall:
     /* If we get here then we simply return from system call. */
 #if DEBUG_CNT_CONTEXT_SWITCHES == 1  && defined(DEBUG)
-    e_lwz   r3, int_cntRetFromSc@sda21(%r0)
+    e_lwz   r3, int_cntRetFromSc@sda21(0)
     se_addi r3, 1
-    e_stw   r3, int_cntRetFromSc@sda21(%r0)
+    e_stw   r3, int_cntRetFromSc@sda21(0)
 #endif
 
     /* Load system call result into r3 and restore non-volatile r14. */

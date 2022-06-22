@@ -438,9 +438,9 @@ initExceptionHandlers:
     e_li        r3, sup_IVOR7trap@l
     mtspr       407, r3     /* IVOR7 Floating-point unavailable */
     
-    e_lis       r0, int_systemCallHandler@ha
-    e_la        r0, int_systemCallHandler@l(r0)
-    mtspr       408, r0     /* IVOR8 System call */
+    e_lis       r3, int_systemCallHandler@ha
+    e_la        r3, int_systemCallHandler@l(r3)
+    mtspr       408, r3     /* IVOR8 System call */
 
     e_li        r3, sup_IVOR9trap@l
     mtspr       409, r3     /* IVOR9 AP unavailable (not used by this core) */

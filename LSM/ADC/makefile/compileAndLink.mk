@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2022 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -58,7 +58,7 @@
 #
 # The makefile compiles and links all source files which are located in a given list of
 # source directories. The list of directories is a variable set in the calling makefile,
-# please look the variable srcDirList below.
+# please look for the variable srcDirList below.
 #   A second list of files is found as cFileListExcl. These C/C++ or assembler files are
 # excluded from build.
 

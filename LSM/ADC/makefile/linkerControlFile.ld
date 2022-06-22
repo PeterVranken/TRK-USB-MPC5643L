@@ -96,6 +96,8 @@ SECTIONS
         *(.rela.rodata)
         *(.rela.rodata.*)
         *(.rela.*)
+        *(.branch_lt)
+        *(.branch_lt.*)
 
         /* Normal code segments go here. */
         *(.text.*)

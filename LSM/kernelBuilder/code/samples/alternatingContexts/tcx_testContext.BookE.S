@@ -347,9 +347,9 @@ tcx_endlessLoop:
     bl      int_systemCall
     
     /* Cycle completed, ok, count it as success report. */
-    lwz     r3, tcx_cntTestLoops@sda21(%r0)
+    lwz     r3, tcx_cntTestLoops@sda21(0)
     addi    r3, r3, 1
-    stw     r3, tcx_cntTestLoops@sda21(%r0)
+    stw     r3, tcx_cntTestLoops@sda21(0)
     
     b       tcx_endlessLoop
     

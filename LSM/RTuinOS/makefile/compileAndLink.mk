@@ -6,7 +6,7 @@
 # Help on the syntax of this makefile is got at
 # http://www.gnu.org/software/make/manual/make.pdf.
 #
-# Copyright (C) 2012-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+# Copyright (C) 2012-2022 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published by the
@@ -223,7 +223,8 @@ VPATH := $(srcDirListExpanded) $(targetDir)
 # 64k each (RAM and ROM) become too small to hold all "small" data objects. Prior to
 # disabling the mode you should first try to reduce the size limit to 4 or 2 Byte.
 useSoftwareEmulation := 0
-targetFlags := -mcpu=e200z4 -mbig-endian -misel=yes -meabi -msdata=default -G8 -mregnames
+targetFlags := -mcpu=e200z4 -mbig-endian -misel=yes -meabi -msdata=default -G8 				\
+               -fshort-double -fsingle-precision-constant
 ifeq ($(INSTR),BOOK_E)
     targetFlags += -mno-vle
 else ifeq ($(INSTR),VLE)
@@ -232,9 +233,9 @@ else
     $(error Please set INSTR to either BOOK_E or VLE)
 endif
 ifeq ($(useSoftwareEmulation),1)
-    targetFlags += -msoft-float -fshort-double
+    targetFlags += -msoft-float
 else
-    targetFlags += -mhard-float -fshort-double
+    targetFlags += -mhard-float
 endif
 
 # Choose optimization level for production compilation.
@@ -260,7 +261,7 @@ cClibSpec := --sysroot=$(call w2u,$(dir $(gcc))../powerpc-eabivle/newlib)
 #cClibSpec += -specs=nosys.specs
 
 # Pattern rules for assembler language source files.
-asmFlags = $(targetFlags)                                                                   \
+asmFlags = $(targetFlags) -mregnames                                                        \
            -Wall                                                                            \
            -MMD -Wa,-a=$(patsubst %.o,%.lst,$@)                                             \
            $(foreach path,$(call noTrailingSlash,$(srcDirListExpanded) $(incDirList)),-I$(path))\

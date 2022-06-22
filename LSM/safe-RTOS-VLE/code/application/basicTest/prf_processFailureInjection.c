@@ -690,8 +690,8 @@ static void injectError(void)
         {
             /* The instruction dcbz is basically permitted but we don't have a D-cache. */
             uint32_t dummy;
-            asm volatile ("dcbtst  0, %%r0, %0 /* Executed without exception */\n\t"
-                          "dcbz    %%r0, %0 /* Fails because of missing cache, IVOR #5 */\n\t"
+            asm volatile ("dcbtst  0, 0, %0 /* Executed without exception */\n\t"
+                          "dcbz    0, %0 /* Fails because of missing cache, IVOR #5 */\n\t"
                          : /* OutputOperands */
                          : /* InputOperands */ "r" (&dummy)
                          : /* Clobbers */ "memory"
