@@ -8,7 +8,7 @@
  * standard startup code (file int_INTCInterruptHandler.S). It replaces the IVOR #4 handler
  * from this file and most of the other dummy IVOR handlers.
  *
- * Copyright (C) 2017-2020 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2023 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -190,22 +190,23 @@ rtos_ivor1Handler:
     /* Supervisor mode may be active if but only if we encounter a double exception. A
        double exception will occur if a core detected failure is made at an MPU protected,
        unavailable address.
-         Examples: Execution of a privileged instruction in process RAM (no execution rights
-       for RAM granted by MPU) or misaligned data access in RAM of other process.
          The precise, synchronously appearing CPU exception is followed by an imprecise (CPU
        external) exception from the MPU. In which case the Machine Check exception here has
        interrupted the just beginning exception handler of the earlier exception from the
-       CPU. All of our anticipated exceptions lead to the same action, error counting and
-       task abort. Therefore we don't need special handling for the double exception and
-       proceed as usual. However, we want to recognize this situation in order to still have
-       a distinction of user code faults and faults in the "trusted" OS code: Normally, any
+       CPU.
+         Examples: Execution of a privileged instruction in process RAM (no execution rights
+       for RAM granted by MPU) or misaligned data access in RAM of other process.
+         All of our anticipated exceptions lead to the same action, error counting and task
+       abort. Therefore we don't need special handling for the double exception and proceed
+       as usual. However, we want to recognize this situation in order to still have a
+       distinction of user code faults and faults in the "trusted" OS code: Normally, any
        exception of SV code points to a severe fault in the operating system itself (kernel
        or I/O driver).
          If we recognize the latter then we can halt the software execution and delegate the
        problem to the next safety catch level: A watchdog will bring the system into the safe
        state. Not recognizing the problem means opening a door to let the SW do unsafe
        things.
-         The way we recognize the double exception is looking at the address, at which the MC
+         The way we recognize the double exception is looking at the address at which the MC
        exception preempted. If it is the beginning of another IVOR exception then we decide
        for double exception. Since the preempted exception is closer to the root cause of the
        fault we resume the execution of that exception.
@@ -219,8 +220,8 @@ rtos_ivor1Handler:
     /* Note, we don't make use of short addressing modes, neither for handler addresses nor
        for counter variables, to keep code independent from location and to spare expensive
        SDA RAM, respectively. There's no need for speed optimized code here, it'll normally
-       never be executed and even if it will rather save CPU execution time (by aborting a
-       task) than producing additional load. */
+       never be executed and even if then it will rather save CPU execution time (by
+       aborting a task) than producing additional load. */
 
     mfspr       r3, SPR_MCSRR0  /* Address, where this Machine Check interrupt preempted */
     e_lis       r0, rtos_ivor4Handler@ha

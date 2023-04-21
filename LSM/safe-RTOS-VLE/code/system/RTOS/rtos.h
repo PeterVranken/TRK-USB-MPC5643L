@@ -4,7 +4,7 @@
  * @file rtos.h
  * Definition of global interface of module rtos.c
  *
- * Copyright (C) 2017-2019 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
+ * Copyright (C) 2017-2023 Peter Vranken (mailto:Peter_Vranken@Yahoo.de)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -142,7 +142,7 @@
             , .conformanceClass = RTOS_HDLR_CONF_CLASS_##confClass      \
             }
 
-/** Helper for data initialization: Task time budget are internally represented in CPU
+/** Helper for data initialization: Task time budgets are internally represented in CPU
     clock ticks. Using this macro one can specify it more conveniently in Milliseconds. The
     macro just converts its argument from Milliseconds to clock ticks. */
 #define RTOS_TI_MS2TICKS(tiInMs) ((tiInMs)*120000u)
@@ -186,6 +186,7 @@ typedef enum rtos_errorCode_t
     , rtos_err_highPrioTaskInLowPrivPrc /// Task of highest prio belongs to process of low privileges
     , rtos_err_runTaskBadPermission /// "Unsafe" permissions granted to rtos_runTask()
     , rtos_err_suspendPrcBadPermission/// "Unsafe" permissions granted to rtos_suspendProcess()
+
     , rtor_err_noErrorCodes
 
 } rtos_errorCode_t;
@@ -206,9 +207,10 @@ typedef struct rtos_taskDesc_t
           In the assembler code, this field is addressed to by offset O_TCONF_pFct. */
     uintptr_t addrTaskFct;
 
-    /** Time budget for the user task in ticks of TBL (i.e. 8.33ns). This budget is
-        granted for each activation of the task. The budget relates to deadline monitoring,
-        i.e. it is a world time budget, not an execution time budget.\n
+    /** Time budget for the user task in ticks of the time base (i.e. TBL or STM depending
+        on MCU derivative). This budget is granted for each activation of the task. The
+        budget relates to deadline monitoring, i.e., it is a world time budget, not an
+        execution time budget.\n
           Macros #RTOS_TI_MS2TICKS and #RTOS_TI_US2TICKS can be used to state the time
         budget in Milli- or Mircoseconds.\n
           A value of zero means that deadline monitoring is disabled for the task.\n
@@ -314,7 +316,7 @@ rtos_errorCode_t rtos_osInitKernel(void);
 /** Software triggered task activation. Can be called from OS context (incl. interrupts). */
 bool rtos_osTriggerEvent(unsigned int idEvent, uintptr_t taskParam);
 
-/** Enter critcal section; partially suspend task scheduling. */
+/** Enter critical section; partially suspend task scheduling. */
 uint32_t rtos_osSuspendAllTasksByPriority(uint32_t suspendUpToThisTaskPriority);
  
 /** Leave critical section; resume scheduling of tasks. */
@@ -326,7 +328,7 @@ void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority);
  * mutual exclusion of sub-sets of tasks: Call it with the highest priority of all tasks,
  * which should be locked, i.e. which compete for the resource or critical section to
  * protect. This may still lock other, not competing tasks, but at least all non competing
- * tasks of higher priority and the interrupt handlers will be served.\n
+ * tasks of higher priority and the interrupt handlers will still be served.\n
  *   To release the protected resource or to leave the critical section, call the
  * counterpart function rtos_resumeAllTasksByPriority(), which restores the original
  * task priority level.\n
@@ -377,7 +379,7 @@ void rtos_osResumeAllTasksByPriority(uint32_t resumeDownToThisTaskPriority);
  *   @remark
  * The raised priority is implicitly restored at the end of the task. It is not possible to
  * consider this function a mutex, which can be acquired in one task activation and which
- * can be releases in an arbitrary later task activation or from another task.
+ * can be released in an arbitrary later task activation or from another task.
  *   @remark
  * This function must be called from the user task context only. Any attempt to use it from
  * OS code will lead to a crash.
@@ -421,9 +423,9 @@ uint32_t rtos_suspendAllTasksByPriority(uint32_t suspendUpToThisPriority);
  * function it may even be advantageous to not call rtos_resumeAllTasksByPriority() in
  * order to save the overhead of the involved system call.
  *   @remark
- * Due to the task switch is can initiate, this function is implemented as a system call of
+ * Due to the task switch it can initiate, this function is implemented as a system call of
  * full conformance class and this means significant overhead. It should be applied with
- * care to for frequently aqcuired resources or for very short critical sections.\n
+ * care for frequently acquired resources or for very short critical sections.\n
  *   Alternatives are: Look-free programming techniques or dedicated system calls for the
  * given purpose.
  *   @remark
@@ -444,7 +446,7 @@ void rtos_resumeAllTasksByPriority(uint32_t resumeDownToThisPriority);
  * https://github.com/PeterVranken/TRK-USB-MPC5643L/blob/master/LSM/safe-RTOS-VLE/doc/manual/manual.pdf,
  * section System calls of RTOS, Table 1, p. 17, for a list of system calls offered by the
  * RTOS kernel. More system calls will be offered by your operating system, which builds on
- * this safe-RTOS, please refer to your device driver documentation.\n
+ * safe-RTOS, please refer to your device driver documentation.\n
  *   The further function arguments depend on the particular system call.
  *   @param ...
  * The remaining arguments are passed register based to the system call implementation.
@@ -488,7 +490,7 @@ unsigned int rtos_getNoTotalTaskFailure(unsigned int PID);
 /** Get the number of task failures of given category for the given process. */
 unsigned int rtos_getNoTaskFailure(unsigned int PID, unsigned int kindOfErr);
 
-/** Compute how many bytes of the stack area are still unused. */
+/** How many bytes of the stack area of a process are still unused? */
 unsigned int rtos_getStackReserve(unsigned int PID);
 
 /** Kernel function to suspend a process. */
